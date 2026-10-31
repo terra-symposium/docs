@@ -13,7 +13,7 @@ const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const requireFromPackage = createRequire(import.meta.url);
 const projectRoot = process.env.TERRA_DOCS_ROOT ?? process.cwd();
 const publicDir = resolve(projectRoot, '.terra-docs/public');
-const outDir = resolve(projectRoot, process.env.TERRA_DOCS_OUT ?? 'docs-dist');
+const outDir = resolve(projectRoot, process.env.TERRA_DOCS_OUT ?? 'dist/docs');
 const site = process.env.TERRA_DOCS_SITE;
 const base = process.env.TERRA_DOCS_BASE ?? '/';
 const projectManifest = (() => {

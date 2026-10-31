@@ -2,7 +2,6 @@ node_modules/
 dist/
 demo-dist/
 site-dist/
-docs-dist/
 .terra-docs/
 coverage/
 test-results/

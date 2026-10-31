@@ -6,7 +6,7 @@
   "description": "Documentation for my project",
   "scripts": {
     "docs:dev": "terra-docs dev",
-    "docs:build": "terra-docs build",
+    "docs:build": "terra-docs build --out dist/docs",
     "docs:preview": "terra-docs preview"
   },
   "devDependencies": {

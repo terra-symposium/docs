@@ -10,7 +10,7 @@ export default tseslint.config(
       'lib-dist/**',
       'site-dist/**',
       'demo-dist/**',
-      'docs-dist/**',
+      'dist/**',
       '.terra-docs/**',
       'node_modules/**',
     ],

@@ -17,7 +17,7 @@ pnpm exec terra-docs dev
 pnpm exec terra-docs build
 ```
 
-The package creates the routes, navigation, Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. `.mdx` files can import interactive examples. Optional `title`, `description`, `hue`, and `sidebar` frontmatter are available when needed. Build output defaults to `docs-dist/`.
+The package creates the routes, navigation, Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. `.mdx` files can import interactive examples. Optional `title`, `description`, `hue`, and `sidebar` frontmatter are available when needed. Build output defaults to `dist/docs/`.
 
 Configure a deployment base path with `--base /project-docs/`, and optionally set `--site`, `--title`, and `--description`. Each repository builds its own site; the starter CI checks builds and leaves deployment to the repository owner.
 

@@ -43,9 +43,9 @@ if (!['dev', 'build', 'preview'].includes(mode)) {
 const docsRoot = resolve(root, 'docs');
 const publicRoot = resolve(root, '.terra-docs/public');
 const publicAssetsRoot = resolve(publicRoot, '_terra-docs/assets');
-const outputDirectory = options.get('--out') ?? 'docs-dist';
+const outputDirectory = options.get('--out') ?? 'dist/docs';
 const searchIndexPath = resolve(publicRoot, '_terra-docs/search-index.json');
-const excludedDirectories = new Set(['node_modules', '.astro', 'dist', 'docs-dist']);
+const excludedDirectories = new Set(['node_modules', '.astro', 'dist']);
 const manifest = await readJson(resolve(root, 'package.json')).catch(() => ({}));
 const siteTitle = options.get('--title') ?? titleFromName(manifest.name) ?? 'Documentation';
 const siteDescription = options.get('--description') ?? manifest.description ?? '';

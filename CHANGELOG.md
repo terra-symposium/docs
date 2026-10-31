@@ -1,5 +1,12 @@
 # @terra-symposium/docs
 
+## 0.1.74
+
+### Patch Changes
+
+- bd67dce: Restore read-only leaf description controls and keep consumer artifacts in sync with the shared workspace.
+- Keep static Markdown and MDX pages visible during Astro rendering and hydrate the shared Terra Docs reader without leaving its editor transition loader active.
+
 ## 0.1.71
 
 ### Patch Changes

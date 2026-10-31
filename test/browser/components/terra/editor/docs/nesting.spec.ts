@@ -90,12 +90,12 @@ test(
   async ({ page }) => {
     await openEditor(page, textFixture, { toolbar: true });
     const toolbar = page.getByRole('toolbar', { name: 'Editor controls' });
-    const insert = toolbar.getByRole('combobox', { name: 'Insert rich block' });
-    await insert.click();
-    for (const type of ['tabs', 'accordion', 'callout']) {
-      await expect(page.getByRole('option', { name: type, exact: true })).toBeVisible();
+    await toolbar.getByRole('button', { name: 'Insert content' }).click();
+    const blocks = page.getByRole('listbox').getByRole('group', { name: 'Block' });
+    for (const type of ['Tabs', 'Accordion', 'Callout']) {
+      await expect(blocks.getByRole('option', { name: type, exact: true })).toBeVisible();
     }
-    await page.getByRole('option', { name: 'table', exact: true }).click();
+    await blocks.getByRole('option', { name: 'Table', exact: true }).click();
 
     await expect(page.locator('[data-terra-block="table"]')).toBeVisible();
     await expect
@@ -113,11 +113,12 @@ test(
   async ({ page }) => {
     await openEditor(page, textFixture, { nested: true, toolbar: true });
     const toolbar = page.getByRole('toolbar', { name: 'Editor controls' });
-    await toolbar.getByRole('combobox', { name: 'Insert rich block' }).click();
-    for (const type of ['tabs', 'accordion', 'callout']) {
-      await expect(page.getByRole('option', { name: type, exact: true })).toHaveCount(0);
+    await toolbar.getByRole('button', { name: 'Insert content' }).click();
+    const blocks = page.getByRole('listbox').getByRole('group', { name: 'Block' });
+    for (const type of ['Tabs', 'Accordion', 'Callout']) {
+      await expect(blocks.getByRole('option', { name: type, exact: true })).toHaveCount(0);
     }
-    await expect(page.getByRole('option', { name: 'table', exact: true })).toBeVisible();
+    await expect(blocks.getByRole('option', { name: 'Table', exact: true })).toBeVisible();
   },
 );
 
@@ -141,7 +142,7 @@ test(
           value: content[1]?.rows?.[1]?.cells?.[0]?.content?.[0]?.children?.[0]?.text,
         };
       })
-      .toEqual({ blockTypes: ['block', 'table', 'block'], value: 'Updated value' });
+      .toEqual({ blockTypes: ['terraBlock', 'table', 'terraBlock'], value: 'Updated value' });
 
     await page.reload();
     await expect(page.locator('[data-terra-block="table"]')).toBeVisible();

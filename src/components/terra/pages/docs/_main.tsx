@@ -521,7 +521,7 @@ const EditorSurfaces = {
 							rows={1}
 							value={draft.description}
 							onChange={e => edit?.update({ description: e.currentTarget.value })}
-							placeholder='Add a description...'
+							placeholder={editable ? 'Add a description...' : undefined}
 							disabled={!editable}
 							className='min-h-0 resize-none overflow-hidden border-none bg-transparent p-0 text-base text-pretty text-primary-11 shadow-none focus-visible:ring-0 disabled:cursor-default disabled:opacity-100 dark:bg-transparent'
 							suppressHydrationWarning
@@ -578,6 +578,7 @@ export default function Scaffold({
   content: initContent,
   mode: initialMode,
   viewContent,
+  staticContent = false,
   beforeContent,
   afterContent,
   blocks: docsBlocks,
@@ -598,6 +599,7 @@ export default function Scaffold({
   updatedAt?: string;
   mode?: Mode;
   viewContent?: ReactNode;
+  staticContent?: boolean;
   beforeContent?: ReactNode;
   afterContent?: ReactNode;
   blocks?: DocsBlockOptions;
@@ -606,7 +608,7 @@ export default function Scaffold({
   const navigationState = { open: useAtom($sidebar) };
   // Match the original Docs shell: only render the Portable Text editor after hydration.
   // Its external store is not SSR-safe, and rendering it in the initial HTML causes React #419.
-  const [hydrated, setHydrated] = useState<boolean>(standalone);
+  const [hydrated, setHydrated] = useState<boolean>(standalone || staticContent);
   const toolbar = useAtom($toolbar);
   const stored = useAtom($mode);
   const writable = permission === 'write';
@@ -947,7 +949,8 @@ export default function Scaffold({
     isSaving: toolbar?.busy === 'saving' && !toolbar?.optimistic,
     transition: useTransitionState(),
   };
-  const isLoading = !hydrated || loadingState.isSaving || loadingState.transition !== 'idle';
+  const isLoading =
+    !hydrated || (!staticContent && (loadingState.isSaving || loadingState.transition !== 'idle'));
   useEffect(() => {
     setHydrated(true);
     if (!writable && stored === 'edit') $mode.set('view');
@@ -1032,7 +1035,7 @@ export default function Scaffold({
           className={cn('relative flex min-h-0 flex-1 flex-col', isLoading && 'overflow-hidden')}
         >
           {/* CONTENT SHELL */}
-          {hydrated && !loadingState.isSaving && (
+          {hydrated && (staticContent || !loadingState.isSaving) && (
             <TransitionShell
               className={cn(
                 'size-full min-w-0 max-w-none overflow-visible text-inherit print:m-0 print:h-auto print:min-h-0 print:w-full print:overflow-visible print:p-0',
@@ -1044,6 +1047,7 @@ export default function Scaffold({
               )}
               mode={a}
               path={currDoc.path}
+              staticContent={staticContent}
             >
               <EditProvider key={currDoc.pathname} permission={permission} {...currDoc}>
                 <div className="w-full">

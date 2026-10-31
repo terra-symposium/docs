@@ -1,10 +1,29 @@
 # Terra Docs
 
-Terra Docs is a reusable React editor and viewer package. Each installation lives in its own host application and controls its own document data, storage, identity, and permissions. This repository contains the component package and installation guide.
+Terra Docs is the shared Terra documentation workspace and Markdown site generator. A repository can use the npm package for an entire Docs site or embed its React editor and viewer in another application.
+
+## Create a repository Docs site
+
+Create a repository from the [Terra Docs starter](https://github.com/Terra-Symposium/docs-template) or install the package in an existing repository:
+
+```sh
+pnpm add -D @terra-symposium/docs
+```
+
+Add Markdown files under `docs/`, then run:
+
+```sh
+pnpm exec terra-docs dev
+pnpm exec terra-docs build
+```
+
+The package creates the routes, navigation, Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. `.mdx` files can import interactive examples. Optional `title`, `description`, `hue`, and `sidebar` frontmatter are available when needed. Build output defaults to `docs-dist/`.
+
+Configure a deployment base path with `--base /project-docs/`, and optionally set `--site`, `--title`, and `--description`. Each repository builds its own site; the starter CI checks builds and leaves deployment to the repository owner.
 
 ## Create an instance
 
-Start with the [instance installation guide](src/content/docs/getting-started.md). The React component can be installed into any React 19 app:
+Start with the [instance installation guide](docs/getting-started.md). The React component can be installed into any React 19 app:
 
 ```sh
 pnpm add @terra-symposium/docs
@@ -16,7 +35,7 @@ import type { DocsValue } from '@terra-symposium/docs';
 import '@terra-symposium/docs/style.css';
 ```
 
-The current package release is still under development and is not yet published. To work on a separate local instance against this checkout, install it by local path (`pnpm add /path/to/terra-docs`). Markdown hosts can use `renderMarkdown`, `markdownToDocsValue`, and `docsValueToMarkdown`; remote hosts implement the [storage provider](src/content/docs/storage.md).
+To work on the package itself, clone this repository and run its component playground and Docs site. Markdown hosts can use `renderMarkdown`, `markdownToDocsValue`, and `docsValueToMarkdown`; remote hosts implement the [storage provider](docs/storage.md).
 
 ## Run the playground and docs site
 
@@ -24,7 +43,7 @@ Requirements: Node.js 24.12+, pnpm 10.30.3. Run `pnpm install --frozen-lockfile`
 
 ```sh
 pnpm dev        # Vite component playground
-pnpm docs:dev   # Astro installation and configuration guide
+pnpm docs:dev   # Package-owned Astro site reading this repository's docs/ folder
 ```
 
 The launcher delegates port acquisition to Terra Quality, then starts the dev server with strict port handling. Host apps use this shared launcher; set DOCS_DEV_PORT to override their preferred port.

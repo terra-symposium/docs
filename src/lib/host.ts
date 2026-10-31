@@ -170,6 +170,8 @@ export type TerraDocsWorkspaceProps = {
   content?: unknown;
   /** Optional static React content slot rendered inside the canonical View surface. */
   renderContent?: ReactNode;
+  /** Static site pages are already rendered and do not need editor transition guards. */
+  staticContent?: boolean;
   /** Optional host-owned React content rendered before the document body in View mode. */
   beforeContent?: ReactNode;
   /** Optional host-owned React content appended after the canonical View surface. */

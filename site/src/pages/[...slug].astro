@@ -1,0 +1,49 @@
+---
+import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
+import { pageForSlug, pageHref, siteNavigation, sitePages } from '../lib/catalog.js';
+
+const title = import.meta.env.PUBLIC_TERRA_DOCS_TITLE ?? 'Documentation';
+const description = import.meta.env.PUBLIC_TERRA_DOCS_DESCRIPTION ?? '';
+const base = import.meta.env.BASE_URL;
+
+export function getStaticPaths() {
+	return sitePages.filter((page) => page.slug !== '404').map((page) => ({
+		params: { slug: page.slug || undefined },
+		props: { slug: page.slug },
+	}));
+}
+
+const { slug = '' } = Astro.props;
+const page = pageForSlug(slug);
+const PageContent = page?.content;
+const currentPath = pageHref(slug, base);
+---
+
+{page && PageContent ? (
+	<html lang="en">
+		<head>
+			<meta charset="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1" />
+			{page.description ? <meta name="description" content={page.description} /> : description ? <meta name="description" content={description} /> : null}
+			<title>{page.title} · {title}</title>
+		</head>
+		<body>
+			<DocsSiteLayout
+				title={title}
+				homeHref={pageHref('', base)}
+				description={description}
+				pageTitle={page.title}
+				nodes={siteNavigation}
+				currentPath={currentPath}
+				rootPath={pageHref('', base)}
+				searchBase={base}
+			>
+				<div class="terra-docs-page-content"><PageContent /></div>
+			</DocsSiteLayout>
+		</body>
+	</html>
+) : null}
+
+<style is:global>
+	.terra-docs-page-content { max-width: 100%; }
+</style>

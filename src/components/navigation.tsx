@@ -10,6 +10,7 @@ export type DocsNavNode = {
   description?: string;
   updatedAt?: string;
   attachments?: DocsAttachment[];
+  hue?: number | null;
   children?: DocsNavNode[];
 };
 

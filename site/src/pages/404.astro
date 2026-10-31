@@ -1,0 +1,38 @@
+---
+import DocsNotFound from '../../../src/components/NotFound.astro';
+import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
+import { pageForSlug, pageHref, siteNavigation } from '../lib/catalog.js';
+
+const title = import.meta.env.PUBLIC_TERRA_DOCS_TITLE ?? 'Documentation';
+const description = import.meta.env.PUBLIC_TERRA_DOCS_DESCRIPTION ?? '';
+const base = import.meta.env.BASE_URL;
+const page = pageForSlug('404');
+const PageContent = page?.content;
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<title>Page not found · {title}</title>
+	</head>
+	<body>
+		{PageContent ? (
+			<DocsSiteLayout
+				title={title}
+				homeHref={pageHref('', base)}
+				description={description}
+				pageTitle={page.title}
+				nodes={siteNavigation}
+				currentPath={`${base}404/`}
+				rootPath={pageHref('', base)}
+				searchBase={base}
+			>
+				<PageContent />
+			</DocsSiteLayout>
+		) : (
+			<DocsNotFound appName={title} homeHref={pageHref('', base)} />
+		)}
+	</body>
+</html>

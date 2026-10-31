@@ -215,6 +215,7 @@ export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element 
         {...(props.source ? { source: props.source } : {})}
         {...(props.content !== undefined ? { content: props.content as any } : {})}
         {...(props.renderContent !== undefined ? { viewContent: props.renderContent } : {})}
+        {...(props.staticContent !== undefined ? { staticContent: props.staticContent } : {})}
         {...(props.beforeContent !== undefined ? { beforeContent: props.beforeContent } : {})}
         {...(props.afterContent !== undefined ? { afterContent: props.afterContent } : {})}
         {...(props.standalone !== undefined ? { standalone: props.standalone } : {})}

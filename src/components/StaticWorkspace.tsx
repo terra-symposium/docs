@@ -68,6 +68,7 @@ function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
           title: node.title,
           href: node.href,
           ...(node.description ? { description: node.description } : {}),
+          ...(node.hue !== undefined ? { hue: node.hue } : {}),
           ...(node.updatedAt ? { updatedAt: node.updatedAt } : {}),
           ...(node.attachments ? { attachments: node.attachments } : {}),
         }
@@ -79,6 +80,7 @@ function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
       ? children.map((group) => ({
           ...(group.id ? { id: group.id } : {}),
           ...(group.path ? { path: group.path } : {}),
+          ...(group.hue !== undefined ? { hue: group.hue } : {}),
           title: group.title,
           leaves: (group.children ?? [])
             .map(toLeaf)
@@ -95,6 +97,7 @@ function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
     return {
       ...(section.id ? { id: section.id } : {}),
       ...(section.path ? { path: section.path } : {}),
+      ...(section.hue !== undefined ? { hue: section.hue } : {}),
       title: section.title,
       groups,
     };
@@ -155,6 +158,7 @@ export function DocsStaticWorkspace({
       origName: sectionId,
       title: section.title,
       path: section.path ?? sectionId,
+      ...(section.hue !== undefined ? { hue: section.hue } : {}),
       url: section.groups[0]?.leaves[0]?.href ?? rootPath,
       permission: 'read',
       children: section.groups.map((group) => {
@@ -165,6 +169,7 @@ export function DocsStaticWorkspace({
           origName: group.id ?? groupKey,
           title: group.title,
           path: group.path ?? groupKey,
+          ...(group.hue !== undefined ? { hue: group.hue } : {}),
           permission: 'read',
           children: group.leaves.map((leaf) => ({
             type: 'leaf',
@@ -173,6 +178,7 @@ export function DocsStaticWorkspace({
             path: leaf.path ?? storageKey(leaf.href),
             url: leaf.href,
             permission: 'read',
+            ...(leaf.hue !== undefined ? { hue: leaf.hue } : {}),
             ...(leaf.description ? { description: leaf.description } : {}),
             ...(leaf.updatedAt ? { updatedAt: leaf.updatedAt } : {}),
           })),
@@ -309,6 +315,7 @@ export function DocsStaticWorkspace({
           : {})}
         source={markdown}
         content={docContent}
+        staticContent={staticContent}
         {...(readyContent !== undefined ? { renderContent: readyContent } : {})}
       />
     </div>

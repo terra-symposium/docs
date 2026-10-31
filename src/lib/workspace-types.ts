@@ -8,6 +8,19 @@ export type DocsLeaf = {
   description?: string;
   updatedAt?: string;
   attachments?: DocsAttachment[];
+  hue?: number | null;
 };
-export type DocsGroup = { title: string; id?: string; path?: string; leaves: DocsLeaf[] };
-export type DocsSection = { title: string; id?: string; path?: string; groups: DocsGroup[] };
+export type DocsGroup = {
+  title: string;
+  id?: string;
+  path?: string;
+  hue?: number | null;
+  leaves: DocsLeaf[];
+};
+export type DocsSection = {
+  title: string;
+  id?: string;
+  path?: string;
+  hue?: number | null;
+  groups: DocsGroup[];
+};

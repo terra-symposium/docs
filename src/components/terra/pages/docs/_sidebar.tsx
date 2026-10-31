@@ -1785,59 +1785,61 @@ export default (function Nav({
             {siteTitle}
           </a>
           {siteDescription && <p className="m-0 mt-1 text-sm text-primary-11">{siteDescription}</p>}
-          {/* sects */}
-          <div className="mt-2 flex items-center">
-            <div className={cn('block min-w-0 flex-1 rounded-md transition-opacity')}>
-              <Select
-                disabled={transitioning}
-                open={sectionOpen}
-                onOpenChange={setSectionOpen}
-                value={aViewed ? aViewed.origName : ''}
-                onValueChange={async (v) => {
-                  if (v === '__add_section__') {
-                    setTimeout(() => {
-                      addSection();
-                    }, 0);
-                    return;
-                  }
-                  if (aViewed?.origName === v) return;
-                  setViewedSecId(v);
-                }}
-              >
-                <SelectTrigger
-                  className="w-full"
-                  aria-label="Section"
-                  data-docs-navigation="true"
-                  onPointerDown={(e) => {
-                    if (e.button === 0) setSectionOpen(true);
+          {/* Keep section management available in editable workspaces. Read-only docs
+              need no selector when their navigation has only one section. */}
+          {(sects.length > 1 || permission === 'write') && (
+            <div className="mt-2 flex items-center">
+              <div className={cn('block min-w-0 flex-1 rounded-md transition-opacity')}>
+                <Select
+                  disabled={transitioning}
+                  open={sectionOpen}
+                  onOpenChange={setSectionOpen}
+                  value={aViewed ? aViewed.origName : ''}
+                  onValueChange={async (v) => {
+                    if (v === '__add_section__') {
+                      setTimeout(() => {
+                        addSection();
+                      }, 0);
+                      return;
+                    }
+                    if (aViewed?.origName === v) return;
+                    setViewedSecId(v);
                   }}
                 >
-                  <SelectValue placeholder="Section" />
-                </SelectTrigger>
-                <SelectContent className="w-[var(--radix-select-trigger-width)]">
-                  {sects.map((s) => {
-                    if (s.simulated) {
+                  <SelectTrigger
+                    className="w-full"
+                    aria-label="Section"
+                    data-docs-navigation="true"
+                    onPointerDown={(e) => {
+                      if (e.button === 0) setSectionOpen(true);
+                    }}
+                  >
+                    <SelectValue placeholder="Section" />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                    {sects.map((s) => {
+                      if (s.simulated) {
+                        return (
+                          <SelectItem
+                            key={s.origName}
+                            value={s.origName}
+                            icon={
+                              <span
+                                aria-hidden="true"
+                                className="size-3.5 rounded-[3px]"
+                                style={{
+                                  backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
+                                }}
+                              />
+                            }
+                            className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                          >
+                            {s.title || 'New Section'}
+                          </SelectItem>
+                        );
+                      }
+                      // prettier-ignore
                       return (
-                        <SelectItem
-                          key={s.origName}
-                          value={s.origName}
-                          icon={
-                            <span
-                              aria-hidden="true"
-                              className="size-3.5 rounded-[3px]"
-                              style={{
-                                backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
-                              }}
-                            />
-                          }
-                          className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
-                        >
-                          {s.title || 'New Section'}
-                        </SelectItem>
-                      );
-                    }
-                    // prettier-ignore
-                    return (
 												<SelectItem
 											key={s.origName}
 													value={s.origName}
@@ -1850,23 +1852,24 @@ export default (function Nav({
 													</ContextMenu>
 												</SelectItem>
 											);
-                  })}
-                  {permission === 'write' && (
-                    <>
-                      {sects.length > 0 && !sects[0]?.simulated && <Separator className="my-1" />}
-                      <SelectItem
-                        value="__add_section__"
-                        icon={<AddIcon className="size-4" />}
-                        className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
-                      >
-                        <span>Add section</span>
-                      </SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
+                    })}
+                    {permission === 'write' && (
+                      <>
+                        {sects.length > 0 && !sects[0]?.simulated && <Separator className="my-1" />}
+                        <SelectItem
+                          value="__add_section__"
+                          icon={<AddIcon className="size-4" />}
+                          className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                        >
+                          <span>Add section</span>
+                        </SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
+          )}
         </SidebarHeader>
         {/* TOC */}
         <ContextMenu>

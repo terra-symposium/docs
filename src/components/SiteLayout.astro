@@ -1,6 +1,8 @@
 ---
 import { DocsStaticWorkspace } from '../../lib-dist/components/StaticWorkspace.js';
 import '../../lib-dist/style.css';
+import { DocsSiteSearch } from '../../site/src/components/DocsSiteSearch.js';
+import '../../site/src/styles/search.css';
 import type { DocsAttachment, DocsSection, DocsNavNode } from '../../lib-dist/lib/index.js';
 
 type Props = {
@@ -16,9 +18,10 @@ type Props = {
 	content?: unknown;
 	attachments?: DocsAttachment[];
 	updatedAt?: string;
+	searchBase?: string;
 };
 
-const { title, homeHref = '/', description, pageTitle, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt } = Astro.props;
+const { title, homeHref = '/', description, pageTitle, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
 const staticContent = Astro.slots.has('default');
 ---
 
@@ -40,3 +43,8 @@ const staticContent = Astro.slots.has('default');
 >
 	<slot />
 </DocsStaticWorkspace>
+<DocsSiteSearch client:load base={searchBase} />
+
+<style is:global>
+	.terra-docs-page-content { max-width: 100%; }
+</style>

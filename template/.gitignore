@@ -1,0 +1,5 @@
+node_modules/
+.astro/
+.terra-docs/
+docs-dist/
+.DS_Store

@@ -121,11 +121,13 @@ export function TransitionShell({
   className,
   mode,
   path,
+  staticContent = false,
 }: {
   children: ReactNode;
   className?: string;
   mode: Mode | 'transitioning';
   path?: string;
+  staticContent?: boolean;
 }): React.JSX.Element {
   // STATE
   const container = useRef<HTMLDivElement | null>(null);
@@ -241,7 +243,7 @@ export function TransitionShell({
   const setSrcReady = useCallback((a: boolean): void => {
     setState((p) => (p.armed === a ? p : { ...p, armed: a }));
   }, []);
-  const loading = transition !== 'idle' || state.loading;
+  const loading = !staticContent && (transition !== 'idle' || state.loading);
 
   // RENDER
   return (

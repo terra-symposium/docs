@@ -1,0 +1,127 @@
+.terra-docs-search {
+  position: fixed;
+  top: 0.65rem;
+  right: 1rem;
+  z-index: 80;
+  font: inherit;
+}
+
+.terra-docs-search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.4rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgb(var(--primary-6));
+  border-radius: 0.45rem;
+  background: rgb(var(--primary-2));
+  color: rgb(var(--primary-11));
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.terra-docs-search-trigger:hover {
+  background: rgb(var(--primary-3));
+}
+.terra-docs-search-trigger > span:first-child {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.terra-docs-search-trigger kbd {
+  padding: 0.05rem 0.25rem;
+  border: 1px solid rgb(var(--primary-6));
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+}
+
+.terra-docs-search-dialog {
+  width: min(42rem, calc(100vw - 2rem));
+  max-width: none;
+  max-height: min(75vh, 42rem);
+  padding: 0;
+  border: 1px solid rgb(var(--primary-7));
+  border-radius: 0.75rem;
+  background: rgb(var(--primary-2));
+  color: rgb(var(--primary-12));
+  box-shadow: 0 1.5rem 5rem rgb(0 0 0 / 0.35);
+}
+
+.terra-docs-search-dialog::backdrop {
+  background: rgb(0 0 0 / 0.58);
+  backdrop-filter: blur(2px);
+}
+.terra-docs-search-panel {
+  overflow: hidden;
+}
+.terra-docs-search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid rgb(var(--primary-5));
+}
+.terra-docs-search-input-row > span {
+  font-size: 1.3rem;
+}
+.terra-docs-search-input-row input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.terra-docs-search-input-row button {
+  border: 1px solid rgb(var(--primary-6));
+  border-radius: 0.3rem;
+  background: transparent;
+  color: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.terra-docs-search-results {
+  max-height: calc(75vh - 4rem);
+  overflow: auto;
+  padding: 0.5rem;
+}
+.terra-docs-search-results > p {
+  padding: 1rem;
+  color: rgb(var(--primary-10));
+  font-size: 0.9rem;
+}
+.terra-docs-search-results > a {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 0.45rem;
+  color: inherit;
+  text-decoration: none;
+}
+.terra-docs-search-results > a:hover,
+.terra-docs-search-results > a:focus {
+  outline: 0;
+  background: rgb(var(--primary-4));
+}
+.terra-docs-search-results > a span,
+.terra-docs-search-results > a small {
+  color: rgb(var(--primary-10));
+}
+.terra-docs-search-results > a small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .terra-docs-search {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  .terra-docs-search-trigger {
+    min-height: 2.1rem;
+  }
+  .terra-docs-search-trigger kbd {
+    display: none;
+  }
+}

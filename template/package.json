@@ -1,0 +1,15 @@
+{
+  "name": "my-project-docs",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.30.3",
+  "description": "Documentation for my project",
+  "scripts": {
+    "docs:dev": "terra-docs dev",
+    "docs:build": "terra-docs build",
+    "docs:preview": "terra-docs preview"
+  },
+  "devDependencies": {
+    "@terra-symposium/docs": "^0.1.73"
+  }
+}

@@ -136,6 +136,25 @@ test('long document descriptions remain fully visible at responsive widths', asy
   }
 });
 
+test('empty descriptions show an editing hint only in Edit mode', async ({ page }) => {
+  await page.goto('/parity-demo/');
+  await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
+  await page.evaluate(() => {
+    const key = 'terra-docs-workspace-demo-v1';
+    const fixture = JSON.parse(localStorage.getItem(key) ?? '{}');
+    fixture.documents.salesphere.description = '';
+    localStorage.setItem(key, JSON.stringify(fixture));
+    window.dispatchEvent(new CustomEvent('terra-docs-fixture-updated'));
+  });
+
+  const description = page.locator('#docs-description');
+  await expect(description).toHaveValue('');
+  await expect(description).not.toHaveAttribute('placeholder', 'Add a description...');
+
+  await setMode(page, 'Edit');
+  await expect(description).toHaveAttribute('placeholder', 'Add a description...');
+});
+
 test('pinned Terra Docs toolbar mode menu matches the original', async ({ page }) => {
   await openParityFixture(page);
   await page.getByRole('combobox', { name: 'Mode' }).click();

@@ -69,6 +69,34 @@ test('standalone Astro pages mount the extracted read-only workspace with their 
   await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Storage providers');
 });
 
+test(
+  'read-only Docs hides the section selector when the navigation has one section',
+  {
+    tag: '@viewport:xl @viewport:md @viewport:mobile',
+    annotation: {
+      type: 'viewport-reason',
+      description: 'The single-section navigation should stay compact at every supported width.',
+    },
+  },
+  async ({ page }) => {
+    await page.goto('/workspace-readonly/');
+    await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
+
+    const sectionSelect = page.getByRole('combobox', { name: 'Section' });
+    await expect(sectionSelect).toBeVisible();
+    await page.evaluate(() => {
+      const key = 'terra-docs-workspace-demo-v1';
+      const fixture = JSON.parse(localStorage.getItem(key) ?? '{}');
+      fixture.tree = fixture.tree.slice(0, 1);
+      localStorage.setItem(key, JSON.stringify(fixture));
+      window.dispatchEvent(new CustomEvent('terra-docs-fixture-updated'));
+    });
+
+    await expect(sectionSelect).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Salesphere Docs', exact: true })).toBeVisible();
+  },
+);
+
 test('local Markdown thematic breaks render as visible dividers in the Docs workspace', async ({
   page,
 }) => {

@@ -6,9 +6,11 @@
 DOCS
 //////////////////////////////////////////////////*/
 
-/* docs block spacing */
-:is(.prose aside) {
-  @apply mb-10 mt-0 flow-root;
+/* Give callouts consistent separation in both the Docs article and Portable Text
+   content surfaces. Portable Text does not always use the `.prose` wrapper. */
+:is(.prose, .terra-docs-content) aside[data-docs-aside] {
+  display: flow-root;
+  margin-block: 0 2.5rem !important;
 }
 .docs-flow {
   @apply isolate;
@@ -659,6 +661,7 @@ aside .title + * {
       @apply mt-12 mb-6 border-t border-primary-6 pt-10 print:my-4 print:mt-10 print:text-primary-12;
     }
     > h2:first-of-type,
+    &[data-docs-view-root] h2:first-of-type,
     :is([data-docs-view-root], .docs-editor-copy) > h2:first-of-type,
     [data-docs-view-root] > .docs-block > h2:first-of-type,
     [data-docs-view-root] > :first-child > .docs-block > h2:first-of-type,

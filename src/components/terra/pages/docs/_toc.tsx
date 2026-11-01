@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toHeadingId } from '../../editor/docs/heading.js';
 import { cn } from '../../../../lib/terra/runtime/runtime.js';
-import { ButtonLink, SidebarMenuSub, SidebarMenuSubItem } from '@terra-symposium/styling/ui';
+import { ButtonLink } from '@terra-symposium/styling/ui';
 
 /** Returns the rendered Docs mode shell used by navigation and the table of contents. */
 const docsShellOf = (): HTMLElement | null =>
@@ -207,10 +207,13 @@ export function Toc({ title }: { title?: string }): JSX.Element | null {
   }, [heads]);
   if (!heads?.length) return null;
   return (
-    <nav aria-label="Table of contents">
-      <SidebarMenuSub className="mr-0 pr-0">
+    <nav aria-label="On this page" className="space-y-1">
+      <p className="m-0 px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-primary-11">
+        On this page
+      </p>
+      <ol className="m-0 flex list-none flex-col gap-0 p-0">
         {heads.map((h) => (
-          <SidebarMenuSubItem key={h.id}>
+          <li key={h.id}>
             <ButtonLink
               data-docs-toc-id={h.id}
               data-docs-toc-heading={h.text}
@@ -219,7 +222,7 @@ export function Toc({ title }: { title?: string }): JSX.Element | null {
               size="xs"
               aria-label={`Jump to ${h.text}`}
               className={cn(
-                'relative w-full justify-start truncate pl-4 before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
+                'relative h-7 min-h-7 w-full justify-start truncate pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
                 a === h.id
                   ? 'text-primary-12 before:bg-current'
                   : 'text-primary-11 before:bg-primary-11 before:opacity-0 hover:before:opacity-100',
@@ -227,9 +230,9 @@ export function Toc({ title }: { title?: string }): JSX.Element | null {
             >
               {h.text}
             </ButtonLink>
-          </SidebarMenuSubItem>
+          </li>
         ))}
-      </SidebarMenuSub>
+      </ol>
     </nav>
   );
 }

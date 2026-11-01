@@ -56,14 +56,14 @@ function astroPackageExportAliases() {
       replacement: resolve(astroPackageRoot, 'dist/runtime/$1'),
     },
     ...Object.keys(astroManifest.exports)
-    .filter((key) => key.startsWith('./') && !key.includes('*'))
-    .map((key) => {
-      const specifier = `astro${key.slice(1)}`;
-      return {
-        find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
-        replacement: requireFromPackage.resolve(specifier),
-      };
-    }),
+      .filter((key) => key.startsWith('./') && !key.includes('*'))
+      .map((key) => {
+        const specifier = `astro${key.slice(1)}`;
+        return {
+          find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
+          replacement: requireFromPackage.resolve(specifier),
+        };
+      }),
   ];
 }
 
@@ -119,7 +119,12 @@ function stylingDependencyAliases() {
       : dependencyManifest('@terra-symposium/styling', requireFromProject);
   if (!stylingManifest) return [];
   return Object.keys(stylingManifest.dependencies ?? {})
-    .filter((name) => name !== 'react' && name !== 'react-dom' && (name.includes('react') || ['cmdk', 'vaul'].includes(name)))
+    .filter(
+      (name) =>
+        name !== 'react' &&
+        name !== 'react-dom' &&
+        (name.includes('react') || ['cmdk', 'vaul'].includes(name)),
+    )
     .flatMap((name) => {
       const manifest = dependencyManifest(name, requireFromProject);
       if (!manifest) return [];
@@ -152,19 +157,19 @@ function sharedReactAliases() {
   ];
   return [
     ...specifiers.map((specifier) => {
-    let replacement;
-    try {
-      // Externalized component dependencies resolve React from the consumer's
-      // installation during SSR. Prefer that same copy for bundled imports.
-      replacement = requireFromProject.resolve(specifier);
-    } catch {
-      // Content-only repositories can rely on the React runtime shipped by Docs.
-      replacement = requireFromPackage.resolve(specifier);
-    }
-    return {
-      find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
-      replacement,
-    };
+      let replacement;
+      try {
+        // Externalized component dependencies resolve React from the consumer's
+        // installation during SSR. Prefer that same copy for bundled imports.
+        replacement = requireFromProject.resolve(specifier);
+      } catch {
+        // Content-only repositories can rely on the React runtime shipped by Docs.
+        replacement = requireFromPackage.resolve(specifier);
+      }
+      return {
+        find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
+        replacement,
+      };
     }),
     {
       // The Docs editor imports `react-dom/server` for Markdown previews. Its

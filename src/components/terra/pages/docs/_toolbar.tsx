@@ -1970,7 +1970,7 @@ const TOOLBAR_COMPONENTS = {
     return (
       <ErrorBoundary name="Toolbar">
         <div
-          className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 -mx-3 -mt-5 mb-5 w-[calc(100%+1.5rem)] max-w-[calc(100%+1.5rem)] overflow-visible text-primary-12 print:hidden"
+          className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto -mt-5 mb-5 w-fit max-w-full overflow-visible text-primary-12 print:hidden"
           data-docs-toolbar-frame
           data-docs-toolbar-scroll
           data-can-edit={editable ? 'true' : 'false'}
@@ -1982,7 +1982,7 @@ const TOOLBAR_COMPONENTS = {
           <div className="relative z-10 rounded-lg border border-primary-6 bg-primary-3">
             <TooltipProvider>
               <div
-                className="mdxeditor-toolbar not-prose relative z-10 box-border flex w-full min-w-0 flex-wrap items-center justify-between gap-1.5 gap-x-3 px-2 py-1 text-primary-12 print:hidden"
+                className="mdxeditor-toolbar not-prose relative z-10 box-border flex w-fit max-w-full min-w-0 flex-wrap items-center justify-between gap-1.5 gap-x-3 px-2 py-1 text-primary-12 print:hidden"
                 data-docs-main-toolbar
               >
                 {mode === 'view' ? (

@@ -1,5 +1,21 @@
 # @terra-symposium/docs
 
+## 0.2.1
+
+### Patch Changes
+
+- Use the shared command dialog for documentation search, tighten the page table of contents and toolbar, and give section menus an opaque theme surface.
+
+## 0.2.0
+
+### Minor Changes
+
+- 2a8a945: Add a read-only PNG export button to Nodes diagrams.
+
+### Patch Changes
+
+- Fix Docs workspace layout, section select styling, and prose width and heading spacing.
+
 ## 0.1.82
 
 ### Patch Changes

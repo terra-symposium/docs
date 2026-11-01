@@ -180,9 +180,7 @@ export async function generateSkillsIndex(repoRoot, outputPath) {
 }
 if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
   const root = resolve(process.argv[2] ?? process.cwd());
-  const outputPath = resolve(
-    process.argv[3] ?? join(root, 'dist/cache/skills.generated.json'),
-  );
+  const outputPath = resolve(process.argv[3] ?? join(root, 'dist/cache/skills.generated.json'));
   const skills = await generateSkillsIndex(root, outputPath);
   console.log(`Indexed ${skills.length} skills from ${root}`);
 }

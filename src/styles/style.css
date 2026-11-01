@@ -4,6 +4,7 @@
 @import '../../node_modules/@terra-symposium/styling/dist/docs-base.css';
 @import '../../node_modules/@terra-symposium/styling/dist/ui-base.css';
 @import './docs-theme.css';
+@import './prose.css';
 @tailwind utilities;
 .terra-docs {
   color: inherit;

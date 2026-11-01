@@ -39,7 +39,6 @@ import {
 } from '../../../../lib/terra/runtime/shared.js';
 import { cn, notify } from '../../../../lib/terra/runtime/runtime.js';
 import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
-import { Toc } from './_toc.js';
 import { toast } from 'sonner';
 import { useEffect, useRef, useState } from 'react';
 
@@ -1173,7 +1172,6 @@ LEAF COMPONENTS
         ) : (
           <Link active={a} node={node} mode={mode} />
         )}
-        {a && <Toc title={node.title} />}
       </SidebarMenuItem>
     );
   },

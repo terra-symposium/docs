@@ -49,6 +49,7 @@ import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import EditProvider, { Loader, TransitionShell } from './_editable.js';
 import Nav from './_sidebar.js';
+import { Toc } from './_toc.js';
 import { Suspense } from 'react';
 import { AlertError } from '@terra-symposium/styling/ui';
 import { Attachments } from './_attachments.js';
@@ -976,7 +977,7 @@ export default function Scaffold({
           <div className={cn('mx-auto w-full px-6 md:px-10', full ? 'max-w-none' : 'max-w-5xl')}>
             <div data-docs-body className="relative h-full min-h-[50vh] text-primary-12">
               <div
-                className="prose max-w-none pb-40 pt-8 transition-opacity duration-200"
+                className="prose !max-w-none pb-40 pt-8 transition-opacity duration-200"
                 data-docs-body-content
                 data-docs-view-root="true"
               >
@@ -1063,58 +1064,70 @@ export default function Scaffold({
                   />
                   {/* MAIN */}
                   <div className="w-full">
-                    <div
-                      className={cn(
-                        'mx-auto w-full px-6 md:px-10',
-                        full ? 'max-w-none' : 'max-w-5xl',
-                      )}
-                    >
+                    <div className={cn('mx-auto w-full', full ? 'max-w-none' : 'max-w-7xl')}>
                       {/* root; must be relative and fill height to constrain absolute overlay */}
                       <div data-docs-body className="relative h-full min-h-[50vh] text-primary-12">
                         {/* View and attachment modes use the document toolbar; Edit owns its original in-editor toolbar. */}
                         {a !== 'edit' && (
                           <Toolbar toolbar={toolbar} activeMode={a} editable={writable} />
                         )}
-                        {/* content */}
                         <div
                           className={cn(
-                            'prose max-w-none pb-40 transition-opacity duration-200',
-                            a === 'edit' ? 'pt-2' : 'pt-8',
+                            'mx-auto w-full px-6 md:px-10',
+                            full ? 'max-w-none' : 'max-w-7xl',
                           )}
-                          data-docs-body-content
-                          data-docs-view-root={a === 'view' ? 'true' : undefined}
                         >
-                          <ErrorBoundary
-                            name="EditorBody"
-                            resetKey={`${a}:${currDoc.path ?? ''}`}
-                            fallback={() => (
-                              <div className="p-8">
-                                <AlertError
-                                  title="Editor Surface Crashed"
-                                  description="The workspace editor canvas encountered a rendering crash. You can safely switch to attachments view to recover."
-                                />
-                              </div>
-                            )}
-                          >
-                            {hydrated &&
-                              (a === 'view' ? (
-                                <>
-                                  {beforeContent}
-                                  {viewContent ?? (
-                                    <View
-                                      body={isDocBody(currDoc.content) ? currDoc.content : []}
-                                      blocks={docsBlocks}
-                                      resetKey={currDoc.path ?? currDoc.pathname}
-                                    />
+                          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_16rem]">
+                            <div className="order-2 min-w-0 xl:order-1">
+                              {/* content */}
+                              <div
+                                className={cn(
+                                  'prose !max-w-none pb-40 transition-opacity duration-200',
+                                  a === 'edit' ? 'pt-2' : 'pt-8',
+                                )}
+                                data-docs-body-content
+                                data-docs-view-root={a === 'view' ? 'true' : undefined}
+                              >
+                                <ErrorBoundary
+                                  name="EditorBody"
+                                  resetKey={`${a}:${currDoc.path ?? ''}`}
+                                  fallback={() => (
+                                    <div className="p-8">
+                                      <AlertError
+                                        title="Editor Surface Crashed"
+                                        description="The workspace editor canvas encountered a rendering crash. You can safely switch to attachments view to recover."
+                                      />
+                                    </div>
                                   )}
-                                  {afterContent}
-                                </>
-                              ) : a === 'edit' ? (
-                                <EditorSurfaces.Edit blocks={docsBlocks} editable={writable} />
-                              ) : a === 'attachments' ? (
-                                <Attachments dPath={currDoc.path ?? ''} tree={tree} />
-                              ) : null)}
-                          </ErrorBoundary>
+                                >
+                                  {hydrated &&
+                                    (a === 'view' ? (
+                                      <>
+                                        {beforeContent}
+                                        {viewContent ?? (
+                                          <View
+                                            body={isDocBody(currDoc.content) ? currDoc.content : []}
+                                            blocks={docsBlocks}
+                                            resetKey={currDoc.path ?? currDoc.pathname}
+                                          />
+                                        )}
+                                        {afterContent}
+                                      </>
+                                    ) : a === 'edit' ? (
+                                      <EditorSurfaces.Edit
+                                        blocks={docsBlocks}
+                                        editable={writable}
+                                      />
+                                    ) : a === 'attachments' ? (
+                                      <Attachments dPath={currDoc.path ?? ''} tree={tree} />
+                                    ) : null)}
+                                </ErrorBoundary>
+                              </div>
+                            </div>
+                            <aside className="order-1 max-h-[35vh] min-w-0 overflow-y-auto overscroll-contain rounded-lg border border-primary-6 bg-primary-2/50 p-3 xl:sticky xl:top-24 xl:order-2 xl:max-h-[calc(100svh-9rem)] xl:self-start xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0">
+                              <Toc title={currDoc.title} />
+                            </aside>
+                          </div>
                         </div>
                       </div>
                     </div>

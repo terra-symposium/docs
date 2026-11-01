@@ -26,7 +26,7 @@ function Callout({ block }: { block: CalloutBlock }): JSX.Element {
   return (
     <ErrorBoundary name="CalloutBlock">
       <aside
-        className="docs-block my-0 flow-root [&>:first-child]:!mt-0 [&>:last-child]:!mb-0"
+        className="docs-block [&>:first-child]:!mt-0 [&>:last-child]:!mb-0"
         data-docs-aside={block.kind ?? 'note'}
       >
         <h4 className="title">{block.title ?? block.kind ?? 'Note'}</h4>
@@ -62,7 +62,7 @@ function CalloutEditor({
       <aside
         {...attrs}
         contentEditable={false}
-        className="docs-block my-0 flow-root rounded-md border border-primary-5 p-4"
+        className="docs-block rounded-md border border-primary-5 p-4"
         data-terra-block="callout"
         data-docs-aside={block.kind ?? 'note'}
       >

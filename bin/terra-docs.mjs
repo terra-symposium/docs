@@ -82,9 +82,7 @@ async function collectMarkdown(dir, rootDir = dir) {
 async function buildSearchIndex() {
   const files = await collectMarkdown(docsRoot);
   if (files.length === 0)
-    throw new Error(
-      'No Markdown files found in docs/. Add docs/index.md to start a Docs site.',
-    );
+    throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');
   const routeFiles = new Map();
   const records = [];
   for (const file of files) {

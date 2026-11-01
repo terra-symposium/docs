@@ -201,9 +201,7 @@ export function pageForSlug(slug: string): SitePage | undefined {
   return sitePages.find((page) => page.slug === slug);
 }
 if (sitePages.length === 0)
-  throw new Error(
-    'No Markdown files found in docs/. Add docs/index.md to start a Docs site.',
-  );
+  throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');
 for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '404')) {
   const segments = page.slug.split('/').filter(Boolean);
   let currentNodes = rootNodes;

@@ -1897,7 +1897,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                   >
                     <SelectValue placeholder="Section" />
                   </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-2 text-primary-12 shadow-lg">
                     {sects.map((s) => {
                       if (s.simulated) {
                         return (
@@ -1992,7 +1992,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           )}
         </ContextMenu>
         {/* USER */}
-        <SidebarFooter className='flex justify-between'>
+        <SidebarFooter className="!flex-row justify-between">
           <User user={userData ?? null} className="mr-auto pl-0" />
           <Button
             variant="primary-underline"
@@ -2003,7 +2003,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
               window.dispatchEvent(new Event('docs:open-search'));
             }}
           >
-            <SearchIcon/> Search
+            <SearchIcon /> Search
           </Button>
         </SidebarFooter>
         {/* RAIL */}

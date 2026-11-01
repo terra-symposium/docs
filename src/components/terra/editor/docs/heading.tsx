@@ -10,6 +10,7 @@ IMPORTS
 
 import { Children, isValidElement, useEffect, useRef, useState } from 'react';
 import { Link as LinkIcon } from '@carbon/icons-react';
+import { toast } from 'sonner';
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 
 import type { ReactNode } from 'react';
@@ -76,10 +77,22 @@ export function DocsHeading({
         className="heading-anchor"
         aria-label={`Copy link to ${text}`}
         title={`Copy link to ${text}`}
-        onClick={() => {
-          void navigator.clipboard.writeText(
-            `${window.location.origin}${window.location.pathname}#${id}`,
-          );
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(
+              `${window.location.origin}${window.location.pathname}#${id}`,
+            );
+            toast.success('Link copied', {
+              duration: 2800,
+              style: {
+                background: 'rgb(var(--primary-9))',
+                borderColor: 'rgb(var(--primary-9))',
+                color: 'rgb(var(--primary-1))',
+              },
+            });
+          } catch {
+            toast.error('Unable to copy link');
+          }
         }}
       >
         {children}

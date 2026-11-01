@@ -7,7 +7,15 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@terra-symposium/styling/ui';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -54,8 +62,6 @@ COMPONENTS
  * @return Search controls, loading and error states, and links to matching pages.
  */
 export function DocsSiteSearch({ base = '/' }: Props) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [documents, setDocuments] = useState<SearchDocument[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -68,9 +74,7 @@ export function DocsSiteSearch({ base = '/' }: Props) {
    * @return Nothing; the callback updates dialog state and browser focus.
    */
   const open = () => {
-    if (!dialog.current?.open) dialog.current?.showModal();
     setOpened(true);
-    window.setTimeout(() => input.current?.focus(), 0);
   };
   useEffect(() => {
     /**
@@ -137,35 +141,49 @@ export function DocsSiteSearch({ base = '/' }: Props) {
       .slice(0, 10);
   }, [documents, query]);
   return (
-    <div className="terra-docs-search">
-      <dialog className="terra-docs-search-dialog" ref={dialog} onClose={() => setQuery('')}>
-        <div className="terra-docs-search-panel">
-          <label className="terra-docs-search-input-row">
-            <span aria-hidden="true">⌕</span>
-            <input
-              ref={input}
-              value={query}
-              onChange={(event) => setQuery(event.currentTarget.value)}
-              placeholder="Search documentation…"
-            />
-            <button type="button" onClick={() => dialog.current?.close()} aria-label="Close search">
-              Esc
-            </button>
-          </label>
-          <div className="terra-docs-search-results" aria-live="polite">
-            {failed ? <p>Search is unavailable right now.</p> : null}
-            {!loaded && !failed ? <p>Loading search…</p> : null}
-            {loaded && query.trim() && results.length === 0 ? <p>No matching pages.</p> : null}
+    <CommandDialog
+      open={opened}
+      onOpenChange={(nextOpen) => {
+        setOpened(nextOpen);
+        if (!nextOpen) setQuery('');
+      }}
+      size="lg"
+      className="max-w-2xl"
+      aria-label="Search documentation"
+    >
+      <CommandInput value={query} onValueChange={setQuery} placeholder="Search documentation…" />
+      <CommandList className="max-h-[min(60vh,32rem)] p-2">
+        {failed ? <CommandEmpty>Search is unavailable right now.</CommandEmpty> : null}
+        {!loaded && !failed ? <CommandEmpty>Loading search…</CommandEmpty> : null}
+        {loaded && query.trim() && results.length === 0 ? (
+          <CommandEmpty>No matching pages.</CommandEmpty>
+        ) : null}
+        {results.length > 0 ? (
+          <CommandGroup>
             {results.map(({ document }) => (
-              <a key={document.href} href={document.href} onClick={() => dialog.current?.close()}>
-                <strong>{document.title}</strong>
-                {document.description ? <span>{document.description}</span> : null}
-                <small>{excerpt(document.text, query.trim().split(S_REGEX)[0] ?? query)}</small>
-              </a>
+              <CommandItem
+                key={document.href}
+                value={`${document.title} ${document.description} ${document.text}`}
+                onSelect={() => {
+                  window.location.assign(document.href);
+                  setOpened(false);
+                }}
+                className="items-start py-3"
+              >
+                <span className="flex min-w-0 flex-col gap-1">
+                  <strong>{document.title}</strong>
+                  {document.description ? (
+                    <span className="text-sm text-primary-11">{document.description}</span>
+                  ) : null}
+                  <small className="line-clamp-2 text-xs text-primary-10">
+                    {excerpt(document.text, query.trim().split(S_REGEX)[0] ?? query)}
+                  </small>
+                </span>
+              </CommandItem>
             ))}
-          </div>
-        </div>
-      </dialog>
-    </div>
+          </CommandGroup>
+        ) : null}
+      </CommandList>
+    </CommandDialog>
   );
 }

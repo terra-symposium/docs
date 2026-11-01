@@ -1,7 +1,7 @@
 /* global process, URL, document, location, console, HTMLInputElement, HTMLTextAreaElement */
 import { chromium } from '@playwright/test';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -21,8 +21,10 @@ const manifest = JSON.parse(
 const reconciliation = JSON.parse(
   await readFile(join(uniRoot, 'content/_archive/reconciliation-report.json'), 'utf8'),
 );
-const toc = JSON.parse(await readFile(join(uniRoot, 'content/toc.json'), 'utf8'));
 const leaves = manifest.leaves;
+const manifestById = new Map(leaves.map((leaf) => [leaf.id, leaf]));
+const tocOverride = await readOptionalJson(join(uniRoot, 'content/toc.json'));
+const toc = tocOverride ?? (await discoverToc(uniRoot, manifestById));
 const failures = [];
 const pageErrors = [];
 const consoleErrors = [];
@@ -36,7 +38,6 @@ const sanitySections = JSON.parse(
 const sanityLeaves = sanitySections.flatMap((section) =>
   (section.groups ?? []).flatMap((group) => group.leaves ?? []),
 );
-const manifestById = new Map(leaves.map((leaf) => [leaf.id, leaf]));
 const reconciliationPageById = new Map((reconciliation.pages ?? []).map((leaf) => [leaf.id, leaf]));
 const tocLeaves = toc.flatMap((section) =>
   (section.groups ?? []).flatMap((group) =>
@@ -47,6 +48,108 @@ const tocById = new Map(
   tocLeaves.map(({ section, group, leaf }) => [leaf.id, { section, group, leaf }]),
 );
 const imageManifest = [...(manifest.inlineImages ?? []), ...(manifest.recoveredInlineImages ?? [])];
+
+async function readOptionalJson(path) {
+  try {
+    return JSON.parse(await readFile(path, 'utf8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+function idFromDirectory(name, groupId) {
+  if (name === 'overview' && groupId) return `group-overview:${groupId}`;
+  return name.split('--').at(-1) || name;
+}
+
+function directoryTitle(name) {
+  return (name.split('--')[0] ?? name)
+    .split('-')
+    .map((word) =>
+      /^(api|astro|cli|css|html|http|seo|sql|ui|url)$/i.test(word)
+        ? word.toUpperCase()
+        : word.charAt(0).toUpperCase() + word.slice(1),
+    )
+    .join(' ');
+}
+
+function markdownTitle(source, fallback) {
+  const frontmatter = /^---\s*\n([\s\S]*?)\n---(?:\n|$)/.exec(source)?.[1] ?? '';
+  const match = /^(?:title|label):\s*(?:"([^"]*)"|'([^']*)'|(.+))\s*$/m.exec(frontmatter);
+  return (match?.[1] ?? match?.[2] ?? match?.[3]?.trim() ?? fallback).trim();
+}
+
+async function discoverToc(root, knownLeaves) {
+  const contentRoot = join(root, 'content');
+  const dirs = async (path) =>
+    (await readdir(path, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('_'))
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b));
+  const readTitle = async (path, fallback) => {
+    try {
+      return markdownTitle(await readFile(path, 'utf8'), fallback);
+    } catch (error) {
+      if (error.code === 'ENOENT') return fallback;
+      throw error;
+    }
+  };
+  const sections = [];
+  for (const sectionDir of await dirs(contentRoot)) {
+    const sectionId = idFromDirectory(sectionDir);
+    const sectionTitle = await readTitle(
+      join(contentRoot, sectionDir, 'index.md'),
+      directoryTitle(sectionDir),
+    );
+    const section = { id: sectionId, title: sectionTitle, groups: [] };
+    for (const groupDir of await dirs(join(contentRoot, sectionDir))) {
+      const groupId = idFromDirectory(groupDir);
+      const groupTitle = await readTitle(
+        join(contentRoot, sectionDir, groupDir, 'index.md'),
+        directoryTitle(groupDir),
+      );
+      const group = { id: groupId, title: groupTitle, leaves: [] };
+      for (const leafDir of await dirs(join(contentRoot, sectionDir, groupDir))) {
+        const leafPath = `content/${sectionDir}/${groupDir}/${leafDir}/index.md`;
+        try {
+          const source = await readFile(join(root, leafPath), 'utf8');
+          const id = idFromDirectory(leafDir, groupId);
+          const known = [...knownLeaves.values()].find((leaf) => leaf.path === leafPath);
+          const attachments = [];
+          for (const entry of await readdir(join(root, dirname(leafPath)), {
+            withFileTypes: true,
+          })) {
+            if (!entry.isFile() || entry.name === 'index.md') continue;
+            const path = `./${entry.name}`;
+            const bytes = await readFile(join(root, dirname(leafPath), entry.name));
+            attachments.push({
+              id: entry.name,
+              name: entry.name,
+              path,
+              type: 'fileAttachment',
+              size: bytes.length,
+              sha256: createHash('sha256').update(bytes).digest('hex'),
+            });
+          }
+          group.leaves.push({
+            id,
+            title: known?.title ?? markdownTitle(source, directoryTitle(leafDir)),
+            path: leafPath,
+            attachments,
+          });
+        } catch (error) {
+          if (error.code !== 'ENOENT') throw error;
+        }
+      }
+      group.leaves.sort((a, b) => a.title.localeCompare(b.title));
+      section.groups.push(group);
+    }
+    section.groups.sort((a, b) => a.title.localeCompare(b.title));
+    sections.push(section);
+  }
+  return sections.sort((a, b) => a.title.localeCompare(b.title));
+}
 
 function walk(value, visit) {
   if (Array.isArray(value)) {

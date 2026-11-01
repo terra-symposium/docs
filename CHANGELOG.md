@@ -1,5 +1,27 @@
 # @terra-symposium/docs
 
+## 0.1.80
+
+### Patch Changes
+
+- Resolve the package-owned Astro runtime and dependencies from consumer repositories so content-only Docs builds do not require duplicate Astro installs.
+- Use the shared Standards quality release for the package build boundary check.
+
+## 0.1.78
+
+### Patch Changes
+
+- Keep the shared Docs interface visible when a client island fails to hydrate, using the reusable Standards Astro boundary.
+- Pre-bundle `bezier-easing` as a root dependency so consumer Vite apps can hydrate the hue and workspace runtime consistently.
+
+## 0.1.77
+
+### Patch Changes
+
+- Add a reusable skills inventory component and generate its repository-local skill cache during Docs builds.
+- Fix section hue inheritance and refine the shared Docs navigation and controls.
+- Pre-bundle the Docs shell's nested React dependencies so its published client islands hydrate in consumer repositories.
+
 ## 0.1.74
 
 ### Patch Changes

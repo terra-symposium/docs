@@ -1,7 +1,7 @@
 ---
-import { DocsStaticWorkspace } from '../../lib-dist/components/StaticWorkspace.js';
+import { DocsSiteIsland } from '../../site/src/components/DocsSiteIsland.js';
+import AstroErrorBoundary from '@terra-symposium/standards-error-boundaries/astro-boundary';
 import '../../lib-dist/style.css';
-import { DocsSiteSearch } from '../../site/src/components/DocsSiteSearch.js';
 import '../../site/src/styles/search.css';
 import type { DocsAttachment, DocsSection, DocsNavNode } from '../../lib-dist/lib/index.js';
 
@@ -25,25 +25,27 @@ const { title, homeHref = '/', description, pageTitle, nodes = [], sections, cur
 const staticContent = Astro.slots.has('default');
 ---
 
-<DocsStaticWorkspace
-	client:load
-	title={title}
-	homeHref={homeHref}
-	description={description}
-	pageTitle={pageTitle}
-	nodes={nodes}
-	sections={sections}
-	currentPath={currentPath}
-	rootPath={rootPath}
-	markdown={markdown}
-	content={content}
-	attachments={attachments}
-	updatedAt={updatedAt}
-	staticContent={staticContent}
->
-	<slot />
-</DocsStaticWorkspace>
-<DocsSiteSearch client:load base={searchBase} />
+<AstroErrorBoundary title="Documentation could not load" description="The Docs interface failed to start. The error has been recorded for diagnosis." reloadLabel="Reload Docs">
+	<DocsSiteIsland
+		client:load
+		title={title}
+		homeHref={homeHref}
+		description={description}
+		pageTitle={pageTitle}
+		nodes={nodes}
+		sections={sections}
+		currentPath={currentPath}
+		rootPath={rootPath}
+		markdown={markdown}
+		content={content}
+		attachments={attachments}
+		updatedAt={updatedAt}
+		staticContent={staticContent}
+		searchBase={searchBase}
+	>
+		<slot />
+	</DocsSiteIsland>
+</AstroErrorBoundary>
 
 <style is:global>
 	.terra-docs-page-content { max-width: 100%; }

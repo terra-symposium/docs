@@ -1,3 +1,4 @@
+import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import { DOCS_VITE_OPTIMIZE_DEPS } from './lib-dist/lib/astro.js';
@@ -5,7 +6,7 @@ import { DOCS_VITE_OPTIMIZE_DEPS } from './lib-dist/lib/astro.js';
 export default defineConfig({
   outDir: './site-dist/',
   devToolbar: { enabled: false },
-  integrations: [react()],
+  integrations: [__terraErrorBoundaryIntegration(), react()],
   vite: {
     // Linked local packages (notably the live Styling checkout) must resolve
     // React through this app. Otherwise Radix's portal providers load a second

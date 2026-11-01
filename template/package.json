@@ -10,6 +10,6 @@
     "docs:preview": "terra-docs preview"
   },
   "devDependencies": {
-    "@terra-symposium/docs": "^0.1.74"
+    "@terra-symposium/docs": "^0.1.80"
   }
 }

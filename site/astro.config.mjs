@@ -149,7 +149,6 @@ function sharedReactAliases() {
     'react/jsx-runtime',
     'react-dom',
     'react-dom/client',
-    'react-dom/server',
   ];
   return specifiers.map((specifier) => {
     let replacement;

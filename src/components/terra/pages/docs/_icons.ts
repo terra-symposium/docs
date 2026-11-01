@@ -37,6 +37,7 @@ export const DOCS_BLOCK_ICONS = {
   heading: HeadingIcon,
   math: MathIcon,
   nodes: NodesIcon,
+  quiz: CatalogIcon,
   paragraph: TextIcon,
   raw: CodeIcon,
   table: TableIcon,

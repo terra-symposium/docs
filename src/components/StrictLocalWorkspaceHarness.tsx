@@ -6,6 +6,7 @@ import type { JSX } from 'react';
 declare global {
   interface Window {
     __terraDocsLocalWorkspaceFixture?: DocsLocalWorkspaceProps;
+    __terraDocsQuizHarness?: { failure?: string; response?: unknown; toolbar?: boolean };
   }
 }
 
@@ -13,9 +14,22 @@ function HarnessContent(): JSX.Element {
   const [fixture] = useState(() =>
     typeof window === 'undefined' ? undefined : window.__terraDocsLocalWorkspaceFixture,
   );
+  const quizHarness = typeof window === 'undefined' ? undefined : window.__terraDocsQuizHarness;
+  const quiz =
+    fixture?.quiz ??
+    (quizHarness
+      ? {
+          ...(quizHarness.toolbar !== undefined ? { toolbar: quizHarness.toolbar } : {}),
+          generate: async (input: unknown) => {
+            document.documentElement.dataset.quizInput = JSON.stringify(input);
+            if (quizHarness.failure) throw new Error(quizHarness.failure);
+            return quizHarness.response;
+          },
+        }
+      : undefined);
 
   return fixture ? (
-    <DocsLocalWorkspace {...fixture} />
+    <DocsLocalWorkspace {...fixture} {...(quiz ? { quiz } : {})} />
   ) : (
     <main>Local Docs workspace fixture not provided.</main>
   );

@@ -464,7 +464,7 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
     };
   });
   expect(toolbarPosition.followsHeader).toBeTruthy();
-  expect(toolbarPosition.toolbarWidth).toBeGreaterThan(700);
+  expect(toolbarPosition.toolbarWidth).toBeLessThan(300);
   expect(toolbarPosition.modeWidth).toBeGreaterThan(toolbarPosition.toolbarWidth * 0.8);
   expect(toolbarPosition.toolbarWidth - toolbarPosition.modeWidth).toBeLessThan(100);
   expect(toolbarPosition.fontFamily).toContain('Inter');
@@ -698,7 +698,7 @@ test('view headings keep hover permalinks and the sidebar table of contents beha
   await page.reload();
   await waitForWorkspaceReady(page);
 
-  const toc = page.getByRole('navigation', { name: 'Table of contents' });
+  const toc = page.getByRole('navigation', { name: 'On this page' });
   await expect(toc).toBeVisible();
   const target = toc.getByRole('link', { name: 'Jump to Find the implementation' });
   await expect(target).toBeVisible();
@@ -1190,6 +1190,11 @@ test('section creation is retained, and menus remain keyboard accessible and por
   await section.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('listbox')).toBeVisible();
+  await expect
+    .poll(() =>
+      page.getByRole('listbox').evaluate((listbox) => getComputedStyle(listbox).backgroundColor),
+    )
+    .not.toBe('rgba(0, 0, 0, 0)');
   await expect
     .poll(() =>
       page

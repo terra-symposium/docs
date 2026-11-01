@@ -5,6 +5,7 @@ import { docsHueTheme, resolveDocsTreeHue } from '../../lib/docs-theme.js';
 import Scaffold from './pages/docs/_main.js';
 import { configureDocsHost } from '../../lib/host-runtime.js';
 import type { TerraDocsWorkspaceProps } from '../../lib/host.js';
+import { DocsQuizProvider } from '../quiz.js';
 
 /** The source-preserving shared Docs workspace used by host route adapters. */
 export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element {
@@ -202,27 +203,29 @@ export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element 
 
   return (
     <div ref={portalThemeRoot} className="docs-theme-scope" {...(theme ? { style: theme } : {})}>
-      <Scaffold
-        tree={props.tree as any}
-        pathname={props.pathname}
-        permission={props.permission}
-        userData={props.userData ?? null}
-        title={props.title}
-        {...(props.path ? { path: props.path } : {})}
-        {...(props.description ? { description: props.description } : {})}
-        {...(props.contributors ? { contributors: props.contributors } : {})}
-        {...(props.updatedAt ? { updatedAt: props.updatedAt } : {})}
-        {...(props.source ? { source: props.source } : {})}
-        {...(props.content !== undefined ? { content: props.content as any } : {})}
-        {...(props.renderContent !== undefined ? { viewContent: props.renderContent } : {})}
-        {...(props.staticContent !== undefined ? { staticContent: props.staticContent } : {})}
-        {...(props.beforeContent !== undefined ? { beforeContent: props.beforeContent } : {})}
-        {...(props.afterContent !== undefined ? { afterContent: props.afterContent } : {})}
-        {...(props.standalone !== undefined ? { standalone: props.standalone } : {})}
-        {...(props.full !== undefined ? { full: props.full } : {})}
-        {...(props.mode ? { mode: props.mode } : {})}
-        {...(props.blocks ? { blocks: props.blocks } : {})}
-      />
+      <DocsQuizProvider config={props.quiz ?? {}} title={props.title} markdown={props.source ?? ''}>
+        <Scaffold
+          tree={props.tree as any}
+          pathname={props.pathname}
+          permission={props.permission}
+          userData={props.userData ?? null}
+          title={props.title}
+          {...(props.path ? { path: props.path } : {})}
+          {...(props.description ? { description: props.description } : {})}
+          {...(props.contributors ? { contributors: props.contributors } : {})}
+          {...(props.updatedAt ? { updatedAt: props.updatedAt } : {})}
+          {...(props.source ? { source: props.source } : {})}
+          {...(props.content !== undefined ? { content: props.content as any } : {})}
+          {...(props.renderContent !== undefined ? { viewContent: props.renderContent } : {})}
+          {...(props.staticContent !== undefined ? { staticContent: props.staticContent } : {})}
+          {...(props.beforeContent !== undefined ? { beforeContent: props.beforeContent } : {})}
+          {...(props.afterContent !== undefined ? { afterContent: props.afterContent } : {})}
+          {...(props.standalone !== undefined ? { standalone: props.standalone } : {})}
+          {...(props.full !== undefined ? { full: props.full } : {})}
+          {...(props.mode ? { mode: props.mode } : {})}
+          {...(props.blocks ? { blocks: props.blocks } : {})}
+        />
+      </DocsQuizProvider>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { DocsBlockOptions } from '../components/blocks.js';
+import type { DocsQuizConfig } from '../components/quiz.js';
 
 /** The portable tree-node shape used by the original Docs workspace. */
 export type DocsHostTreeNode = {
@@ -184,4 +185,6 @@ export type TerraDocsWorkspaceProps = {
   /** Disable selected shared rich blocks while keeping their stored source intact. */
   blocks?: DocsBlockOptions;
   customBlocks?: DocsCustomBlock[];
+  /** Optional ephemeral quiz flow. Hosts own the server-side generation endpoint and credentials. */
+  quiz?: DocsQuizConfig;
 };

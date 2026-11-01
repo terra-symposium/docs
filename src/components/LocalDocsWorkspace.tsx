@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { markdownToDocsValue } from '../lib/markdown-model.js';
+import type { DocsQuizConfig } from './quiz.js';
 import { TerraDocsWorkspace } from './terra/Workspace.js';
 import type { DocsBlockOptions } from './blocks.js';
 import type {
@@ -39,6 +40,8 @@ export type DocsLocalWorkspaceProps = {
   afterContent?: ReactNode;
   customBlocks?: DocsCustomBlock[];
   blocks?: DocsBlockOptions;
+  /** Optional quiz UI and server-backed generation callback. */
+  quiz?: DocsQuizConfig;
 };
 
 function normalized(value: string, base = 'http://docs.local'): string {
@@ -143,6 +146,7 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
     afterContent,
     customBlocks,
     blocks,
+    quiz,
   } = props;
   const page = findDocsLocalPage(pages, pathname) ?? pages[0];
   const content = useMemo(
@@ -288,6 +292,7 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
       {...(afterContent !== undefined ? { afterContent } : {})}
       {...(customBlocks ? { customBlocks } : {})}
       {...(blocks ? { blocks } : {})}
+      {...(quiz ? { quiz } : {})}
     />
   );
 }

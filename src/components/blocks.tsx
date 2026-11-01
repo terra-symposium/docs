@@ -5,6 +5,7 @@ import { docsValueToMarkdown } from '../lib/markdown-model.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import type { JSX, ReactNode } from 'react';
 import type { Path } from '@portabletext/editor';
+import { DocsQuizBlock } from './quiz.js';
 
 /** The portable Docs members. A host can disable any member without changing stored data. */
 export const DOCS_BLOCK_TYPES = [
@@ -17,6 +18,7 @@ export const DOCS_BLOCK_TYPES = [
   'embed',
   'math',
   'nodes',
+  'quiz',
   'raw',
   'tsDocs',
 ] as const;
@@ -87,6 +89,7 @@ export const DOCS_BLOCK_FIELDS: Record<
     { name: 'proximityConnect', type: 'boolean' },
     { name: 'markdown', type: 'string' },
   ],
+  quiz: [{ name: 'markdown', type: 'string' }],
   raw: [{ name: 'markdown', type: 'string' }],
   tsDocs: [
     { name: 'scope', type: 'string' },
@@ -104,6 +107,7 @@ const defaults: Record<DocsBlockType, RichBlock> = {
   embed: { _type: 'embed', src: '', title: '' },
   math: { _type: 'math', code: '', inline: false },
   nodes: { _type: 'nodes', nodes: [], edges: [], direction: 'TB' },
+  quiz: { _type: 'quiz' },
   raw: { _type: 'raw', markdown: '' },
   tsDocs: { _type: 'tsDocs', scope: '' },
 };
@@ -412,6 +416,8 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
           {block.markdown && <p>{text(block.markdown)}</p>}
         </section>
       );
+    case 'quiz':
+      return <DocsQuizBlock />;
     default:
       return (
         <pre data-unsupported-block={block._type}>{block.markdown ?? JSON.stringify(block)}</pre>

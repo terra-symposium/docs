@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 import { Button } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '@terra-symposium/standards-error-boundaries/react';
 import { TerraDocsWorkspace } from './terra/Workspace.js';
+import type { DocsQuizConfig } from './quiz.js';
 
 // TYPES
 import type { DocsAttachment, DocsLeaf, DocsSection } from '../lib/workspace-types.js';
@@ -53,6 +54,8 @@ type Props = {
   renderContent?: ReactNode;
   children?: ReactNode;
   staticContent?: boolean;
+  /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
+  quiz?: DocsQuizConfig;
 };
 
 /*//////////////////////////////////////////////////
@@ -206,6 +209,7 @@ export function DocsStaticWorkspace({
   renderContent,
   children,
   staticContent = false,
+  quiz,
 }: Props): JSX.Element {
   const workspaceSections: DocsSection[] = sections ?? sectionsFromNavigation(nodes);
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
@@ -461,6 +465,7 @@ export function DocsStaticWorkspace({
           source={markdown}
           content={docContent}
           staticContent={staticContent}
+          {...(quiz ? { quiz } : {})}
           {...(readyContent !== undefined ? { renderContent: readyContent } : {})}
         />
       </ErrorBoundary>

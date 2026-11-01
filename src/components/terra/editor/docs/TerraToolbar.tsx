@@ -48,6 +48,7 @@ const DOCS_INSERTIONS: readonly DocsInsertion[] = [
   { label: 'Receive value', type: 'code', value: 'docs:code-received' },
   { label: 'Add attachment', type: 'attachment', value: 'docs:attachment' },
   { label: 'Nodes', type: 'nodes', value: 'docs:nodes' },
+  { label: 'Quiz generator', type: 'quiz', value: 'docs:quiz' },
   { label: 'TypeScript docs', type: 'tsDocs', value: 'docs:tsDocs' },
   { label: 'Raw', type: 'raw', value: 'docs:raw' },
   { label: 'Table', type: 'table', value: 'docs:table' },

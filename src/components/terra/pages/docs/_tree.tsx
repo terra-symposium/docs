@@ -27,6 +27,7 @@ import {
 import { runMutation } from '../../../../lib/terra/docs/mutations.js';
 import { download, uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
+import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import {
   bName,
   cTitle,
@@ -213,6 +214,7 @@ function Link({
           onClick={async (e: ReactMouseEvent<HTMLAnchorElement>) => {
             if (asset || (node.type === 'leaf' && node.fileType === 'pdf')) return;
             if (e.button !== 0 || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+            if (getDocsHostAdapter()?.navigationMode === 'document') return;
             e.preventDefault();
             if (a || transitioning || !('url' in node) || !node.url) return;
             if (node.type !== 'leaf') return;

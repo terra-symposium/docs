@@ -41,11 +41,13 @@ export default function WorkspaceDemo({
   hue = 145,
   siteTitle = 'Salesphere Docs',
   siteDescription = 'Product and engineering documentation.',
+  syncParentOnNavigate = true,
 }: {
   readOnly?: boolean;
   hue?: number | null;
   siteTitle?: string;
   siteDescription?: string | null;
+  syncParentOnNavigate?: boolean;
 } = {}): JSX.Element {
   const [state, setState] = useState<WorkspaceDemoState>(() => createWorkspaceDemoSeed());
   const [location, setLocation] = useState(WORKSPACE_DEMO_PATH);
@@ -69,13 +71,13 @@ export default function WorkspaceDemo({
     syncFixture();
     window.addEventListener('terra-docs-fixture-updated', syncFixture);
     window.addEventListener('popstate', syncFixture);
-    document.addEventListener('docs:navigate', syncLocation);
+    if (syncParentOnNavigate) document.addEventListener('docs:navigate', syncLocation);
     return () => {
       window.removeEventListener('terra-docs-fixture-updated', syncFixture);
       window.removeEventListener('popstate', syncFixture);
-      document.removeEventListener('docs:navigate', syncLocation);
+      if (syncParentOnNavigate) document.removeEventListener('docs:navigate', syncLocation);
     };
-  }, []);
+  }, [syncParentOnNavigate]);
 
   const selectedId = activeDocumentId(state, location);
   const selectedDocument = state.documents[selectedId] ?? state.documents.salesphere;

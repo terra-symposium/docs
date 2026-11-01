@@ -294,6 +294,7 @@ export function DocsStaticWorkspace({
     ...(i.size !== undefined ? { size: i.size } : {}),
   }));
   const host: DocsHostAdapter = {
+    navigationMode: 'document',
     capabilities: {
       read: true,
       write: false,

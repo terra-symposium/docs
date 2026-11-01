@@ -11,4 +11,4 @@ Write documentation in `docs/`. Add `index.md` for the home page and any nested 
 
 Build the static site into `dist/docs/` with `pnpm docs:build`. The template CI checks that build; configure a host and deployment workflow when the repository is ready to publish.
 
-Optional Markdown frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). A `docs/404.md` file customizes the generated not-found page.
+Optional Markdown frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). The generated not-found page always uses the shared Docs interface; a host-specific `docs/404.md` override is not supported.

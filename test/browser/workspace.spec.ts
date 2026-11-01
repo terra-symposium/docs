@@ -81,6 +81,9 @@ test(
   async ({ page }) => {
     await page.goto('/workspace-readonly/');
     await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
+    if ((page.viewportSize()?.width ?? 0) < 768) {
+      await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
+    }
 
     const sectionSelect = page.getByRole('combobox', { name: 'Section' });
     await expect(sectionSelect).toBeVisible();
@@ -559,6 +562,94 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
 
   await page.screenshot({ path: '/tmp/terra-docs-shared-desktop.png', fullPage: true });
 });
+
+test(
+  'switching between leaves hot-swaps the active document without a page reload',
+  {
+    tag: '@viewport:xl',
+    annotation: {
+      type: 'viewport-reason',
+      description: 'Leaf navigation and document replacement are exercised in the wide workspace.',
+    },
+  },
+  async ({ page }) => {
+    await page.addInitScript(() => {
+      const key = 'terra-docs-document-instance-count';
+      const current = Number(sessionStorage.getItem(key) ?? '0');
+      sessionStorage.setItem(key, String(current + 1));
+    });
+    await page.goto('/workspace-stable-demo/?section=overview&group=start-here&leaf=salesphere');
+    await waitForWorkspaceReady(page);
+    await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue(
+      'Salesphere',
+    );
+    await expect(page.locator('[data-docs-view-root]')).toContainText('Start with the product');
+    await page.getByRole('combobox', { name: 'Mode' }).click();
+    await page.getByRole('option', { name: 'Edit', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'Document editor' });
+    await expect(editor).toContainText('Start with the product');
+
+    await page.getByRole('link', { name: 'Runtime map', exact: true }).click();
+    await expect(page).toHaveURL(/leaf=runtime-map/);
+    await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue(
+      'Runtime map',
+    );
+    await expect(editor).toContainText('The request enters through the Astro application.');
+    await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
+
+    await page.getByRole('link', { name: 'Salesphere', exact: true }).click();
+    await expect(page).toHaveURL(/leaf=salesphere/);
+    await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue(
+      'Salesphere',
+    );
+    await expect(editor).toContainText('Start with the product');
+    await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
+    await expect
+      .poll(() => page.evaluate(() => sessionStorage.getItem('terra-docs-document-instance-count')))
+      .toBe('1');
+  },
+);
+
+test(
+  'static Docs sibling links navigate to the selected leaf without dispatching stale content',
+  {
+    tag: '@viewport:xl',
+    annotation: {
+      type: 'viewport-reason',
+      description:
+        'Static sibling pages must render their own content instead of hot-swapping the current body.',
+    },
+  },
+  async ({ page }) => {
+    let loadCount = 0;
+    page.on('load', () => {
+      loadCount += 1;
+    });
+    await page.addInitScript(() => {
+      document.addEventListener('docs:navigate', (event) => {
+        const detail = (event as CustomEvent<{ pathname?: string }>).detail;
+        if (detail.pathname && detail.pathname !== window.location.pathname) {
+          sessionStorage.setItem('terra-docs-stale-navigation', detail.pathname);
+        }
+      });
+    });
+    await page.goto('/static-leaf-swap/one/');
+    await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
+    await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Leaf one');
+    const content = page.locator('[data-docs-view-root]');
+    await expect(content).toContainText('Content from the first static leaf.');
+    expect(loadCount).toBe(1);
+
+    await page.getByRole('link', { name: 'Leaf two', exact: true }).click();
+    await expect(page).toHaveURL(/\/static-leaf-swap\/two\/$/);
+    await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Leaf two');
+    await expect(content).toContainText('Content from the second static leaf.');
+    await expect
+      .poll(() => page.evaluate(() => sessionStorage.getItem('terra-docs-stale-navigation')))
+      .toBeNull();
+    expect(loadCount).toBe(2);
+  },
+);
 
 test('view headings keep hover permalinks and the sidebar table of contents behavior', async ({
   page,

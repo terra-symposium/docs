@@ -115,6 +115,8 @@ export type DocsHostOperationContracts = {
 /** Host boundary for storage, authorization, URLs, and mutations. */
 export type DocsHostAdapter = {
   capabilities: DocsHostCapabilities;
+  /** Whether this host must load each document as its own browser page. */
+  navigationMode?: 'client' | 'document';
   /** Legacy action bridge for host-specific operations outside the stable contract. */
   invoke<T = unknown>(
     operation: DocsActionOperation,

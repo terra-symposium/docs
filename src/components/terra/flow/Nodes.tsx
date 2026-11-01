@@ -9,6 +9,7 @@ IMPORTS
 
 // API
 import katex from 'katex';
+import { toPng } from 'html-to-image';
 import {
   applyEdgeChanges,
   applyNodeChanges,
@@ -45,6 +46,7 @@ import {
   DistributeVerticalCenter as DistributeVerticalCenterIcon,
   DistributeVerticalTop as DistributeVerticalTopIcon,
   Document as NoteIcon,
+  Download as DownloadIcon,
   Edit as EditIcon,
   MagicWand as WandIcon,
   Maximize as MaximizeIcon,
@@ -648,8 +650,10 @@ const FLOW_COMPONENTS = {
     // STATES
     const {
       fitView,
+      getViewport,
       screenToFlowPosition: screenToFlowPos,
       getIntersectingNodes,
+      setViewport,
       updateNodeData,
       getNodes,
     } = useReactFlow();
@@ -660,6 +664,7 @@ const FLOW_COMPONENTS = {
     const dragTgtGroup = useRef<string | null>(null);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [ready, setReady] = useState(readyWhenEmpty && flow.nodes.length === 0);
+    const [isExporting, setIsExporting] = useState(false);
     const notified = useRef(false);
     const [menuCtx, setMenuCtx] = useState<FlowMenuContext>({ type: 'pane', id: null });
 
@@ -724,6 +729,48 @@ const FLOW_COMPONENTS = {
       }
       return locked(tgtNode);
     }, [flow.nodes.length, lockedTypes, menuCtx, tgtNode]);
+    const exportDiagram = useCallback(async (): Promise<void> => {
+      const wrapper = reactFlowWrapper.current;
+      if (!wrapper || isExporting || !ready) return;
+      const viewport = getViewport();
+      const handles = wrapper.querySelectorAll<HTMLElement>('.flow-node-handle');
+      const handleVisibility = Array.from(handles, (handle) => handle.style.visibility);
+      setIsExporting(true);
+      try {
+        await fitView({ padding: 0.15, duration: 0 });
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        handles.forEach((handle) => {
+          handle.style.visibility = 'hidden';
+        });
+        const dataUrl = await toPng(wrapper, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: '#fff',
+          style: { backgroundColor: '#fff', color: '#111827' },
+          filter: (node) =>
+            ![
+              'react-flow__controls',
+              'react-flow__background',
+              'react-flow__attribution',
+              'react-flow__handle',
+            ].some((className) => node.classList?.contains(className)),
+        });
+        const link = document.createElement('a');
+        link.download = 'diagram.png';
+        link.href = dataUrl;
+        link.click();
+      } catch (error) {
+        errorLog('Nodes', 'export.failed', error);
+      } finally {
+        handles.forEach((handle, index) => {
+          handle.style.visibility = handleVisibility[index] ?? '';
+        });
+        await setViewport(viewport, { duration: 0 }).catch((error) => {
+          errorLog('Nodes', 'export.viewport-restore.failed', error);
+        });
+        setIsExporting(false);
+      }
+    }, [fitView, getViewport, isExporting, ready, setViewport]);
 
     // RENDER
     return (
@@ -909,6 +956,16 @@ const FLOW_COMPONENTS = {
                     >
                       <MaximizeIcon aria-hidden="true" />
                     </ControlButton>
+                    {!editable && (
+                      <ControlButton
+                        aria-label="Export diagram as PNG"
+                        title="Export diagram as PNG"
+                        disabled={isExporting || !ready}
+                        onClick={() => void exportDiagram()}
+                      >
+                        <DownloadIcon aria-hidden="true" />
+                      </ControlButton>
+                    )}
                   </Controls>
                 )
               )}

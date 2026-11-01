@@ -1,0 +1,61 @@
+---
+import { DocsStaticWorkspace } from '../../components/StaticWorkspace.js';
+import '@terra-symposium/docs/style.css';
+
+export function getStaticPaths() {
+  return [
+    {
+      params: { page: 'one' },
+      props: {
+        page: 'one',
+        title: 'Leaf one',
+        markdown: '# Leaf one\n\nContent from the first static leaf.',
+      },
+    },
+    {
+      params: { page: 'two' },
+      props: {
+        page: 'two',
+        title: 'Leaf two',
+        markdown: '# Leaf two\n\nContent from the second static leaf.',
+      },
+    },
+  ];
+}
+
+const { page, title: pageTitle, markdown } = Astro.props;
+const sections = [
+  {
+    id: 'section',
+    title: 'Section',
+    groups: [
+      {
+        id: 'group',
+        title: 'Pages',
+        leaves: [
+          { id: 'one', title: 'Leaf one', href: '/static-leaf-swap/one/' },
+          { id: 'two', title: 'Leaf two', href: '/static-leaf-swap/two/' },
+        ],
+      },
+    ],
+  },
+];
+---
+<!doctype html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle} | Static Docs fixture</title>
+  </head>
+  <body>
+    <DocsStaticWorkspace
+      client:load
+      title="Static Docs fixture"
+      sections={sections}
+      currentPath={`/static-leaf-swap/${page}/`}
+      pageTitle={pageTitle}
+      markdown={markdown}
+    />
+  </body>
+</html>

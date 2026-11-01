@@ -1,5 +1,12 @@
 # @terra-symposium/docs
 
+## 0.1.82
+
+### Patch Changes
+
+- Use one shared, viewport-centered not-found page across generated Docs sites.
+- Navigate between static Docs leaves as full document links so the current page content is not applied to a sibling route.
+
 ## 0.1.81
 
 ### Patch Changes

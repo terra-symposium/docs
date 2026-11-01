@@ -1,6 +1,6 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.1.81",
+  "version": "0.1.82",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
@@ -59,7 +59,7 @@
     "format:check": "prettier --check .",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck",
     "test": "pnpm build && node --test test/*.test.mjs",
-    "test:browser": "pnpm docs:build && node scripts/acquire-playwright-port.mjs && playwright test",
+    "test:browser": "pnpm build && pnpm exec astro build --config astro.config.mjs && node scripts/acquire-playwright-port.mjs && playwright test",
     "test:report:slides": "node scripts/generate-screenshot-deck.mjs",
     "prepare": "husky",
     "changeset": "changeset",
@@ -112,6 +112,7 @@
     "@uiw/codemirror-theme-github": "^4.25.9",
     "@xyflow/react": "^12.3.6",
     "astro": "^7.4.2",
+    "html-to-image": "1.11.11",
     "jszip": "^3.10.1",
     "katex": "^0.19.1",
     "lexical": "^0.35.0",

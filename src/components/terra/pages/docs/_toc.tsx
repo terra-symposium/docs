@@ -211,7 +211,7 @@ export function Toc({ title }: { title?: string }): JSX.Element | null {
       <p className="m-0 px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-primary-11">
         On this page
       </p>
-      <ol className="m-0 flex list-none flex-col gap-0 p-0">
+      <ol className="m-0 flex list-none flex-col gap-2 p-0">
         {heads.map((h) => (
           <li key={h.id}>
             <ButtonLink
@@ -222,7 +222,7 @@ export function Toc({ title }: { title?: string }): JSX.Element | null {
               size="xs"
               aria-label={`Jump to ${h.text}`}
               className={cn(
-                'relative h-7 min-h-7 w-full justify-start truncate pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
+                'relative h-fit min-h-0 w-full justify-start truncate pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
                 a === h.id
                   ? 'text-primary-12 before:bg-current'
                   : 'text-primary-11 before:bg-primary-11 before:opacity-0 hover:before:opacity-100',

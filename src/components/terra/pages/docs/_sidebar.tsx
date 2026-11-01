@@ -1897,7 +1897,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                   >
                     <SelectValue placeholder="Section" />
                   </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-2 text-primary-12 shadow-lg">
+                  <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
                     {sects.map((s) => {
                       if (s.simulated) {
                         return (

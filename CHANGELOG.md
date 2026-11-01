@@ -1,5 +1,15 @@
 # @terra-symposium/docs
 
+## 0.3.0
+
+### Minor Changes
+
+- 62c55f6: Add host-configurable leaf quiz generation, review, and multi-step quiz rendering.
+
+### Patch Changes
+
+- Make the on-page navigation compact and align the full-width toolbar with the document content.
+
 ## 0.2.1
 
 ### Patch Changes

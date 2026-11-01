@@ -1,6 +1,6 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
@@ -16,6 +16,7 @@
     "bin",
     "site",
     "src/components/navigation.tsx",
+    "src/components/quiz-demo-fixture.ts",
     "src/components/SiteLayout.astro",
     "src/components/NotFound.astro",
     "src/components/NotFound.tsx"

@@ -1,4 +1,8 @@
 import { expect, test } from '@playwright/test';
+import {
+  quizDemoLeaf,
+  quizDemoResponse,
+} from '../../../../../../src/components/quiz-demo-fixture.js';
 
 const fixture = {
   tree: [
@@ -9,9 +13,9 @@ const fixture = {
       children: [
         {
           type: 'leaf',
-          origName: 'quiz-leaf',
-          title: 'Course Leaf',
-          path: 'course/quiz-leaf/index.md',
+          origName: quizDemoLeaf.id,
+          title: quizDemoLeaf.title,
+          path: quizDemoLeaf.path,
           url: '/strict-local-workspace-harness/',
         },
       ],
@@ -19,12 +23,8 @@ const fixture = {
   ],
   pages: [
     {
-      id: 'quiz-leaf',
-      path: 'content/course/quiz-leaf/index.md',
+      ...quizDemoLeaf,
       pathname: '/strict-local-workspace-harness/',
-      title: 'Course Leaf',
-      markdown:
-        'Leaf source: routing sends packets between networks.\n\n:::terra-docs quiz\n_type: quiz\n:::',
     },
   ],
   pathname: '/strict-local-workspace-harness/',
@@ -33,19 +33,7 @@ const fixture = {
   homePath: '/docs/quiz-leaf/',
 };
 
-const response = {
-  title: 'Routing quiz',
-  questions: [
-    {
-      type: 'multipleChoice',
-      prompt: 'What does a router do?',
-      opts: ['Routes packets', 'Stores files'],
-      answer: 'Routes packets',
-      explanation: 'It forwards packets between networks.',
-    },
-    { type: 'keyword', prompt: 'What does it forward?', answers: ['packets'] },
-  ],
-};
+const response = quizDemoResponse;
 
 async function openQuizWorkspace(
   page: import('@playwright/test').Page,

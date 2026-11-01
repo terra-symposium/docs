@@ -1,6 +1,6 @@
 import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { defineConfig } from 'astro/config';
@@ -13,9 +13,9 @@ import { docsContentPlugin } from './docs-content-plugin.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const requireFromPackage = createRequire(import.meta.url);
-const astroManifest = JSON.parse(
-  readFileSync(requireFromPackage.resolve('astro/package.json'), 'utf8'),
-);
+const astroManifestPath = requireFromPackage.resolve('astro/package.json');
+const astroManifest = JSON.parse(readFileSync(astroManifestPath, 'utf8'));
+const astroPackageRoot = dirname(astroManifestPath);
 const docsManifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
 const projectRoot = process.env.TERRA_DOCS_ROOT ?? process.cwd();
 const publicDir = resolve(projectRoot, '.terra-docs/public');
@@ -30,7 +30,6 @@ const projectManifest = (() => {
   }
 })();
 const requireFromProject = createRequire(resolve(projectRoot, 'package.json'));
-
 function packageExportAliases() {
   if (!projectManifest.name || !projectManifest.exports) return [];
   const escapeRegex = (value) => value.replace(/[|\\{}()[\]^$+?.]/g, '\\$&');
@@ -49,36 +48,53 @@ function packageExportAliases() {
 }
 
 function astroPackageExportAliases() {
-  return Object.keys(astroManifest.exports)
+  return [
+    {
+      // Astro's MDX renderer imports this internal runtime path, which Astro
+      // does not expose through package exports. Resolve it from Docs' Astro.
+      find: /^astro\/runtime\/(.+)$/,
+      replacement: resolve(astroPackageRoot, 'dist/runtime/$1'),
+    },
+    ...Object.keys(astroManifest.exports)
     .filter((key) => key.startsWith('./') && !key.includes('*'))
     .map((key) => {
       const specifier = `astro${key.slice(1)}`;
-      try {
-        requireFromProject.resolve(specifier);
-        return null;
-      } catch {
-        // Package-owned Astro installation is the fallback for content-only repos.
-      }
       return {
         find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
         replacement: requireFromPackage.resolve(specifier),
       };
-    })
-    .filter(Boolean);
+    }),
+  ];
+}
+
+function dependencyManifest(name) {
+  let entry;
+  try {
+    entry = requireFromPackage.resolve(name);
+  } catch {
+    return null;
+  }
+  let directory = resolve(entry, '..');
+  while (directory !== resolve(directory, '..')) {
+    const manifestPath = resolve(directory, 'package.json');
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      if (manifest.name === name) return manifest;
+    } catch {
+      // Keep walking through package subdirectories until the owning manifest is found.
+    }
+    directory = resolve(directory, '..');
+  }
+  return null;
 }
 
 function packageDependencyAliases() {
   return Object.keys(docsManifest.dependencies ?? {})
     .filter((name) => name !== 'astro')
     .flatMap((name) => {
-      const manifestPath = resolve(packageRoot, 'node_modules', name, 'package.json');
-      let dependencyManifest;
-      try {
-        dependencyManifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-      } catch {
-        return [];
-      }
-      const subpaths = Object.keys(dependencyManifest.exports ?? {}).filter(
+      const manifest = dependencyManifest(name);
+      if (!manifest) return [];
+      const subpaths = Object.keys(manifest.exports ?? {}).filter(
         (key) => key.startsWith('./') && !key.includes('*'),
       );
       return [name, ...subpaths.map((key) => `${name}${key.slice(1)}`)].flatMap((specifier) => {
@@ -107,9 +123,18 @@ function sharedReactAliases() {
     'react-dom/server',
   ];
   return specifiers.map((specifier) => {
+    let replacement;
+    try {
+      // Externalized component dependencies resolve React from the consumer's
+      // installation during SSR. Prefer that same copy for bundled imports.
+      replacement = requireFromProject.resolve(specifier);
+    } catch {
+      // Content-only repositories can rely on the React runtime shipped by Docs.
+      replacement = requireFromPackage.resolve(specifier);
+    }
     return {
       find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
-      replacement: requireFromPackage.resolve(specifier),
+      replacement,
     };
   });
 }
@@ -141,9 +166,14 @@ export default defineConfig({
       dedupe: ['react', 'react-dom'],
     },
     ssr: {
-      // Bundle React peer consumers with the package-owned React runtime so
-      // static rendering does not load two copies across pnpm virtual stores.
-      noExternal: ['@terra-symposium/styling', '@terra-symposium/standards-error-boundaries'],
+      // Bundle the shared UI and its React hook dependencies together so SSR
+      // cannot load a second React copy from a pnpm peer-dependency store.
+      noExternal: [
+        '@terra-symposium/styling',
+        '@terra-symposium/standards-error-boundaries',
+        'react-hook-form',
+        /^@radix-ui\/react-/,
+      ],
     },
     server: { fs: { allow: [projectRoot, packageRoot] } },
   },

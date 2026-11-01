@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
-import { DocsSiteLayout } from '../lib-dist/components/SiteLayout.js';
+import { DocsSiteLayout } from '../dist/lib/components/SiteLayout.js';
 
 const sections = [
   {

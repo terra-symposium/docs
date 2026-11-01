@@ -15,7 +15,7 @@ export default withResponsivePlaywright(
       },
     },
     webServer: {
-      command: `python3 -m http.server ${port} --bind 127.0.0.1 --directory site-dist`,
+      command: `python3 -m http.server ${port} --bind 127.0.0.1 --directory dist/site`,
       url: `${baseURL}/`,
       reuseExistingServer: false,
       timeout: 120_000,

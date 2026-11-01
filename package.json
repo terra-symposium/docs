@@ -12,7 +12,7 @@
     "node": ">=24.12.0"
   },
   "files": [
-    "lib-dist",
+    "dist/lib",
     "bin",
     "site",
     "src/components/navigation.tsx",
@@ -22,17 +22,17 @@
   ],
   "exports": {
     ".": {
-      "types": "./lib-dist/lib/index.d.ts",
-      "import": "./lib-dist/lib/index.js"
+      "types": "./dist/lib/lib/index.d.ts",
+      "import": "./dist/lib/lib/index.js"
     },
-    "./style.css": "./lib-dist/style.css",
+    "./style.css": "./dist/lib/style.css",
     "./astro": {
-      "types": "./lib-dist/lib/astro.d.ts",
-      "import": "./lib-dist/lib/astro.js"
+      "types": "./dist/lib/lib/astro.d.ts",
+      "import": "./dist/lib/lib/astro.js"
     },
     "./local-workspace": {
-      "types": "./lib-dist/components/LocalDocsWorkspace.d.ts",
-      "import": "./lib-dist/components/LocalDocsWorkspace.js"
+      "types": "./dist/lib/components/LocalDocsWorkspace.d.ts",
+      "import": "./dist/lib/components/LocalDocsWorkspace.js"
     },
     "./site-layout.astro": "./src/components/SiteLayout.astro",
     "./not-found.astro": "./src/components/NotFound.astro",
@@ -51,7 +51,7 @@
     "docs:preview": "pnpm docs:build && node bin/terra-docs.mjs preview --title 'Docs'",
     "dev:library": "tsc --watch",
     "prebuild": "pnpm exec terra-quality error-boundaries --all",
-    "build": "rm -rf lib-dist && tsc && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/style.css -o lib-dist/style.css --minify && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/workspace.css -o lib-dist/workspace.css --minify && node scripts/copy-runtime.mjs",
+    "build": "rm -rf dist/lib && tsc && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
     "build:demo": "vite build",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.demo.json",
     "lint": "eslint .",

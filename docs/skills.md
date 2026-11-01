@@ -5,12 +5,12 @@ description: Build a searchable inventory of repository skills in a Docs site.
 
 # Skills inventory
 
-Docs exports a reusable `SkillsExplorer` component for repositories that keep agent guidance in `SKILL.md` files. The Docs build indexes skill files in the repository and writes the cache to `.terra-docs/cache/skills.generated.json`.
+Docs exports a reusable `SkillsExplorer` component for repositories that keep agent guidance in `SKILL.md` files. The Docs build indexes skill files in the repository and writes the cache to `dist/cache/skills.generated.json`.
 
 For example, add `docs/skills/index.mdx` and pass the generated cache to the component:
 
 ```mdx
-import skills from '../../.terra-docs/cache/skills.generated.json';
+import skills from '../../dist/cache/skills.generated.json';
 import { SkillsExplorer } from '@terra-symposium/docs/skills';
 
 <SkillsExplorer client:load skills={skills} />

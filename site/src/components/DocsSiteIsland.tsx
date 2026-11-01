@@ -19,7 +19,7 @@ CONFIG
 
 const { lazy, Suspense } = React;
 const DocsStaticWorkspace = lazy(() =>
-  import('../../../lib-dist/components/StaticWorkspace.js').then(({ DocsStaticWorkspace }) => ({
+  import('../../../dist/lib/components/StaticWorkspace.js').then(({ DocsStaticWorkspace }) => ({
     default: DocsStaticWorkspace,
   })),
 );

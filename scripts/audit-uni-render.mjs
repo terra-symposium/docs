@@ -14,7 +14,7 @@ const screenshotDir = resolve(process.env.UNI_RENDER_SCREENSHOTS || '/tmp/uni-re
 const pkgRoot = dirname(
   await realpath(join(uniRoot, 'node_modules/@terra-symposium/docs/package.json')),
 );
-const docsPkg = await import(pathToFileURL(join(pkgRoot, 'lib-dist/lib/index.js')));
+const docsPkg = await import(pathToFileURL(join(pkgRoot, 'dist/lib/lib/index.js')));
 const manifest = JSON.parse(
   await readFile(join(uniRoot, 'content/_archive/manifest.json'), 'utf8'),
 );

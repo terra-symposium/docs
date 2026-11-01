@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../lib-dist/components/blocks.js';
-import { docsValueToMarkdown, markdownToDocsValue } from '../lib-dist/lib/markdown-model.js';
-import { renderMarkdown } from '../lib-dist/lib/markdown.js';
-import { stringifyDocBody } from '../lib-dist/lib/terra/runtime/content/document-markdown.js';
-import { renderMd, toCodeJsx } from '../lib-dist/lib/terra/runtime/content/markdown.js';
+import { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../dist/lib/components/blocks.js';
+import { docsValueToMarkdown, markdownToDocsValue } from '../dist/lib/lib/markdown-model.js';
+import { renderMarkdown } from '../dist/lib/lib/markdown.js';
+import { stringifyDocBody } from '../dist/lib/lib/terra/runtime/content/document-markdown.js';
+import { renderMd, toCodeJsx } from '../dist/lib/lib/terra/runtime/content/markdown.js';
 
 function withoutPortableTextKeys(value) {
   if (Array.isArray(value)) return value.map(withoutPortableTextKeys);

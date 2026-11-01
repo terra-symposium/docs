@@ -7,7 +7,7 @@ import postcss from 'postcss';
 const root = fileURLToPath(new URL('../', import.meta.url));
 
 test('the packed Docs stylesheet is a single deterministic Styling and Docs cascade', async () => {
-  const style = await readFile(`${root}/lib-dist/style.css`, 'utf8');
+  const style = await readFile(`${root}/dist/lib/style.css`, 'utf8');
   assert.doesNotMatch(style, /@import\s|@tailwind\s|@terra-symposium\/styling\/ui\.css/);
   assert.match(style, /\.flex\s*\{\s*display:\s*flex\s*\}/);
   assert.match(style, /\.md\\:hidden\s*\{\s*display:\s*none\s*\}/);
@@ -37,7 +37,7 @@ test('the packed Docs stylesheet is a single deterministic Styling and Docs casc
 });
 
 test('math font URLs in the package stylesheet resolve inside its published files', async () => {
-  const css = await readFile(`${root}/lib-dist/style.css`, 'utf8');
+  const css = await readFile(`${root}/dist/lib/style.css`, 'utf8');
   assert.match(css, /fonts\/KaTeX_Main-Regular\.woff2/);
-  await stat(`${root}/lib-dist/fonts/KaTeX_Main-Regular.woff2`);
+  await stat(`${root}/dist/lib/fonts/KaTeX_Main-Regular.woff2`);
 });

@@ -29,9 +29,7 @@ const ignoredDirs = new Set([
   'coverage',
   'dist',
   'docs-dist',
-  'lib-dist',
   'node_modules',
-  'site-dist',
   'target',
   'vendor',
 ]);
@@ -183,7 +181,7 @@ export async function generateSkillsIndex(repoRoot, outputPath) {
 if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
   const root = resolve(process.argv[2] ?? process.cwd());
   const outputPath = resolve(
-    process.argv[3] ?? join(root, '.terra-docs/cache/skills.generated.json'),
+    process.argv[3] ?? join(root, 'dist/cache/skills.generated.json'),
   );
   const skills = await generateSkillsIndex(root, outputPath);
   console.log(`Indexed ${skills.length} skills from ${root}`);

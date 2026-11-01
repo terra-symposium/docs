@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, 'src', 'lib', 'terra');
-const output = join(root, 'lib-dist', 'lib', 'terra');
+const output = join(root, 'dist', 'lib', 'lib', 'terra');
 
 async function copyRuntime(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -21,28 +21,28 @@ async function copyRuntime(directory) {
 }
 
 await copyRuntime(source);
-await mkdir(join(root, 'lib-dist'), { recursive: true });
+await mkdir(join(root, 'dist', 'lib'), { recursive: true });
 for (const name of ['EditorHarness', 'WorkspaceDemo']) {
   for (const extension of ['js', 'js.map', 'd.ts', 'd.ts.map']) {
-    await rm(join(root, 'lib-dist', 'components', `${name}.${extension}`), { force: true });
+    await rm(join(root, 'dist', 'lib', 'components', `${name}.${extension}`), { force: true });
   }
 }
 await cp(
   join(root, 'node_modules', '@terra-symposium', 'styling', 'dist', 'assets', 'fonts'),
-  join(root, 'lib-dist', 'assets', 'fonts'),
+  join(root, 'dist', 'lib', 'assets', 'fonts'),
   { recursive: true },
 );
 // Keep authored Docs prose after generated utilities, matching the original
 // website's cascade where its prose stylesheet loaded after global.css. Styling's
 // effect layer also contains authored @layer rules, so append it last.
-const workspaceStyles = await readFile(join(root, 'lib-dist', 'workspace.css'), 'utf8');
-await appendFile(join(root, 'lib-dist', 'style.css'), `\n${workspaceStyles}`);
-await rm(join(root, 'lib-dist', 'workspace.css'), { force: true });
+const workspaceStyles = await readFile(join(root, 'dist', 'lib', 'workspace.css'), 'utf8');
+await appendFile(join(root, 'dist', 'lib', 'style.css'), `\n${workspaceStyles}`);
+await rm(join(root, 'dist', 'lib', 'workspace.css'), { force: true });
 const effects = await readFile(
   join(root, 'node_modules', '@terra-symposium', 'styling', 'dist', 'effects.css'),
   'utf8',
 );
-await appendFile(join(root, 'lib-dist', 'style.css'), `\n${effects}`);
-await cp(join(root, 'node_modules', 'katex', 'dist', 'fonts'), join(root, 'lib-dist', 'fonts'), {
+await appendFile(join(root, 'dist', 'lib', 'style.css'), `\n${effects}`);
+await cp(join(root, 'node_modules', 'katex', 'dist', 'fonts'), join(root, 'dist', 'lib', 'fonts'), {
   recursive: true,
 });

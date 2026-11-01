@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import { markdownToDocsValue } from '../../../../../../lib-dist/lib/markdown-model.js';
+import { markdownToDocsValue } from '../../../../../../dist/lib/lib/markdown-model.js';
 import type { Content } from '../../../../support/editor.js';
 
 const textCell = (key: string, text: string) => ({

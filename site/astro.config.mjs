@@ -7,7 +7,7 @@ import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import { unified } from '@astrojs/markdown-remark';
-import { DOCS_VITE_OPTIMIZE_DEPS } from '../lib-dist/lib/astro.js';
+import { DOCS_VITE_OPTIMIZE_DEPS } from '../dist/lib/lib/astro.js';
 import { basePathRemarkPlugin } from './base-path-remark-plugin.mjs';
 import { docsContentPlugin } from './docs-content-plugin.mjs';
 
@@ -18,7 +18,7 @@ const astroManifest = JSON.parse(readFileSync(astroManifestPath, 'utf8'));
 const astroPackageRoot = dirname(astroManifestPath);
 const docsManifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
 const projectRoot = process.env.TERRA_DOCS_ROOT ?? process.cwd();
-const publicDir = resolve(projectRoot, '.terra-docs/public');
+const publicDir = resolve(projectRoot, 'dist/public');
 const outDir = resolve(projectRoot, process.env.TERRA_DOCS_OUT ?? 'dist/docs');
 const site = process.env.TERRA_DOCS_SITE;
 const base = process.env.TERRA_DOCS_BASE ?? '/';

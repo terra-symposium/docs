@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { renderMarkdown } from '../lib-dist/lib/markdown.js';
+import { renderMarkdown } from '../dist/lib/lib/markdown.js';
 
 test('renders Terra accordion and tab syntax without dropping rich content', () => {
   const source =

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import {
   docsValueToMarkdown,
   markdownToDocsValue,
-} from '../../../../../../lib-dist/lib/markdown-model.js';
+} from '../../../../../../dist/lib/lib/markdown-model.js';
 import type { Content } from '../../../../support/editor.js';
 
 const calloutFixture = [

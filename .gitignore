@@ -1,7 +1,7 @@
 node_modules/
 dist/
-demo-dist/
-site-dist/
+# Legacy outputs for already-running Docs development servers.
+lib-dist/
 .terra-docs/
 coverage/
 test-results/
@@ -11,5 +11,4 @@ test-results/
 .DS_Store
 *.tsbuildinfo
 
-lib-dist/
 vendor/

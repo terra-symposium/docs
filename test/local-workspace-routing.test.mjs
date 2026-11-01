@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { findDocsLocalPage } from '../lib-dist/components/LocalDocsWorkspace.js';
+import { findDocsLocalPage } from '../dist/lib/components/LocalDocsWorkspace.js';
 
 const pages = [
   { id: 'index', path: 'content/index.md', pathname: '/', title: 'Home' },

@@ -1,10 +1,10 @@
 import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import { DOCS_VITE_OPTIMIZE_DEPS } from './lib-dist/lib/astro.js';
+import { DOCS_VITE_OPTIMIZE_DEPS } from './dist/lib/lib/astro.js';
 
 export default defineConfig({
-  outDir: './site-dist/',
+  outDir: './dist/site/',
   devToolbar: { enabled: false },
   integrations: [__terraErrorBoundaryIntegration(), react()],
   vite: {

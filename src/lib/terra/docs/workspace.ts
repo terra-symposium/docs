@@ -10,15 +10,15 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
-import { actions } from '../../runtime/action-proxy.js';
+import { actions } from '../runtime/action-proxy.js';
 import { atom, map } from 'nanostores';
 import { createContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { getHue } from '@terra-symposium/styling';
-import { validateType, warn } from '../../runtime/runtime.js';
+import { validateType, warn } from '../runtime/runtime.js';
 import { toast } from 'sonner';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../regex.mjs';
+import * as TerraQualityRegex from '../regex.mjs';
 
 // TYPES
 import type {
@@ -30,7 +30,7 @@ import type {
   Transition,
   ToolbarState,
   Tree as TreeType,
-} from '../../runtime/types.js';
+} from '../runtime/types.js';
 import type { EditorView } from '@codemirror/view';
 
 /*//////////////////////////////////////////////////
@@ -451,13 +451,11 @@ export function withImport(md: string, statement: string): string {
  */
 export function codeViewOf(): EditorView | null {
   if (typeof document === 'undefined') return null;
-  const active =
+  const a =
     document.activeElement instanceof Element
       ? document.activeElement.closest<HTMLElement>('.docs-code-block .cm-editor')
       : null;
-  return (
-    (active as (HTMLElement & { cmView?: { view?: EditorView } }) | null)?.cmView?.view ?? null
-  );
+  return (a as (HTMLElement & { cmView?: { view?: EditorView } }) | null)?.cmView?.view ?? null;
 }
 
 /**
@@ -859,19 +857,19 @@ CONFIG
  * @remarks The context carries the current editable document state through the editor tree.
  */
 export const EditStateCtx = createContext<{
-  busy: import('../../runtime/types.js').EditorState['busy'];
+  busy: import('../runtime/types.js').EditorState['busy'];
   code: string;
-  draft: import('../../runtime/types.js').Draft;
+  draft: import('../runtime/types.js').Draft;
   dirty: boolean;
   loaded?: boolean;
   mark?: () => void;
-  references?: import('react').MutableRefObject<import('../../runtime/types.js').EditorRefs>;
+  references?: import('react').MutableRefObject<import('../runtime/types.js').EditorRefs>;
   setSrc?: (val: string) => void;
   source?: string;
-  state?: import('../../runtime/types.js').EditorState;
+  state?: import('../runtime/types.js').EditorState;
   save: (code?: string, opts?: { force?: boolean; format?: boolean }) => void;
   setCode: (val: string) => void;
-  update: (patch: Partial<import('../../runtime/types.js').Draft>) => void;
+  update: (patch: Partial<import('../runtime/types.js').Draft>) => void;
 } | null>(null);
 /**
  * Context for the docs editor surface.

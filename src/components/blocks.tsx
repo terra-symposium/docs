@@ -124,7 +124,7 @@ function text(value: unknown): string {
   }
   return '';
 }
-function safeUrl(value: unknown): string | undefined {
+function sUrl(value: unknown): string | undefined {
   if (typeof value !== 'string' || !value.trim()) return undefined;
   try {
     const url = new URL(value, 'https://docs.invalid');
@@ -147,7 +147,7 @@ function renderPortableTextChild(
   const textValue = typeof member.text === 'string' ? member.text : '';
   let node: ReactNode = textValue
     .split('\n')
-    .flatMap((line, index) => (index ? [<br key={`${key}-br-${index}`} />, line] : [line]));
+    .flatMap((line, i) => (i ? [<br key={`${key}-br-${i}`} />, line] : [line]));
   const marks = Array.isArray(member.marks) ? member.marks : [];
   for (const mark of marks) {
     if (typeof mark !== 'string') continue;
@@ -158,7 +158,7 @@ function renderPortableTextChild(
     else if (mark === 'code') node = <code key={`${key}-code`}>{node}</code>;
     else {
       const definition = markDefinitions.get(mark);
-      const href = safeUrl(definition?.href);
+      const href = sUrl(definition?.href);
       if (href)
         node = (
           <a key={`${key}-link`} href={href}>
@@ -179,15 +179,15 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
       : 'p';
   const definitions = Array.isArray(block.markDefs) ? block.markDefs : [];
   const markDefinitions = new Map(
-    definitions.flatMap((item) =>
-      item && typeof item === 'object' && typeof item._key === 'string'
-        ? [[item._key, item as Record<string, unknown>] as const]
+    definitions.flatMap((i) =>
+      i && typeof i === 'object' && typeof i._key === 'string'
+        ? [[i._key, i as Record<string, unknown>] as const]
         : [],
     ),
   );
   const children = Array.isArray(block.children) ? block.children : [];
-  const rendered = children.map((child, index) =>
-    renderPortableTextChild(child, markDefinitions, `portable-${index}`),
+  const rendered = children.map((child, i) =>
+    renderPortableTextChild(child, markDefinitions, `portable-${i}`),
   );
   if (block.listItem === 'bullet')
     return (
@@ -225,9 +225,9 @@ function Diagram({ block }: { block: RichBlock }): JSX.Element {
   const width = horizontal ? Math.max(320, nodes.length * 180) : 320;
   const height = horizontal ? 140 : Math.max(140, nodes.length * 100);
   const positions = new Map(
-    nodes.map((node, index) => [
-      String(node.id ?? index),
-      horizontal ? { x: 90 + index * 180, y: 70 } : { x: 160, y: 70 + index * 100 },
+    nodes.map((node, i) => [
+      String(node.id ?? i),
+      horizontal ? { x: 90 + i * 180, y: 70 } : { x: 160, y: 70 + i * 100 },
     ]),
   );
   return (
@@ -301,10 +301,10 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
     case 'accordion':
       return (
         <div className="terra-docs-accordions">
-          {items.map((item, i) => (
+          {items.map((v, i) => (
             <details key={i}>
-              <summary>{text(item.title)}</summary>
-              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(item)) }} />
+              <summary>{text(v.title)}</summary>
+              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(v)) }} />
             </details>
           ))}
         </div>
@@ -312,10 +312,10 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
     case 'tabs':
       return (
         <div className="terra-docs-tabs" role="tablist">
-          {items.map((item, i) => (
+          {items.map((v, i) => (
             <details key={i} open={i === 0}>
-              <summary>{text(item.title)}</summary>
-              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(item)) }} />
+              <summary>{text(v.title)}</summary>
+              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(v)) }} />
             </details>
           ))}
         </div>
@@ -359,19 +359,19 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
         </pre>
       );
     case 'docImage':
-      return safeUrl(block.url) ? (
+      return sUrl(block.url) ? (
         <figure>
-          <img src={safeUrl(block.url)} alt={text(block.alt)} />
+          <img src={sUrl(block.url)} alt={text(block.alt)} />
           <figcaption>{text(block.title)}</figcaption>
         </figure>
       ) : (
         <p>Image URL unavailable</p>
       );
     case 'embed':
-      return safeUrl(block.src) ? (
+      return sUrl(block.src) ? (
         <iframe
           title={text(block.title) || 'Embedded content'}
-          src={safeUrl(block.src)}
+          src={sUrl(block.src)}
           loading="lazy"
           sandbox="allow-scripts allow-same-origin allow-popups"
         />
@@ -440,12 +440,12 @@ function BlockEditor({
   const fields = DOCS_BLOCK_FIELDS[type] ?? [];
   const set = (props: Record<string, unknown>) =>
     editor.send({ type: 'block.set', at: path, props });
-  const update = (field: string, next: unknown) =>
+  const update = (field: string, n: unknown) =>
     set({
-      [field]: next,
+      [field]: n,
       ...(type === 'callout' && (field === 'title' || field === 'kind')
         ? {}
-        : { markdown: field === 'markdown' ? next : '' }),
+        : { markdown: field === 'markdown' ? n : '' }),
     });
   const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
   const rows = Array.isArray(block.rows) ? (block.rows as Record<string, unknown>[]) : [];
@@ -467,16 +467,16 @@ function BlockEditor({
                   return (
                     <fieldset key="items">
                       <legend>Items</legend>
-                      {items.map((item, index) => (
-                        <div className="terra-docs-rich-item" key={index}>
+                      {items.map((v, r) => (
+                        <div className="terra-docs-rich-item" key={r}>
                           <label>
                             Title
                             <input
-                              value={text(item.title)}
+                              value={text(v.title)}
                               onChange={(event) =>
                                 set({
                                   items: items.map((entry, i) =>
-                                    i === index
+                                    i === r
                                       ? { ...entry, title: event.currentTarget.value }
                                       : entry,
                                   ),
@@ -488,11 +488,11 @@ function BlockEditor({
                           <label>
                             Content
                             <textarea
-                              value={nestedMarkdown(item)}
+                              value={nestedMarkdown(v)}
                               onChange={(event) =>
                                 set({
                                   items: items.map((entry, i) =>
-                                    i === index
+                                    i === r
                                       ? { ...entry, markdown: event.currentTarget.value }
                                       : entry,
                                   ),
@@ -503,7 +503,7 @@ function BlockEditor({
                           </label>
                           <button
                             onClick={() =>
-                              set({ items: items.filter((_entry, i) => i !== index), markdown: '' })
+                              set({ items: items.filter((_entry, i) => i !== r), markdown: '' })
                             }
                           >
                             Remove item
@@ -616,8 +616,8 @@ function BlockEditor({
                   return (
                     <fieldset key="nodes">
                       <legend>Diagram nodes</legend>
-                      {nodes.map((node, index) => (
-                        <div key={index} className="terra-docs-rich-item">
+                      {nodes.map((node, v) => (
+                        <div key={v} className="terra-docs-rich-item">
                           <label>
                             ID
                             <input
@@ -625,9 +625,7 @@ function BlockEditor({
                               onChange={(event) =>
                                 set({
                                   nodes: nodes.map((entry, i) =>
-                                    i === index
-                                      ? { ...entry, id: event.currentTarget.value }
-                                      : entry,
+                                    i === v ? { ...entry, id: event.currentTarget.value } : entry,
                                   ),
                                   markdown: '',
                                 })
@@ -643,7 +641,7 @@ function BlockEditor({
                               onChange={(event) =>
                                 set({
                                   nodes: nodes.map((entry, i) =>
-                                    i === index
+                                    i === v
                                       ? {
                                           ...entry,
                                           data: {
@@ -660,7 +658,7 @@ function BlockEditor({
                           </label>
                           <button
                             onClick={() =>
-                              set({ nodes: nodes.filter((_entry, i) => i !== index), markdown: '' })
+                              set({ nodes: nodes.filter((_entry, i) => i !== v), markdown: '' })
                             }
                           >
                             Remove node
@@ -686,8 +684,8 @@ function BlockEditor({
                   return (
                     <fieldset key="edges">
                       <legend>Connections</legend>
-                      {edges.map((edge, index) => (
-                        <div key={index} className="terra-docs-rich-item">
+                      {edges.map((edge, v) => (
+                        <div key={v} className="terra-docs-rich-item">
                           {(['source', 'target'] as const).map((name) => (
                             <label key={name}>
                               {name}
@@ -696,7 +694,7 @@ function BlockEditor({
                                 onChange={(event) =>
                                   set({
                                     edges: edges.map((entry, i) =>
-                                      i === index
+                                      i === v
                                         ? { ...entry, [name]: event.currentTarget.value }
                                         : entry,
                                     ),
@@ -717,7 +715,7 @@ function BlockEditor({
                           ))}
                           <button
                             onClick={() =>
-                              set({ edges: edges.filter((_entry, i) => i !== index), markdown: '' })
+                              set({ edges: edges.filter((_entry, i) => i !== v), markdown: '' })
                             }
                           >
                             Remove connection
@@ -791,8 +789,8 @@ export function docsBlockNodes(options: DocsBlockOptions = {}) {
   const nodes = enabledDocsBlocks(options).map((type) =>
     defineBlockObject({
       type,
-      render: ({ attributes, children, node, path, readOnly }) => (
-        <div {...attributes} data-docs-block={type} contentEditable={false}>
+      render: ({ attributes: attrs, children, node, path, readOnly }) => (
+        <div {...attrs} data-docs-block={type} contentEditable={false}>
           <BlockEditor block={node as RichBlock} path={path} readOnly={readOnly} />
           {children}
         </div>
@@ -803,8 +801,8 @@ export function docsBlockNodes(options: DocsBlockOptions = {}) {
     nodes.push(
       defineInlineObject({
         type: 'math',
-        render: ({ attributes, children, node }) => (
-          <span {...attributes} contentEditable={false}>
+        render: ({ attributes: attrs, children, node }) => (
+          <span {...attrs} contentEditable={false}>
             <DocsRichBlock block={{ ...(node as RichBlock), _type: 'math', inline: true }} />
             {children}
           </span>

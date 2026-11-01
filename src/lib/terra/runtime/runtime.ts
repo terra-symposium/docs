@@ -21,8 +21,8 @@ export const validateType = (types: readonly string[], value: unknown): boolean 
   types.includes(typeof value);
 export const warn = (tag: string, message: string, detail?: unknown): void =>
   console.warn(`[${tag}] ${message}`, detail ?? '');
-export const error = warn;
-export const errorLog = warn;
+export const logErr = (tag: string, message: string, detail?: unknown): void =>
+  console.error(`[${tag}] ${message}`, detail ?? '');
 export const createTrace =
   (scope: string, enabled: boolean) =>
   (event: string, detail?: unknown): void => {
@@ -63,12 +63,8 @@ export function resolvedEdges(graph: unknown): ArcEdge[] {
       keys.has(edge.source) &&
       keys.has(edge.target),
   );
-  const terminal = nodes.find((node) => node.type === 'terminal');
-  const terminalKey = terminal?._key;
+  const terminalKey = nodes.find((node) => node.type === 'terminal')?._key;
   if (typeof terminalKey !== 'string') return edges;
-  // Capture the narrowed key before entering the callback; TypeScript widens
-  // the optional property again inside the closure.
-  const resolvedTerminalKey: string = terminalKey;
   const sources = new Set(edges.flatMap((edge) => (edge.source ? [edge.source] : [])));
   return [
     ...edges,
@@ -80,7 +76,7 @@ export function resolvedEdges(graph: unknown): ArcEdge[] {
           _key: `terminal:${node._key}`,
           _type: 'edge',
           source: node._key,
-          target: resolvedTerminalKey,
+          target: terminalKey as string,
         },
       ];
     }),

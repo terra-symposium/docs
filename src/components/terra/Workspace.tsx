@@ -11,7 +11,7 @@ import { DocsQuizProvider } from '../quiz.js';
 export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element {
   configureDocsHost(props.host, props.customBlocks);
   const portalThemeRoot = useRef<HTMLDivElement>(null);
-  const [activePath, setActivePath] = useState(props.pathname);
+  const [aPath, setActivePath] = useState(props.pathname);
 
   useEffect(() => setActivePath(props.pathname), [props.pathname]);
 
@@ -37,13 +37,13 @@ export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element 
     };
   }, []);
 
-  let activeRoute;
+  let aRoute;
   try {
-    activeRoute = props.host.resolveRoute?.(activePath);
+    aRoute = props.host.resolveRoute?.(aPath);
   } catch {
-    activeRoute = undefined;
+    aRoute = undefined;
   }
-  const hue = resolveDocsTreeHue(props.tree, activeRoute, props.host.hue);
+  const hue = resolveDocsTreeHue(props.tree, aRoute, props.host.hue);
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
 
   // Terra originally applied Styling's hue palette to the page root. Keep the
@@ -100,8 +100,8 @@ export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element 
       '--foreground',
       '--ring',
       ...(['primary', 'gray', 'secondary'] as const).flatMap((family) =>
-        Array.from({ length: 12 }, (_, index) => {
-          const step = index + 1;
+        Array.from({ length: 12 }, (_, i) => {
+          const step = i + 1;
           return [`--${family}-${step}`, `--${family}Light${step}`, `--${family}Dark${step}`];
         }).flat(),
       ),
@@ -148,13 +148,13 @@ export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element 
 
       const explicitTheme = workspace.closest<HTMLElement>('.dark, .light');
       if (explicitTheme) {
-        const nextClasses = {
+        const nClasses = {
           dark: explicitTheme.classList.contains('dark'),
           light: explicitTheme.classList.contains('light'),
         };
-        target.classList.toggle('dark', nextClasses.dark);
-        target.classList.toggle('light', nextClasses.light);
-        appliedThemeClasses = nextClasses;
+        target.classList.toggle('dark', nClasses.dark);
+        target.classList.toggle('light', nClasses.light);
+        appliedThemeClasses = nClasses;
       }
     };
 

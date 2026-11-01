@@ -7,10 +7,10 @@ import type {
   DocsHostAdapter,
 } from './host.js';
 
-let activeHost: DocsHostAdapter | undefined;
+let aHost: DocsHostAdapter | undefined;
 
 export function getDocsHostAdapter(): DocsHostAdapter | undefined {
-  return activeHost;
+  return aHost;
 }
 
 /** Install host-owned storage and capability checks before mounting the Docs surface. */
@@ -18,7 +18,7 @@ export function configureDocsHost(
   host: DocsHostAdapter,
   customBlocks: DocsCustomBlock[] = [],
 ): void {
-  activeHost = host;
+  aHost = host;
   setDocsCustomComponents(customBlocks);
   configureDocsActionProxy(
     async <T>(operation: DocsActionOperation, input?: unknown): Promise<DocsActionResult<T>> => {

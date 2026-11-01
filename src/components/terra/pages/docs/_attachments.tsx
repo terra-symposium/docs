@@ -19,14 +19,7 @@ import { $attachmentFilter } from '../../../../lib/terra/docs/attachments.js';
 import { sanitizeName } from '../../../../lib/terra/docs/tree.js';
 import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
-import {
-  cn,
-  error as logError,
-  errorLog,
-  isRec,
-  notify,
-  warn,
-} from '../../../../lib/terra/runtime/runtime.js';
+import { cn, isRec, logErr, notify, warn } from '../../../../lib/terra/runtime/runtime.js';
 import {
   createElement,
   createElement as __terraQualityCreateElement,
@@ -114,9 +107,9 @@ const latestContent = (content: unknown): string => {
  * @param sis - Attachment records to normalize for the Docs editor.
  */
 const textAsset = (sis: Sister): boolean => {
-  const extension = /\.(?:csv|json|log|md|mdx|text|txt|xml|ya?ml)(?:[?#].*)?$/i;
+  const ext = /\.(?:csv|json|log|md|mdx|text|txt|xml|ya?ml)(?:[?#].*)?$/i;
   return [sis.name, sis.title, sis.path].some(
-    (candidate) => typeof candidate === 'string' && extension.test(candidate.trim()),
+    (candidate) => typeof candidate === 'string' && ext.test(candidate.trim()),
   );
 };
 
@@ -259,7 +252,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       .attachments({ path: docId })
       .then(async ({ data: d, error: err }) => {
         if (err) {
-          errorLog('Attachments', 'Action returned an error', logError(err));
+          logErr('Attachments', 'Action returned an error', err);
           return;
         }
         if (!a) return;
@@ -270,7 +263,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         setSisters(d as Sister[]);
       })
       .catch((_err) => {
-        errorLog('Attachments', 'Fetch threw an exception', logError(_err));
+        logErr('Attachments', 'Fetch threw an exception', _err);
       })
       .finally(() => {
         if (a) setLoading(false);
@@ -339,7 +332,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         ),
       );
     } catch (_err: unknown) {
-      errorLog('Attachments:Upload', `Failed '${file.name}'`, logError(_err));
+      logErr('Attachments:Upload', `Failed '${file.name}'`, _err);
       setSisters((p) => p.filter((s) => s.id !== tempId));
       toast.error(_err instanceof Error ? _err.message : `Failed to upload ${file.name}.`);
       notify({
@@ -579,7 +572,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         });
       toast.success('Renamed successfully');
     } catch (_err) {
-      errorLog('Attachments:Rename', 'Rename failed', logError(_err));
+      logErr('Attachments:Rename', 'Rename failed', _err);
       setSisters((p) =>
         p.map((s) =>
           s.path === renameDlg.path ? { ...s, path: renameDlg.path, name: renameDlg.name } : s,
@@ -990,10 +983,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                 );
                                 toast.success('PDFs merged successfully.');
                               } catch (_err) {
-                                errorLog(
+                                logErr(
                                   'Attachments:Merge',
                                   'Fatal exception caught during PDF merge',
-                                  logError(_err),
+                                  _err,
                                 );
                                 toast.error('Failed to merge PDFs.');
                                 setSisters([...sisters]);
@@ -1106,11 +1099,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                         },
                                       ]);
                                     } catch (_err: unknown) {
-                                      errorLog(
-                                        'Attachments:Duplicate',
-                                        'Duplicate failed',
-                                        logError(_err),
-                                      );
+                                      logErr('Attachments:Duplicate', 'Duplicate failed', _err);
                                       notify({
                                         error:
                                           _err instanceof Error
@@ -1240,10 +1229,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                       void processUpload(f, tmpId, isMdFile);
                     });
                   } catch (_err) {
-                    errorLog(
+                    logErr(
                       'Attachments:UploadMerge',
                       'Fatal exception caught during PDF merge',
-                      logError(_err),
+                      _err,
                     );
                     toast.error('Failed to merge PDFs.');
                   } finally {
@@ -1489,7 +1478,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 											setSel([]);
 											toast.success(`Successfully ${transferDlg.action === 'copy' ? 'copied' : 'moved'} attachments.`);
 										} catch (_err) {
-											errorLog('Attachments:Transfer', 'Transfer failed', logError(_err));
+											logErr('Attachments:Transfer', 'Transfer failed', _err);
 											toast.error(`Failed to ${transferDlg.action} attachments.`);
 										} finally {
 											setTransferring(false);

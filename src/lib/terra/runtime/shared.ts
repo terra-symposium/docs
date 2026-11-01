@@ -1,8 +1,8 @@
 import type { Tree } from './types.js';
 import { getDocsHostAdapter } from '../../host-runtime.js';
 
-const stripExtension = /\.(?:md|mdx)$/i;
-export const FILES = { index: /^(?:\/|^)index\.(?:md|mdx)$/i, markdown: stripExtension } as const;
+const stripExt = /\.(?:md|mdx)$/i;
+export const FILES = { index: /^(?:\/|^)index\.(?:md|mdx)$/i, markdown: stripExt } as const;
 export const REORDER = {
   active: 'bg-primary-3 text-primary-12 ring-1 ring-primary-7',
   after:
@@ -37,10 +37,10 @@ export function docsPath(path = ''): string {
   const host = getDocsHostAdapter();
   if (host?.routePath) return host.routePath(path);
   const root = docsRootPath().replace(/\/+$/, '');
-  const clean = path.replace(/^\/+/, '');
-  if (!clean) return root || '/';
+  const c = path.replace(/^\/+/, '');
+  if (!c) return root || '/';
   if (root && (path === root || path.startsWith(`${root}/`))) return path;
-  return `${root}/${clean}`;
+  return `${root}/${c}`;
 }
 export function isDocsPath(path: string): boolean {
   const root = docsRootPath().replace(/\/+$/, '') || '/';
@@ -73,7 +73,7 @@ export const cTitle = (title?: string): string => (title || '').trim();
 export const fmtNodeTitle = (value: string): string =>
   value
     ?.replace(/\.pdf$/i, '')
-    .replace(stripExtension, '')
+    .replace(stripExt, '')
     .replace(/^_+/, '')
     .replace(/[-_]+/g, ' ') ?? '';
 export const toPascal = (value: string): string =>

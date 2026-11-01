@@ -27,8 +27,8 @@ export function DocsNavigation({
   const style = { '--docs-accent': `rgb(${accent.light[8]})` } as CSSProperties;
   const render = (items: DocsNavNode[]): JSX.Element => (
     <ul className="terra-docs-nav-list">
-      {items.map((node, index) => (
-        <li key={`${node.href ?? node.title}-${index}`}>
+      {items.map((node, i) => (
+        <li key={`${node.href ?? node.title}-${i}`}>
           {node.href ? (
             <a href={node.href} aria-current={node.href === currentPath ? 'page' : undefined}>
               {node.title}

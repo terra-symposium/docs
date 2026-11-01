@@ -461,11 +461,3 @@ export const normDocsSpacing = (src: string): string => {
     )
     .trim();
 };
-
-/**
- * Renders a Portable Text table block into HTML with a header row followed by body rows.
- *
- * @param rows - Table rows to serialize.
- *
- * @returns HTML table markup for the stored Portable Text rows.
- */

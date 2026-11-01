@@ -1,10 +1,10 @@
 import type { DocsActionOperation, DocsActionResult } from '../../host.js';
 
 let invoke: <T = unknown>(
-  operation: DocsActionOperation,
+  op: DocsActionOperation,
   input?: unknown,
-) => Promise<DocsActionResult<T>> = async (operation) => ({
-  error: new Error(`Docs host action is not configured: ${operation}`),
+) => Promise<DocsActionResult<T>> = async (op) => ({
+  error: new Error(`Docs host action is not configured: ${op}`),
 });
 
 type ActionProxy = ((...args: unknown[]) => Promise<DocsActionResult<unknown>>) & {
@@ -40,10 +40,7 @@ type ActionTree = {
 };
 
 export function configureDocsActionProxy(
-  handler: <T = unknown>(
-    operation: DocsActionOperation,
-    input?: unknown,
-  ) => Promise<DocsActionResult<T>>,
+  handler: <T = unknown>(op: DocsActionOperation, input?: unknown) => Promise<DocsActionResult<T>>,
 ): void {
   invoke = handler;
 }

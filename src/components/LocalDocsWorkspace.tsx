@@ -44,7 +44,7 @@ export type DocsLocalWorkspaceProps = {
   quiz?: DocsQuizConfig;
 };
 
-function normalized(value: string, base = 'http://docs.local'): string {
+function norm(value: string, base = 'http://docs.local'): string {
   try {
     const url = new URL(value, base);
     // Mode and other host query parameters describe the surface, not the page.
@@ -68,7 +68,7 @@ export function findDocsLocalPage(
   value: unknown,
 ): DocsLocalPage | undefined {
   if (typeof value !== 'string' || !value) return undefined;
-  const route = normalized(value);
+  const route = norm(value);
   const pathOnly = route.split('#', 1)[0];
   const id = routeId(value);
 
@@ -78,7 +78,7 @@ export function findDocsLocalPage(
     if (byId) return byId;
   }
 
-  const exactRoute = pages.find((page) => normalized(page.pathname) === route);
+  const exactRoute = pages.find((page) => norm(page.pathname) === route);
   if (exactRoute) return exactRoute;
 
   const direct = pages.find((page) => page.id === value || page.path === value);
@@ -86,10 +86,10 @@ export function findDocsLocalPage(
 
   // A root page is the fallback for `/` only. It must not shadow `/` + #leaf.
   if (pathOnly === '/' && !id) {
-    return pages.find((page) => normalized(page.pathname) === '/');
+    return pages.find((page) => norm(page.pathname) === '/');
   }
 
-  return pages.find((page) => normalized(page.pathname).split('#', 1)[0] === pathOnly);
+  return pages.find((page) => norm(page.pathname).split('#', 1)[0] === pathOnly);
 }
 
 function findTreeNode(
@@ -154,7 +154,7 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
     [blocks, page],
   );
   const host = useMemo<DocsHostAdapter>(() => {
-    const activePage = (): DocsLocalPage | undefined =>
+    const aPage = (): DocsLocalPage | undefined =>
       typeof window === 'undefined'
         ? page
         : (findDocsLocalPage(
@@ -173,10 +173,10 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
       const requested = [value.path, value.pathname, value.id].find(
         (candidate) => typeof candidate === 'string' && candidate.length > 0,
       );
-      if (typeof requested !== 'string') return activePage();
+      if (typeof requested !== 'string') return aPage();
       const basename = requested.split(/[?#]/, 1)[0]?.split('/').filter(Boolean).at(-1);
-      const active = activePage();
-      if (basename && active?.path.split('/').at(-1) === basename) return active;
+      const a = aPage();
+      if (basename && a?.path.split('/').at(-1) === basename) return a;
       const matches = pages.filter(
         (candidate) => candidate.path.split('/').at(-1) === basename || candidate.id === basename,
       );
@@ -211,7 +211,7 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
           ...(branches[1] ? { groupId: branches[1].origName } : {}),
           ...(resolved ? { leafId: resolved.id } : {}),
           targetId: resolved?.id ?? tree[0]?.origName ?? 'index',
-          pathname: resolved?.pathname ?? normalized(value),
+          pathname: resolved?.pathname ?? norm(value),
         };
       },
       buildRoute(sectionId, groupId, leafId) {
@@ -225,12 +225,12 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
         return findDocsLocalPage(pages, path)?.pathname ?? rootPath;
       },
       async invoke<T = unknown>(
-        operation: DocsActionOperation,
+        op: DocsActionOperation,
         input?: unknown,
       ): Promise<DocsActionResult<T>> {
         const args = (input ?? {}) as Record<string, unknown>;
-        if (operation === 'read.doc.list') return { data: tree as T };
-        if (operation === 'read.doc.get') {
+        if (op === 'read.doc.list') return { data: tree as T };
+        if (op === 'read.doc.get') {
           const document = resolvePage(args);
           return {
             data: (document
@@ -242,8 +242,8 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
               : null) as T,
           };
         }
-        if (operation === 'read.doc.attachments') {
-          const document = resolvePage(args) ?? activePage();
+        if (op === 'read.doc.attachments') {
+          const document = resolvePage(args) ?? aPage();
           const attachments = (document?.attachments ?? []).map((attachment) => ({
             ...attachment,
             title: attachment.name,
@@ -251,10 +251,10 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
           }));
           return { data: attachments as T };
         }
-        if (operation === 'read.source.body')
+        if (op === 'read.source.body')
           return { data: markdownToDocsValue(String(args.source ?? '')) as T };
-        if (operation === 'read.util.pathname') return { data: String(args.path ?? pathname) as T };
-        if (operation === 'read.util.node') {
+        if (op === 'read.util.pathname') return { data: String(args.path ?? pathname) as T };
+        if (op === 'read.util.node') {
           const document = resolvePage(args);
           return {
             data: (document
@@ -262,8 +262,8 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
               : null) as T,
           };
         }
-        if (operation === 'read.tsdocs') return { data: { scopes: [] } as T };
-        if (operation === 'read.asset.get') {
+        if (op === 'read.tsdocs') return { data: { scopes: [] } as T };
+        if (op === 'read.asset.get') {
           const assetPath = String(args.path ?? args.id ?? '');
           const response = await fetch(assetPath);
           if (!response.ok)

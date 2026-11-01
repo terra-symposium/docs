@@ -68,7 +68,7 @@ COMPONENTS
  *
  * @return A filterable list and the selected skill's description and content.
  */
-export function SkillsExplorer({ skills }: { skills: SkillRecord[] }) {
+function SkillsExplorer({ skills }: { skills: SkillRecord[] }) {
   const [query, setQuery] = useState('');
   const [aPath, setActivePath] = useState(skills[0]?.sourcePath ?? '');
   const filteredSkills = useMemo(() => {

@@ -233,14 +233,14 @@ const EditorSurfaces = {
       };
     }, [surface?.path, surface?.parseError, surface?.editor.loaded]);
     useEffect(() => {
-      let active = true;
+      let a = true;
       const path = surface?.path;
       if (!path) {
         setDocsAttachments([]);
         return;
       }
       void actions.read.doc.attachments({ path }).then(({ data, error }) => {
-        if (!active) return;
+        if (!a) return;
         if (error) {
           console.error('[Docs:attachments] load-failed', { path, error });
           setDocsAttachments([]);
@@ -249,7 +249,7 @@ const EditorSurfaces = {
         setDocsAttachments(Array.isArray(data) ? (data as DocsHostAttachment[]) : []);
       });
       return () => {
-        active = false;
+        a = false;
       };
     }, [surface?.path]);
     useEffect(() => {
@@ -398,10 +398,10 @@ const EditorSurfaces = {
       const input = titleRef.current;
       const context = window.document.createElement('canvas').getContext('2d');
       if (!input || !context) return;
-      let active = true;
+      let a = true;
 
       const fitTitle = (): void => {
-        if (!active) return;
+        if (!a) return;
         // Restore the responsive Tailwind size first so repeated resizes never
         // compound a previous shrink. Then scale only titles that exceed the
         // available content width.
@@ -432,16 +432,16 @@ const EditorSurfaces = {
       const parent = input.parentElement;
       let previousWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
       const resize = (): void => {
-        const nextWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
-        if (nextWidth === previousWidth) return;
-        previousWidth = nextWidth;
+        const nWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
+        if (nWidth === previousWidth) return;
+        previousWidth = nWidth;
         fitTitle();
       };
       const observer = new ResizeObserver(resize);
       if (parent) observer.observe(parent);
       window.addEventListener('resize', resize);
       return () => {
-        active = false;
+        a = false;
         observer.disconnect();
         window.document.fonts.removeEventListener('loadingdone', fitTitle);
         window.removeEventListener('resize', resize);
@@ -451,10 +451,10 @@ const EditorSurfaces = {
     useLayoutEffect(() => {
       const textarea = descriptionRef.current;
       if (!textarea) return;
-      let active = true;
+      let a = true;
 
       const resize = (): void => {
-        if (!active) return;
+        if (!a) return;
         // The original shared Textarea variant fixes this field at h-10 (40px).
         // Measure that CSS height without the previous inline measurement, then
         // grow only when the wrapped description needs more room.
@@ -470,16 +470,16 @@ const EditorSurfaces = {
       fonts.addEventListener('loadingdone', resize);
       let previousWidth = textarea.parentElement?.getBoundingClientRect().width;
       const observer = new ResizeObserver(() => {
-        const nextWidth = textarea.parentElement?.getBoundingClientRect().width;
-        if (nextWidth !== previousWidth) {
-          previousWidth = nextWidth;
+        const nWidth = textarea.parentElement?.getBoundingClientRect().width;
+        if (nWidth !== previousWidth) {
+          previousWidth = nWidth;
           resize();
         }
       });
       if (textarea.parentElement) observer.observe(textarea.parentElement);
       window.addEventListener('resize', resize);
       return () => {
-        active = false;
+        a = false;
         observer.disconnect();
         fonts.removeEventListener('loadingdone', resize);
         window.removeEventListener('resize', resize);

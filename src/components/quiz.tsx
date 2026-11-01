@@ -73,7 +73,7 @@ export function parseDocsQuiz(value: unknown): DocsQuizDocument {
       if (
         !Array.isArray(question.opts) ||
         question.opts.length < 2 ||
-        !question.opts.every((item) => typeof item === 'string' && item.trim()) ||
+        !question.opts.every((i) => typeof i === 'string' && i.trim()) ||
         new Set(question.opts).size !== question.opts.length ||
         typeof question.answer !== 'string' ||
         !question.opts.includes(question.answer)
@@ -94,10 +94,10 @@ export function parseDocsQuiz(value: unknown): DocsQuizDocument {
       if (
         !Array.isArray(question.answers) ||
         question.answers.length === 0 ||
-        !question.answers.every((item) => typeof item === 'string' && item.trim()) ||
+        !question.answers.every((i) => typeof i === 'string' && i.trim()) ||
         (question.keywords !== undefined &&
           (!Array.isArray(question.keywords) ||
-            !question.keywords.every((item) => typeof item === 'string')))
+            !question.keywords.every((i) => typeof i === 'string')))
       )
         throw new Error('Keyword questions need at least one accepted answer.');
       return {
@@ -115,14 +115,14 @@ export function parseDocsQuiz(value: unknown): DocsQuizDocument {
 }
 
 function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean {
-  const normalized = response.trim().toLowerCase();
-  if (!normalized) return false;
+  const norm = response.trim().toLowerCase();
+  if (!norm) return false;
   if (question.type === 'multipleChoice') return response.trim() === question.answer;
   return (
-    question.answers.some((answer) => normalized === answer.trim().toLowerCase()) ||
+    question.answers.some((answer) => norm === answer.trim().toLowerCase()) ||
     Boolean(
       question.keywords?.length &&
-      question.keywords.every((keyword) => normalized.includes(keyword.trim().toLowerCase())),
+      question.keywords.every((keyword) => norm.includes(keyword.trim().toLowerCase())),
     )
   );
 }
@@ -131,7 +131,7 @@ function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean 
 export function DocsQuizGenerator({
   title,
   markdown,
-  generate,
+  generate: gen,
 }: {
   title: string;
   markdown: string;
@@ -144,12 +144,12 @@ export function DocsQuizGenerator({
   const [answers, setAnswers] = useState<string[]>([]);
   const [checkedAnswers, setCheckedAnswers] = useState<boolean[]>([]);
   const [index, setIndex] = useState(0);
-  const [error, setError] = useState('');
+  const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
 
   const toggleType = (type: DocsQuizQuestionType) =>
     setTypes((current) =>
-      current.includes(type) ? current.filter((item) => item !== type) : [...current, type],
+      current.includes(type) ? current.filter((i) => i !== type) : [...current, type],
     );
   const updateQuestion = (
     questionIndex: number,
@@ -166,19 +166,19 @@ export function DocsQuizGenerator({
         : current,
     );
   };
-  const startGeneration = async () => {
-    setError('');
-    if (!generate) {
-      setError('Quiz generation is not configured for this Docs host.');
+  const startGen = async () => {
+    setErr('');
+    if (!gen) {
+      setErr('Quiz generation is not configured for this Docs host.');
       return;
     }
     if (!types.length) {
-      setError('Choose at least one question type.');
+      setErr('Choose at least one question type.');
       return;
     }
     setLoading(true);
     try {
-      const generated = parseDocsQuiz(await generate({ title, markdown, count, types }));
+      const generated = parseDocsQuiz(await gen({ title, markdown, count, types }));
       if (generated.questions.length !== count)
         throw new Error(
           `The quiz endpoint returned ${generated.questions.length} questions; ${count} were requested.`,
@@ -188,18 +188,16 @@ export function DocsQuizGenerator({
       setQuiz(generated);
       setStage('review');
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : 'Quiz generation failed. Please try again.',
-      );
+      setErr(cause instanceof Error ? cause.message : 'Quiz generation failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
   const question = quiz?.questions[index];
   const correct =
-    quiz?.questions.reduce((score, item, i) => {
+    quiz?.questions.reduce((score, v, i) => {
       const response = (answers[i] ?? '').trim();
-      return score + Number(isCorrectAnswer(item, response));
+      return score + Number(isCorrectAnswer(v, response));
     }, 0) ?? 0;
 
   return (
@@ -208,12 +206,12 @@ export function DocsQuizGenerator({
       aria-label="Quiz generator"
     >
       <h2 className="mb-2 text-xl font-semibold">{quiz?.title ?? `Quiz: ${title}`}</h2>
-      {error && (
+      {err && (
         <p
           role="alert"
           className="mb-3 rounded-md border border-destructive-7 p-3 text-sm text-destructive-11"
         >
-          {error}
+          {err}
         </p>
       )}
       {stage === 'setup' && (
@@ -250,7 +248,7 @@ export function DocsQuizGenerator({
           <button
             type="button"
             disabled={loading}
-            onClick={() => void startGeneration()}
+            onClick={() => void startGen()}
             className="rounded-md bg-primary-9 px-4 py-2 font-medium text-primary-1 disabled:opacity-60"
           >
             {loading ? 'Generating…' : 'Generate quiz'}
@@ -260,28 +258,28 @@ export function DocsQuizGenerator({
       {stage === 'review' && quiz && (
         <div className="space-y-4">
           <p className="text-sm text-primary-10">Review and edit the questions before starting.</p>
-          {quiz.questions.map((item, i) => (
+          {quiz.questions.map((v, i) => (
             <fieldset key={i} className="space-y-2 rounded-lg border border-primary-6 p-4">
               <legend className="px-1 font-medium">
-                Question {i + 1} · {item.type === 'multipleChoice' ? 'Multiple choice' : 'Keyword'}
+                Question {i + 1} · {v.type === 'multipleChoice' ? 'Multiple choice' : 'Keyword'}
               </legend>
               <label className="flex flex-col gap-1 text-sm">
                 Prompt
                 <input
                   className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                  value={item.prompt}
+                  value={v.prompt}
                   onChange={(event) =>
                     updateQuestion(i, (q) => ({ ...q, prompt: event.target.value }))
                   }
                 />
               </label>
-              {item.type === 'multipleChoice' ? (
+              {v.type === 'multipleChoice' ? (
                 <>
                   <label className="flex flex-col gap-1 text-sm">
                     Options (one per line)
                     <textarea
                       className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                      value={item.opts.join('\n')}
+                      value={v.opts.join('\n')}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
                           q.type === 'multipleChoice'
@@ -295,7 +293,7 @@ export function DocsQuizGenerator({
                     Correct answer
                     <input
                       className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                      value={item.answer}
+                      value={v.answer}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
                           q.type === 'multipleChoice' ? { ...q, answer: event.target.value } : q,
@@ -310,7 +308,7 @@ export function DocsQuizGenerator({
                     Accepted answers (one per line)
                     <textarea
                       className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                      value={item.answers.join('\n')}
+                      value={v.answers.join('\n')}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
                           q.type === 'keyword'
@@ -324,7 +322,7 @@ export function DocsQuizGenerator({
                     Hint keywords (one per line)
                     <textarea
                       className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                      value={item.keywords?.join('\n') ?? ''}
+                      value={v.keywords?.join('\n') ?? ''}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
                           q.type === 'keyword'
@@ -340,7 +338,7 @@ export function DocsQuizGenerator({
                 Explanation
                 <input
                   className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                  value={item.explanation ?? ''}
+                  value={v.explanation ?? ''}
                   onChange={(event) =>
                     updateQuestion(i, (q) => ({ ...q, explanation: event.target.value }))
                   }
@@ -361,13 +359,13 @@ export function DocsQuizGenerator({
               onClick={() => {
                 try {
                   parseDocsQuiz(quiz);
-                  setError('');
+                  setErr('');
                   setAnswers([]);
                   setCheckedAnswers([]);
                   setIndex(0);
                   setStage('quiz');
                 } catch (cause) {
-                  setError(
+                  setErr(
                     cause instanceof Error
                       ? cause.message
                       : 'Fix invalid quiz questions before starting.',
@@ -401,16 +399,16 @@ export function DocsQuizGenerator({
                     checked={answers[index] === option}
                     onChange={() =>
                       setAnswers((current) => {
-                        const next = [...current];
-                        next[index] = option;
-                        return next;
+                        const n = [...current];
+                        n[index] = option;
+                        return n;
                       })
                     }
                     onClick={() =>
                       setCheckedAnswers((current) => {
-                        const next = [...current];
-                        next[index] = false;
-                        return next;
+                        const n = [...current];
+                        n[index] = false;
+                        return n;
                       })
                     }
                   />
@@ -426,16 +424,16 @@ export function DocsQuizGenerator({
                 value={answers[index] ?? ''}
                 onChange={(event) =>
                   setAnswers((current) => {
-                    const next = [...current];
-                    next[index] = event.target.value;
-                    return next;
+                    const n = [...current];
+                    n[index] = event.target.value;
+                    return n;
                   })
                 }
                 onChangeCapture={() =>
                   setCheckedAnswers((current) => {
-                    const next = [...current];
-                    next[index] = false;
-                    return next;
+                    const n = [...current];
+                    n[index] = false;
+                    return n;
                   })
                 }
               />
@@ -474,9 +472,9 @@ export function DocsQuizGenerator({
                 type="button"
                 onClick={() =>
                   setCheckedAnswers((current) => {
-                    const next = [...current];
-                    next[index] = true;
-                    return next;
+                    const n = [...current];
+                    n[index] = true;
+                    return n;
                   })
                 }
                 className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
@@ -508,22 +506,20 @@ export function DocsQuizGenerator({
           <p className="text-lg font-medium">
             Score: {correct} / {quiz.questions.length}
           </p>
-          {quiz.questions.map((item, i) => {
+          {quiz.questions.map((v, i) => {
             const response = (answers[i] ?? '').trim();
-            const isCorrect = isCorrectAnswer(item, response);
+            const isCorrect = isCorrectAnswer(v, response);
             return (
               <article key={i} className="rounded-lg border border-primary-6 p-4">
                 <h3 className="font-medium">
-                  {i + 1}. {item.prompt}
+                  {i + 1}. {v.prompt}
                 </h3>
                 <p className="text-sm">
                   {isCorrect
                     ? 'Correct'
-                    : `Answer: ${item.type === 'multipleChoice' ? item.answer : item.answers.join(' / ')}`}
+                    : `Answer: ${v.type === 'multipleChoice' ? v.answer : v.answers.join(' / ')}`}
                 </p>
-                {item.explanation && (
-                  <p className="mt-1 text-sm text-primary-10">{item.explanation}</p>
-                )}
+                {v.explanation && <p className="mt-1 text-sm text-primary-10">{v.explanation}</p>}
               </article>
             );
           })}

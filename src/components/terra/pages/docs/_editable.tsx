@@ -71,7 +71,7 @@ HELPERS
  */
 export function Loader({ className }: { className?: string }): React.JSX.Element {
   const mounts = useAtom($editorMounts);
-  const loadingImage = getDocsHostAdapter()?.assetUrl?.(
+  const loadingImg = getDocsHostAdapter()?.assetUrl?.(
     'image-1e365a8f99a0859fa0ad38617b1b399520b32767-984x984',
     1200,
   );
@@ -87,9 +87,7 @@ export function Loader({ className }: { className?: string }): React.JSX.Element
         data-docs-loading-overlay
         role="status"
       >
-        {loadingImage && (
-          <img alt="" src={loadingImage} className={cn('size-40', IMG_RESPONSIVE)} />
-        )}
+        {loadingImg && <img alt="" src={loadingImg} className={cn('size-40', IMG_RESPONSIVE)} />}
         <Progress
           className="h-3 w-56"
           value={Math.max(

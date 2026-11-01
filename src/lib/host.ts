@@ -119,10 +119,7 @@ export type DocsHostAdapter = {
   /** Whether this host must load each document as its own browser page. */
   navigationMode?: 'client' | 'document';
   /** Legacy action bridge for host-specific operations outside the stable contract. */
-  invoke<T = unknown>(
-    operation: DocsActionOperation,
-    input?: unknown,
-  ): Promise<DocsActionResult<T>>;
+  invoke<T = unknown>(op: DocsActionOperation, input?: unknown): Promise<DocsActionResult<T>>;
   /** Load a host-owned draft when an editor enters Edit mode. */
   loadDraft?: (path: string) => Promise<DocsHostDocument | null>;
   /** Publish the current saved draft from the shared toolbar when supported by the host. */

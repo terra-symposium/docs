@@ -50,7 +50,7 @@ function restoreInlineMathPlaceholders(value: string): string {
   });
 }
 
-function withGeneratedInlineMathTokens(tokens: Token[] | undefined): Token[] {
+function withGenInlineMathTokens(tokens: Token[] | undefined): Token[] {
   const result: Token[] = [];
   for (const token of tokens ?? []) {
     if (!['text', 'escape'].includes(token.type)) {
@@ -166,15 +166,15 @@ function inline(
   inheritedMarks: string[] = [],
 ): (ReturnType<typeof span> | { _type: 'math'; _key: string; code: string; inline: true })[] {
   if (!tokens) return [];
-  let activeMarks = [...inheritedMarks];
+  let aMarks = [...inheritedMarks];
   const result: (
     ReturnType<typeof span> | { _type: 'math'; _key: string; code: string; inline: true }
   )[] = [];
   const addMark = (items: typeof result, mark: string) =>
-    items.map((item) => (item._type === 'span' ? { ...item, marks: [...item.marks, mark] } : item));
+    items.map((i) => (i._type === 'span' ? { ...i, marks: [...i.marks, mark] } : i));
 
   for (const token of withInlineMathTokens(
-    inlineMath ? withGeneratedInlineMathTokens(tokens) : tokens,
+    inlineMath ? withGenInlineMathTokens(tokens) : tokens,
     inlineMath,
   )) {
     if (token.type === 'docsMath') {
@@ -193,40 +193,38 @@ function inline(
               : /^(?:strong|b)$/i.test(tag[2]!)
                 ? 'strong'
                 : 'strike-through';
-        if (tag[1]) activeMarks = activeMarks.filter((item) => item !== mark);
-        else activeMarks = [...activeMarks, mark];
+        if (tag[1]) aMarks = aMarks.filter((i) => i !== mark);
+        else aMarks = [...aMarks, mark];
         continue;
       }
       if (/^<br\s*\/?>$/i.test(token.raw)) {
-        result.push(span('\n', activeMarks));
+        result.push(span('\n', aMarks));
         continue;
       }
-      result.push(span(token.raw, activeMarks));
+      result.push(span(token.raw, aMarks));
       continue;
     }
     if (token.type === 'strong') {
-      result.push(...addMark(inline(token.tokens, markDefs, inlineMath, activeMarks), 'strong'));
+      result.push(...addMark(inline(token.tokens, markDefs, inlineMath, aMarks), 'strong'));
       continue;
     }
     if (token.type === 'em') {
-      result.push(...addMark(inline(token.tokens, markDefs, inlineMath, activeMarks), 'em'));
+      result.push(...addMark(inline(token.tokens, markDefs, inlineMath, aMarks), 'em'));
       continue;
     }
     if (token.type === 'del') {
-      result.push(
-        ...addMark(inline(token.tokens, markDefs, inlineMath, activeMarks), 'strike-through'),
-      );
+      result.push(...addMark(inline(token.tokens, markDefs, inlineMath, aMarks), 'strike-through'));
       continue;
     }
     if (token.type === 'link') {
       const href = typeof token.href === 'string' ? token.href : '';
       if (!href || !/^(?:https?:\/\/|mailto:|tel:|\/|\.\.?\/|#)/i.test(href)) {
-        result.push(span(token.raw, activeMarks));
+        result.push(span(token.raw, aMarks));
         continue;
       }
       const mark = key();
       markDefs.push({ _type: 'link', _key: mark, href });
-      const linked = addMark(inline(token.tokens, markDefs, inlineMath, activeMarks), mark);
+      const linked = addMark(inline(token.tokens, markDefs, inlineMath, aMarks), mark);
       const joined: typeof result = [];
       for (const item of linked) {
         const previous = joined.at(-1);
@@ -243,8 +241,8 @@ function inline(
     }
     if (token.type === 'text' || token.type === 'escape') {
       const tokenText = token.text ?? token.raw;
-      if (activeMarks.includes('code')) {
-        result.push(span(decodeHtml(tokenText), activeMarks));
+      if (aMarks.includes('code')) {
+        result.push(span(decodeHtml(tokenText), aMarks));
         continue;
       }
       const pieces = tokenText.split(/(\$[^$\n]+\$)/g).filter(Boolean);
@@ -257,21 +255,21 @@ function inline(
                 code: piece.slice(1, -1),
                 inline: true as const,
               }
-            : span(piece, activeMarks),
+            : span(piece, aMarks),
         ),
       );
       continue;
     }
     if (token.type === 'codespan') {
-      result.push(span(token.text ?? token.raw, [...activeMarks, 'code']));
+      result.push(span(token.text ?? token.raw, [...aMarks, 'code']));
       continue;
     }
     if (token.type === 'br') {
-      result.push(span('\n', activeMarks));
+      result.push(span('\n', aMarks));
       continue;
     }
     // Images in the middle of prose have no Portable Text inline equivalent. Keep their source.
-    result.push(span(token.raw, activeMarks));
+    result.push(span(token.raw, aMarks));
   }
   return result;
 }
@@ -464,10 +462,7 @@ function structuredBlockRanges(source: string): SourceRange[] {
     .map((match) => ({ start: match.index ?? 0, end: (match.index ?? 0) + match[0].length }))
     .sort((a, b) => a.start - b.start);
 }
-function readBracedExpression(
-  source: string,
-  start: number,
-): { value: string; end: number } | undefined {
+function readBracedExpr(source: string, start: number): { value: string; end: number } | undefined {
   if (source[start] !== '{') return undefined;
   let depth = 1;
   let quote: '"' | "'" | '`' | undefined;
@@ -496,7 +491,7 @@ function readBracedExpression(
 
 function readJsxTagEnd(source: string, start: number): number | undefined {
   let quote: '"' | "'" | '`' | undefined;
-  let expressionDepth = 0;
+  let exprDepth = 0;
   for (let index = start + 1; index < source.length; index += 1) {
     const char = source[index]!;
     if (quote) {
@@ -511,9 +506,9 @@ function readJsxTagEnd(source: string, start: number): number | undefined {
       quote = char;
       continue;
     }
-    if (char === '{') expressionDepth += 1;
-    else if (char === '}' && expressionDepth > 0) expressionDepth -= 1;
-    else if (char === '>' && expressionDepth === 0) return index + 1;
+    if (char === '{') exprDepth += 1;
+    else if (char === '}' && exprDepth > 0) exprDepth -= 1;
+    else if (char === '>' && exprDepth === 0) return index + 1;
   }
   return undefined;
 }
@@ -545,8 +540,8 @@ function parseJsxLiteral(source: string): unknown {
   }
 }
 
-function parseJsxAttributes(source: string): Record<string, unknown> {
-  const attributes: Record<string, unknown> = {};
+function parseJsxAttrs(source: string): Record<string, unknown> {
+  const attrs: Record<string, unknown> = {};
   let index = 0;
   while (index < source.length) {
     while (/\s/.test(source[index] ?? '')) index += 1;
@@ -558,7 +553,7 @@ function parseJsxAttributes(source: string): Record<string, unknown> {
     index += name.length;
     while (/\s/.test(source[index] ?? '')) index += 1;
     if (source[index] !== '=') {
-      attributes[name] = true;
+      attrs[name] = true;
       continue;
     }
     index += 1;
@@ -578,14 +573,14 @@ function parseJsxAttributes(source: string): Record<string, unknown> {
         }
         index += 1;
       }
-      attributes[name] = parseJsxLiteral(source.slice(start, index));
+      attrs[name] = parseJsxLiteral(source.slice(start, index));
       continue;
     }
     if (source[index] === '{') {
-      const expression = readBracedExpression(source, index);
-      if (!expression) break;
-      attributes[name] = parseJsxLiteral(expression.value);
-      index = expression.end;
+      const expr = readBracedExpr(source, index);
+      if (!expr) break;
+      attrs[name] = parseJsxLiteral(expr.value);
+      index = expr.end;
       continue;
     }
     const bare = source.slice(index).match(/^[^\s/>]+/)?.[0];
@@ -593,10 +588,10 @@ function parseJsxAttributes(source: string): Record<string, unknown> {
       index += 1;
       continue;
     }
-    attributes[name] = parseJsxLiteral(bare);
+    attrs[name] = parseJsxLiteral(bare);
     index += bare.length;
   }
-  return attributes;
+  return attrs;
 }
 
 function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undefined {
@@ -610,21 +605,18 @@ function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undef
   const selfClosing = /\/\s*$/.test(shell);
   return {
     name,
-    attributes: parseJsxAttributes(shell.replace(/\/\s*$/, '')),
+    attributes: parseJsxAttrs(shell.replace(/\/\s*$/, '')),
     end,
     selfClosing,
   };
 }
 
-function codeBodyExpression(
-  source: string,
-  start: number,
-): { value: string; end: number } | undefined {
+function codeBodyExpr(source: string, start: number): { value: string; end: number } | undefined {
   const first = source.slice(start).match(/^\s*\{/);
   if (!first) return undefined;
-  const expressionStart = start + first[0].length - 1;
-  const body = source.slice(expressionStart + 1).match(/^\s*`/);
-  return body ? readBracedExpression(source, expressionStart) : undefined;
+  const exprStart = start + first[0].length - 1;
+  const body = source.slice(exprStart + 1).match(/^\s*`/);
+  return body ? readBracedExpr(source, exprStart) : undefined;
 }
 
 function jsxComponentEnd(source: string, opening: JsxOpeningTag): number {
@@ -633,21 +625,21 @@ function jsxComponentEnd(source: string, opening: JsxOpeningTag): number {
 
 function jsxComponentRange(source: string, opening: JsxOpeningTag): JsxComponentRange | undefined {
   if (opening.selfClosing) return { bodyEnd: opening.end, end: opening.end };
-  const expression = opening.name === 'Code' ? codeBodyExpression(source, opening.end) : undefined;
+  const expr = opening.name === 'Code' ? codeBodyExpr(source, opening.end) : undefined;
   const closePattern = new RegExp(`<\\/${opening.name}\\s*>`, 'g');
-  closePattern.lastIndex = expression?.end ?? opening.end;
+  closePattern.lastIndex = expr?.end ?? opening.end;
   const close = closePattern.exec(source);
   if (opening.name === 'Code') {
     // Older exported leaves can omit an end tag before the next Code block. Treat that next
     // opening tag as the boundary instead of swallowing every following code sample.
-    const nextOpening = source.indexOf('<Code', expression?.end ?? opening.end);
-    if (nextOpening !== -1 && (!close || nextOpening < close.index))
-      return { bodyEnd: nextOpening, end: nextOpening };
+    const nOpening = source.indexOf('<Code', expr?.end ?? opening.end);
+    if (nOpening !== -1 && (!close || nOpening < close.index))
+      return { bodyEnd: nOpening, end: nOpening };
   }
   return close ? { bodyEnd: close.index, end: close.index + close[0].length } : undefined;
 }
 
-function parseArrayAttribute(value: unknown): unknown[] | undefined {
+function parseArrayAttr(value: unknown): unknown[] | undefined {
   if (Array.isArray(value)) return value;
   if (typeof value !== 'string') return undefined;
   try {
@@ -660,53 +652,53 @@ function parseArrayAttribute(value: unknown): unknown[] | undefined {
 
 function componentBlock(
   name: string,
-  attributes: Record<string, unknown>,
+  attrs: Record<string, unknown>,
   body: string,
 ): RichBlock | undefined {
-  const expression = codeBodyExpression(body, 0);
-  const bodyValue = expression ? parseJsxLiteral(expression.value) : decodeHtml(body.trim());
+  const expr = codeBodyExpr(body, 0);
+  const bodyValue = expr ? parseJsxLiteral(expr.value) : decodeHtml(body.trim());
   if (name === 'Nodes') {
-    const nodes = parseArrayAttribute(attributes.nodes);
-    const edges = parseArrayAttribute(attributes.edges);
-    if (('nodes' in attributes && !nodes) || ('edges' in attributes && !edges)) return undefined;
+    const nodes = parseArrayAttr(attrs.nodes);
+    const edges = parseArrayAttr(attrs.edges);
+    if (('nodes' in attrs && !nodes) || ('edges' in attrs && !edges)) return undefined;
     return {
       _type: 'nodes',
       _key: key(),
-      ...attributes,
+      ...attrs,
       nodes: Array.isArray(nodes) ? nodes : [],
       edges: Array.isArray(edges) ? edges : [],
     };
   }
   if (name === 'Code') {
-    const language = typeof attributes.language === 'string' ? attributes.language : '';
-    const source = typeof attributes.source === 'string' ? attributes.source : undefined;
-    const codeAttribute = typeof attributes.code === 'string' ? attributes.code : undefined;
+    const lang = typeof attrs.language === 'string' ? attrs.language : '';
+    const source = typeof attrs.source === 'string' ? attrs.source : undefined;
+    const codeAttr = typeof attrs.code === 'string' ? attrs.code : undefined;
     const value =
       typeof bodyValue === 'string'
         ? bodyValue.replace(/^\r?\n/, '').replace(/\r?\n$/, '')
-        : (codeAttribute ?? '');
+        : (codeAttr ?? '');
     return {
       _type: 'code',
       _key: key(),
-      language,
+      language: lang,
       ...(source ? { source } : {}),
-      value: value || codeAttribute || '',
+      value: value || codeAttr || '',
     };
   }
   if (name === 'Embed')
     return {
       _type: 'embed',
       _key: key(),
-      ...attributes,
-      src: typeof attributes.src === 'string' ? attributes.src : '',
-      title: typeof attributes.title === 'string' ? attributes.title : '',
+      ...attrs,
+      src: typeof attrs.src === 'string' ? attrs.src : '',
+      title: typeof attrs.title === 'string' ? attrs.title : '',
     };
   if (name === 'TsDocs')
     return {
       _type: 'tsDocs',
       _key: key(),
-      ...attributes,
-      scope: typeof attributes.scope === 'string' ? attributes.scope : '',
+      ...attrs,
+      scope: typeof attrs.scope === 'string' ? attrs.scope : '',
     };
   return undefined;
 }
@@ -901,8 +893,8 @@ function decodeHtmlRepeated(value: string): string {
   return current;
 }
 
-function htmlAttribute(attributes: string, name: string): string | undefined {
-  const match = attributes.match(
+function htmlAttr(attrs: string, name: string): string | undefined {
+  const match = attrs.match(
     new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'),
   );
   const value = match?.[1] ?? match?.[2] ?? match?.[3];
@@ -987,7 +979,7 @@ function htmlToMarkdown(source: string, inlineMath: boolean): string {
     }
     const closing = /^<\//.test(raw);
     const selfClosing = /\/\s*>$/.test(raw);
-    const attributes = match[2] ?? '';
+    const attrs = match[2] ?? '';
     output += escapeHtmlTableText(source.slice(copiedUntil, index), inlineMath);
     copiedUntil = tagPattern.lastIndex;
 
@@ -1005,9 +997,9 @@ function htmlToMarkdown(source: string, inlineMath: boolean): string {
       continue;
     }
     if (name === 'img') {
-      const alt = htmlAttribute(attributes, 'alt') ?? 'image';
-      const src = htmlAttribute(attributes, 'src') ?? '';
-      const title = htmlAttribute(attributes, 'title');
+      const alt = htmlAttr(attrs, 'alt') ?? 'image';
+      const src = htmlAttr(attrs, 'src') ?? '';
+      const title = htmlAttr(attrs, 'title');
       const escapedTitle = title?.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
       output += src
         ? `![${escapeMarkdownText(alt)}](${markdownDestination(src)}${escapedTitle ? ` "${escapedTitle}"` : ''})`
@@ -1031,7 +1023,7 @@ function htmlToMarkdown(source: string, inlineMath: boolean): string {
     let open = '';
     let close = '';
     if (name === 'a') {
-      const href = htmlAttribute(attributes, 'href');
+      const href = htmlAttr(attrs, 'href');
       if (href) [open, close] = ['[', `](${markdownDestination(href)})`];
     } else if (name === 'strong' || name === 'b') [open, close] = ['**', '**'];
     else if (name === 'em' || name === 'i') [open, close] = ['*', '*'];
@@ -1119,16 +1111,16 @@ function tableBlock(
   };
 }
 
-function markdownImagesAsBlocks(
+function markdownImgsAsBlocks(
   source: string,
   options: DocsBlockOptions,
   blocks: RichBlock[],
 ): string {
   if (!enabled(options, 'docImage')) return source;
-  const images: Token[] = [];
+  const imgs: Token[] = [];
   const visit = (tokens: Token[] | undefined, insideLink = false) => {
     for (const token of tokens ?? []) {
-      if (token.type === 'image' && !insideLink) images.push(token);
+      if (token.type === 'image' && !insideLink) imgs.push(token);
       else if (token.tokens) visit(token.tokens, insideLink || token.type === 'link');
     }
   };
@@ -1136,16 +1128,16 @@ function markdownImagesAsBlocks(
 
   let result = source;
   let cursor = 0;
-  for (const image of images) {
-    const raw = image.raw;
+  for (const img of imgs) {
+    const raw = img.raw;
     const index = result.indexOf(raw, cursor);
-    if (index < 0 || typeof image.href !== 'string') continue;
+    if (index < 0 || typeof img.href !== 'string') continue;
     const block = {
       _type: 'docImage',
       _key: key(),
-      alt: image.text ?? '',
-      url: image.href,
-      ...(image.title ? { title: image.title } : {}),
+      alt: img.text ?? '',
+      url: img.href,
+      ...(img.title ? { title: img.title } : {}),
       markdown: raw,
     } satisfies RichBlock;
     const placeholder = richPlaceholder(blocks, block);
@@ -1177,7 +1169,7 @@ function htmlTableBlock(
           return original ? richPlaceholder(cellBlocks, original) : placeholder;
         },
       );
-      const cellMarkdown = markdownImagesAsBlocks(cellMarkdownWithBlocks, options, cellBlocks);
+      const cellMarkdown = markdownImgsAsBlocks(cellMarkdownWithBlocks, options, cellBlocks);
       return {
         _type: 'cell',
         _key: key(),
@@ -1263,11 +1255,11 @@ function parseGroupedItems(
   for (let index = 0; index < markers.length; index += 1) {
     const marker = markers[index]!;
     const bodyStart = (marker.index ?? 0) + marker[0].length;
-    const nextStart = markers[index + 1]?.index ?? source.length;
+    const nStart = markers[index + 1]?.index ?? source.length;
     const closing = /^:::terra-item-end[ \t]*\r?$/gm;
     closing.lastIndex = bodyStart;
     const end = closing.exec(source);
-    if (!end || end.index >= nextStart || source.slice(end.index + end[0].length, nextStart).trim())
+    if (!end || end.index >= nStart || source.slice(end.index + end[0].length, nStart).trim())
       return undefined;
     let title: string;
     try {
@@ -1357,10 +1349,9 @@ function parseMarkdown(
       try {
         const data = parseYaml(payload) as RichBlock;
         if (data && data._type === type) {
-          const normalized =
-            type === 'table' ? parseMarkdownTableCells(data, options, blocks) : data;
+          const norm = type === 'table' ? parseMarkdownTableCells(data, options, blocks) : data;
           return enabled(options, type)
-            ? richPlaceholder(blocks, normalized)
+            ? richPlaceholder(blocks, norm)
             : rawPlaceholder(blocks, source);
         }
       } catch {
@@ -1448,17 +1439,17 @@ function parseMarkdown(
       continue;
     }
     if (token.type === 'paragraph') {
-      const image =
+      const img =
         token.tokens?.length === 1 && token.tokens[0]?.type === 'image'
           ? token.tokens[0]
           : undefined;
-      if (image && enabled(options, 'docImage')) {
+      if (img && enabled(options, 'docImage')) {
         result.push({
           _type: 'docImage',
           _key: key(),
-          alt: image.text ?? '',
-          url: image.href ?? '',
-          ...(image.title ? { title: image.title } : {}),
+          alt: img.text ?? '',
+          url: img.href ?? '',
+          ...(img.title ? { title: img.title } : {}),
           markdown: token.raw,
         });
         continue;
@@ -1766,7 +1757,7 @@ function escapeTableAutolinks(markdown: string): string {
     .replace(/\b([A-Z0-9._%+-]+)@([A-Z0-9.-]+\.[A-Z]{2,})\b/gi, '$1&#64;$2');
   return escaped.replace(
     /DOCSTABLEPROTECTED(\d+)TOKEN/g,
-    (_match, index: string) => protectedParts[Number(index)] ?? _match,
+    (_match, i: string) => protectedParts[Number(i)] ?? _match,
   );
 }
 
@@ -1774,8 +1765,8 @@ function tableToMarkdown(block: RichBlock): string {
   const rows = Array.isArray(block.rows) ? (block.rows as Record<string, unknown>[]) : [];
   const fallback = richBlockDirective(block);
   if (!rows.length) return fallback;
-  const columnCounts = rows.map((row) => (Array.isArray(row.cells) ? row.cells.length : 0));
-  const rectangular = columnCounts.every((count) => count === columnCounts[0]);
+  const colCounts = rows.map((row) => (Array.isArray(row.cells) ? row.cells.length : 0));
+  const rectangular = colCounts.every((count) => count === colCounts[0]);
   const simpleRows =
     rectangular &&
     rows.every((row) => {
@@ -1957,7 +1948,7 @@ function emptyPortableTextParagraph(value: unknown): boolean {
 
 function semanticMarkdownValue(value: unknown): unknown {
   if (Array.isArray(value))
-    return value.filter((item) => !emptyPortableTextParagraph(item)).map(semanticMarkdownValue);
+    return value.filter((i) => !emptyPortableTextParagraph(i)).map(semanticMarkdownValue);
   if (!value || typeof value !== 'object') return value;
 
   const block = value as Record<string, unknown>;
@@ -1965,10 +1956,8 @@ function semanticMarkdownValue(value: unknown): unknown {
   if (type === 'block' || type === 'terraBlock') {
     const definitions = new Map(
       (Array.isArray(block.markDefs) ? block.markDefs : [])
-        .filter(
-          (item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object',
-        )
-        .map((item) => [String(item._key ?? ''), semanticMarkdownValue(item)]),
+        .filter((i): i is Record<string, unknown> => Boolean(i) && typeof i === 'object')
+        .map((i) => [String(i._key ?? ''), semanticMarkdownValue(i)]),
     );
     const children: unknown[] = [];
     for (const child of Array.isArray(block.children) ? block.children : []) {
@@ -2019,9 +2008,9 @@ function semanticMarkdownValue(value: unknown): unknown {
             ].includes(name),
         )
         .sort(([left], [right]) => left.localeCompare(right))
-        .map(([name, item]) => [name, semanticMarkdownValue(item)]),
+        .map(([name, i]) => [name, semanticMarkdownValue(i)]),
     );
-    const markDefs = [...definitions.values()].map((item) => JSON.stringify(item)).sort();
+    const markDefs = [...definitions.values()].map((i) => JSON.stringify(i)).sort();
     return {
       ...extra,
       _type: 'textBlock',
@@ -2036,10 +2025,9 @@ function semanticMarkdownValue(value: unknown): unknown {
   // Empty, metadata-free Portable Text paragraphs have no visible Markdown
   // representation. Ignore them in all nested block arrays (including callouts
   // and table cells), while retaining the original records in the source archive.
-  const semanticBlock = block;
-  const nestedContent = Array.isArray(semanticBlock.content) ? semanticBlock.content : undefined;
+  const nestedContent = Array.isArray(block.content) ? block.content : undefined;
   const extra = Object.fromEntries(
-    Object.entries(semanticBlock)
+    Object.entries(block)
       .filter(([name]) => !['_key', '_rev', '_createdAt', '_updatedAt', '_system'].includes(name))
       .filter(([name]) => !(name === '_type' && type === 'item'))
       .filter(([name]) => !(name === 'markdown' && nestedContent))
@@ -2056,7 +2044,7 @@ function semanticMarkdownValue(value: unknown): unknown {
           !(name === 'markdown' && type === 'code' && ('value' in block || 'source' in block)),
       )
       .sort(([left], [right]) => left.localeCompare(right))
-      .map(([name, item]) => [name, semanticMarkdownValue(item)]),
+      .map(([name, i]) => [name, semanticMarkdownValue(i)]),
   );
   return extra;
 }
@@ -2094,11 +2082,11 @@ function colonFence(contents: string[], minimum = 4): string {
   return ':'.repeat(Math.max(minimum, 1 + Math.max(0, ...largest)));
 }
 
-function codeFence(code: string, language: string): string {
+function codeFence(code: string, lang: string): string {
   const tick = String.fromCharCode(96);
   const runs = code.match(new RegExp(tick + '+', 'g')) ?? [];
   const fence = tick.repeat(Math.max(3, 1 + Math.max(0, ...runs.map((run) => run.length))));
-  const suffix = language ? language : '';
+  const suffix = lang ? lang : '';
   return fence + suffix + '\n' + code.replace(/\n+$/, '') + '\n' + fence;
 }
 
@@ -2153,8 +2141,8 @@ export function docsValueToMarkdown(value: DocsValue): string {
     }
 
     if (item._type === 'code' && !extra) {
-      const language = String(item.language ?? '');
-      if (language && !/^[A-Za-z0-9_+.-]+$/.test(language)) {
+      const lang = String(item.language ?? '');
+      if (lang && !/^[A-Za-z0-9_+.-]+$/.test(lang)) {
         result.push(richBlockDirective(item));
       } else if (
         typeof item.markdown === 'string' &&
@@ -2166,7 +2154,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
           markdownPreservesValue(item, item.markdown) ? item.markdown : richBlockDirective(item),
         );
       } else {
-        const markdown = codeFence(String(item.value ?? item.source ?? ''), language);
+        const markdown = codeFence(String(item.value ?? item.source ?? ''), lang);
         result.push(markdownPreservesValue(item, markdown) ? markdown : richBlockDirective(item));
       }
       continue;

@@ -91,12 +91,12 @@ export const TabsGroup = ({
                     ? {
                         onDelete: (val) => {
                           const deletedIndex = Number(val);
-                          const activeIndex = Number(a);
-                          const nextLength = items.length - 1;
+                          const aIndex = Number(a);
+                          const nLength = items.length - 1;
                           onDelete(deletedIndex);
-                          if (deletedIndex < activeIndex) setActive(String(activeIndex - 1));
-                          else if (deletedIndex === activeIndex && nextLength > 0) {
-                            setActive(String(Math.min(deletedIndex, nextLength - 1)));
+                          if (deletedIndex < aIndex) setActive(String(aIndex - 1));
+                          else if (deletedIndex === aIndex && nLength > 0) {
+                            setActive(String(Math.min(deletedIndex, nLength - 1)));
                           }
                         },
                       }

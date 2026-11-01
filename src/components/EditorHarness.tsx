@@ -45,11 +45,10 @@ const host: DocsHostAdapter = {
     publish: true,
   },
   async invoke<T = unknown>(
-    operation: DocsActionOperation,
+    op: DocsActionOperation,
     input?: unknown,
   ): Promise<{ data?: T; error?: unknown }> {
-    const mock =
-      typeof window === 'undefined' ? undefined : window.__terraDocsMockResponses?.[operation];
+    const mock = typeof window === 'undefined' ? undefined : window.__terraDocsMockResponses?.[op];
     if (mock?.error) return { error: new Error(mock.error) };
     const inputKey =
       input && typeof input === 'object' && 'source' in input

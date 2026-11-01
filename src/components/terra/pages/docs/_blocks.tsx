@@ -10,7 +10,7 @@ IMPORTS
 
 // API
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
-import { cn, error as logError, errorLog } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, logErr } from '../../../../lib/terra/runtime/runtime.js';
 import { useEffect, useMemo, useState } from 'react';
 
 // COMPONENTS
@@ -135,7 +135,7 @@ export function TsDocsSelect({
         },
       )
       .catch((e: unknown) => {
-        errorLog('TsDocsSelect', 'Failed to fetch scopes', logError(e));
+        logErr('TsDocsSelect', 'Failed to fetch scopes', e);
       })
       .finally(() => {
         if (a) setLoading(false);

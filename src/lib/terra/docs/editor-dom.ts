@@ -117,13 +117,11 @@ export function pasteMd(
 
 export function codeViewOf(): EditorView | null {
   if (typeof document === 'undefined') return null;
-  const active =
+  const a =
     document.activeElement instanceof Element
       ? document.activeElement.closest<HTMLElement>('.docs-code-block .cm-editor')
       : null;
-  return (
-    (active as (HTMLElement & { cmView?: { view?: EditorView } }) | null)?.cmView?.view ?? null
-  );
+  return (a as (HTMLElement & { cmView?: { view?: EditorView } }) | null)?.cmView?.view ?? null;
 }
 
 /**

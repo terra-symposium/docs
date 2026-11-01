@@ -48,15 +48,15 @@ export function BlockContext({
                     : event.target instanceof Node
                       ? (event.target.parentElement as BlockActionTarget | null)
                       : null;
-                const nextActions: BlockAction[] = [];
+                const nActions: BlockAction[] = [];
                 while (current && current !== event.currentTarget) {
                   if (current.__blockActions?.length) {
-                    if (nextActions.length) nextActions.push({ sep: true });
-                    nextActions.push(...current.__blockActions);
+                    if (nActions.length) nActions.push({ sep: true });
+                    nActions.push(...current.__blockActions);
                   }
                   current = current.parentElement as BlockActionTarget | null;
                 }
-                if (!nextActions.length) {
+                if (!nActions.length) {
                   const block = (event.target as HTMLElement).closest<HTMLElement>(
                     '[data-docs-editor-block], [data-docs-block], [data-terra-block]',
                   );
@@ -64,7 +64,7 @@ export function BlockContext({
                     event.stopPropagation();
                     return;
                   }
-                  nextActions.push({
+                  nActions.push({
                     text: 'Select block',
                     onSelect: () =>
                       document.dispatchEvent(
@@ -77,7 +77,7 @@ export function BlockContext({
                       ),
                   });
                 }
-                setActions(nextActions);
+                setActions(nActions);
               }}
             >
               {children}
@@ -92,8 +92,8 @@ export function BlockContext({
             selectedAction.current.splice(0, 1)[0]?.();
           }}
         >
-          {actions?.map((action, index) => {
-            if ('sep' in action) return <ContextMenuSeparator key={`separator-${index}`} />;
+          {actions?.map((action, i) => {
+            if ('sep' in action) return <ContextMenuSeparator key={`separator-${i}`} />;
             if ('sub' in action)
               return (
                 <ContextMenuSub key={action.text}>
@@ -101,15 +101,15 @@ export function BlockContext({
                     {action.icon} {action.text}
                   </ContextMenuSubTrigger>
                   <ContextMenuSubContent>
-                    {action.sub.map((item) => (
+                    {action.sub.map((i) => (
                       <ContextMenuItem
-                        key={item.text}
-                        intent={item.intent as never}
+                        key={i.text}
+                        intent={i.intent as never}
                         onSelect={() => {
-                          selectedAction.current[0] = item.onSelect ?? null;
+                          selectedAction.current[0] = i.onSelect ?? null;
                         }}
                       >
-                        {item.icon} {item.text}
+                        {i.icon} {i.text}
                       </ContextMenuItem>
                     ))}
                   </ContextMenuSubContent>

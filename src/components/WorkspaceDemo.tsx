@@ -30,7 +30,7 @@ function currentLocation(): string {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
-function activeDocumentId(state: WorkspaceDemoState, location: string): string {
+function aDocumentId(state: WorkspaceDemoState, location: string): string {
   try {
     const requested = new URL(location, 'http://localhost').searchParams.get('leaf');
     if (requested && state.documents[requested]) return requested;
@@ -40,7 +40,7 @@ function activeDocumentId(state: WorkspaceDemoState, location: string): string {
   return state.documents.salesphere ? 'salesphere' : (Object.keys(state.documents)[0] ?? '');
 }
 
-function generateDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
+function genDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
   const excerpt =
     input.markdown
       .replace(/^\s*#+\s*/gm, '')
@@ -52,8 +52,8 @@ function generateDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
   const keyword = excerpt.split(/\s+/).find((word) => word.length >= 5) ?? input.title;
   return Promise.resolve({
     title: `${input.title} quiz · sample`,
-    questions: Array.from({ length: input.count }, (_, index) => {
-      const type = input.types[index % input.types.length];
+    questions: Array.from({ length: input.count }, (_, i) => {
+      const type = input.types[i % input.types.length];
       if (type === 'keyword')
         return {
           type,
@@ -72,7 +72,7 @@ function generateDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
   });
 }
 
-const demoQuiz: DocsQuizConfig = { toolbar: true, generate: generateDemoQuiz };
+const demoQuiz: DocsQuizConfig = { toolbar: true, generate: genDemoQuiz };
 
 export default function WorkspaceDemo({
   readOnly = false,
@@ -121,7 +121,7 @@ export default function WorkspaceDemo({
     };
   }, [syncParentOnNavigate]);
 
-  const selectedId = activeDocumentId(state, location);
+  const selectedId = aDocumentId(state, location);
   const selectedDocument = state.documents[selectedId] ?? state.documents.salesphere;
   const host = useMemo(() => {
     const demoHost = createWorkspaceDemoHost(readOnly);
@@ -143,12 +143,10 @@ export default function WorkspaceDemo({
     ...flattenColors('secondary', secondary ?? baseGray),
   };
   const theme = {
-    ...Object.fromEntries(primary.light.map((rgb, index) => [`--primary-${index + 1}`, rgb])),
+    ...Object.fromEntries(primary.light.map((rgb, i) => [`--primary-${i + 1}`, rgb])),
+    ...Object.fromEntries((gray ?? baseGray).light.map((rgb, i) => [`--gray-${i + 1}`, rgb])),
     ...Object.fromEntries(
-      (gray ?? baseGray).light.map((rgb, index) => [`--gray-${index + 1}`, rgb]),
-    ),
-    ...Object.fromEntries(
-      (secondary ?? baseGray).light.map((rgb, index) => [`--secondary-${index + 1}`, rgb]),
+      (secondary ?? baseGray).light.map((rgb, i) => [`--secondary-${i + 1}`, rgb]),
     ),
     ...colorTokens,
   } as CSSProperties;

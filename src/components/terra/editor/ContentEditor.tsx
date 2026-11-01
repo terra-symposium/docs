@@ -45,35 +45,35 @@ const rendererByType: Record<string, (props: any) => JSX.Element | null> = {
   callout: renderCallout,
   code: renderCode,
   docImage: renderImage,
-  embed: ({ attributes, children, node }) => (
-    <div {...attributes} data-docs-editor-block="Embed">
+  embed: ({ attributes: attrs, children, node }) => (
+    <div {...attrs} data-docs-editor-block="Embed">
       <Embed block={node} />
       {children}
     </div>
   ),
   math: renderMathBlock,
-  nodes: ({ attributes, children, node }) => (
-    <div {...attributes} data-docs-editor-block="Diagram">
+  nodes: ({ attributes: attrs, children, node }) => (
+    <div {...attrs} data-docs-editor-block="Diagram">
       <NodesBlock block={node} />
       {children}
     </div>
   ),
-  quiz: ({ attributes, children }) => (
-    <div {...attributes} data-docs-editor-block="Quiz generator">
+  quiz: ({ attributes: attrs, children }) => (
+    <div {...attrs} data-docs-editor-block="Quiz generator">
       <DocsQuizBlock />
       {children}
     </div>
   ),
-  raw: ({ attributes, children, node }) => (
-    <div {...attributes} data-docs-editor-block="Raw Markdown">
+  raw: ({ attributes: attrs, children, node }) => (
+    <div {...attrs} data-docs-editor-block="Raw Markdown">
       <Raw block={node} />
       {children}
     </div>
   ),
   table: renderTable,
   tabs: renderSections,
-  tsDocs: ({ attributes, children, node }) => (
-    <div {...attributes} data-docs-editor-block="TypeScript docs">
+  tsDocs: ({ attributes: attrs, children, node }) => (
+    <div {...attrs} data-docs-editor-block="TypeScript docs">
       <TsDocs block={node} />
       {children}
     </div>
@@ -101,11 +101,7 @@ function fallbackInline(value: ContentMember): ContentMember {
   };
 }
 
-function normalizeTextChildren(
-  value: unknown,
-  options: DocsBlockOptions,
-  blockKey?: string,
-): unknown[] {
+function normTextChildren(value: unknown, options: DocsBlockOptions, blockKey?: string): unknown[] {
   if (typeof value === 'string') {
     value = value
       ? [
@@ -134,7 +130,7 @@ function normalizeTextChildren(
   });
 }
 
-function normalizeNestedContent(value: unknown, options: DocsBlockOptions): unknown {
+function normNestedContent(value: unknown, options: DocsBlockOptions): unknown {
   return Array.isArray(value) ? toEditorValue(value, options) : value;
 }
 
@@ -146,7 +142,7 @@ function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): Editor
       return {
         ...rest,
         _type: 'block',
-        children: normalizeTextChildren(
+        children: normTextChildren(
           typeof children === 'string'
             ? children
             : Array.isArray(children) && children.length > 0
@@ -168,16 +164,14 @@ function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): Editor
       if (member._type === 'callout')
         return {
           ...member,
-          content: normalizeNestedContent(member.content, options),
+          content: normNestedContent(member.content, options),
         } as unknown as PortableTextBlock;
       if (member._type === 'tabs' || member._type === 'accordion')
         return {
           ...member,
           items: Array.isArray(member.items)
-            ? member.items.map((item: unknown) =>
-                isMember(item)
-                  ? { ...item, content: normalizeNestedContent(item.content, options) }
-                  : item,
+            ? member.items.map((i: unknown) =>
+                isMember(i) ? { ...i, content: normNestedContent(i.content, options) } : i,
               )
             : member.items,
         } as unknown as PortableTextBlock;
@@ -194,7 +188,7 @@ function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): Editor
                             isMember(cell)
                               ? {
                                   ...cell,
-                                  content: normalizeNestedContent(cell.content, options),
+                                  content: normNestedContent(cell.content, options),
                                 }
                               : cell,
                           )
@@ -250,15 +244,15 @@ function toTerraValue(value: EditorValue): unknown[] {
       return {
         ...member,
         items: Array.isArray(member.items)
-          ? member.items.map((item: unknown) =>
-              isMember(item)
+          ? member.items.map((i: unknown) =>
+              isMember(i)
                 ? {
-                    ...item,
-                    content: Array.isArray(item.content)
-                      ? toTerraValue(item.content as EditorValue)
-                      : item.content,
+                    ...i,
+                    content: Array.isArray(i.content)
+                      ? toTerraValue(i.content as EditorValue)
+                      : i.content,
                   }
-                : item,
+                : i,
             )
           : member.items,
       };
@@ -339,16 +333,16 @@ function OrderedListItem({
   );
 }
 
-function TerraTextBlock({ attributes, children, node, readOnly }: any): JSX.Element {
+function TerraTextBlock({ attributes: attrs, children, node, readOnly }: any): JSX.Element {
   const content = renderTextStyle(node.style, children, readOnly);
   if (!node.listItem)
     return (
-      <div {...attributes} data-level={node.level} data-style={node.style}>
+      <div {...attrs} data-level={node.level} data-style={node.style}>
         {content}
       </div>
     );
   return (
-    <div {...attributes} data-level={node.level ?? 1} data-list-item={node.listItem}>
+    <div {...attrs} data-level={node.level ?? 1} data-list-item={node.listItem}>
       {node.listItem === 'number' ? (
         <OrderedListItem block={node} level={node.level ?? 1}>
           {content}
@@ -368,10 +362,10 @@ function TerraTextBlock({ attributes, children, node, readOnly }: any): JSX.Elem
   );
 }
 
-function UnsupportedBlock({ attributes, children, node }: any): JSX.Element {
+function UnsupportedBlock({ attributes: attrs, children, node }: any): JSX.Element {
   const source = isPreservedMember(node.source) ? node.source : node;
   return (
-    <div {...attributes} contentEditable={false} data-docs-unsupported-block={source._type}>
+    <div {...attrs} contentEditable={false} data-docs-unsupported-block={source._type}>
       <p className="text-sm text-primary-10">
         Unsupported document block ({source._type}) retained in source.
       </p>
@@ -383,10 +377,10 @@ function UnsupportedBlock({ attributes, children, node }: any): JSX.Element {
   );
 }
 
-function UnsupportedInline({ attributes, children, node }: any): JSX.Element {
+function UnsupportedInline({ attributes: attrs, children, node }: any): JSX.Element {
   const source = isPreservedMember(node.source) ? node.source : node;
   return (
-    <span {...attributes} contentEditable={false} data-docs-unsupported-inline={source._type}>
+    <span {...attrs} contentEditable={false} data-docs-unsupported-inline={source._type}>
       {source.text ?? `[Unsupported ${source._type}]`}
       {children}
     </span>
@@ -404,20 +398,20 @@ function ContentChangeListener({ onChange }: { onChange: (content: unknown[]) =>
   return null;
 }
 
-function validateNesting(value: unknown, depth = 0): true | string {
+function validNesting(value: unknown, depth = 0): true | string {
   if (Array.isArray(value)) {
     for (const item of value) {
-      const result = validateNesting(item, depth);
+      const result = validNesting(item, depth);
       if (result !== true) return result;
     }
   } else if (value && typeof value === 'object') {
     const member = value as Record<string, unknown>;
-    const nextDepth =
+    const nDepth =
       depth + (typeof member._type === 'string' && containerTypes.has(member._type) ? 1 : 0);
-    if (nextDepth > 1)
+    if (nDepth > 1)
       return 'Tabs, accordions, and callouts cannot be nested inside another tabs, accordion, or callout block.';
     for (const child of Object.values(member)) {
-      const result = validateNesting(child, nextDepth);
+      const result = validNesting(child, nDepth);
       if (result !== true) return result;
     }
   }
@@ -446,16 +440,16 @@ export function ContentEditor({
   toolbarActions?: ReactNode;
   blocks?: DocsBlockOptions;
 }): JSX.Element {
-  const [nestingError, setNestingError] = useState<string | undefined>(undefined);
+  const [nestingErr, setNestingErr] = useState<string | undefined>(undefined);
   const [rejectedChanges, setRejectedChanges] = useState(0);
   const updateContent = (value: unknown[]): void => {
-    const result = validateNesting(value, nested ? 1 : 0);
+    const result = validNesting(value, nested ? 1 : 0);
     if (result !== true) {
-      setNestingError(result);
+      setNestingErr(result);
       setRejectedChanges((count: number) => count + 1);
       return;
     }
-    setNestingError(undefined);
+    setNestingErr(undefined);
     onChange?.(value);
   };
   const nodes = [
@@ -497,7 +491,7 @@ export function ContentEditor({
             />
           </div>
         )}
-        {nestingError && <p role="alert">{nestingError}</p>}
+        {nestingErr && <p role="alert">{nestingErr}</p>}
         <BlockContext enabled={!readOnly}>
           <section
             aria-label={readOnly ? 'Content preview' : 'Content editor'}

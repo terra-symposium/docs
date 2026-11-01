@@ -19,7 +19,7 @@ import {
 import {
   cn,
   createTrace,
-  errorLog,
+  logErr,
   isRec,
   validateType,
   warn as logWarn,
@@ -759,14 +759,14 @@ const FLOW_COMPONENTS = {
         link.download = 'diagram.png';
         link.href = dataUrl;
         link.click();
-      } catch (error) {
-        errorLog('Nodes', 'export.failed', error);
+      } catch (err) {
+        logErr('Nodes', 'export.failed', err);
       } finally {
-        handles.forEach((handle, index) => {
-          handle.style.visibility = handleVisibility[index] ?? '';
+        handles.forEach((handle, i) => {
+          handle.style.visibility = handleVisibility[i] ?? '';
         });
         await setViewport(viewport, { duration: 0 }).catch((error) => {
-          errorLog('Nodes', 'export.viewport-restore.failed', error);
+          logErr('Nodes', 'export.viewport-restore.failed', error);
         });
         setIsExporting(false);
       }
@@ -1169,7 +1169,7 @@ const FLOW_COMPONENTS = {
                             if (t === 'process' && onAddContent) onAddContent(pos);
                             else onAddNode(t, pos);
                           } catch (err: unknown) {
-                            errorLog('AuthNodes', `menu.add.failed: ${t}`, {
+                            logErr('AuthNodes', `menu.add.failed: ${t}`, {
                               error: err instanceof Error ? err.message : String(err),
                             });
                           }

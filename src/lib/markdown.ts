@@ -109,11 +109,11 @@ function renderGroupedBlocks(
       for (let index = 0; valid && index < markers.length; index += 1) {
         const marker = markers[index]!;
         const start = (marker.index ?? 0) + marker[0].length;
-        const next = markers[index + 1]?.index ?? body.length;
+        const n = markers[index + 1]?.index ?? body.length;
         const endMarker = /^:::terra-item-end[ \t]*\r?$/gm;
         endMarker.lastIndex = start;
         const end = endMarker.exec(body);
-        if (!end || end.index >= next || body.slice(end.index + end[0].length, next).trim()) {
+        if (!end || end.index >= n || body.slice(end.index + end[0].length, n).trim()) {
           valid = false;
           break;
         }
@@ -253,7 +253,7 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
       ],
     });
   const html = parser.parse(withMath, { async: false });
-  const safe = sanitizeHtml(html, {
+  const s = sanitizeHtml(html, {
     ...sanitizeHtml.defaults,
     allowedTags: [
       ...sanitizeHtml.defaults.allowedTags,
@@ -281,8 +281,8 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
     },
     allowedSchemes: ['http', 'https', 'mailto'],
   });
-  return safe.replace(
+  return s.replace(
     /TERRADOCSRICHPLACEHOLDER(\d+)END/g,
-    (_match, index: string) => rendered[Number(index)] ?? '',
+    (_match, i: string) => rendered[Number(i)] ?? '',
   );
 }

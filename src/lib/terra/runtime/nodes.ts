@@ -171,8 +171,8 @@ export const NODES = {
 				let i = 0;
 				while (i < line.length) {
 					const el = line.slice(i).match(/^([A-Za-z_$][\w$]*)\s*=\s*/u);
-					const attributeName = el?.[1];
-					if (!el || !attributeName) break;
+					const attrName = el?.[1];
+					if (!el || !attrName) break;
 					i += el[0].length;
 					let v = '';
 					let depth = 0;
@@ -213,7 +213,7 @@ export const NODES = {
 						i++;
 					}
 					const trimmed = v.trim();
-						assignmentVals[attributeName] = scalar((trimmed.match(/^\{([^{}\n]+)\}$/u)?.[1]?.trim() ?? (/^\{[-\w.'"`$]+\}$/u.test(trimmed) ? trimmed.slice(1, -1).trim() : null)) ?? trimmed);
+						assignmentVals[attrName] = scalar((trimmed.match(/^\{([^{}\n]+)\}$/u)?.[1]?.trim() ?? (/^\{[-\w.'"`$]+\}$/u.test(trimmed) ? trimmed.slice(1, -1).trim() : null)) ?? trimmed);
 						while (i < line.length && TerraQualityRegex.REGEX_S_U_REGEX().test(line[i] ?? '')) i++;
 				}
 			}

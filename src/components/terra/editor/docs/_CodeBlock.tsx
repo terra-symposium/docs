@@ -11,7 +11,7 @@ IMPORTS
 // API
 import { $hydrating, $transition } from '../../../../lib/terra/docs/state.js';
 import { htmlToMd } from '../../../../lib/terra/docs/editor-dom.js';
-import { cn, errorLog, isDarkMode } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, isDarkMode, logErr } from '../../../../lib/terra/runtime/runtime.js';
 import {
   copyLineDown,
   copyLineUp,
@@ -282,7 +282,7 @@ export function CodeBlock(
         codeSrcCache.delete(src);
         if (!a) return;
         const msg = e instanceof Error ? e.message : 'Unable to receive the API value.';
-        errorLog('DocsCode', `Failed to receive ${src}`, { message: msg });
+        logErr('DocsCode', `Failed to receive ${src}`, { message: msg });
         setResCode(n);
         setReceivedErr(msg);
         setReceivedState('error');
@@ -296,7 +296,7 @@ export function CodeBlock(
   useEffect(() => {
     if (props.tone === 'view') return;
     let a = true;
-    let activeEnterHandler: ((event: KeyboardEvent) => void) | undefined;
+    let aEnterHandler: ((event: KeyboardEvent) => void) | undefined;
     $hydrating.set($hydrating.get() + 1);
     const hydration = {
       finished: false,
@@ -492,19 +492,19 @@ export function CodeBlock(
       const codeInput = editorView.contentDOM;
       const onCodeEnter = (event: KeyboardEvent): void => {
         if (event.key !== 'Enter' || props.tone !== 'edit' || props.readOnly || src) return;
-        const activeView = view.current;
-        if (!activeView) return;
+        const aView = view.current;
+        if (!aView) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        const { from, to } = activeView.state.selection.main;
-        activeView.dispatch({
+        const { from, to } = aView.state.selection.main;
+        aView.dispatch({
           changes: { from, to, insert: '\n' },
           selection: { anchor: from + 1 },
           scrollIntoView: true,
           userEvent: 'input.type',
         });
       };
-      activeEnterHandler = onCodeEnter;
+      aEnterHandler = onCodeEnter;
       codeInput.addEventListener('keydown', onCodeEnter, true);
       view.current = editorView;
       (editorView.dom as HTMLDivElement & { cmView?: { view: EditorView } }).cmView = {
@@ -538,8 +538,8 @@ export function CodeBlock(
       a = false;
       hydration.release();
       if (view.current) {
-        if (activeEnterHandler)
-          view.current.contentDOM.removeEventListener('keydown', activeEnterHandler, true);
+        if (aEnterHandler)
+          view.current.contentDOM.removeEventListener('keydown', aEnterHandler, true);
         delete (view.current.dom as HTMLDivElement & { cmView?: { view: EditorView } }).cmView;
       }
       view.current?.destroy();

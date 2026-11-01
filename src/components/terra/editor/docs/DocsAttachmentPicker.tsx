@@ -16,10 +16,10 @@ import type { DocsBlockOptions } from '../../../blocks.js';
 import type { DocsHostAttachment } from '../../../../lib/host.js';
 import type { JSX } from 'react';
 
-const imageFile = /\.(?:png|jpe?g|gif|webp|svg|avif)$/iu;
+const imgFile = /\.(?:png|jpe?g|gif|webp|svg|avif)$/iu;
 
 function canEmbedAttachment(attachment: DocsHostAttachment, blocks: DocsBlockOptions): boolean {
-  return imageFile.test(attachment.name) ? blocks.docImage !== false : blocks.embed !== false;
+  return imgFile.test(attachment.name) ? blocks.docImage !== false : blocks.embed !== false;
 }
 
 /** Select an attachment belonging to the current leaf and insert it in the document body. */
@@ -38,10 +38,10 @@ export function DocsAttachmentPicker({
 }): JSX.Element {
   const [mode, setMode] = useState<'embed' | 'link'>('embed');
   const [path, setPath] = useState('');
-  const attachment = attachments.find((item) => item.path === path);
+  const attachment = attachments.find((i) => i.path === path);
   const visualEmbedAvailable = attachment
     ? canEmbedAttachment(attachment, blocks)
-    : attachments.some((item) => canEmbedAttachment(item, blocks));
+    : attachments.some((i) => canEmbedAttachment(i, blocks));
   const selectedMode =
     mode === 'embed' &&
     visualEmbedAvailable &&
@@ -70,9 +70,9 @@ export function DocsAttachmentPicker({
               <SelectValue placeholder="Select an attachment" />
             </SelectTrigger>
             <SelectContent>
-              {attachments.map((item) => (
-                <SelectItem key={item.path} value={item.path}>
-                  {item.name}
+              {attachments.map((i) => (
+                <SelectItem key={i.path} value={i.path}>
+                  {i.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -122,7 +122,7 @@ export function DocsAttachmentPicker({
                   markDefs: [{ _key: linkKey, _type: 'link', href: attachment.path }],
                   style: 'normal',
                 });
-              } else if (imageFile.test(attachment.name)) {
+              } else if (imgFile.test(attachment.name)) {
                 onConfirm({
                   _key: crypto.randomUUID(),
                   _type: 'docImage',

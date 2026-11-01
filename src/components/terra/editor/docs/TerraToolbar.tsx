@@ -231,7 +231,7 @@ export function TerraToolbar({
               if (value === 'docs:code-received') setReceivedValueOpen(true);
               else if (value === 'docs:attachment') setAttachmentPickerOpen(true);
               else {
-                const choice = DOCS_INSERTIONS.find((item) => item.value === value);
+                const choice = DOCS_INSERTIONS.find((i) => i.value === value);
                 if (choice && choice.type !== 'attachment') insertBlock(choice.type);
               }
             }}

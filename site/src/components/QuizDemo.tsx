@@ -27,11 +27,11 @@ const sections: DocsSection[] = [
   },
 ];
 
-function generateDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
+function genDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
   return Promise.resolve({
     title: `${quizDemoResponse.title} · sample`,
-    questions: Array.from({ length: input.count }, (_, index) => {
-      const type = input.types[index % input.types.length];
+    questions: Array.from({ length: input.count }, (_, i) => {
+      const type = input.types[i % input.types.length];
       const question =
         quizDemoResponse.questions.find((candidate) => candidate.type === type) ??
         quizDemoResponse.questions[0];
@@ -40,7 +40,7 @@ function generateDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
   });
 }
 
-const quiz: DocsQuizConfig = { toolbar: true, generate: generateDemoQuiz };
+const quiz: DocsQuizConfig = { toolbar: true, generate: genDemoQuiz };
 
 /** A package-safe interactive demo for the host-configurable leaf quiz flow. */
 export function QuizDemo() {

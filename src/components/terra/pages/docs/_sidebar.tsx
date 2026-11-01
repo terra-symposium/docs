@@ -18,20 +18,8 @@ import {
   memoryDrafts,
   useAtom,
 } from '../../../../lib/terra/docs/state.js';
-import {
-  extractAllNodeIds,
-  getSiblings as getSibs,
-  parseDocsRoute as route,
-  getStableKey,
-  sanitizeName,
-} from '../../../../lib/terra/docs/tree.js';
-import { navigateDocs as navigate } from '../../../../lib/terra/docs/navigation.js';
-import { runMutation } from '../../../../lib/terra/docs/mutations.js';
-import { getHue } from '@terra-symposium/styling';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
 import { archiveDocs } from '../../../../lib/terra/docs/archive.js';
-import { ManageAttachmentsDialog } from './_manage-attachments-dialog.js';
-import { useRenderTripwire } from './use-render-tripwire.js';
 import {
   bName,
   buildRoute as buildRoute,
@@ -39,22 +27,31 @@ import {
   dirname,
   docsPath,
   docsRootPath,
-  FILES,
   toNodeLabel,
   toPaths,
 } from '../../../../lib/terra/runtime/shared.js';
-import { cn, createTrace, notify } from '../../../../lib/terra/runtime/runtime.js';
-import { isDevOrigin } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, createTrace, isDevOrigin, notify } from '../../../../lib/terra/runtime/runtime.js';
 import { components as repoComponents } from '../../../../lib/terra/custom-components.js';
 import { currLeafSrc } from '../../../../lib/terra/runtime/leaf.js';
+import {
+  extractAllNodeIds,
+  getSiblings as getSibs,
+  getStableKey,
+  parseDocsRoute as route,
+  sanitizeName,
+} from '../../../../lib/terra/docs/tree.js';
+import { getHue } from '@terra-symposium/styling';
+import { navigateDocs as navigate } from '../../../../lib/terra/docs/navigation.js';
+import { runMutation } from '../../../../lib/terra/docs/mutations.js';
 import { toast } from 'sonner';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRenderTripwire } from './use-render-tripwire.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 import Tree, { Menu } from './_tree.js';
-import User from '../../ui.js';
+import User, { ErrorBoundary } from '../../ui.js';
 import {
   Add as AddIcon,
   ArrowUpRight as PopOutIcon,
@@ -65,50 +62,54 @@ import {
   Link as LinkIcon,
   TrashCan as TrashIcon,
 } from '@carbon/icons-react';
-import { AlertError } from '@terra-symposium/styling/ui';
-import { Button } from '@terra-symposium/styling/ui';
-import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@terra-symposium/styling/ui';
 import {
+  AlertError,
+  Button,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuTrigger,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@terra-symposium/styling/ui';
-import { ErrorBoundary } from '../../ui.js';
-import { ExportDialog as SharedExportDialog } from './_export-dialog.js';
-import { Input } from '@terra-symposium/styling/ui';
-import { Label } from '@terra-symposium/styling/ui';
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@terra-symposium/styling/ui';
-import { Separator } from '@terra-symposium/styling/ui';
-import {
+  Separator,
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarRail,
+  Slider,
 } from '@terra-symposium/styling/ui';
-import { Slider } from '@terra-symposium/styling/ui';
+import { ExportDialog as SharedExportDialog } from './_export-dialog.js';
+import { ManageAttachmentsDialog } from './_manage-attachments-dialog.js';
+
+// DATA
+import { FILES } from '../../../../lib/terra/runtime/shared.js';
 
 // TYPES
-import type { ActionRes, Md } from '../../../../lib/terra/runtime/types.js';
-import type { AttchTgt, DelTgt, PromptState } from '../../../../lib/terra/runtime/types.js';
-import type { DocsTreeMenuAction as MenuAction } from '../../../../lib/terra/runtime/types.js';
 import type {
+  ActionRes,
+  AttchTgt,
   Branch,
+  DelTgt,
+  DocsTreeMenuAction as MenuAction,
+  DragState,
   Leaf as LeafNode,
+  Md,
+  PromptState,
+  ReorderDropState,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
-import type { DragState } from '../../../../lib/terra/runtime/types.js';
-import type { ReorderDropState } from '../../../../lib/terra/runtime/types.js';
 
 // prettier-ignore
 
@@ -117,26 +118,20 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 /**
- * SANITY MANY-TO-MANY ROUTING ARCHITECTURE
- *
- * Parses explicit Sanity IDs directly from the URL.
- * A single leaf or group can belong to multiple parents. Canonical routing keeps the active
- * section anchored to the first path segment so the sidebar select never drifts.
- *
- * @param pathname - Current browser pathname used to mark the active route.
- */
-/**
  * Reads the typed detail payload from a DOM event.
  *
  * @param e - DOM event carrying the custom payload.
- * @returns The event detail payload.
+ *
+ * @return The event detail payload.
  */
 const eDetail = <T,>(e: Event): T => (e as CustomEvent<T>).detail;
 
 /**
- * Handles latest content.
+ * Reads the latest Markdown source from the content model for sidebar preview state.
  *
  * @param content - Docs content used to derive the sidebar structure.
+ *
+ * @return The source text, or an empty string when the model has no text content.
  */
 const latestContent = (content: Md['content']): string => {
   if (typeof content === 'string') return content;
@@ -144,19 +139,10 @@ const latestContent = (content: Md['content']): string => {
 };
 
 /*//////////////////////////////////////////////////
-FUNCTIONS
+HELPERS
 //////////////////////////////////////////////////*/
 
-/**
- * Handles archive.
- *
- * @param v - Paths input supplied to archive's operation.
- * @param r - Root dir input supplied to archive's operation.
- * @param f - Filename base input supplied to archive's operation.
- * @param o - Opts input supplied to archive's operation.
- * @param d - Callback invoked for progress.
- * @param n - Node ids input supplied to archive's operation.
- */
+/** Dialog implementations assigned below for the sidebar's typed component registry. */
 const SidebarComponents = {} as {
   PromptDialog: (props: {
     state: PromptState;
@@ -171,173 +157,150 @@ const SidebarComponents = {} as {
   }) => JSX.Element | null;
 };
 
-/**
+/*
  * RENDER TRIPWIRE
  * A diagnostic tool to catch and analyze React infinite loops.
  *
  * @param componentName - Component name input supplied to use render tripwire's operation.
  * @param trackedVars - Tracked vars input supplied to use render tripwire's operation.
  */
+
 /*//////////////////////////////////////////////////
 COMPONENTS
 //////////////////////////////////////////////////*/
 
-/*
- * Dialog component for selecting and managing all attachments across a section tree.
- *
- * @param props - Active attachment target, state setter, disabled state, and Docs tree for browsing and managing related assets.
- * @param tgt - The specific target node (Leaf, Group, or Section) receiving the attachment modifications.
- * @param setTgt - State dispatcher to clear or update the active target boundary, closing the dialog.
- * @param disabled - Master lock preventing interactions while network mutations or animations are active.
- * @param tree - Tree input supplied to manage attchs dialog's operation.
- *
- * @return The interactive modal overlay containing the attachment dashboard.
- *
- * @remarks
- * Provides a unified interface for uploading raw media, scraping external web links, linking YouTube videos,
- * and directly associating existing or new internal documentation pages as relational attachments.
- */
-SidebarComponents.PromptDialog = function PromptDialog({
-  state: s,
-  setState: setS,
-  disabled,
-}: {
-  state: PromptState;
-  setState: (v: PromptState) => void;
-  disabled: boolean;
-}): JSX.Element | null {
-  if (!s) return null;
-  return (
-    <Dialog
-      open={s.open}
-      onOpenChange={(o) => {
-        if (!o) {
-          s.onCancel?.();
-          setS(null);
-        }
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{s.title}</DialogTitle>
-          <DialogDescription>
-            {s.description || `Enter a new ${s.label.toLowerCase()}.`}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <Input
-            autoFocus
-            aria-label={s.label}
-            value={s.value}
-            onChange={(e) => {
-              setS({ ...s, value: e.target.value });
-            }}
-            className="w-full focus:ring-0"
-            disabled={disabled}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
+SidebarComponents.PromptDialog =
+  /**
+   * Prompts for a new sidebar operation and reports the user's choice to the owning component.
+   *
+   * @param props Prompt state, state updater, and whether the current operation is disabled.
+   *
+   * @return The prompt dialog while a prompt is active, or `null` when no prompt is open.
+   */
+  function PromptDialog({
+    state: s,
+    setState: setS,
+    disabled,
+  }: {
+    state: PromptState;
+    setState: (v: PromptState) => void;
+    disabled: boolean;
+  }): JSX.Element | null {
+    if (!s) return null;
+    return (
+      <Dialog
+        open={s.open}
+        onOpenChange={(o) => {
+          if (!o) {
+            s.onCancel?.();
+            setS(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{s.title}</DialogTitle>
+            <DialogDescription>
+              {s.description || `Enter a new ${s.label.toLowerCase()}.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              autoFocus
+              aria-label={s.label}
+              value={s.value}
+              onChange={(e) => {
+                setS({ ...s, value: e.target.value });
+              }}
+              className="w-full focus:ring-0"
+              disabled={disabled}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (s.value.trim()) {
+                    s.onSave(s.value.trim());
+                    setS(null);
+                  }
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              disabled={disabled || !s.value.trim()}
+              onClick={() => {
                 if (s.value.trim()) {
                   s.onSave(s.value.trim());
                   setS(null);
                 }
-              }
-            }}
-          />
-        </div>
-        <DialogFooter>
-          <Button
-            disabled={disabled || !s.value.trim()}
-            onClick={() => {
-              if (s.value.trim()) {
-                s.onSave(s.value.trim());
-                setS(null);
-              }
-            }}
-          >
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-/*
- * Renders the delete dialog component.
- *
- * @param props - The selected deletion target, state setter, confirmation callback, and disabled state for the delete confirmation.
- * @param setTgt - Clears or updates the active target.
- * @param tgt - Tgt input supplied to delete dialog's operation.
- * @param disabled - Disabled state controlling whether delete dialog accepts interaction.
- * @param onConfirm - Callback invoked for confirm.
- *
- * @return The delete dialog or nothing when no target is selected.
- *
- * @remarks Renders the delete confirmation dialog for sidebar content.
- */
-SidebarComponents.DeleteDialog = function DeleteDialog({
-  tgt,
-  setTgt,
-  onConfirm,
-  disabled,
-}: {
-  tgt: DelTgt;
-  setTgt: (v: DelTgt) => void;
-  onConfirm: () => void;
-  disabled: boolean;
-}): JSX.Element | null {
-  if (!tgt) return null;
-  return (
-    <Dialog
-      open={!!tgt}
-      onOpenChange={(o) => {
-        if (!o) setTgt(null);
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            Delete {tgt.kind === 'leaf' ? 'page' : tgt.kind === 'branch' ? 'group' : 'section'}?
-          </DialogTitle>
-          <DialogDescription>
-            Delete <code>{tgt.title || tgt.path}</code>{' '}
-            {tgt.kind !== 'leaf' ? ' and its nested docs.' : '.'} This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            disabled={disabled}
-            onClick={() => {
-              onConfirm();
-            }}
-          >
-            Delete
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+SidebarComponents.DeleteDialog =
+  /**
+   * Confirms deletion of the selected page, group, or section before invoking the caller's action.
+   *
+   * @param props Selected deletion target, state updater, confirmation callback, and disabled state.
+   *
+   * @return The confirmation dialog while a target is selected, or `null` otherwise.
+   */
+  function DeleteDialog({
+    tgt,
+    setTgt,
+    onConfirm,
+    disabled,
+  }: {
+    tgt: DelTgt;
+    setTgt: (v: DelTgt) => void;
+    onConfirm: () => void;
+    disabled: boolean;
+  }): JSX.Element | null {
+    if (!tgt) return null;
+    return (
+      <Dialog
+        open={!!tgt}
+        onOpenChange={(o) => {
+          if (!o) setTgt(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete {tgt.kind === 'leaf' ? 'page' : tgt.kind === 'branch' ? 'group' : 'section'}?
+            </DialogTitle>
+            <DialogDescription>
+              Delete <code>{tgt.title || tgt.path}</code>{' '}
+              {tgt.kind !== 'leaf' ? ' and its nested docs.' : '.'} This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="destructive"
+              disabled={disabled}
+              onClick={() => {
+                onConfirm();
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 /**
- * Renders the top collapsed header boundary on mobile-view structurally isolating context safely cleanly.
+ * Coordinates the Docs sidebar's route selection, navigation tree, dialogs, and user actions.
  *
- * @return {JSX.Element} Visual mobile heading frame.
+ * @param props Navigation tree, current path, access permission, optional user, and site labels.
+ * @returns The Docs sidebar and its navigation controls for the active host route.
  */
-/**
- * Main sidebar controller connecting context providers natively driving application visual trees.
- *
- * @param {object} props - Input definitions matching specific nav tree routes.
- * @param docs - Docs input supplied to nav's operation.
- * @param pathname - Pathname input supplied to nav's operation.
- * @param permission - Permission input supplied to nav's operation.
- * @param userData - user record supplied to nav.
- *
- * @return {JSX.Element} Fully formatted UI sidebar assembly correctly binding handlers.
- */
-export default (function Nav({
+function Nav({
   docs: items,
   pathname,
   permission,
@@ -364,6 +327,9 @@ export default (function Nav({
   const [drag, setDrag] = useState<DragState | null>(null);
   const [dState, setDState] = useState<ReorderDropState | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+
+  // MANY-TO-MANY ROUTE ANCHOR
+  // Resolve the first route segment as the active section because leaves and groups can have multiple parents.
   const [cPathname, setCPathname] = useState(() => route(pathname || '').pathname);
   const urlIds = useMemo(() => route(cPathname), [cPathname]);
   const [viewedSecId, setViewedSecId] = useState<string | null>(
@@ -460,14 +426,23 @@ export default (function Nav({
     const nestedBranchIds = new Set<string>();
     s.forEach((n) => {
       if (n.children)
-        (function walk(children: TreeType[]) {
-          children.forEach((c) => {
-            if (c.type === 'branch') {
-              nestedBranchIds.add(c.origName);
-              if (c.children) walk(c.children);
-            }
-          });
-        })(n.children);
+        (
+          /**
+           * Collects nested branch IDs so child groups are not duplicated as top-level sections.
+           *
+           * @param children Child navigation nodes under the current section.
+           *
+           * @return Nothing; branch IDs are added to `nestedBranchIds` during traversal.
+           */
+          function walk(children: TreeType[]) {
+            children.forEach((c) => {
+              if (c.type === 'branch') {
+                nestedBranchIds.add(c.origName);
+                if (c.children) walk(c.children);
+              }
+            });
+          }
+        )(n.children);
     });
     s = s.filter((n) => !nestedBranchIds.has(n.origName));
 
@@ -533,7 +508,13 @@ export default (function Nav({
      */
     if (leafTitle?.path)
       setTree((nodes) => {
-        /** Normalize full storage paths before matching a local title update. */
+        /**
+         * Normalizes stored paths before matching a local title update.
+         *
+         * @param value Host path, storage path, or route fragment.
+         *
+         * @return A slash-delimited path without draft markers, extensions, or query fragments.
+         */
         const cPath = (value: string): string =>
           value
             .replace(/\\/g, '/')
@@ -543,32 +524,46 @@ export default (function Nav({
             .replace(/^\/+|\/+$/g, '');
         const targetPath = cPath(leafTitle.path);
         const targetBasename = targetPath.split('/').at(-1)?.toLowerCase() ?? '';
+        /**
+         * Counts leaves with the target basename before enabling a basename-only title match.
+         *
+         * @param items Navigation nodes whose leaves should be counted.
+         *
+         * @return Number of leaves whose normalized basename matches the target.
+         */
         const countBasename = (items: TreeType[]): number =>
-          items.reduce((count, item) => {
-            if (item.type === 'leaf') {
-              const basename = cPath(item.path || '')
+          items.reduce((count, i) => {
+            if (i.type === 'leaf') {
+              const basename = cPath(i.path || '')
                 .split('/')
                 .at(-1)
                 ?.toLowerCase();
               return count + Number(basename === targetBasename);
             }
-            return count + countBasename(item.children ?? []);
+            return count + countBasename(i.children ?? []);
           }, 0);
         // Many repository documents are named index.md. A basename fallback
         // would rename every such leaf, so only allow it for a unique filename.
         const canMatchBasename =
           targetBasename !== 'index' && targetBasename !== '' && countBasename(nodes) === 1;
+        /**
+         * Returns a copied tree with the matching leaf title replaced.
+         *
+         * @param items Navigation nodes to copy and update recursively.
+         *
+         * @return A new tree whose matching leaf uses the latest title.
+         */
         const update = (items: TreeType[]): TreeType[] =>
           items.map((node) => {
             const nodePath = node.type === 'leaf' ? node.path || '' : '';
-            const normalizedNodePath = cPath(nodePath);
+            const normNodePath = cPath(nodePath);
             if (
               node.type === 'leaf' &&
               (nodePath === leafTitle.path ||
                 node.origName === leafTitle.path ||
-                normalizedNodePath === targetPath ||
+                normNodePath === targetPath ||
                 (canMatchBasename &&
-                  normalizedNodePath.split('/').at(-1)?.toLowerCase() === targetBasename))
+                  normNodePath.split('/').at(-1)?.toLowerCase() === targetBasename))
             ) {
               return { ...node, title: leafTitle.title };
             }
@@ -682,12 +677,21 @@ export default (function Nav({
              *
              * @param nodes - Sidebar nodes traversed while collecting leaf paths.
              */
-            (function walk(nodes: TreeType[]) {
-              nodes.forEach((n) => {
-                if (n.type === 'leaf' && n.path) allLeaves.push(n.path);
-                if (n.type === 'branch' && n.children) walk(n.children);
-              });
-            })(tree);
+            (
+              /**
+               * Collects leaf paths in the same order they appear in the navigation tree.
+               *
+               * @param nodes Navigation nodes to traverse.
+               *
+               * @return Nothing; each discovered leaf path is appended to `allLeaves`.
+               */
+              function walk(nodes: TreeType[]) {
+                nodes.forEach((n) => {
+                  if (n.type === 'leaf' && n.path) allLeaves.push(n.path);
+                  if (n.type === 'branch' && n.children) walk(n.children);
+                });
+              }
+            )(tree);
             const i1 = allLeaves.indexOf(anchor);
             const i2 = allLeaves.indexOf(v);
             if (i1 !== -1 && i2 !== -1)
@@ -717,13 +721,23 @@ export default (function Nav({
   const mergeLeaves = useCallback(
     (v: string[]) => {
       const leafOrder = new Map<string, number>();
-      (function walk(nodes: TreeType[], order = 0): number {
-        for (const node of nodes) {
-          if (node.type === 'leaf' && node.path) leafOrder.set(node.path, order++);
-          if (node.type === 'branch' && node.children) order = walk(node.children, order);
+      (
+        /**
+         * Records each leaf's traversal index so merged pages retain sidebar order.
+         *
+         * @param nodes Navigation subtree to index.
+         * @param order Next traversal index to assign.
+         *
+         * @return The next index after this subtree has been visited.
+         */
+        function walk(nodes: TreeType[], order = 0): number {
+          for (const node of nodes) {
+            if (node.type === 'leaf' && node.path) leafOrder.set(node.path, order++);
+            if (node.type === 'branch' && node.children) order = walk(node.children, order);
+          }
+          return order;
         }
-        return order;
-      })(tree);
+      )(tree);
       const orderedPaths = Array.from(new Set(v)).sort(
         (a, b) =>
           (leafOrder.get(a) ?? Number.MAX_SAFE_INTEGER) -
@@ -749,7 +763,23 @@ export default (function Nav({
 																		 *
 																											 * @param items - Sidebar items being pruned from the tree.
 									 */
-									return (function prune(items: TreeType[]): TreeType[] {
+									return (/**
+									return ( * return ( * return ( *
+									return ( * return ( * return ( * @param items
+									return ( * return ( * return ( *
+									return ( * return ( * return ( * @return
+									return ( * return ( * return (
+									return ( * return ( *
+									return ( * return ( * @param items
+									return ( * return ( *
+									return ( * return ( * @return
+									return ( * return (
+									return ( *
+									return ( * @param items
+									return ( *
+									return ( * @return
+									return ( */
+function prune(items: TreeType[]): TreeType[] {
 						const n: TreeType[] = [];
 						for (const node of items) {
 							if (node.type === 'leaf') {
@@ -1074,7 +1104,6 @@ export default (function Nav({
     },
     [refreshTree],
   );
-
   const openCreate = useCallback(
     (p: string, v: string): void => {
       if ($transition.get()) return;
@@ -1110,7 +1139,26 @@ export default (function Nav({
 							url = aParentId === sectId ? buildRoute(sectId, undefined, tLeafId) : buildRoute(sectId, aParentId, tLeafId);
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
-								(function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
+								(/**
+								( * ( * ( *
+								( * ( * ( * @param nodes
+								( * ( * ( * @param tgtId
+								( * ( * ( *
+								( * ( * ( * @return
+								( * ( * (
+								( * ( *
+								( * ( * @param nodes
+								( * ( * @param tgtId
+								( * ( *
+								( * ( * @return
+								( * (
+								( *
+								( * @param nodes
+								( * @param tgtId
+								( *
+								( * @return
+								( */
+function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
 									for (const n of nodes) {
 										if (n.type === 'branch') {
 											if (n.origName === tgtId) {
@@ -1176,7 +1224,26 @@ export default (function Nav({
 							const gUrl = buildRoute(rootId, tGrpId);
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
-								(function insertGroup(nodes: TreeType[], tgtId: string): boolean {
+								(/**
+								( * ( * ( *
+								( * ( * ( * @param nodes
+								( * ( * ( * @param tgtId
+								( * ( * ( *
+								( * ( * ( * @return
+								( * ( * (
+								( * ( *
+								( * ( * @param nodes
+								( * ( * @param tgtId
+								( * ( *
+								( * ( * @return
+								( * (
+								( *
+								( * @param nodes
+								( * @param tgtId
+								( *
+								( * @return
+								( */
+function insertGroup(nodes: TreeType[], tgtId: string): boolean {
 									for (const n of nodes) {
 										if (n.type === 'branch') {
 											if (n.origName === tgtId) {
@@ -1245,24 +1312,35 @@ export default (function Nav({
          * @param currPath - Current traversal path accumulated during the search.
          */
         const pPath =
-          (function findParentPath(
-            nodes: TreeType[],
-            tgtPath: string,
-            currPath = '',
-          ): string | null {
-            for (const n of nodes) {
-              if (n.type === 'leaf' && n.path === tgtPath) return currPath || '.';
-              if (n.type === 'branch' && n.children) {
-                const found = findParentPath(
-                  n.children,
-                  tgtPath,
-                  currPath ? `${currPath}/${n.origName}` : n.origName,
-                );
-                if (found) return found;
+          (
+            /**
+             * Finds the containing branch path for a leaf before moving it.
+             *
+             * @param nodes Navigation subtree to search.
+             * @param tgtPath Storage path of the leaf being moved.
+             * @param currPath Branch path accumulated during traversal.
+             *
+             * @return Parent branch path, or `null` when the leaf is absent.
+             */
+            function findParentPath(
+              nodes: TreeType[],
+              tgtPath: string,
+              currPath = '',
+            ): string | null {
+              for (const n of nodes) {
+                if (n.type === 'leaf' && n.path === tgtPath) return currPath || '.';
+                if (n.type === 'branch' && n.children) {
+                  const found = findParentPath(
+                    n.children,
+                    tgtPath,
+                    currPath ? `${currPath}/${n.origName}` : n.origName,
+                  );
+                  if (found) return found;
+                }
               }
+              return null;
             }
-            return null;
-          })(tree, p) || '';
+          )(tree, p) || '';
         const isMovingBranch = pPath !== v;
         const nTree = JSON.parse(JSON.stringify(tree)) as TreeType[];
         const oldSibs = getSibs(nTree, pPath);
@@ -1781,10 +1859,12 @@ export default (function Nav({
         {/* HEADER */}
         <SidebarHeader className="print:hidden" data-docs-navigation="true">
           {/* Keep the original single-brand header; site description is optional. */}
-          <a className="font-serif text-2xl hover:italic hover:tracking-tight" href={homePath}>
+          <a className="font-serif text-2xl italic hover:tracking-tight" href={homePath}>
             {siteTitle}
           </a>
-          {siteDescription && <p className="m-0 mt-1 text-sm text-primary-11">{siteDescription}</p>}
+          {siteDescription && (
+            <p className="m-0 mt-1 line-clamp-1 text-sm text-primary-11">{siteDescription}</p>
+          )}
           {/* Keep section management available in editable workspaces. Read-only docs
               need no selector when their navigation has only one section. */}
           {(sects.length > 1 || permission === 'write') && (
@@ -1912,11 +1992,24 @@ export default (function Nav({
         </ContextMenu>
         {/* USER */}
         <SidebarFooter>
-          {userData && <User user={userData} className="mr-auto pl-0" />}
+          <User user={userData ?? null} className="mr-auto pl-0" />
+          <Button
+            variant="primary-underline"
+            aria-label="Search ⌘K"
+            title="Search docs (⌘K)"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new Event('docs:open-search'));
+            }}
+          >
+            Search docs
+          </Button>
         </SidebarFooter>
         {/* RAIL */}
         <SidebarRail />
       </Sidebar>
     </ErrorBoundary>
   );
-});
+}
+
+export default Nav;

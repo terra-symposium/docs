@@ -48,4 +48,4 @@ export default function App() {
 }
 ```
 
-Run `pnpm dev`. This example stores changes in memory; saving and loading are responsibilities of the host app. See [storage](./storage/) before using it for durable documents.
+Run `pnpm dev`. This example stores changes in memory; saving and loading are responsibilities of the host app. See [storage](../storage/) before using it for durable documents.

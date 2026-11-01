@@ -1,3 +1,7 @@
+/**
+ * src/components/terra/pages/docs/_toolbar.tsx
+ */
+
 // @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
  * astro/src/pages/docs/_toolbar.tsx
@@ -10,28 +14,26 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
-import { clearTransition, setTransition, useAtom } from '../../../../lib/terra/docs/state.js';
 import { $attachmentFilter } from '../../../../lib/terra/docs/attachments.js';
-import { codeViewOf } from '../../../../lib/terra/docs/editor-dom.js';
-import { FindReplace } from './_toolbar-find-replace.js';
-import { toolbarFocusValue } from '../../../../lib/terra/docs/toolbar.js';
-import { isDocBody } from '../../../../lib/terra/runtime/types.js';
 import { $createHeadingNode } from '@lexical/rich-text';
 import { $createParagraphNode, $getNearestNodeFromDOMNode, $isElementNode } from 'lexical';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
-import { dirname, docsRootPath, toPascal } from '../../../../lib/terra/runtime/shared.js';
+import { clearTransition, setTransition, useAtom } from '../../../../lib/terra/docs/state.js';
 import { cn, notify } from '../../../../lib/terra/runtime/runtime.js';
+import { codeViewOf } from '../../../../lib/terra/docs/editor-dom.js';
 import { components as repoComponents } from '../../../../lib/terra/custom-components.js';
+import { dirname, docsRootPath, toPascal } from '../../../../lib/terra/runtime/shared.js';
+import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
+import { isDocBody } from '../../../../lib/terra/runtime/types.js';
 import { redo, redoDepth, undo, undoDepth } from '@codemirror/commands';
 import { stringifyDocBody } from '../../../../lib/terra/runtime/content/document-markdown.js';
 import { toast } from 'sonner';
+import { toolbarFocusValue } from '../../../../lib/terra/docs/toolbar.js';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
-import { TextTooltip, TooltipProvider } from '@terra-symposium/styling/ui';
 import {
   ArrowUpRight as PopOutIcon,
   CaretDown as CaretDownIcon,
@@ -52,18 +54,15 @@ import {
   TextUnderline as UnderlineIcon,
   Undo as UndoIcon,
 } from '@carbon/icons-react';
-import { Button as UiButton } from '@terra-symposium/styling/ui';
-import { ButtonGroup } from '@terra-symposium/styling/ui';
-import { CodeBlock } from '../../editor/docs/_CodeBlock.js';
 import {
+  Button as UiButton,
+  ButtonGroup,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@terra-symposium/styling/ui';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -72,14 +71,12 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@terra-symposium/styling/ui';
-import { EditStateCtx } from '../../../../lib/terra/docs/state.js';
-import { ErrorBoundary } from '../../ui.js';
-import { Input } from '@terra-symposium/styling/ui';
-import { Label } from '@terra-symposium/styling/ui';
-import { Popover, PopoverContent, PopoverTrigger } from '@terra-symposium/styling/ui';
-import { SearchEmpty } from '@terra-symposium/styling/ui';
-import {
+  Input,
+  Label,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  SearchEmpty,
   Select,
   SelectContent,
   SelectGroup,
@@ -88,8 +85,15 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
+  TextTooltip,
+  ToggleGroup,
+  ToggleGroupItem,
+  TooltipProvider,
 } from '@terra-symposium/styling/ui';
-import { ToggleGroup, ToggleGroupItem } from '@terra-symposium/styling/ui';
+import { CodeBlock } from '../../editor/docs/_CodeBlock.js';
+import { EditStateCtx } from '../../../../lib/terra/docs/state.js';
+import { ErrorBoundary } from '../../ui.js';
+import { FindReplace } from './_toolbar-find-replace.js';
 
 // DATA
 import { ATTCH_TYPES } from '../../../../lib/terra/docs/attachments.js';
@@ -100,9 +104,9 @@ import { EMPTY_NODES } from '../../../../lib/terra/runtime/nodes.js';
 import type {
   AttchType,
   BlockOpt,
-  DocsAttachment,
   DocBody,
   DocVer,
+  DocsAttachment,
   EditorToolbarAdapter,
   Md,
   MenuTree,
@@ -138,11 +142,13 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Handles code offset.
+ * Measures the visible text offset of a DOM position within the active editor.
  *
- * @param content - Docs content containing the target block.
- * @param node - Block node being transformed by the toolbar action.
- * @param value - Replacement value supplied by the toolbar control.
+ * @param content Editor element whose rendered text supplies the offset basis.
+ * @param node DOM node containing the position being measured.
+ * @param val Offset within `node` at which the range should end.
+ *
+ * @return Character count before the position, or the full editor text length when the node is outside it.
  */
 const codeOffset = (content: HTMLElement, node: Node, val: number): number => {
   if (!content.contains(node)) return content.innerText.length;
@@ -152,14 +158,6 @@ const codeOffset = (content: HTMLElement, node: Node, val: number): number => {
   return range.toString().length;
 };
 
-/**
- * Derives a clean, human-readable label from a raw filename or URL.
- *
- * @param {string} v - The raw filename or path string.
- * @param {string} fallback - The default label if extraction fails.
- *
- * @return {string} The formatted, capitalized label.
- */
 /**
  * Prevents the active selection range from being lost when clicking toolbar buttons.
  *
@@ -226,49 +224,56 @@ function looksLikeJsonBlob(val: string): boolean {
 COMPONENTS
 //////////////////////////////////////////////////*/
 
-const Button = React.forwardRef<
-  HTMLButtonElement,
-  /*
-   * Pre-configured micro-button used throughout the toolbar.
-   */ Omit<React.ComponentPropsWithoutRef<typeof UiButton>, 'children' | 'size' | 'variant'> & {
-    active?: boolean;
-    children: ReactNode;
-    lbl: string;
-    shortcut?: string;
-  }
->(function Button(
-  {
-    children: c,
-    className: v,
-    disabled: d,
-    lbl: l,
-    shortcut: s,
-    onClick: o,
-    onMouseDown: r,
-    active: a,
-    ...p
+type ToolbarButtonProps = Omit<
+  React.ComponentPropsWithoutRef<typeof UiButton>,
+  'children' | 'size' | 'variant'
+> & {
+  active?: boolean;
+  children: ReactNode;
+  lbl: string;
+  shortcut?: string;
+};
+
+const Button = React.forwardRef<HTMLButtonElement, ToolbarButtonProps>(
+  /**
+   * Renders the toolbar's compact button with its label and optional shortcut hint.
+   *
+   * @param props Button content, label, shortcut, active state, and native button attributes.
+   * @param ref Forwarded reference attached to the rendered button.
+   * @returns The styled button wrapped in its tooltip.
+   */
+  function Button(props, ref): JSX.Element {
+    const {
+      children: c,
+      className: v,
+      disabled: d,
+      lbl: l,
+      shortcut: s,
+      onClick: o,
+      onMouseDown: r,
+      active: a,
+      ...p
+    } = props;
+    void a;
+    return (
+      <TextTooltip content={s ? `${l} (${s})` : l} side="top" align="center" delayDuration={400}>
+        <UiButton
+          ref={ref}
+          variant="ghost"
+          size="xs"
+          aria-label={l}
+          disabled={d}
+          onClick={o}
+          onMouseDown={r}
+          className={cn('inline-flex h-6 !p-0.5 shadow-none', v)}
+          {...p}
+        >
+          {c}
+        </UiButton>
+      </TextTooltip>
+    );
   },
-  x,
-): JSX.Element {
-  void a;
-  return (
-    <TextTooltip content={s ? `${l} (${s})` : l} side="top" align="center" delayDuration={400}>
-      <UiButton
-        ref={x}
-        variant="ghost"
-        size="xs"
-        aria-label={l}
-        disabled={d}
-        onClick={o}
-        onMouseDown={r}
-        className={cn('inline-flex h-6 !p-0.5 shadow-none', v)}
-        {...p}
-      >
-        {c}
-      </UiButton>
-    </TextTooltip>
-  );
-});
+);
 Button.displayName = 'Button';
 
 /**
@@ -308,12 +313,7 @@ function Mode({
         onModeChange(n);
       }}
     >
-      <SelectTrigger
-        aria-label="Mode"
-        // Match the original full-row selector in View/Edit. Attachments adds
-        // its type filters beside this control, so only that mode sizes to fit.
-        className={mode === 'attachments' ? 'w-fit' : undefined}
-      >
+      <SelectTrigger aria-label="Mode" width="fit">
         <SelectValue placeholder="Mode" />
       </SelectTrigger>
       {/* prettier-ignore */}
@@ -323,20 +323,16 @@ function Mode({
     </Select>
   );
 }
-
-/**
- * Renders Docs-specific controls beside a content editor toolbar.
- *
- * Formatting and content insertion remain editor-owned; these controls manage
- * the document shell's mode and persistence state.
- *
- * @param props - Docs toolbar state and current mode.
- *
- * @return The mode, history, save, or version actions supported by the active Docs editor toolbar.
- */
 const TOOLBAR_COMPONENTS = {
+  /**
+   * Adds Docs-specific mode, history, save, and version controls beside an editor toolbar.
+   *
+   * @param props Active mode, editability, control size, and toolbar state.
+   *
+   * @return Supported Docs actions, or `null` when the host is read-only.
+   */
   DocsToolbarActions({
-    activeMode,
+    activeMode: aMode,
     editable,
     size = 'xs',
     toolbar,
@@ -353,7 +349,6 @@ const TOOLBAR_COMPONENTS = {
     const historyEnabled = getDocsHostAdapter()?.capabilities.history !== false;
     const selectedVersion = versions.find((version) => version.savedAt === selectedVersionId);
     const preview = useMemo(() => parseVerBody(selectedVersion), [selectedVersion]);
-
     useEffect(() => {
       let live = true;
       if (!editable || !historyEnabled || !toolbar?.path || !historyOpen) {
@@ -373,48 +368,58 @@ const TOOLBAR_COMPONENTS = {
             if (Array.isArray(fallback.data) && fallback.data.length > 0) data = fallback.data;
           }
           if (live && Array.isArray(data)) setVersions(data as DocVer[]);
-        } catch (error) {
-          console.error('[Toolbar:versions] load-failed', { path, error });
-          toast.error(error instanceof Error ? error.message : 'Failed to load doc versions.');
+        } catch (err) {
+          console.error('[Toolbar:versions] load-failed', { path, error: err });
+          toast.error(err instanceof Error ? err.message : 'Failed to load doc versions.');
         }
       })();
       return () => {
         live = false;
       };
     }, [editable, historyEnabled, historyOpen, toolbar?.path]);
-
     useEffect(() => {
       if (historyOpen && !selectedVersionId && versions[0])
         setSelectedVersionId(versions[0].savedAt);
     }, [historyOpen, selectedVersionId, versions]);
-
+    /**
+     * Saves the current document while preventing the toolbar form's default submission.
+     *
+     * @param event Form event whose browser submission must be cancelled.
+     *
+     * @return A promise that settles after the save callback finishes or reports an error.
+     */
     const save = async (event: { preventDefault: () => void }): Promise<void> => {
       event.preventDefault();
       if (!toolbar?.save) return;
       try {
         await Promise.resolve(toolbar.save());
-      } catch (error) {
-        console.error('[Docs:save] failed', error);
-        toast.error(error instanceof Error ? error.message : 'Unable to save document.');
+      } catch (err) {
+        console.error('[Docs:save] failed', err);
+        toast.error(err instanceof Error ? err.message : 'Unable to save document.');
       }
     };
-
     useEffect(() => {
-      if (activeMode === 'view') return;
+      if (aMode === 'view') return;
+      /**
+       * Saves the document when the user presses the platform save shortcut.
+       *
+       * @param event Keyboard event dispatched by the document.
+       *
+       * @return Nothing; matching shortcuts delegate to the save handler.
+       */
       const onKeyDown = (event: KeyboardEvent): void => {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') void save(event);
       };
       document.addEventListener('keydown', onKeyDown);
       return () => document.removeEventListener('keydown', onKeyDown);
-    }, [activeMode, toolbar]);
-
+    }, [aMode, toolbar]);
     if (!editable) return null;
     return (
       <TooltipProvider>
         <div className="flex items-center gap-1" data-docs-toolbar-actions>
           <Mode
             editable={editable}
-            mode={activeMode}
+            mode={aMode}
             size={size}
             disabled={!toolbar}
             onModeChange={(mode) => {
@@ -426,7 +431,7 @@ const TOOLBAR_COMPONENTS = {
               });
             }}
           />
-          {activeMode === 'edit' && (
+          {aMode === 'edit' && (
             <ButtonGroup>
               <TextTooltip content="Save (⌘S)" side="top" align="center" delayDuration={400}>
                 <UiButton
@@ -559,6 +564,7 @@ const TOOLBAR_COMPONENTS = {
       let frame = 0;
       /**
        * Handles sync.
+       *
        */
       const sync = (): void => {
         const view = codeViewOf();
@@ -570,6 +576,7 @@ const TOOLBAR_COMPONENTS = {
       sync();
       /**
        * Handles refresh.
+       *
        */
       const refresh = (): void => {
         cancelAnimationFrame(frame);
@@ -1034,10 +1041,12 @@ const TOOLBAR_COMPONENTS = {
 
     // 5. EMBED OR CREATE LEAF
     /**
-     * Handles embed.
+     * Creates a page when requested and links the destination into the current document.
      *
-     * @param targetPath - Destination path for the moved or renamed document.
-     * @param isNew - Whether the destination represents a newly created document.
+     * @param tgtPath Existing destination path, or the initial path for a new page.
+     * @param isNew Whether a new page should be created before linking it.
+     *
+     * @return A promise that settles after the page link is inserted and the editor is restored.
      */
     const embed = async (tgtPath: string, isNew = false) => {
       let finalPath = tgtPath;
@@ -1390,6 +1399,7 @@ const TOOLBAR_COMPONENTS = {
       sync();
       /**
        * Handles refresh.
+       *
        */
       const refresh = (): void => {
         cancelAnimationFrame(frame);
@@ -1605,6 +1615,7 @@ const TOOLBAR_COMPONENTS = {
     useEffect(() => {
       /**
        * Handles sync.
+       *
        */
       const sync = (): void => {
         const view = codeViewOf();
@@ -1629,14 +1640,19 @@ const TOOLBAR_COMPONENTS = {
     const saving = toolbar?.busy ?? null;
     const dirty = toolbar?.dirty ?? false;
     const publishDraft = getDocsHostAdapter()?.publishDraft;
+    /**
+     * Saves pending edits and publishes the active document through the host adapter.
+     *
+     * @return A promise that settles after publishing or reports a user-facing error.
+     */
     const publish = async (): Promise<void> => {
       if (!publishDraft || !toolbar?.path) return;
       try {
         if (dirty && toolbar.save) await toolbar.save();
         await publishDraft(toolbar.path);
         toast.success('Published.');
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Unable to publish document.');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Unable to publish document.');
       }
     };
     useEffect(() => {
@@ -1670,6 +1686,7 @@ const TOOLBAR_COMPONENTS = {
         live = false;
       };
     }, [docs, editable, toolbar?.path, verDialogOpen]);
+
     // HANDLERS
     const onSave = toolbar
       ? async (e: { preventDefault: () => void }) => {
@@ -1735,9 +1752,11 @@ const TOOLBAR_COMPONENTS = {
     };
     const insert = toolbar?.insert ?? adapter?.insert;
     /**
-     * Handles json command.
+     * Dispatches a structured text command when the editor is in edit mode.
      *
      * @param detail - Toolbar detail describing the requested document update.
+     *
+     * @return `true` after dispatching in edit mode, or `false` when the editor is read-only.
      */
     const jsonCmd = (
       detail:
@@ -1750,10 +1769,12 @@ const TOOLBAR_COMPONENTS = {
       return true;
     };
     /**
-     * Handles json block.
+     * Creates a Portable Text block with a fresh key and the supplied field data.
      *
-     * @param _type - Sanity field type associated with the value.
-     * @param value - Field value being normalized for the toolbar.
+     * @param _type Portable Text block type assigned by the caller.
+     * @param val Block fields copied into the new object.
+     *
+     * @return A block object with a new `_key`, the requested type, and supplied fields.
      */
     const jsonBlock = (_type: string, val: Record<string, unknown>): Record<string, unknown> => ({
       _key: crypto.randomUUID(),
@@ -1768,7 +1789,7 @@ const TOOLBAR_COMPONENTS = {
      * @param fallback - Value passed to the helper.
      * @param isInline - Value passed to the helper.
      *
-     * @returns safe Sel.
+     * @return safe Sel.
      */
     const sSel = (fallback: string, isInline = false): string => {
       let text = '';
@@ -2332,5 +2353,4 @@ const TOOLBAR_COMPONENTS = {
     );
   },
 };
-
 export const { DocsToolbarActions, Toolbar } = TOOLBAR_COMPONENTS;

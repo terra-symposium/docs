@@ -1,9 +1,28 @@
-import { StrictMode, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { Docs } from '../../../src/lib/index.js';
-import type { DocsMode, DocsValue } from '../../../src/lib/index.js';
+/**
+ * demo/src/app/main.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import '../../../src/styles/style.css';
 import '../styles/style.css';
+import { createRoot } from 'react-dom/client';
+import { useState } from 'react';
+
+// COMPONENTS
+import { Docs } from '../../../src/lib/index.js';
+import { ErrorBoundary as TerraRootErrorBoundary } from '@terra-symposium/standards-quality/error-boundaries/react';
+import { StrictMode } from 'react';
+
+// TYPES
+import type { DocsMode, DocsValue } from '../../../src/lib/index.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const sample: DocsValue = [
   {
@@ -29,10 +48,18 @@ const sample: DocsValue = [
   },
 ];
 
+/*//////////////////////////////////////////////////
+COMPONENTS
+//////////////////////////////////////////////////*/
+
+/**
+ * Provides an in-memory document editor with edit and view mode controls.
+ *
+ * @return The editor and controls used by the Docs package demo.
+ */
 function Playground(): React.JSX.Element {
   const [mode, setMode] = useState<DocsMode>('edit');
   const [value, setValue] = useState<DocsValue>(() => structuredClone(sample));
-
   return (
     <>
       <header className="demo-header">
@@ -41,12 +68,7 @@ function Playground(): React.JSX.Element {
           <button onClick={() => setValue([])}>New document</button>
           <button onClick={() => setValue(structuredClone(sample))}>Reset document</button>
           {(['edit', 'view'] as const).map((value) => (
-            <button
-              key={value}
-
-              aria-pressed={mode === value}
-              onClick={() => setMode(value)}
-            >
+            <button key={value} aria-pressed={mode === value} onClick={() => setMode(value)}>
               {value === 'edit' ? 'Edit' : 'View'}
             </button>
           ))}
@@ -68,9 +90,10 @@ function Playground(): React.JSX.Element {
     </>
   );
 }
-
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Playground />
-  </StrictMode>,
+  <TerraRootErrorBoundary name="Application root">
+    <StrictMode>
+      <Playground />
+    </StrictMode>
+  </TerraRootErrorBoundary>,
 );

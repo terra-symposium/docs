@@ -101,7 +101,6 @@ export const sitePages: SitePage[] = Object.entries(modules)
   .sort((left, right) => left.order - right.order || left.file.localeCompare(right.file));
 type MutableNode = Omit<DocsNavNode, 'children'> & { children: Map<string, MutableNode> };
 const rootNodes = new Map<string, MutableNode>();
-export const siteNavigation = materialize(rootNodes);
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -238,3 +237,6 @@ for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '404')) {
   }
   if (current) Object.assign(current, pageMetadata(page, pageHref(page.slug, base)));
 }
+
+/** Navigation tree built from the visible pages after their routes are registered. */
+export const siteNavigation = materialize(rootNodes);

@@ -150,7 +150,8 @@ function sharedReactAliases() {
     'react-dom',
     'react-dom/client',
   ];
-  return specifiers.map((specifier) => {
+  return [
+    ...specifiers.map((specifier) => {
     let replacement;
     try {
       // Externalized component dependencies resolve React from the consumer's
@@ -164,7 +165,16 @@ function sharedReactAliases() {
       find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
       replacement,
     };
-  });
+    }),
+    {
+      // The Docs editor imports `react-dom/server` for Markdown previews. Its
+      // Node entrypoint pulls `util.TextEncoder` into browser chunks, where
+      // `util` is externalized and the Docs workspace fails to hydrate. The
+      // browser server renderer also works during Node prerendering.
+      find: /^react-dom\/server$/,
+      replacement: requireFromProject.resolve('react-dom/server.browser'),
+    },
+  ];
 }
 
 export default defineConfig({

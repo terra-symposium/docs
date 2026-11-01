@@ -50,8 +50,8 @@ function withoutPortableTextKeys(value) {
 }
 
 test('all reusable rich blocks are enabled by default and can be opted out individually', () => {
-  assert.equal(DOCS_BLOCK_TYPES.length, 11);
-  assert.equal(enabledDocsBlocks().length, 11);
+  assert.equal(DOCS_BLOCK_TYPES.length, 12);
+  assert.equal(enabledDocsBlocks().length, 12);
   assert.equal(enabledDocsBlocks({ embed: false }).includes('embed'), false);
   assert.equal(enabledDocsBlocks({ code: false }).includes('math'), true);
 });
@@ -75,6 +75,14 @@ test('structured block containers round-trip without losing source fields', () =
     assert.deepEqual(restored[0].extra, block.extra);
     assert.equal(markdownToDocsValue(docsValueToMarkdown(restored))[0].extra.nested, true);
   }
+});
+
+test('the quiz Markdown directive round-trips as a shared renderable Docs block', () => {
+  const source = ':::terra-docs quiz\n_type: quiz\n:::\n';
+  const value = markdownToDocsValue(source);
+  assert.equal(value.length, 1);
+  assert.equal(value[0]._type, 'quiz');
+  assert.equal(markdownToDocsValue(docsValueToMarkdown(value))[0]._type, 'quiz');
 });
 
 test('complex rich blocks use readable typed YAML and render instead of showing source payloads', () => {

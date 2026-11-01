@@ -369,6 +369,7 @@ export const DOCS_BLOCK_SCHEMAS = {
   embed: { fields: [{ name: 'src', type: 'string' }] },
   math: { fields: [{ name: 'code', type: 'string' }] },
   nodes: { fields: [{ name: 'nodes', type: 'array' }] },
+  quiz: { fields: [{ name: 'markdown', type: 'string' }] },
   raw: { fields: [{ name: 'markdown', type: 'string' }] },
   tsDocs: { fields: [{ name: 'scope', type: 'string' }] },
 } satisfies Record<string, { fields: Array<{ name: string; type: string }> }>;

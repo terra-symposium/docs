@@ -2,6 +2,7 @@ import { DocsStaticWorkspace } from './StaticWorkspace.js';
 import type { DocsSection, DocsAttachment } from '../lib/workspace-types.js';
 import type { DocsNavNode } from './navigation.js';
 import type { JSX, ReactNode } from 'react';
+import type { DocsQuizConfig } from './quiz.js';
 
 /**
  * Compatibility adapter for static React sites.
@@ -23,6 +24,7 @@ export function DocsSiteLayout({
   rootPath,
   markdown,
   content,
+  quiz,
 }: {
   title: string;
   homeHref?: string;
@@ -37,6 +39,7 @@ export function DocsSiteLayout({
   rootPath?: string;
   markdown?: string;
   content?: unknown;
+  quiz?: DocsQuizConfig;
 }): JSX.Element {
   return (
     <DocsStaticWorkspace
@@ -51,6 +54,7 @@ export function DocsSiteLayout({
       {...(rootPath ? { rootPath } : {})}
       {...(markdown !== undefined ? { markdown } : {})}
       {...(content !== undefined ? { content } : {})}
+      {...(quiz ? { quiz } : {})}
       attachments={attachments}
       {...(children !== undefined ? { renderContent: children } : {})}
     />

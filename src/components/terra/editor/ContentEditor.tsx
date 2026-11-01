@@ -26,6 +26,7 @@ import { Raw } from './docs/_Raw.js';
 import { renderTable } from './docs/_Table.js';
 import { renderSections } from './docs/_Tabs.js';
 import { TsDocs } from './docs/_TsDocs.js';
+import { DocsQuizBlock } from '../../quiz.js';
 import MathInline from './docs/_math_inline.js';
 import { DocsHeading } from './docs/heading.js';
 import { TerraToolbar } from './docs/TerraToolbar.js';
@@ -54,6 +55,12 @@ const rendererByType: Record<string, (props: any) => JSX.Element | null> = {
   nodes: ({ attributes, children, node }) => (
     <div {...attributes} data-docs-editor-block="Diagram">
       <NodesBlock block={node} />
+      {children}
+    </div>
+  ),
+  quiz: ({ attributes, children }) => (
+    <div {...attributes} data-docs-editor-block="Quiz generator">
+      <DocsQuizBlock />
       {children}
     </div>
   ),

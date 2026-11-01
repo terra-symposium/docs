@@ -9,9 +9,6 @@ IMPORTS
 // API
 import { useMemo, useState } from 'react';
 
-// COMPONENTS
-import { Button, Input, Label } from '@terra-symposium/styling/ui';
-
 /*//////////////////////////////////////////////////
 CONFIG
 //////////////////////////////////////////////////*/
@@ -133,8 +130,11 @@ export function SkillsExplorer({ skills }: { skills: SkillRecord[] }) {
             className="max-h-[78vh] min-w-0 overflow-auto rounded-xl border border-gray-6 bg-gray-1 p-3"
           >
             <div>
-              <Label htmlFor="skills-explorer-filter">Filter skills</Label>
-              <Input
+              <label className="text-sm font-medium text-gray-11" htmlFor="skills-explorer-filter">
+                Filter skills
+              </label>
+              <input
+                className="mt-1 w-full rounded-md border border-gray-6 bg-gray-1 px-3 py-2 text-sm text-gray-12 shadow-sm outline-none placeholder:text-gray-9 focus-visible:ring-2 focus-visible:ring-primary-8"
                 id="skills-explorer-filter"
                 onChange={(event) => setQuery(event.currentTarget.value)}
                 placeholder="Name, topic, or text"
@@ -154,17 +154,14 @@ export function SkillsExplorer({ skills }: { skills: SkillRecord[] }) {
                   <ul className="m-0 grid list-none gap-1 p-0">
                     {entries.map((skill) => (
                       <li key={skill.sourcePath}>
-                        <Button
-                          aria-current={
-                            selectedSkill?.sourcePath === skill.sourcePath ? 'true' : undefined
-                          }
-                          className="h-auto w-full justify-start px-3 py-2 text-left"
-                          onClick={() => setActivePath(skill.sourcePath)}
-                          variant={
+                        <button
+                          aria-pressed={selectedSkill?.sourcePath === skill.sourcePath}
+                          className={`grid h-auto w-full min-w-0 justify-start rounded-md border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8 ${
                             selectedSkill?.sourcePath === skill.sourcePath
-                              ? 'primary-tonal'
-                              : 'gray-ghost'
-                          }
+                              ? 'border-primary-7 bg-primary-3 text-primary-12'
+                              : 'border-transparent bg-transparent text-gray-11 hover:border-gray-6 hover:bg-gray-2 hover:text-gray-12'
+                          }`}
+                          onClick={() => setActivePath(skill.sourcePath)}
                           type="button"
                         >
                           <span className="grid min-w-0 gap-1">
@@ -176,7 +173,7 @@ export function SkillsExplorer({ skills }: { skills: SkillRecord[] }) {
                               {skill.directory}
                             </span>
                           </span>
-                        </Button>
+                        </button>
                       </li>
                     ))}
                   </ul>

@@ -287,7 +287,7 @@ function Diagram({ block }: { block: RichBlock }): JSX.Element {
   );
 }
 
-/** Read-only rendering for every reusable Terra Docs member. Unknown data stays in the value. */
+/** Read-only rendering for every reusable Docs member. Unknown data stays in the value. */
 export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
   const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
   switch (block._type) {

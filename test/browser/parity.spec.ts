@@ -42,7 +42,7 @@ const viewports = [
 ] as const;
 
 for (const viewport of viewports) {
-  test(`pinned Terra Docs UI parity: ${viewport.name}`, async ({ page }) => {
+  test(`pinned Docs UI parity: ${viewport.name}`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => {
@@ -155,7 +155,7 @@ test('empty descriptions show an editing hint only in Edit mode', async ({ page 
   await expect(description).toHaveAttribute('placeholder', 'Add a description...');
 });
 
-test('pinned Terra Docs toolbar mode menu matches the original', async ({ page }) => {
+test('pinned Docs toolbar mode menu matches the original', async ({ page }) => {
   await openParityFixture(page);
   await page.getByRole('combobox', { name: 'Mode' }).click();
   await expect(page.getByRole('option', { name: 'View', exact: true })).toBeVisible();
@@ -165,7 +165,7 @@ test('pinned Terra Docs toolbar mode menu matches the original', async ({ page }
   await expectOriginalScreenshot(page, 'mode-menu');
 });
 
-test('pinned Terra Docs visual editor toolbar matches the original', async ({ page }) => {
+test('pinned Docs visual editor toolbar matches the original', async ({ page }) => {
   await openParityFixture(page);
   await setMode(page, 'Edit');
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
@@ -173,7 +173,7 @@ test('pinned Terra Docs visual editor toolbar matches the original', async ({ pa
   await expectOriginalScreenshot(page, 'edit-mode');
 });
 
-test('Terra Docs attachments mode uses a compact selector and preserves the empty state', async ({
+test('Docs attachments mode uses a compact selector and preserves the empty state', async ({
   page,
 }) => {
   await openParityFixture(page);
@@ -203,7 +203,7 @@ test('Terra Docs attachments mode uses a compact selector and preserves the empt
   });
 });
 
-test('pinned Terra Docs leaf context menu matches the original', async ({ page }) => {
+test('pinned Docs leaf context menu matches the original', async ({ page }) => {
   await openParityFixture(page);
   await page.getByRole('link', { name: 'Salesphere', exact: true }).click({ button: 'right' });
   const menu = page.getByRole('menu');
@@ -214,7 +214,7 @@ test('pinned Terra Docs leaf context menu matches the original', async ({ page }
   await expectOriginalScreenshot(page, 'leaf-context-menu');
 });
 
-test('pinned Terra Docs group context menu matches the original', async ({ page }) => {
+test('pinned Docs group context menu matches the original', async ({ page }) => {
   await openParityFixture(page);
   await expect(page.getByRole('button', { name: /Actions for group/ })).toHaveCount(0);
   await page.locator('[data-docs-drop^="branch:"]').filter({ hasText: 'Start here' }).hover();
@@ -230,7 +230,7 @@ test('pinned Terra Docs group context menu matches the original', async ({ page 
   await expectOriginalScreenshot(page, 'group-context-menu');
 });
 
-test('pinned Terra Docs attachment management dialog matches the original', async ({ page }) => {
+test('pinned Docs attachment management dialog matches the original', async ({ page }) => {
   await openParityFixture(page);
   await page.mouse.click(169, 160, { button: 'right' });
   await page.getByRole('menuitem', { name: 'Manage attachments', exact: true }).click();

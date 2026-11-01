@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -19,7 +19,7 @@ const embedFixture = [
     width: '320px',
     height: '180px',
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test(
   'embed.spec: Render title and size without remote requests',

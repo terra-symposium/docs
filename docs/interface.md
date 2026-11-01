@@ -44,4 +44,4 @@ The host owns saving/loading, authentication, permissions, and storage. Docs own
 
 ## Terra source
 
-This component follows the schema/provider/editable surface and formatting commands in [TerraContentEditor](https://github.com/Terra-Symposium/terra-symposium-website/blob/7041215247802c8a779c6a81a6f76150cdcb67c3/astro/src/components/editor/TerraContentEditor.tsx) and its toolbar. It uses the same `@portabletext/editor` version (7.9.0), retaining only the basic text subset. It does not depend on Terra's generated Sanity types or internal UI components.
+This component follows the schema/provider/editable surface and formatting commands in [ContentEditor](https://github.com/Terra-Symposium/terra-symposium-website/blob/7041215247802c8a779c6a81a6f76150cdcb67c3/astro/src/components/editor/ContentEditor.tsx) and its toolbar. It uses the same `@portabletext/editor` version (7.9.0), retaining only the basic text subset. It does not depend on Terra's generated Sanity types or internal UI components.

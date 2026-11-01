@@ -16,11 +16,11 @@ import { useEffect, useState } from 'react';
 import { AlertError } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../../ui.js';
 import { Empty } from '../../ui.js';
-import { TerraContentEditor } from '../TerraContentEditor.js';
+import { ContentEditor } from '../ContentEditor.js';
 
 // TYPES
 import type { DocsBlock } from '../types.js';
-import type { TerraContent as TerraContentData } from '../../../../lib/terra/runtime/types.js';
+import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
 import type { TsDocsItem } from '../../../../lib/terra/runtime/types.js';
 
 /*//////////////////////////////////////////////////
@@ -122,8 +122,8 @@ function TsDocsRenderer({
         {items.map((d) => (
           <section key={d.slug} id={d.slug.replaceAll('/', '-')}>
             {items.length > 1 && <h2>{d.title}</h2>}
-            <TerraContentEditor
-              content={d.body as unknown as TerraContentData}
+            <ContentEditor
+              content={d.body as unknown as ContentData}
               docsAttachments={[]}
               memberProfile="docs"
               nested

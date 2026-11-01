@@ -17,7 +17,7 @@ export type { DocsBlockOptions, DocsBlockType, RichBlock } from '../components/b
 export { TerraDocsWorkspace } from '../components/terra/Workspace.js';
 export { DocsLocalWorkspace } from '../components/LocalDocsWorkspace.js';
 export type { DocsLocalPage, DocsLocalWorkspaceProps } from '../components/LocalDocsWorkspace.js';
-export { TerraContentEditor as DocsContentEditor } from '../components/terra/editor/TerraContentEditor.js';
+export { ContentEditor as DocsContentEditor } from '../components/terra/editor/ContentEditor.js';
 export { renderCallout } from '../components/terra/editor/docs/_Callout.js';
 export { renderCode } from '../components/terra/editor/docs/_DocsCode.js';
 export { Embed } from '../components/terra/editor/docs/_Embed.js';

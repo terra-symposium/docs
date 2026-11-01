@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const nodesFixture = [
   {
@@ -36,7 +36,7 @@ const nodesFixture = [
       },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('nodes.spec: Preserve canvas height', async ({ page }) => {
   await openEditor(page, nodesFixture);
@@ -85,7 +85,7 @@ const autoLayoutNodesFixture = [
       },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('nodes.spec: Auto-layout Sanity nodes that have no saved positions', async ({ page }) => {
   await openEditor(page, autoLayoutNodesFixture);
@@ -120,7 +120,7 @@ const selfLoopNodesFixture = [
       },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('nodes.spec: Auto-layout graphs with self-loop edges', async ({ page }) => {
   const pageErrors: string[] = [];
@@ -202,7 +202,7 @@ const compoundGroupNodesFixture = [
       },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('nodes.spec: Auto-layout compound groups with group-target and self-loop edges', async ({
   page,

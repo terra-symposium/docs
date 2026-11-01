@@ -202,7 +202,7 @@ export function pageForSlug(slug: string): SitePage | undefined {
 }
 if (sitePages.length === 0)
   throw new Error(
-    'No Markdown files found in docs/. Add docs/index.md to start a Terra Docs site.',
+    'No Markdown files found in docs/. Add docs/index.md to start a Docs site.',
   );
 for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '404')) {
   const segments = page.slug.split('/').filter(Boolean);

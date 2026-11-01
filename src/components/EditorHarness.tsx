@@ -1,5 +1,5 @@
 import { StrictMode, useState } from 'react';
-import { TerraContentEditor } from './terra/editor/TerraContentEditor.js';
+import { ContentEditor } from './terra/editor/ContentEditor.js';
 import { configureDocsHost } from '../lib/host-runtime.js';
 import type { DocsHostAdapter, DocsActionOperation } from '../lib/host.js';
 import type { DocsBlockOptions } from './blocks.js';
@@ -8,8 +8,8 @@ import type { JSX } from 'react';
 
 declare global {
   interface Window {
-    __terraContentFixture?: unknown[];
-    __terraContentOptions?: {
+    __contentFixture?: unknown[];
+    __contentOptions?: {
       attachments?: DocsHostAttachment[];
       blocks?: DocsBlockOptions;
       nested?: boolean;
@@ -63,17 +63,17 @@ const host: DocsHostAdapter = {
 export default function EditorHarness(): JSX.Element {
   configureDocsHost(host);
   const [readOnly] = useState(() =>
-    typeof window === 'undefined' ? false : (window.__terraContentOptions?.readOnly ?? false),
+    typeof window === 'undefined' ? false : (window.__contentOptions?.readOnly ?? false),
   );
   const [options] = useState(() =>
-    typeof window === 'undefined' ? {} : (window.__terraContentOptions ?? {}),
+    typeof window === 'undefined' ? {} : (window.__contentOptions ?? {}),
   );
   const [content, setContent] = useState(() => {
     const saved = options.persistKey ? sessionStorage.getItem(options.persistKey) : null;
     if (saved) return JSON.parse(saved) as unknown[];
     return (
       (mapContent(
-        typeof window === 'undefined' ? [] : (window.__terraContentFixture ?? []),
+        typeof window === 'undefined' ? [] : (window.__contentFixture ?? []),
       ) as unknown[]) ?? []
     );
   });
@@ -81,7 +81,7 @@ export default function EditorHarness(): JSX.Element {
     <StrictMode>
       <div className="docs-theme-scope">
         <main className="terra-docs-workspace mx-auto min-h-svh max-w-5xl p-6">
-          <TerraContentEditor
+          <ContentEditor
             content={content}
             {...(options.attachments ? { docsAttachments: options.attachments } : {})}
             {...(options.blocks ? { blocks: options.blocks } : {})}

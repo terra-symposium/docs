@@ -126,7 +126,7 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
 }
 
 /**
- * Render repository-owned Markdown with the original Terra Docs workspace.
+ * Render repository-owned Markdown with the original Docs workspace.
  * This adapter has no write operations, account dependency, or server requirement.
  */
 export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element {

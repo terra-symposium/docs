@@ -1,10 +1,10 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const blockFixture = [
   { _key: 'math-under-test', _type: 'math', code: 'x^2', inline: false },
-] satisfies TerraContent;
+] satisfies Content;
 const inlineFixture = [
   {
     _key: 'inline-math-paragraph',
@@ -17,7 +17,7 @@ const inlineFixture = [
       { _key: 'after-math', _type: 'span', marks: [], text: ' is useful.' },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('math.spec: Render block and emit formula edits', async ({ page }) => {
   const missingKatexFonts: string[] = [];

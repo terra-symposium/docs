@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -36,7 +36,7 @@ const tabsFixture = [
       },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('tabs.spec: Switch tabs and emit structure edits', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, tabsFixture);
@@ -189,7 +189,7 @@ test('tabs.spec: Render source-backed table cells inside read-only tabs', async 
         },
       ],
     },
-  ] satisfies TerraContent;
+  ] satisfies Content;
 
   await openEditor(page, content, { readOnly: true });
   const tabs = page.getByRole('tablist').last();
@@ -275,7 +275,7 @@ test('tabs.spec: Render Sanity terraBlock cells inside production-shaped nested 
         },
       ],
     },
-  ] satisfies TerraContent;
+  ] satisfies Content;
 
   await openEditor(page, content, { readOnly: true });
   const table = page.locator('[data-docs-editor-block="DocsTable"] table');
@@ -342,7 +342,7 @@ test('tabs.spec: Render production legacy string children in table cells', async
         },
       ],
     },
-  ] satisfies TerraContent;
+  ] satisfies Content;
 
   await openEditor(page, content, { readOnly: true });
   const table = page.locator('[data-docs-editor-block="DocsTable"] table');

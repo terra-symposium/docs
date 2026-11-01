@@ -61,6 +61,7 @@ import {
   Edit as EditIcon,
   Link as LinkIcon,
   TrashCan as TrashIcon,
+  Search as SearchIcon,
 } from '@carbon/icons-react';
 import {
   AlertError,
@@ -1991,18 +1992,18 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           )}
         </ContextMenu>
         {/* USER */}
-        <SidebarFooter>
+        <SidebarFooter className='flex justify-between'>
           <User user={userData ?? null} className="mr-auto pl-0" />
           <Button
             variant="primary-underline"
             aria-label="Search ⌘K"
-            title="Search docs (⌘K)"
+            title="Search (⌘K)"
             onClick={(e) => {
               e.stopPropagation();
               window.dispatchEvent(new Event('docs:open-search'));
             }}
           >
-            Search docs
+            <SearchIcon/> Search
           </Button>
         </SidebarFooter>
         {/* RAIL */}

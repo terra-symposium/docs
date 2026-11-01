@@ -80,9 +80,9 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@terra-symposium/
 import { Separator } from '@terra-symposium/styling/ui';
 import { Textarea } from '@terra-symposium/styling/ui';
 import { Toaster } from 'sonner';
-const TerraContentEditor = lazy(() =>
-  import('../../editor/TerraContentEditor.js').then((module) => ({
-    default: module.TerraContentEditor,
+const ContentEditor = lazy(() =>
+  import('../../editor/ContentEditor.js').then((module) => ({
+    default: module.ContentEditor,
   })),
 );
 
@@ -97,7 +97,7 @@ import type {
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
 import type { User } from '../../../../lib/terra/runtime/types.js';
-import type { TerraContent as TerraContentData } from '../../../../lib/terra/runtime/types.js';
+import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
 import type { DocsHostAttachment } from '../../../../lib/host.js';
 import type { DocsBlockOptions } from '../../../blocks.js';
 /*//////////////////////////////////////////////////
@@ -143,7 +143,7 @@ function View({
   }, [resetKey, transition]);
   return (
     <Suspense fallback={<div aria-hidden="true" data-docs-view-loading />}>
-      <TerraContentEditor
+      <ContentEditor
         content={body as unknown as any[]}
         readOnly
         {...(blocks ? { blocks } : {})}
@@ -320,11 +320,11 @@ const EditorSurfaces = {
           </>
         ) : (
           <Suspense fallback={<div aria-hidden="true" data-docs-editor-loading />}>
-            <TerraContentEditor
+            <ContentEditor
               content={
                 (isDocBody(editor.draft.content)
                   ? editor.draft.content
-                  : undefined) as unknown as TerraContentData
+                  : undefined) as unknown as ContentData
               }
               docsAttachments={docsAttachments}
               blocks={blocks}

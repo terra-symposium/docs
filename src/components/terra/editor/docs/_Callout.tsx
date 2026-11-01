@@ -2,7 +2,7 @@
 /** Docs callout renderer with view and edit modes. */
 
 import { useEditor } from '@portabletext/editor';
-import { TerraContentEditor } from '../TerraContentEditor.js';
+import { ContentEditor } from '../ContentEditor.js';
 import { ErrorBoundary } from '../../ui.js';
 import { Input } from '@terra-symposium/styling/ui';
 
@@ -12,7 +12,7 @@ import type {
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
-import type { TerraContent as TerraContentData } from '../../../../lib/terra/runtime/types.js';
+import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
 
 /** Sanity Portable Text callout data consumed by the docs editor and renderer. */
 type CalloutBlock = DocsBlock<'callout'>;
@@ -30,8 +30,8 @@ function Callout({ block }: { block: CalloutBlock }): JSX.Element {
         data-docs-aside={block.kind ?? 'note'}
       >
         <h4 className="title">{block.title ?? block.kind ?? 'Note'}</h4>
-        <TerraContentEditor
-          content={(block.content ?? []) as unknown as TerraContentData}
+        <ContentEditor
+          content={(block.content ?? []) as unknown as ContentData}
           docsAttachments={[]}
           memberProfile="docs"
           nested
@@ -74,8 +74,8 @@ function CalloutEditor({
             editor.send({ type: 'block.set', at: path, props: { title: e.currentTarget.value } })
           }
         />
-        <TerraContentEditor
-          content={(block.content ?? []) as unknown as TerraContentData}
+        <ContentEditor
+          content={(block.content ?? []) as unknown as ContentData}
           docsAttachments={[]}
           memberProfile="docs"
           nested

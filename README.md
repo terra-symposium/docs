@@ -1,10 +1,10 @@
-# Terra Docs
+# Docs
 
-Terra Docs is the shared Terra documentation workspace and Markdown site generator. A repository can use the npm package for an entire Docs site or embed its React editor and viewer in another application.
+Docs is the shared Terra documentation workspace and Markdown site generator. A repository can use the npm package for an entire Docs site or embed its React editor and viewer in another application.
 
 ## Create a repository Docs site
 
-Create a repository from the [Terra Docs starter](https://github.com/Terra-Symposium/docs-template) or install the package in an existing repository:
+Create a repository from the [Docs starter](https://github.com/Terra-Symposium/docs-template) or install the package in an existing repository:
 
 ```sh
 pnpm add -D @terra-symposium/docs

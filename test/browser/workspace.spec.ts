@@ -38,7 +38,7 @@ test('standalone Astro pages mount the extracted read-only workspace with their 
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Terra Docs', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Docs', exact: true }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Create an instance' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Section' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Mode' })).toBeVisible();

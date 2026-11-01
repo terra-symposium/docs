@@ -1,4 +1,4 @@
-# Terra Docs parity baseline
+# Docs parity baseline
 
 The `original-*.png` snapshots in `parity.spec.ts-snapshots/` come from the
 pre-abstraction Terra website at commit

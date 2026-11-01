@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -12,7 +12,7 @@ const XL_VIEWPORT_TEST = {
 
 const codeFixture = [
   { _key: 'code-under-test', _type: 'code', language: 'typescript', value: 'const answer = 1;' },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('code.spec: Render source and emit edits', XL_VIEWPORT_TEST, async ({ page }) => {
   const code = page.locator('[data-terra-block="code"] .cm-content');

@@ -1,7 +1,7 @@
 // @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
  * astro/src/components/editor/docs/_math_inline.tsx
- * Read-only Docs math inline renderer for the shared Terra content editor.
+ * Read-only Docs math inline renderer for the shared Content editor.
  */
 
 /*//////////////////////////////////////////////////

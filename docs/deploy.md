@@ -3,7 +3,7 @@ title: Deploy an instance
 description: Build and deploy the host application.
 ---
 
-Terra Docs is a client-side React component. Deploy the host app using its framework's normal build and hosting workflow.
+Docs is a client-side React component. Deploy the host app using its framework's normal build and hosting workflow.
 
 For the Vite starter created in [Create an instance](./getting-started/):
 

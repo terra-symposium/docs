@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -20,7 +20,7 @@ const imageFixture = [
     width: '120',
     height: '80',
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('image.spec: Render metadata and emit field edits', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, imageFixture);

@@ -183,7 +183,7 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
 }
 
 /**
- * Adapts a host's local Markdown pages to the original, read-only Terra Docs workspace.
+ * Adapts a host's local Markdown pages to the original, read-only Docs workspace.
  *
  * @param props Page content, navigation, attachment metadata, and optional host render slots.
  *

@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -12,7 +12,7 @@ const XL_VIEWPORT_TEST = {
 
 const rawFixture = [
   { _key: 'raw-under-test', _type: 'raw', markdown: '# Terra source' },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('raw.spec: Show read-only source', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, rawFixture);

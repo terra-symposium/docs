@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.1.81
+
+### Patch Changes
+
+- 5982803: Resolve package-owned Astro runtime imports in content-only consumer repositories.
+
 ## 0.1.80
 
 ### Patch Changes
@@ -27,7 +33,7 @@
 ### Patch Changes
 
 - bd67dce: Restore read-only leaf description controls and keep consumer artifacts in sync with the shared workspace.
-- Keep static Markdown and MDX pages visible during Astro rendering and hydrate the shared Terra Docs reader without leaving its editor transition loader active.
+- Keep static Markdown and MDX pages visible during Astro rendering and hydrate the shared Docs reader without leaving its editor transition loader active.
 
 ## 0.1.71
 
@@ -78,7 +84,7 @@
 
 ### Patch Changes
 
-- Use the pre-extraction Terra Docs UI primitives from Styling and keep the mode selector full-width in View and compact in Attachments.
+- Use the pre-extraction Docs UI primitives from Styling and keep the mode selector full-width in View and compact in Attachments.
 
 ## 0.1.61
 
@@ -200,7 +206,7 @@
 
 ### Patch Changes
 
-- Import canonical Terra Docs JSX blocks from exported Markdown and preserve adjacent legacy code blocks.
+- Import canonical Docs JSX blocks from exported Markdown and preserve adjacent legacy code blocks.
 - 37dcac9: Add a host content slot to the local workspace for interactive page content.
 - 37dcac9: Apply the shared hue palette to standalone remote Docs hosts so system and explicit dark themes work consistently.
 - 37dcac9: Fit long document titles to the available header width.

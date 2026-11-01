@@ -17,7 +17,7 @@ export type DocsNotFoundProps = {
 };
 
 export function DocsNotFound({
-  appName = 'Terra Docs',
+  appName = 'Docs',
   homeHref = '/',
   description = 'The page may have moved, or the link may be out of date.',
 }: DocsNotFoundProps): JSX.Element {

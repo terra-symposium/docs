@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const paragraph = [
   {
@@ -10,7 +10,7 @@ const paragraph = [
     markDefs: [],
     children: [{ _key: 'registry-span', _type: 'span', marks: [], text: 'Start writing here.' }],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('default registry inserts code content and exposes every shared block', async ({ page }) => {
   await openEditor(page, paragraph);

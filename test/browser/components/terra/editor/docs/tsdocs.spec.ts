@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { openEditor } from '../../../../support/editor.js';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -12,11 +12,11 @@ const XL_VIEWPORT_TEST = {
 
 const emptyScopeFixture = [
   { _key: 'tsdocs-under-test', _type: 'tsDocs', scope: '' },
-] satisfies TerraContent;
+] satisfies Content;
 const scopedFixture = [
   { _key: 'tsdocs-under-test', _type: 'tsDocs', scope: 'lib/local' },
-] satisfies TerraContent;
-const paragraph = (text: string): TerraContent => [
+] satisfies Content;
+const paragraph = (text: string): Content => [
   {
     _key: `${text}-block`,
     _type: 'terraBlock',

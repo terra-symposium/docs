@@ -1,6 +1,6 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -38,7 +38,7 @@ const accordionFixture = [
       },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test(
   'accordion.spec: Expand sections and emit structure edits',

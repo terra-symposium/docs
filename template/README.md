@@ -1,4 +1,4 @@
-# Terra Docs starter
+# Docs starter
 
 Create a repository with GitHub's **Use this template** button, then install its dependencies:
 

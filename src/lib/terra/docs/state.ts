@@ -1,4 +1,4 @@
-/** Shared state, transitions, contexts, and surface readiness for Terra Docs. */
+/** Shared state, transitions, contexts, and surface readiness for Docs. */
 import { atom, map } from 'nanostores';
 import { createContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { validateType } from '../runtime/runtime.js';

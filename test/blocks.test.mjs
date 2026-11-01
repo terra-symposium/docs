@@ -698,7 +698,7 @@ test('nested standalone math keeps its block boundary in callouts and grouped bl
   }
 });
 
-test('canonical Terra Docs components import into their matching rich blocks', () => {
+test('canonical Docs components import into their matching rich blocks', () => {
   const template = String.fromCharCode(96);
   const source = [
     '<Nodes',

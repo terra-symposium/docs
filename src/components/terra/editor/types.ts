@@ -1,7 +1,7 @@
 // @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
  * astro/src/components/editor/types.ts
- * Shared Terra content and Portable Text renderer contracts.
+ * Shared Content and Portable Text renderer contracts.
  */
 
 /*//////////////////////////////////////////////////

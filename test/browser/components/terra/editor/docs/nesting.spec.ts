@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { openEditor } from '../../../../support/editor.js';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -18,7 +18,7 @@ const textFixture = [
     markDefs: [],
     children: [{ _key: 'paragraph-text', _type: 'span', marks: [], text: 'Editor text' }],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 const migratedTableFixture = [
   {
@@ -82,7 +82,7 @@ const migratedTableFixture = [
     markDefs: [],
     children: [{ _key: 'after-text', _type: 'span', marks: [], text: 'After table' }],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test(
   'root editor offers portable blocks and inserts a table from the toolbar',
@@ -166,7 +166,7 @@ test(
         markDefs: [],
         children: [{ _key: 'nested-span', _type: 'span', text: 'Nested text', marks: [] }],
       },
-    ] satisfies TerraContent;
+    ] satisfies Content;
     const container = {
       _key: 'accordion',
       _type: 'accordion',

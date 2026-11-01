@@ -1,11 +1,11 @@
 ---
 title: Skills inventory
-description: Build a searchable inventory of repository skills in a Terra Docs site.
+description: Build a searchable inventory of repository skills in a Docs site.
 ---
 
 # Skills inventory
 
-Terra Docs exports a reusable `SkillsExplorer` component for repositories that keep agent guidance in `SKILL.md` files. The Docs build indexes skill files in the repository and writes the cache to `.terra-docs/cache/skills.generated.json`.
+Docs exports a reusable `SkillsExplorer` component for repositories that keep agent guidance in `SKILL.md` files. The Docs build indexes skill files in the repository and writes the cache to `.terra-docs/cache/skills.generated.json`.
 
 For example, add `docs/skills/index.mdx` and pass the generated cache to the component:
 

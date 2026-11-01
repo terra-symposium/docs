@@ -2,11 +2,11 @@ import type { Page } from '@playwright/test';
 import type { DocsBlockOptions } from '../../../src/components/blocks.js';
 import type { DocsHostAttachment } from '../../../src/lib/host.js';
 
-export type TerraContent = unknown[];
+export type Content = unknown[];
 
 export async function openEditor(
   page: Page,
-  content: TerraContent,
+  content: Content,
   options: {
     attachments?: DocsHostAttachment[];
     blocks?: DocsBlockOptions;
@@ -20,8 +20,8 @@ export async function openEditor(
   await page.addInitScript(
     ({ fixture, settings }) => {
       Object.assign(window, {
-        __terraContentFixture: fixture,
-        __terraContentOptions: settings,
+        __contentFixture: fixture,
+        __contentOptions: settings,
         __terraDocsMockResponses: settings.mockResponses,
       });
     },

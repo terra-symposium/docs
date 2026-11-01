@@ -418,7 +418,7 @@ function validateNesting(value: unknown, depth = 0): true | string {
 }
 
 /** Portable Docs editor profile extracted from Terra's shared content editor. */
-export function TerraContentEditor({
+export function ContentEditor({
   content = [],
   onChange,
   readOnly = false,
@@ -468,7 +468,7 @@ export function TerraContentEditor({
     defineInlineObject({ type: 'todoInline', render: (props) => <UnsupportedInline {...props} /> }),
   ];
   return (
-    <ErrorBoundary name="TerraContent">
+    <ErrorBoundary name="Content">
       <EditorProvider
         key={`${resetKey ?? ''}:${rejectedChanges}`}
         initialConfig={{
@@ -493,7 +493,7 @@ export function TerraContentEditor({
         {nestingError && <p role="alert">{nestingError}</p>}
         <BlockContext enabled={!readOnly}>
           <section
-            aria-label={readOnly ? 'Terra content preview' : 'Terra content editor'}
+            aria-label={readOnly ? 'Content preview' : 'Content editor'}
             className="bg-transparent"
             data-terra-content-editor
           >

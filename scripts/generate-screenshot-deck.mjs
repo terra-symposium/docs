@@ -11,5 +11,5 @@ if (!fs.existsSync(screenshotsDirectory)) {
 
 await fs.promises.mkdir(path.dirname(outputFile), { recursive: true });
 await writeScreenshotSlideshowFromDirectory(screenshotsDirectory, outputFile, {
-  title: 'Terra Docs Playwright screenshots',
+  title: 'Docs Playwright screenshots',
 });

@@ -4,7 +4,7 @@ import {
   docsValueToMarkdown,
   markdownToDocsValue,
 } from '../../../../../../lib-dist/lib/markdown-model.js';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const calloutFixture = [
   {
@@ -22,7 +22,7 @@ const calloutFixture = [
       },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('callout.spec: Render content and emit title edits', async ({ page }) => {
   await openEditor(page, calloutFixture);

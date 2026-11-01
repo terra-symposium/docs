@@ -1,9 +1,9 @@
 ---
-title: Terra Docs
+title: Docs
 description: Install an independent document editor and viewer in your own application.
 ---
 
-Terra Docs is a reusable React editor and viewer. Each installation is a host application: it owns documents, storage, authentication, and access rules, while the Docs component edits and renders the document value.
+Docs is a reusable React editor and viewer. Each installation is a host application: it owns documents, storage, authentication, and access rules, while the Docs component edits and renders the document value.
 
 ## Install an instance
 

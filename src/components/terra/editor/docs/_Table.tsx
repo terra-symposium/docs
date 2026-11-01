@@ -3,7 +3,7 @@
 
 import { useEditor } from '@portabletext/editor';
 import { Add as AddIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
-import { TerraContentEditor } from '../TerraContentEditor.js';
+import { ContentEditor } from '../ContentEditor.js';
 import { ErrorBoundary } from '../../ui.js';
 import { Button } from '@terra-symposium/styling/ui';
 import { Input } from '@terra-symposium/styling/ui';
@@ -16,7 +16,7 @@ import type {
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
-import type { TerraContent as TerraContentData } from '../../../../lib/terra/runtime/types.js';
+import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
 
 /** Sanity Portable Text table rows and headers. */
 type TableBlock = DocsBlock<'table'>;
@@ -54,8 +54,8 @@ function Table({ block }: { block: TableBlock }): React.JSX.Element {
   const count = rows.reduce((m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0), 0);
   const renderCell = (c: DocTableCell | undefined): React.JSX.Element | null =>
     c ? (
-      <TerraContentEditor
-        content={(Array.isArray(c.content) ? c.content : []) as unknown as TerraContentData}
+      <ContentEditor
+        content={(Array.isArray(c.content) ? c.content : []) as unknown as ContentData}
         docsAttachments={[]}
         memberProfile="docs"
         nested

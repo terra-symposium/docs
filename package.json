@@ -1,7 +1,7 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.1.80",
-  "description": "Terra Docs workspace and Markdown site generator.",
+  "version": "0.1.81",
+  "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Terra-Symposium/docs.git"
@@ -46,9 +46,9 @@
   },
   "scripts": {
     "dev": "terra-quality-dev -- vite --host 127.0.0.1 --open",
-    "docs:dev": "pnpm build && node bin/terra-docs.mjs dev --title 'Terra Docs'",
-    "docs:build": "pnpm build && node bin/terra-docs.mjs build --title 'Terra Docs'",
-    "docs:preview": "pnpm docs:build && node bin/terra-docs.mjs preview --title 'Terra Docs'",
+    "docs:dev": "pnpm build && node bin/terra-docs.mjs dev --title 'Docs'",
+    "docs:build": "pnpm build && node bin/terra-docs.mjs build --title 'Docs'",
+    "docs:preview": "pnpm docs:build && node bin/terra-docs.mjs preview --title 'Docs'",
     "dev:library": "tsc --watch",
     "prebuild": "pnpm exec terra-quality error-boundaries --all",
     "build": "rm -rf lib-dist && tsc && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/style.css -o lib-dist/style.css --minify && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/workspace.css -o lib-dist/workspace.css --minify && node scripts/copy-runtime.mjs",

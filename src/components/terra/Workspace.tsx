@@ -6,7 +6,7 @@ import Scaffold from './pages/docs/_main.js';
 import { configureDocsHost } from '../../lib/host-runtime.js';
 import type { TerraDocsWorkspaceProps } from '../../lib/host.js';
 
-/** The source-preserving shared Terra Docs workspace used by host route adapters. */
+/** The source-preserving shared Docs workspace used by host route adapters. */
 export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element {
   configureDocsHost(props.host, props.customBlocks);
   const portalThemeRoot = useRef<HTMLDivElement>(null);
@@ -125,7 +125,7 @@ export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element 
       // destination a Docs scope so the extracted bundle's scoped variants
       // continue to style menus, selects, dialogs, and popovers there.
       target.classList.add('docs-theme-scope');
-      // Sanity's global editor styles supplied Inter on the original Terra Docs route.
+      // Sanity's global editor styles supplied Inter on the original Docs route.
       // Keep body-mounted Radix menus and dialogs on that same Docs typeface.
       const docsFont = computed.fontFamily;
       if (docsFont && target.style.fontFamily !== docsFont) {

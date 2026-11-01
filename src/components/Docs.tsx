@@ -1,4 +1,4 @@
-import { TerraContentEditor } from './terra/editor/TerraContentEditor.js';
+import { ContentEditor } from './terra/editor/ContentEditor.js';
 import type { DocsBlockOptions } from './blocks.js';
 import type { PortableTextBlock } from '@portabletext/editor';
 import type { JSX } from 'react';
@@ -16,11 +16,11 @@ export type DocsProps = {
   blocks?: DocsBlockOptions;
 } & ({ mode: 'edit'; onChange: (value: DocsValue) => void } | { mode: 'view'; onChange?: never });
 
-/** Controlled editor surface backed by the canonical Terra Docs editor. */
+/** Controlled editor surface backed by the canonical Docs editor. */
 export function Docs(props: DocsProps): JSX.Element {
   return (
     <div className={['terra-docs', props.className].filter(Boolean).join(' ')}>
-      <TerraContentEditor
+      <ContentEditor
         content={props.value}
         readOnly={props.mode === 'view'}
         {...(props.blocks !== undefined ? { blocks: props.blocks } : {})}

@@ -6,7 +6,7 @@ import { AccordionGroup, AccordionItem, TabsGroup, TabsItem } from '../_blocks.j
 import { Add as AddIcon } from '@carbon/icons-react';
 import { ErrorBoundary } from '../../ui.js';
 import { Button } from '@terra-symposium/styling/ui';
-import { TerraContentEditor } from '../TerraContentEditor.js';
+import { ContentEditor } from '../ContentEditor.js';
 
 import type { DocBody } from '../../../../lib/terra/runtime/types.js';
 import type { DocsNestedContent } from '../../../../lib/terra/runtime/types.js';
@@ -15,7 +15,7 @@ import type {
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
-import type { TerraContent as TerraContentData } from '../../../../lib/terra/runtime/types.js';
+import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
 
 /** Union of the docs tabs and accordion block shapes. */
 type SectionsBlock = DocsBlock<'tabs'> | DocsBlock<'accordion'>;
@@ -46,9 +46,9 @@ function TabsBlock({ block }: { block: DocsBlock<'tabs'> }): JSX.Element {
               key={key(i, `${v}`)}
               title={typeof entry.title === 'string' ? entry.title : `Tab ${v + 1}`}
             >
-              <TerraContentEditor
+              <ContentEditor
                 content={
-                  (Array.isArray(entry.content) ? entry.content : []) as unknown as TerraContentData
+                  (Array.isArray(entry.content) ? entry.content : []) as unknown as ContentData
                 }
                 docsAttachments={[]}
                 memberProfile="docs"
@@ -82,9 +82,9 @@ function AccordionBlock({ block }: { block: DocsBlock<'accordion'> }): JSX.Eleme
               key={key(i, `${v}`)}
               title={typeof entry.title === 'string' ? entry.title : `Item ${v + 1}`}
             >
-              <TerraContentEditor
+              <ContentEditor
                 content={
-                  (Array.isArray(entry.content) ? entry.content : []) as unknown as TerraContentData
+                  (Array.isArray(entry.content) ? entry.content : []) as unknown as ContentData
                 }
                 docsAttachments={[]}
                 memberProfile="docs"
@@ -159,8 +159,8 @@ function SectionsEditor({
     const title =
       typeof i.title === 'string' ? i.title : kind === 'tabs' ? `Tab ${v + 1}` : `Item ${v + 1}`;
     const nested = (
-      <TerraContentEditor
-        content={(i.content ?? []) as unknown as TerraContentData}
+      <ContentEditor
+        content={(i.content ?? []) as unknown as ContentData}
         docsAttachments={[]}
         memberProfile="docs"
         nested

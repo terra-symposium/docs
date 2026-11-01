@@ -63,7 +63,7 @@ function Playground(): React.JSX.Element {
   return (
     <>
       <header className="demo-header">
-        <span>Terra Docs</span>
+        <span>Docs</span>
         <div role="group" aria-label="Preview mode">
           <button onClick={() => setValue([])}>New document</button>
           <button onClick={() => setValue(structuredClone(sample))}>Reset document</button>

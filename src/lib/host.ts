@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { DocsBlockOptions } from '../components/blocks.js';
 
-/** The portable tree-node shape used by the original Terra Docs workspace. */
+/** The portable tree-node shape used by the original Docs workspace. */
 export type DocsHostTreeNode = {
   type: 'branch' | 'leaf';
   origName: string;
@@ -154,7 +154,7 @@ export type DocsCustomBlock = {
   [key: string]: unknown;
 };
 
-/** Root inputs required to mount the original Terra Docs workspace. */
+/** Root inputs required to mount the original Docs workspace. */
 export type TerraDocsWorkspaceProps = {
   host: DocsHostAdapter;
   tree: DocsHostTreeNode[];

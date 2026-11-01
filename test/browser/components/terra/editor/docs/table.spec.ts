@@ -1,7 +1,7 @@
 import { openEditor } from '../../../../support/editor.js';
 import { expect, test } from '@playwright/test';
 import { markdownToDocsValue } from '../../../../../../lib-dist/lib/markdown-model.js';
-import type { TerraContent } from '../../../../support/editor.js';
+import type { Content } from '../../../../support/editor.js';
 
 const textCell = (key: string, text: string) => ({
   _key: key,
@@ -27,7 +27,7 @@ const tableFixture = [
       { _key: 'data-row', _type: 'row', cells: [textCell('data-cell', 'Terra')] },
     ],
   },
-] satisfies TerraContent;
+] satisfies Content;
 
 test('table.spec: Render cells and emit structure edits', async ({ page }) => {
   const cell = page.getByRole('textbox', { name: 'Table cell 2, 1' });
@@ -97,7 +97,7 @@ test('table.spec: Preserve inline code marks inside nested cells', async ({ page
         },
       ],
     },
-  ] satisfies TerraContent;
+  ] satisfies Content;
 
   await openEditor(page, fixture, { readOnly: true });
   const cell = page.locator('[data-docs-editor-block="DocsTable"] tbody td');
@@ -142,7 +142,7 @@ test('table.spec: Render Sanity terraBlock aliases inside nested table cells', a
         },
       ],
     },
-  ] satisfies TerraContent;
+  ] satisfies Content;
 
   await openEditor(page, fixture, { readOnly: true });
   const table = page.locator('[data-docs-editor-block="DocsTable"] table');
@@ -192,7 +192,7 @@ test('table.spec: Render compact Docs Markdown text aliases inside nested cells'
         },
       ],
     },
-  ] satisfies TerraContent;
+  ] satisfies Content;
 
   await openEditor(page, fixture, { readOnly: true });
   const table = page.locator('[data-docs-editor-block="DocsTable"] table');
@@ -242,7 +242,7 @@ test('table.spec: Render legacy Sanity text blocks with string children in cells
         },
       ],
     },
-  ] satisfies TerraContent;
+  ] satisfies Content;
 
   await openEditor(page, fixture, { readOnly: true });
   const table = page.locator('[data-docs-editor-block="DocsTable"] table');

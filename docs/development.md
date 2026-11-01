@@ -1,5 +1,5 @@
 ---
-title: Develop Terra Docs
+title: Develop Docs
 description: Work on the package and documentation site.
 ---
 

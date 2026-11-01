@@ -46,6 +46,6 @@ Unknown Markdown tokens and disabled block syntax are kept as raw source. Fields
 
 ## Workspace shell
 
-`DocsSiteLayout` (React) and `@terra-symposium/docs/site-layout.astro` are static-host adapters around the same Terra Docs workspace used by the local and remote providers. They render the original section selector, nested group and leaf tree, document header, and View/Attachments toolbar. They do not add a second site shell or a persistent page-search field. Pass `sections` as an ordered array of `{ title, groups: [{ title, leaves: [{ title, href, description?, updatedAt?, attachments? }] }] }`. Each attachment belongs to its leaf and appears in Attachments mode, not in the navigation tree.
+`DocsSiteLayout` (React) and `@terra-symposium/docs/site-layout.astro` are static-host adapters around the same Docs workspace used by the local and remote providers. They render the original section selector, nested group and leaf tree, document header, and View/Attachments toolbar. They do not add a second site shell or a persistent page-search field. Pass `sections` as an ordered array of `{ title, groups: [{ title, leaves: [{ title, href, description?, updatedAt?, attachments? }] }] }`. Each attachment belongs to its leaf and appears in Attachments mode, not in the navigation tree.
 
 Local hosts use `DocsLocalWorkspace` and remain read-only in the browser. Remote hosts mount `TerraDocsWorkspace` with a `DocsHostAdapter`; the adapter supplies capabilities and routes all reads and mutations to the host. The shared UI does not decide identity or authorization.

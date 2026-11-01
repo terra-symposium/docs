@@ -166,14 +166,7 @@ export default defineConfig({
       dedupe: ['react', 'react-dom'],
     },
     ssr: {
-      // Bundle the shared UI and its React hook dependencies together so SSR
-      // cannot load a second React copy from a pnpm peer-dependency store.
-      noExternal: [
-        '@terra-symposium/styling',
-        '@terra-symposium/standards-error-boundaries',
-        'react-hook-form',
-        /^@radix-ui\/react-/,
-      ],
+      noExternal: true,
     },
     server: { fs: { allow: [projectRoot, packageRoot] } },
   },

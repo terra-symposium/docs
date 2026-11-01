@@ -67,10 +67,10 @@ function astroPackageExportAliases() {
   ];
 }
 
-function dependencyManifest(name) {
+function dependencyManifest(name, resolver = requireFromPackage) {
   let entry;
   try {
-    entry = requireFromPackage.resolve(name);
+    entry = resolver.resolve(name);
   } catch {
     return null;
   }
@@ -103,6 +103,35 @@ function packageDependencyAliases() {
             {
               find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
               replacement: requireFromPackage.resolve(specifier),
+            },
+          ];
+        } catch {
+          return [];
+        }
+      });
+    });
+}
+
+function stylingDependencyAliases() {
+  const stylingManifest =
+    projectManifest.name === '@terra-symposium/styling'
+      ? projectManifest
+      : dependencyManifest('@terra-symposium/styling', requireFromProject);
+  if (!stylingManifest) return [];
+  return Object.keys(stylingManifest.dependencies ?? {})
+    .filter((name) => name !== 'react' && name !== 'react-dom' && (name.includes('react') || ['cmdk', 'vaul'].includes(name)))
+    .flatMap((name) => {
+      const manifest = dependencyManifest(name, requireFromProject);
+      if (!manifest) return [];
+      const subpaths = Object.keys(manifest.exports ?? {}).filter(
+        (key) => key.startsWith('./') && !key.includes('*'),
+      );
+      return [name, ...subpaths.map((key) => `${name}${key.slice(1)}`)].flatMap((specifier) => {
+        try {
+          return [
+            {
+              find: new RegExp(`^${specifier.replace(/[|\\{}()[\]^$+?.]/g, '\\$&')}$`),
+              replacement: requireFromProject.resolve(specifier),
             },
           ];
         } catch {
@@ -162,11 +191,13 @@ export default defineConfig({
         ...sharedReactAliases(),
         ...astroPackageExportAliases(),
         ...packageDependencyAliases(),
+        ...stylingDependencyAliases(),
       ],
       dedupe: ['react', 'react-dom'],
     },
     ssr: {
-      noExternal: true,
+      // Bundle the shared UI packages while retaining their peer runtime.
+      noExternal: ['@terra-symposium/styling', '@terra-symposium/standards-error-boundaries'],
     },
     server: { fs: { allow: [projectRoot, packageRoot] } },
   },

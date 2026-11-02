@@ -1,3 +1,1 @@
-packages: []
-lockfileDir: config
-virtualStoreDir: ../node_modules/.pnpm
+config/pnpm-workspace.yaml

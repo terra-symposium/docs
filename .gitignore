@@ -1,11 +1,22 @@
+# Dependencies
 node_modules/
+
+# Build and generated output
 dist/
 dist/.docs/
+.astro/
+
+# Test artifacts
 coverage/
 tests/results/
-.astro/
+
+# Local environment
 .env
 .env.*
+!.env.example
+
+# TypeScript build cache
 *.tsbuildinfo
 
+# Vendored dependencies
 vendor/

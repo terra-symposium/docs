@@ -31,7 +31,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run build:demo
+      - run: pnpm exec vite build
 
   docs-build:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm docs:build
+      - run: pnpm run build && pnpm exec terra-docs build
 
   check:
     if: github.event_name == 'pull_request'

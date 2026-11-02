@@ -22,8 +22,9 @@ const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const astroPackage = require.resolve('astro/package.json');
 const astroCli = resolve(dirname(astroPackage), 'bin/astro.mjs');
-const configFile = resolve(packageRoot, 'site/astro.config.mjs');
-const mode = process.argv[2];
+const configFile = resolve(packageRoot, 'site/config/astro.config.mjs');
+const requestedMode = process.argv[2];
+const mode = requestedMode === 'docs' ? 'dev' : requestedMode;
 const root = resolve(process.cwd());
 const options = new Map();
 const passthrough = [];
@@ -56,12 +57,12 @@ for (let index = 3; index < process.argv.length; index += 1) {
 const docsRoot = resolve(root, 'docs');
 const publicRoot = resolve(root, 'dist/public');
 const publicAssetsRoot = resolve(publicRoot, '_terra-docs/assets');
-const outputDir = options.get('--out') ?? 'dist/docs';
+const manifest = await readJson(resolve(root, 'package.json')).catch(() => ({}));
+const docsConfig = manifest.terraDocs ?? {};
+const outputDir = options.get('--out') ?? docsConfig.out ?? 'dist/docs';
 const searchIndexPath = resolve(publicRoot, '_terra-docs/search-index.json');
 const excludedDirs = new Set(['node_modules', '.astro', 'dist']);
-const manifest = await readJson(resolve(root, 'package.json')).catch(() => ({}));
-const configuredAgents =
-  manifest.terraDocs?.includeAgents ?? manifest.terraDocs?.includeSkills ?? true;
+const configuredAgents = docsConfig.includeAgents ?? docsConfig.includeSkills ?? true;
 if (typeof configuredAgents !== 'boolean') {
   throw new Error('package.json terraDocs.includeAgents must be true or false');
 }
@@ -70,13 +71,13 @@ if (options.has('--agents') && options.has('--skills')) {
 }
 const agentsOption = options.get('--agents') ?? options.get('--skills');
 const includeAgents = agentsOption === undefined ? configuredAgents : parseBoolean(agentsOption);
-const siteTitle = options.get('--title') ?? titleFromName(manifest.name) ?? 'Documentation';
-const siteDescription = options.get('--description') ?? manifest.description ?? '';
-const base = normBase(options.get('--base') ?? '/');
+const siteTitle = options.get('--title') ?? docsConfig.title ?? titleFromName(manifest.name) ?? 'Documentation';
+const siteDescription = options.get('--description') ?? docsConfig.description ?? manifest.description ?? '';
+const base = normBase(options.get('--base') ?? docsConfig.base ?? '/');
 const env = {
   ...process.env,
   TERRA_DOCS_ROOT: root,
-  TERRA_DOCS_SITE: options.get('--site') ?? '',
+  TERRA_DOCS_SITE: options.get('--site') ?? docsConfig.site ?? '',
   TERRA_DOCS_BASE: base,
   TERRA_DOCS_OUT: outputDir,
   PUBLIC_TERRA_DOCS_TITLE: siteTitle,
@@ -308,8 +309,10 @@ async function readJson(path) {
  */
 function runAstro(cmd) {
   const args = [astroCli, cmd, '--root', root, '--config', relative(root, configFile)];
-  if (options.has('--port')) args.push('--port', options.get('--port'));
-  if (options.has('--host')) args.push('--host', options.get('--host'));
+  const port = options.get('--port') ?? docsConfig.port;
+  const host = options.get('--host') ?? docsConfig.host;
+  if (port) args.push('--port', String(port));
+  if (host) args.push('--host', host);
   args.push(...passthrough);
   const child = spawn(process.execPath, args, { cwd: root, env, stdio: 'inherit' });
   child.on('error', (error) => {
@@ -325,7 +328,7 @@ function runAstro(cmd) {
 }
 if (!['dev', 'build', 'preview'].includes(mode)) {
   console.error(
-    'Usage: terra-docs <dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory] [--agents true|false]',
+    'Usage: terra-docs <docs|dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory] [--agents true|false]',
   );
   process.exit(2);
 }

@@ -41,26 +41,19 @@
   "bin": {
     "terra-docs": "bin/terra-docs.mjs"
   },
+  "terraDocs": {
+    "title": "Docs",
+    "description": "Docs workspace and Markdown site generator.",
+    "out": "dist/docs"
+  },
   "scripts": {
     "dev": "terra-quality-dev -- vite --host 127.0.0.1 --open",
-    "docs:dev": "pnpm build && node bin/terra-docs.mjs dev --title 'Docs'",
-    "docs:build": "pnpm build && node bin/terra-docs.mjs build --title 'Docs' --out dist/docs",
-    "docs:preview": "pnpm docs:build && node bin/terra-docs.mjs preview --title 'Docs' --out dist/docs",
-    "dev:library": "tsc --watch",
-    "prebuild": "pnpm exec terra-quality error-boundaries --all",
+    "docs": "pnpm run build && node bin/terra-docs.mjs docs",
     "build": "rm -rf dist/lib && tsc && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
-    "build:demo": "vite build",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.demo.json",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck",
-    "test": "pnpm build && node --test test/*.test.mjs",
-    "test:browser": "pnpm build && pnpm exec astro build --config astro.config.mjs && node scripts/acquire-playwright-port.mjs && playwright test",
-    "test:report:slides": "node scripts/generate-screenshot-deck.mjs",
-    "prepare": "husky",
-    "changeset": "changeset",
-    "version-packages": "changeset version"
+    "check": "prettier --check . && eslint . && tsc --noEmit && tsc -p tsconfig.demo.json",
+    "test:browser": "pnpm run build && pnpm exec astro build --config config/astro.config.mjs && node scripts/acquire-playwright-port.mjs && pnpm exec playwright test --config config/playwright.config.ts",
+    "test": "pnpm run build && node --test test/*.test.mjs",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",

@@ -7,11 +7,11 @@ import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import { unified } from '@astrojs/markdown-remark';
-import { DOCS_VITE_OPTIMIZE_DEPS } from '../dist/lib/lib/astro.js';
-import { basePathRemarkPlugin } from './base-path-remark-plugin.mjs';
-import { docsContentPlugin } from './docs-content-plugin.mjs';
+import { DOCS_VITE_OPTIMIZE_DEPS } from '../../dist/lib/lib/astro.js';
+import { basePathRemarkPlugin } from '../base-path-remark-plugin.mjs';
+import { docsContentPlugin } from '../docs-content-plugin.mjs';
 
-const packageRoot = fileURLToPath(new URL('../', import.meta.url));
+const packageRoot = fileURLToPath(new URL('../../', import.meta.url));
 const requireFromPackage = createRequire(import.meta.url);
 const astroManifestPath = requireFromPackage.resolve('astro/package.json');
 const astroManifest = JSON.parse(readFileSync(astroManifestPath, 'utf8'));

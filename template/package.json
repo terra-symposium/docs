@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.30.3",
   "description": "Documentation for my project",
+  "terraDocs": {
+    "title": "My Project Docs",
+    "description": "Documentation for my project",
+    "out": "dist/docs"
+  },
   "scripts": {
-    "docs:dev": "terra-docs dev",
-    "docs:build": "terra-docs build --out dist/docs",
-    "docs:preview": "terra-docs preview --out dist/docs"
+    "docs": "terra-docs dev",
+    "build": "terra-docs build --out dist/docs"
   },
   "devDependencies": {
-    "@terra-symposium/docs": "^0.2.1"
+    "@terra-symposium/docs": "^0.4.0"
   }
 }

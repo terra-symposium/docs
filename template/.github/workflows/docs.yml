@@ -30,4 +30,4 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install
-      - run: pnpm docs:build
+      - run: pnpm run build

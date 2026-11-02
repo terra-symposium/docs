@@ -30,3 +30,31 @@ test('authored blocks parse and render through the shared package', () => {
     assert.equal(markdownToDocsValue(docsValueToMarkdown(blocks))[0]?._type, kind, source);
   }
 });
+
+test('fenced authoring examples stay literal and do not leak parser placeholders', () => {
+  const source = [
+    '```md',
+    '=== [Further detail]',
+    'Supporting explanation.',
+    '===',
+    '',
+    '||| [Linux]',
+    'Linux instructions.',
+    '|||',
+    '```',
+  ].join('\n');
+  const value = markdownToDocsValue(source);
+  assert.equal(value.length, 1);
+  assert.equal(value[0]?._type, 'code');
+  assert.match(value[0].value, /=== \[Further detail\]/);
+  assert.match(value[0].value, /\|\|\| \[Linux\]/);
+  assert.doesNotMatch(renderMarkdown(source), /DOCSBLOCK|DOCSFENCE/);
+});
+
+test('accordion bodies can contain fenced delimiter examples', () => {
+  const source = ['=== [Details]', '```md', '===', '```', 'More detail.', '==='].join('\n');
+  const value = markdownToDocsValue(source);
+  assert.equal(value[0]?._type, 'accordion');
+  assert.equal(value[0].items[0].content[0]?._type, 'code');
+  assert.match(value[0].items[0].content[0].value, /===/);
+});

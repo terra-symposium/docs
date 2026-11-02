@@ -397,6 +397,28 @@ function codeFenceRanges(source: string): SourceRange[] {
   return ranges;
 }
 
+// Line directives must skip fenced Markdown examples, including nested ones.
+function shieldCodeFences(source: string) {
+  const ranges = codeFenceRanges(source);
+  const fences = ranges.map(({ start, end }) => source.slice(start, end));
+  let cursor = 0;
+  const shielded =
+    ranges
+      .map(({ start, end }, index) => {
+        const part = `${source.slice(cursor, start)}DOCSFENCE${index}PLACEHOLDER`;
+        cursor = end;
+        return part;
+      })
+      .join('') + source.slice(cursor);
+  return {
+    source: shielded,
+    restore: (value: string) =>
+      value.replace(/DOCSFENCE(\d+)PLACEHOLDER/g, (match, number: string) =>
+        fences[Number(number)] === undefined ? match : fences[Number(number)]!,
+      ),
+  };
+}
+
 function protectMarkdownInlineMath(source: string, inlineMath: boolean): string {
   if (!inlineMath) return source;
   const fences = codeFenceRanges(source);
@@ -1330,31 +1352,43 @@ function parseMarkdown(
       return table ? richPlaceholder(blocks, table) : rawPlaceholder(blocks, source);
     },
   );
-  const withAccordions = withCaptionTables.replace(
-    /^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm,
-    (source, delimiter: string, title: string, body: string) => {
-      const type = delimiter === '===' ? 'accordion' : 'tabs';
-      if (!enabled(options, type)) return rawPlaceholder(blocks, source);
-      return richPlaceholder(blocks, {
-        _type: type,
-        items: [
-          {
-            _type: 'item',
-            title,
-            ...(/DOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
-            content: parseMarkdown(body, options, blocks),
-          },
-        ],
-      });
-    },
+  const fencedAccordions = shieldCodeFences(withCaptionTables);
+  const withAccordions = fencedAccordions.restore(
+    fencedAccordions.source.replace(
+      /^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm,
+      (source, delimiter: string, title: string, body: string) => {
+        const type = delimiter === '===' ? 'accordion' : 'tabs';
+        if (!enabled(options, type)) return rawPlaceholder(blocks, source);
+        const markdown = fencedAccordions.restore(body);
+        return richPlaceholder(blocks, {
+          _type: type,
+          items: [
+            {
+              _type: 'item',
+              title,
+              ...(/DOCSBLOCK\d+PLACEHOLDER/.test(markdown) ? {} : { markdown }),
+              content: parseMarkdown(markdown, options, blocks),
+            },
+          ],
+        });
+      },
+    ),
   );
   const withCallouts = transformCallouts(withAccordions, options, blocks, (body) =>
     parseMarkdown(body, options, blocks),
   );
-  const source = withCallouts.replace(/^\$\$\s*\n([\s\S]*?)^\$\$\s*$/gm, (raw, code: string) =>
-    enabled(options, 'math')
-      ? richPlaceholder(blocks, { _type: 'math', code: code.trim(), inline: false, markdown: raw })
-      : rawPlaceholder(blocks, raw),
+  const fencedMath = shieldCodeFences(withCallouts);
+  const source = fencedMath.restore(
+    fencedMath.source.replace(/^\$\$\s*\n([\s\S]*?)^\$\$\s*$/gm, (raw, code: string) =>
+      enabled(options, 'math')
+        ? richPlaceholder(blocks, {
+            _type: 'math',
+            code: code.trim(),
+            inline: false,
+            markdown: raw,
+          })
+        : rawPlaceholder(blocks, raw),
+    ),
   );
   const parsed = marked.lexer(protectMarkdownInlineMath(source, inlineMath), {
     gfm: true,

@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- Publish repository skills as Markdown pages in the Agents section, with per-instance configuration to disable the section.
+- Support full agent trees under docs/agents as a configurable Docs section, with SKILL.md routed as each skill folder's index.
 
 ### Patch Changes
 

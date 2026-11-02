@@ -72,11 +72,11 @@ const sources = import.meta.glob<string>('/docs/**/*.{md,mdx}', {
   eager: true,
 });
 const base = import.meta.env.BASE_URL;
-const includeSkills = import.meta.env.PUBLIC_TERRA_DOCS_INCLUDE_SKILLS !== 'false';
+const includeAgents = import.meta.env.PUBLIC_TERRA_DOCS_INCLUDE_AGENTS !== 'false';
 const routes = new Map<string, string>();
 /** Visible Docs pages sorted by configured sidebar order and source path. */
 export const sitePages: SitePage[] = Object.entries(modules)
-  .filter(([file]) => includeSkills || !file.startsWith('/docs/agents/'))
+  .filter(([file]) => includeAgents || !file.startsWith('/docs/agents/'))
   .map(([file, module]) => {
     const relativeFile = file.replace(/^\/docs\//, '');
     const isRootIndex = ['index.md', 'index.mdx'].includes(relativeFile.toLowerCase());

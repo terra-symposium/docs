@@ -210,6 +210,27 @@ export function pageHref(slug: string, base = '/'): string {
 export function pageForSlug(slug: string): SitePage | undefined {
   return sitePages.find((page) => page.slug === slug);
 }
+
+/**
+ * Finds the first visible page leaf in the first available navigation section.
+ *
+ * @return The public URL for that page, or the site root when no section has a leaf.
+ */
+export function firstAvailableLeafHref(): string {
+  const findLeaf = (nodes: DocsNavNode[]): string | undefined => {
+    for (const node of nodes) {
+      if (node.children?.length) {
+        const child = findLeaf(node.children);
+        if (child) return child;
+      } else if (node.href) {
+        return node.href;
+      }
+    }
+    return undefined;
+  };
+
+  return findLeaf(siteNavigation) ?? pageHref('', base);
+}
 if (sitePages.length === 0)
   throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');
 for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '404')) {

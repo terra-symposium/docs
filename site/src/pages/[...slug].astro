@@ -7,7 +7,7 @@ const description = import.meta.env.PUBLIC_TERRA_DOCS_DESCRIPTION ?? '';
 const base = import.meta.env.BASE_URL;
 
 export function getStaticPaths() {
-	return sitePages.filter((page) => page.slug !== '404').map((page) => ({
+	return sitePages.filter((page) => page.slug !== '' && page.slug !== '404').map((page) => ({
 		params: { slug: page.slug || undefined },
 		props: { slug: page.slug },
 	}));

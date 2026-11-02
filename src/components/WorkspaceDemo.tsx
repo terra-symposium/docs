@@ -11,13 +11,17 @@ import {
   type WorkspaceDemoState,
 } from './workspace-demo-fixture.js';
 import type { DocsHostTreeNode } from '../lib/host.js';
+import type { DocsQuizConfig, DocsQuizGenerationInput } from './quiz.js';
 import type { CSSProperties, JSX } from 'react';
 
-function withLocalRoute(nodes: DocsHostTreeNode[]): DocsHostTreeNode[] {
+function withLocalRoute(
+  nodes: DocsHostTreeNode[],
+  routeBase = '/workspace-readonly/',
+): DocsHostTreeNode[] {
   return nodes.map((node) => ({
     ...node,
-    ...(node.type === 'leaf' ? { url: '/workspace-readonly/' } : {}),
-    ...(node.children ? { children: withLocalRoute(node.children) } : {}),
+    ...(node.type === 'leaf' ? { url: routeBase } : {}),
+    ...(node.children ? { children: withLocalRoute(node.children, routeBase) } : {}),
   }));
 }
 
@@ -36,14 +40,52 @@ function activeDocumentId(state: WorkspaceDemoState, location: string): string {
   return state.documents.salesphere ? 'salesphere' : (Object.keys(state.documents)[0] ?? '');
 }
 
+function generateDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
+  const excerpt =
+    input.markdown
+      .replace(/^\s*#+\s*/gm, '')
+      .replace(/[*_`>#]/g, ' ')
+      .split(/[.!?\n]+/)
+      .map((part) => part.trim())
+      .find((part) => part.length > 12)
+      ?.slice(0, 150) ?? input.title;
+  const keyword = excerpt.split(/\s+/).find((word) => word.length >= 5) ?? input.title;
+  return Promise.resolve({
+    title: `${input.title} quiz · sample`,
+    questions: Array.from({ length: input.count }, (_, index) => {
+      const type = input.types[index % input.types.length];
+      if (type === 'keyword')
+        return {
+          type,
+          prompt: `Name a key term from “${input.title}”.`,
+          answers: [keyword.replace(/[^\p{L}\p{N}-]/gu, '') || input.title],
+          explanation: 'This sample answer is drawn from the selected leaf.',
+        };
+      return {
+        type,
+        prompt: `Which statement appears in “${input.title}”?`,
+        opts: [excerpt, 'The leaf contains no information about this topic.'],
+        answer: excerpt,
+        explanation: 'The correct choice comes from the selected leaf text.',
+      };
+    }),
+  });
+}
+
+const demoQuiz: DocsQuizConfig = { toolbar: true, generate: generateDemoQuiz };
+
 export default function WorkspaceDemo({
   readOnly = false,
+  quizEnabled = false,
+  routeBase = '/workspace-readonly/',
   hue = 145,
   siteTitle = 'Salesphere Docs',
   siteDescription = 'Product and engineering documentation.',
   syncParentOnNavigate = true,
 }: {
   readOnly?: boolean;
+  quizEnabled?: boolean;
+  routeBase?: string;
   hue?: number | null;
   siteTitle?: string;
   siteDescription?: string | null;
@@ -116,7 +158,7 @@ export default function WorkspaceDemo({
   const localPage = {
     id: 'salesphere',
     path: selectedDocument.path,
-    pathname: '/workspace-readonly/',
+    pathname: routeBase,
     title: selectedDocument.title,
     description: 'A page level description for the Salesphere overview.',
     updatedAt: selectedDocument.updatedAt,
@@ -127,13 +169,14 @@ export default function WorkspaceDemo({
 
   const workspace = readOnly ? (
     <DocsLocalWorkspace
-      tree={withLocalRoute(routedWorkspaceTree(state, true))}
+      tree={withLocalRoute(routedWorkspaceTree(state, true), routeBase)}
       pages={[localPage]}
       pathname={localPage.pathname}
       title="Salesphere Docs"
       description="Product and engineering documentation."
-      rootPath="/workspace-readonly/"
-      homePath={localPage.pathname}
+      rootPath={routeBase}
+      homePath={routeBase}
+      {...(quizEnabled ? { quiz: demoQuiz } : {})}
     />
   ) : (
     <TerraDocsWorkspace
@@ -152,6 +195,7 @@ export default function WorkspaceDemo({
       updatedAt={selectedDocument.updatedAt}
       content={selectedDocument.content}
       source={selectedDocument.source}
+      {...(quizEnabled ? { quiz: demoQuiz } : {})}
     />
   );
 

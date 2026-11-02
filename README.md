@@ -52,6 +52,10 @@ Build commands: `pnpm run check`, `pnpm run build`, `pnpm run build:demo`, and `
 
 The reusable block registry includes accordions, tabs, tables, callouts, code, images, embeds, math, diagrams, raw Markdown, and TypeScript documentation. All are available by default; hosts can disable individual members with the `blocks` prop. Local repository pages stay read-only in the browser.
 
+Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, generate }}` on `DocsLocalWorkspace`, `DocsStaticWorkspace`, or `TerraDocsWorkspace`. The `generate` callback receives the current leaf title and Markdown plus the requested question count and types, and must return `{ title, questions }`. Multiple-choice questions use `{ type: 'multipleChoice', prompt, opts, answer, explanation?, section? }`; keyword questions use `{ type: 'keyword', prompt, answers, keywords?, explanation?, section? }`. Hosts should implement that callback through a server endpoint and keep `OPENAI_API_KEY` in server-side secret storage. The shared Docs package never accepts or stores API keys.
+
+Individual leaves can expose the same flow with a `:::terra-docs quiz` Markdown block. The repository-level toolbar option is off by default.
+
 ## Embed a Docs workspace
 
 The shared workspace accepts sections containing groups and leaves. Each leaf owns its attachment links; files are never navigation entries. The host provides URLs, storage, access decisions, and mutations.

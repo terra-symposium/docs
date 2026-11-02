@@ -24,6 +24,7 @@ import { codeViewOf } from '../../../../lib/terra/docs/editor-dom.js';
 import { components as repoComponents } from '../../../../lib/terra/custom-components.js';
 import { dirname, docsRootPath, toPascal } from '../../../../lib/terra/runtime/shared.js';
 import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
+import { DocsQuizGenerator, useDocsQuizContext } from '../../../quiz.js';
 import { isDocBody } from '../../../../lib/terra/runtime/types.js';
 import { redo, redoDepth, undo, undoDepth } from '@codemirror/commands';
 import { stringifyDocBody } from '../../../../lib/terra/runtime/content/document-markdown.js';
@@ -1605,6 +1606,8 @@ const TOOLBAR_COMPONENTS = {
       edit: useContext(EditStateCtx),
       attachmentFilter: useAtom($attachmentFilter),
     };
+    const quizContext = useDocsQuizContext();
+    const [quizOpen, setQuizOpen] = useState(false);
     const mode = aMode ?? 'view';
     const [vers, setVers] = useState<DocVer[]>([]);
     const [verDialogOpen, setVerDialogOpen] = useState(false);
@@ -1970,7 +1973,7 @@ const TOOLBAR_COMPONENTS = {
     return (
       <ErrorBoundary name="Toolbar">
         <div
-          className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 -mx-3 -mt-5 mb-5 w-[calc(100%+1.5rem)] max-w-[calc(100%+1.5rem)] overflow-visible text-primary-12 print:hidden"
+          className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto -mt-5 mb-5 !w-full !max-w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
           data-docs-toolbar-frame
           data-docs-toolbar-scroll
           data-can-edit={editable ? 'true' : 'false'}
@@ -1982,25 +1985,54 @@ const TOOLBAR_COMPONENTS = {
           <div className="relative z-10 rounded-lg border border-primary-6 bg-primary-3">
             <TooltipProvider>
               <div
-                className="mdxeditor-toolbar not-prose relative z-10 box-border flex w-full min-w-0 flex-wrap items-center justify-between gap-1.5 gap-x-3 px-2 py-1 text-primary-12 print:hidden"
+                className="mdxeditor-toolbar not-prose relative z-10 box-border flex !w-full max-w-full min-w-0 flex-wrap items-center justify-between gap-0.5 px-2 py-1 text-primary-12 print:hidden"
                 data-docs-main-toolbar
               >
                 {mode === 'view' ? (
-                  docs && (
-                    <Mode
-                      editable={editable}
-                      mode={mode}
-                      disabled={!ready}
-                      onModeChange={(v) => {
-                        if (!toolbar) return;
-                        toolbar.setMode(v).catch((e) => {
-                          console.error('[Toolbar:mode] change-failed', { mode: v, error: e });
-                          toast.error(e instanceof Error ? e.message : 'Failed to change mode.');
-                          clearTransition();
-                        });
-                      }}
-                    />
-                  )
+                  <>
+                    {docs && (
+                      <Mode
+                        editable={editable}
+                        mode={mode}
+                        disabled={!ready}
+                        onModeChange={(v) => {
+                          if (!toolbar) return;
+                          toolbar.setMode(v).catch((e) => {
+                            console.error('[Toolbar:mode] change-failed', { mode: v, error: e });
+                            toast.error(e instanceof Error ? e.message : 'Failed to change mode.');
+                            clearTransition();
+                          });
+                        }}
+                      />
+                    )}
+                    {docs && quizContext?.config.toolbar && (
+                      <>
+                        <UiButton
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setQuizOpen(true)}
+                        >
+                          Generate quiz
+                        </UiButton>
+                        <Dialog open={quizOpen} onOpenChange={setQuizOpen}>
+                          <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>Generate a quiz</DialogTitle>
+                              <DialogDescription>
+                                Build a quiz from the current Docs leaf.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DocsQuizGenerator
+                              title={quizContext.title}
+                              markdown={quizContext.markdown}
+                              generate={quizContext.config.generate}
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      </>
+                    )}
+                  </>
                 ) : mode === 'attachments' ? (
                   // ATTACHMENT FILTERS
                   <>

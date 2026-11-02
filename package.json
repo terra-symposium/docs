@@ -16,6 +16,7 @@
     "bin",
     "site",
     "src/components/navigation.tsx",
+    "src/components/quiz-demo-fixture.ts",
     "src/components/SiteLayout.astro",
     "src/components/NotFound.astro",
     "src/components/NotFound.tsx"

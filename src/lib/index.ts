@@ -14,6 +14,15 @@ export {
   DocsRichBlock,
 } from '../components/blocks.js';
 export type { DocsBlockOptions, DocsBlockType, RichBlock } from '../components/blocks.js';
+export { DocsQuizGenerator } from '../components/quiz.js';
+export { parseDocsQuiz } from '../components/quiz.js';
+export type {
+  DocsQuizConfig,
+  DocsQuizDocument,
+  DocsQuizGenerationInput,
+  DocsQuizQuestion,
+  DocsQuizQuestionType,
+} from '../components/quiz.js';
 export { TerraDocsWorkspace } from '../components/terra/Workspace.js';
 export { DocsLocalWorkspace } from '../components/LocalDocsWorkspace.js';
 export type { DocsLocalPage, DocsLocalWorkspaceProps } from '../components/LocalDocsWorkspace.js';

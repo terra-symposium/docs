@@ -1980,7 +1980,7 @@ const TOOLBAR_COMPONENTS = {
         >
           <div
             aria-hidden="true"
-            className="docs-toolbar-backdrop pointer-events-none absolute -inset-x-4 -bottom-12 -top-16 z-0"
+            className="docs-toolbar-backdrop pointer-events-none absolute inset-x-0 -bottom-12 -top-16 z-0"
           />
           <div className="relative z-10 rounded-lg border border-primary-6 bg-primary-3">
             <TooltipProvider>

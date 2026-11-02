@@ -71,8 +71,8 @@ if (options.has('--agents') && options.has('--skills')) {
 }
 const agentsOption = options.get('--agents') ?? options.get('--skills');
 const includeAgents = agentsOption === undefined ? configuredAgents : parseBoolean(agentsOption);
-const siteTitle = options.get('--title') ?? docsConfig.title ?? titleFromName(manifest.name) ?? 'Documentation';
-const siteDescription = options.get('--description') ?? docsConfig.description ?? manifest.description ?? '';
+const siteTitle = options.get('--title') ?? docsConfig.title ?? 'Documentation';
+const siteDescription = options.get('--description') ?? docsConfig.description ?? '';
 const base = normBase(options.get('--base') ?? docsConfig.base ?? '/');
 const env = {
   ...process.env,

@@ -50,7 +50,7 @@
     "out": "dist/docs"
   },
   "scripts": {
-    "dev": "terra-quality-dev -- vite --config config/vite.config.ts --host 127.0.0.1 --open",
+    "dev": "DOCS_DEV_PORT=2020 terra-quality-dev -- vite --config config/vite.config.ts --host 127.0.0.1 --open",
     "quality": "node scripts/quality.mjs",
     "docs": "pnpm run build && node bin/docs.mjs docs",
     "build": "rm -rf dist/lib && tsc -p config/tsconfig.json && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",

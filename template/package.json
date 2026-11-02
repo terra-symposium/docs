@@ -7,7 +7,7 @@
   "scripts": {
     "docs:dev": "terra-docs dev",
     "docs:build": "terra-docs build --out dist/docs",
-    "docs:preview": "terra-docs preview"
+    "docs:preview": "terra-docs preview --out dist/docs"
   },
   "devDependencies": {
     "@terra-symposium/docs": "^0.2.1"

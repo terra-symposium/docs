@@ -28,7 +28,6 @@ const ignoredDirs = new Set([
   'build',
   'coverage',
   'dist',
-  'docs-dist',
   'node_modules',
   'target',
   'vendor',

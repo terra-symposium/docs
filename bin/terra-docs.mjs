@@ -28,6 +28,22 @@ const mode = process.argv[2];
 const root = resolve(process.cwd());
 const options = new Map();
 const passthrough = [];
+for (let index = 3; index < process.argv.length; index += 1) {
+  const argument = process.argv[index];
+  if (
+    ['--title', '--description', '--site', '--base', '--out', '--port', '--host'].includes(argument)
+  ) {
+    const value = process.argv[index + 1];
+    if (!value || value.startsWith('--')) {
+      console.error(`Missing value for ${argument}`);
+      process.exit(2);
+    }
+    options.set(argument, value);
+    index += 1;
+  } else {
+    passthrough.push(argument);
+  }
+}
 const docsRoot = resolve(root, 'docs');
 const publicRoot = resolve(root, 'dist/public');
 const publicAssetsRoot = resolve(publicRoot, '_terra-docs/assets');
@@ -258,22 +274,6 @@ function runAstro(cmd) {
     if (signal) process.kill(process.pid, signal);
     else process.exitCode = code ?? 1;
   });
-}
-for (let index = 3; index < process.argv.length; index += 1) {
-  const argument = process.argv[index];
-  if (
-    ['--title', '--description', '--site', '--base', '--out', '--port', '--host'].includes(argument)
-  ) {
-    const value = process.argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      console.error(`Missing value for ${argument}`);
-      process.exit(2);
-    }
-    options.set(argument, value);
-    index += 1;
-  } else {
-    passthrough.push(argument);
-  }
 }
 if (!['dev', 'build', 'preview'].includes(mode)) {
   console.error(

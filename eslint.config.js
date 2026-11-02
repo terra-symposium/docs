@@ -7,7 +7,6 @@ export default tseslint.config(
     ignores: [
       '**/.astro/**',
       '**/dist/**',
-      '**/lib-dist/**',
       '**/.terra-docs/**',
       '**/node_modules/**',
       '**/test-results/**',

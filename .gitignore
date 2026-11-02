@@ -1,7 +1,5 @@
 node_modules/
 dist/
-# Legacy outputs for already-running Docs development servers.
-lib-dist/
 .terra-docs/
 coverage/
 test-results/

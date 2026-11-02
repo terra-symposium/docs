@@ -48,8 +48,8 @@
   "scripts": {
     "dev": "terra-quality-dev -- vite --host 127.0.0.1 --open",
     "docs:dev": "pnpm build && node bin/terra-docs.mjs dev --title 'Docs'",
-    "docs:build": "pnpm build && node bin/terra-docs.mjs build --title 'Docs'",
-    "docs:preview": "pnpm docs:build && node bin/terra-docs.mjs preview --title 'Docs'",
+    "docs:build": "pnpm build && node bin/terra-docs.mjs build --title 'Docs' --out dist/docs",
+    "docs:preview": "pnpm docs:build && node bin/terra-docs.mjs preview --title 'Docs' --out dist/docs",
     "dev:library": "tsc --watch",
     "prebuild": "pnpm exec terra-quality error-boundaries --all",
     "build": "rm -rf dist/lib && tsc && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",

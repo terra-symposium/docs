@@ -83,6 +83,16 @@ async function buildSearchIndex() {
   const files = await collectMarkdown(docsRoot);
   if (files.length === 0)
     throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');
+  const misplaced = files.filter((file) => {
+    const isRootIndex = ['index.md', 'index.mdx'].includes(file.relativePath.toLowerCase());
+    return !isRootIndex && !file.relativePath.includes('/');
+  });
+  if (misplaced.length) {
+    const paths = misplaced.map((file) => `docs/${file.relativePath}`).join(', ');
+    throw new Error(
+      `Markdown pages must be grouped in folders directly under docs/ (keep only docs/index.md at the root): ${paths}`,
+    );
+  }
   const routeFiles = new Map();
   const records = [];
   for (const file of files) {

@@ -76,6 +76,11 @@ const routes = new Map<string, string>();
 /** Visible Docs pages sorted by configured sidebar order and source path. */
 export const sitePages: SitePage[] = Object.entries(modules)
   .map(([file, module]) => {
+    const relativeFile = file.replace(/^\/docs\//, '');
+    const isRootIndex = ['index.md', 'index.mdx'].includes(relativeFile.toLowerCase());
+    if (!isRootIndex && !relativeFile.includes('/')) {
+      throw new Error(`Markdown pages must be grouped in folders directly under docs/: ${file}`);
+    }
     const slug = routeForFile(file);
     const previous = routes.get(slug);
     if (previous) throw new Error(`Duplicate Docs route "${slug || '/'}": ${previous} and ${file}`);

@@ -6,14 +6,14 @@ on:
     paths:
       - 'docs/**'
       - 'package.json'
-      - 'pnpm-lock.yaml'
+      - 'config/pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/docs.yml'
   pull_request:
     paths:
       - 'docs/**'
       - 'package.json'
-      - 'pnpm-lock.yaml'
+      - 'config/pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/docs.yml'
 
@@ -29,5 +29,6 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install
       - run: pnpm run build

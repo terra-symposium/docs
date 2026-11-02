@@ -129,7 +129,7 @@ test('long document descriptions remain fully visible at responsive widths', asy
       expect(layout!.descriptionHeight).toBeGreaterThan(layout!.lineHeight * 2);
     expect(layout!.descriptionBottom).toBeLessThanOrEqual(layout!.toolbarTop);
     await page.screenshot({
-      path: `test-results/description-${viewport.name}.png`,
+      path: `tests/results/description-${viewport.name}.png`,
       fullPage: true,
       style: referenceStyle,
     });

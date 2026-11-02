@@ -2,7 +2,7 @@ node_modules/
 dist/
 .terra-docs/
 coverage/
-test-results/
+tests/results/
 .astro/
 .env
 .env.*

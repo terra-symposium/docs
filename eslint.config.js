@@ -9,7 +9,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/.terra-docs/**',
       '**/node_modules/**',
-      '**/test-results/**',
+      '**/tests/results/**',
       '**/coverage/**',
     ],
   },

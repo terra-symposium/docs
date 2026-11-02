@@ -28,7 +28,7 @@ export default withResponsivePlaywright(
       md: { width: 768, height: 900 },
       xl: { width: 1280, height: 720 },
     },
-    screenshotsDirectory: 'test-results/visual/screenshots',
+    screenshotsDirectory: 'tests/results/visual/screenshots',
     screenshotOnlySlideshow: true,
   },
 );

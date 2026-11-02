@@ -75,7 +75,7 @@ test('math.spec: Render inline within a paragraph', async ({ page }) => {
     }
   });
   await openEditor(page, inlineFixture);
-  const inline = page.locator('[data-content-inline="math"]');
+  const inline = page.locator('[data-terra-inline="math"]');
   await expect(inline.locator('.katex')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await expect

@@ -1,6 +1,7 @@
 {
   "$schema": "../node_modules/@terra-symposium/standards-quality/quality.schema.json",
   "root": ".",
+  "tsconfig": "config/tsconfig.json",
   "sourceRoots": ["src", "site/src", "demo/src", "bin"],
   "extensions": [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"],
   "documentation": {

@@ -31,7 +31,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vite build
+      - run: pnpm exec vite build --config config/vite.config.ts
 
   docs-build:
     runs-on: ubuntu-latest

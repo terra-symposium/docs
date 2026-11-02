@@ -3,8 +3,7 @@ export const quizDemoLeaf = {
   id: 'quiz-leaf',
   path: 'content/course/quiz-leaf/index.md',
   title: 'Course Leaf',
-  markdown:
-    'Leaf source: routing sends packets between networks.\n\n:::docs quiz\n_type: quiz\n:::',
+  markdown: 'Leaf source: routing sends packets between networks.\n\n<Quiz />',
 };
 
 /** Stable sample response for review, run, and score coverage. */

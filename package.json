@@ -12,6 +12,7 @@
     "node": ">=24.12.0"
   },
   "files": [
+    "docs/authoring",
     "dist/lib",
     "bin",
     "site",
@@ -22,6 +23,8 @@
     "src/components/NotFound.tsx"
   ],
   "exports": {
+    "./authoring/blocks.md": "./docs/authoring/blocks/index.md",
+    "./authoring/composing.md": "./docs/authoring/composing/index.md",
     ".": {
       "types": "./dist/lib/lib/index.d.ts",
       "import": "./dist/lib/lib/index.js"
@@ -47,11 +50,10 @@
     "out": "dist/docs"
   },
   "scripts": {
-    "dev": "terra-quality-dev -- vite --host 127.0.0.1 --open",
+    "dev": "terra-quality-dev -- vite --config config/vite.config.ts --host 127.0.0.1 --open",
     "docs": "pnpm run build && node bin/docs.mjs docs",
-    "build": "rm -rf dist/lib && tsc && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
-    "check": "prettier --check . && eslint . && tsc --noEmit && tsc -p tsconfig.demo.json",
-    "test:browser": "pnpm run build && pnpm exec astro build --config config/astro.config.mjs && node scripts/acquire-playwright-port.mjs && pnpm exec playwright test --config config/playwright.config.ts",
+    "build": "rm -rf dist/lib && tsc -p config/tsconfig.json && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
+    "check": "prettier --config config/.prettierrc.json --ignore-path config/.prettierignore --check . && eslint --config config/eslint.config.js . && tsc --noEmit -p config/tsconfig.json && tsc -p config/tsconfig.demo.json",
     "test": "pnpm run build && node --test test/*.test.mjs",
     "prepare": "husky"
   },

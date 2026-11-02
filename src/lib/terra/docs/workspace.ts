@@ -1026,11 +1026,7 @@ const VAL_BY_KIND: Record<string, string> = {
 export function toolbarFocusValue(el: Element, vals: readonly string[]): string | null {
   const text = el.closest('h1, h2, h3, h4, h5, h6, p');
   if (text) return text.tagName.toLowerCase();
-  if (
-    el
-      .closest('td, th')
-      ?.closest('[data-docs-editor-block="DocsTable"], [data-block="table"]')
-  )
+  if (el.closest('td, th')?.closest('[data-docs-editor-block="DocsTable"], [data-block="table"]'))
     return 'p';
   const block = el.closest(
     '[data-docs-editor-block], [data-block], .docs-math-wrapper, [data-math-code], [data-docs-view-root="true"]',

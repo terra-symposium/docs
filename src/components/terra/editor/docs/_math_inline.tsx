@@ -35,7 +35,7 @@ export default function MathInline({
       {...attrs}
       className="mx-1 inline align-baseline"
       contentEditable={false}
-      data-content-inline="math"
+      data-terra-inline="math"
       suppressContentEditableWarning
     >
       {renderMath({

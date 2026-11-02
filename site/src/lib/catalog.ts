@@ -235,22 +235,11 @@ export function firstAvailableLeafHref(): string | undefined {
 }
 if (sitePages.length === 0)
   throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');
-for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '404')) {
+for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '' && i.slug !== '404')) {
   const segments = page.slug.split('/').filter(Boolean);
   let currentNodes = rootNodes;
   let current: MutableNode | undefined;
   let prefix = '';
-  if (segments.length === 0) {
-    const overview = currentNodes.get('overview') ?? {
-      id: 'overview',
-      title: 'Overview',
-      hue: getHue('Overview'),
-      children: new Map(),
-    };
-    if (!currentNodes.has('overview')) currentNodes.set('overview', overview);
-    Object.assign(overview, pageMetadata(page, pageHref('', base)));
-    continue;
-  }
   for (const segment of segments) {
     prefix = prefix ? `${prefix}/${segment}` : segment;
     let node = currentNodes.get(segment);

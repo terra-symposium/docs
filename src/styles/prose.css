@@ -105,8 +105,7 @@ DOCS
 }
 /* Keep list-item wrappers tight and put block spacing only after the list run. */
 .docs-content > [data-list-item]:not(:has(+ [data-list-item])),
-.docs-content
-  > :is(ul, ol)[data-docs-list-level]:not(:has(+ :is(ul, ol)[data-docs-list-level])) {
+.docs-content > :is(ul, ol)[data-docs-list-level]:not(:has(+ :is(ul, ol)[data-docs-list-level])) {
   margin-block-end: 1rem;
 }
 .docs-content :is(ul, ol)[data-docs-list-level] > li {

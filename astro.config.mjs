@@ -1,1 +1,0 @@
-config/astro.config.mjs

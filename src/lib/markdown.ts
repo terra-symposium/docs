@@ -2,9 +2,9 @@ import { Marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { parse as parseYaml } from 'yaml';
 import { DocsRichBlock, enabledDocsBlocks } from '../components/blocks.js';
 import type { DocsBlockOptions, RichBlock } from '../components/blocks.js';
+import { markdownToDocsValue, replaceCanonicalComponents } from './markdown-model.js';
 
 type CalloutRange = {
   start: number;
@@ -44,7 +44,7 @@ function markdownCalloutRanges(source: string): CalloutRange[] {
     }
 
     const open = line.match(
-      /^ {0,3}(:{3,})(?!(?:docs|terra-item(?:-end)?)(?:\s|$))([A-Za-z][\w-]*)(?:\[([^\]\n]*)\])?[ \t]*$/,
+      /^ {0,3}(:{3,})(note|tip|caution|danger|example|warning)(?:\[([^\]\n]*)\])?[ \t]*$/,
     );
     if (open) {
       stack.push({
@@ -100,51 +100,7 @@ function renderGroupedBlocks(
   options: DocsBlockOptions,
   placeholder: (html: string) => string,
 ): string {
-  const grouped = markdown.replace(
-    /^(:{4,})docs (accordion|tabs)[ \t]*\r?\n([\s\S]*?)^\1[ \t]*$/gm,
-    (source, _fence: string, type: string, body: string) => {
-      const markers = [...body.matchAll(/^:::terra-item ("(?:\\.|[^"\\])*")[ \t]*\r?$/gm)];
-      const items: { title: string; markdown: string }[] = [];
-      let valid = markers.length > 0 && !body.slice(0, markers[0]!.index).trim();
-      for (let index = 0; valid && index < markers.length; index += 1) {
-        const marker = markers[index]!;
-        const start = (marker.index ?? 0) + marker[0].length;
-        const n = markers[index + 1]?.index ?? body.length;
-        const endMarker = /^:::terra-item-end[ \t]*\r?$/gm;
-        endMarker.lastIndex = start;
-        const end = endMarker.exec(body);
-        if (!end || end.index >= n || body.slice(end.index + end[0].length, n).trim()) {
-          valid = false;
-          break;
-        }
-        try {
-          const title = JSON.parse(marker[1]!) as unknown;
-          if (typeof title !== 'string') {
-            valid = false;
-            break;
-          }
-          items.push({
-            title,
-            markdown: body
-              .slice(start, end.index)
-              .replace(/^\r?\n/, '')
-              .replace(/\r?\n$/, ''),
-          });
-        } catch {
-          valid = false;
-        }
-      }
-      if (!valid || !enabledDocsBlocks(options).includes(type as never)) {
-        return placeholder(
-          '<pre>' + sanitizeHtml(source, { allowedTags: [], allowedAttributes: {} }) + '</pre>',
-        );
-      }
-      return placeholder(
-        renderToStaticMarkup(createElement(DocsRichBlock, { block: { _type: type, items } })),
-      );
-    },
-  );
-  return grouped.replace(
+  return markdown.replace(
     /^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm,
     (_match, delimiter: string, title: string, body: string) => {
       const summary = sanitizeHtml(title, { allowedTags: [], allowedAttributes: {} });
@@ -160,6 +116,27 @@ function renderGroupedBlocks(
   );
 }
 
+function renderCanonicalComponents(
+  markdown: string,
+  options: DocsBlockOptions,
+  placeholder: (html: string) => string,
+): string {
+  return replaceCanonicalComponents(markdown, (block, raw, inTable) => {
+    if (
+      !block ||
+      (block._type !== 'block' && !enabledDocsBlocks(options).includes(block._type as never))
+    )
+      return placeholder(
+        '<pre>' + sanitizeHtml(raw, { allowedTags: [], allowedAttributes: {} }) + '</pre>',
+      );
+    if (inTable) {
+      const value = String(block.value ?? block.source ?? '');
+      return '<code>' + sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }) + '</code>';
+    }
+    return placeholder(renderToStaticMarkup(createElement(DocsRichBlock, { block })));
+  });
+}
+
 export function renderMarkdown(markdown: string, options: DocsBlockOptions = {}): string {
   const rendered: string[] = [];
   const parser = new Marked({ gfm: true });
@@ -173,15 +150,30 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
   // DocsRichBlock, so nested typed blocks keep their own parser context instead
   // of being replaced by placeholders that cannot cross the callout boundary.
   const callouts = renderCallouts(grouped, options, placeholder);
-  const captioned = callouts.replace(
+  const typedTables = callouts.replace(/^(:{3,})docs table\s*\n([\s\S]*?)^\1\s*$/gm, (source) => {
+    const table = markdownToDocsValue(source, options)[0];
+    return table?._type === 'table'
+      ? placeholder(
+          renderToStaticMarkup(createElement(DocsRichBlock, { block: table as RichBlock })),
+        )
+      : placeholder(
+          '<pre>' + sanitizeHtml(source, { allowedTags: [], allowedAttributes: {} }) + '</pre>',
+        );
+  });
+  const captioned = typedTables.replace(
     /^:::docs table\[([^\]\r\n]*)\][ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm,
     (source, caption: string, body: string) => {
       try {
-        const decoded = decodeURIComponent(caption);
-        const label = sanitizeHtml(decoded, { allowedTags: [], allowedAttributes: {} });
-        const table = parser.parse(body, { async: false });
+        const label = sanitizeHtml(decodeURIComponent(caption), {
+          allowedTags: [],
+          allowedAttributes: {},
+        });
         return placeholder(
-          '<section class="docs-table"><strong>' + label + '</strong>' + table + '</section>',
+          '<section class="docs-table"><strong>' +
+            label +
+            '</strong>' +
+            parser.parse(body, { async: false }) +
+            '</section>',
         );
       } catch {
         return placeholder(
@@ -190,39 +182,8 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
       }
     },
   );
-  const portable = captioned.replace(
-    /^(:{3,})docs ([A-Za-z]+)\s*\n([\s\S]*?)^\1\s*$/gm,
-    (source, fence: string, type: string, payload: string) => {
-      // Grouped accordion/tab Markdown is not YAML. Keep it for the dedicated
-      // grouped renderer so ordinary prose and list labels are never parsed as
-      // YAML aliases.
-      if (
-        fence.length >= 4 &&
-        (type === 'accordion' || type === 'tabs') &&
-        /^:::terra-item "/m.test(payload)
-      )
-        return source;
-      try {
-        const data = parseYaml(payload) as RichBlock;
-        if (data?._type === type && (type === 'block' || type === 'block')) {
-          return placeholder(renderToStaticMarkup(createElement(DocsRichBlock, { block: data })));
-        }
-        if (!enabledDocsBlocks(options).includes(type as never) || data?._type !== type) {
-          if (fence.length >= 4 && (type === 'accordion' || type === 'tabs')) return source;
-          return placeholder(
-            '<pre>' + sanitizeHtml(source, { allowedTags: [], allowedAttributes: {} }) + '</pre>',
-          );
-        }
-        return placeholder(renderToStaticMarkup(createElement(DocsRichBlock, { block: data })));
-      } catch {
-        if (fence.length >= 4 && (type === 'accordion' || type === 'tabs')) return source;
-        return placeholder(
-          '<pre>' + sanitizeHtml(source, { allowedTags: [], allowedAttributes: {} }) + '</pre>',
-        );
-      }
-    },
-  );
-  const withMath = portable.replace(/^\$\$\s*\n([\s\S]*?)^\$\$\s*$/gm, (_source, code: string) =>
+  const components = renderCanonicalComponents(captioned, options, placeholder);
+  const withMath = components.replace(/^\$\$\s*\n([\s\S]*?)^\$\$\s*$/gm, (_source, code: string) =>
     options.math === false
       ? _source
       : placeholder(
@@ -271,12 +232,24 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
       'tr',
       'th',
       'td',
+      'svg',
+      'g',
+      'rect',
+      'text',
+      'path',
+      'defs',
+      'marker',
     ],
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
       a: ['href', 'name', 'target', 'rel', 'id'],
       img: ['src', 'alt', 'title', 'width', 'height'],
       input: ['type', 'checked', 'disabled'],
+      svg: ['viewBox', 'width', 'height', 'role', 'aria-label'],
+      rect: ['x', 'y', 'width', 'height', 'rx', 'fill', 'stroke'],
+      text: ['x', 'y', 'text-anchor', 'dominant-baseline', 'fill'],
+      path: ['d', 'fill', 'stroke', 'stroke-width', 'marker-end'],
+      marker: ['id', 'markerWidth', 'markerHeight', 'refX', 'refY', 'orient'],
       '*': ['id', 'class', 'aria-label'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],

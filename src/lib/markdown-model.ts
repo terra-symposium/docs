@@ -1,9 +1,9 @@
 import { marked } from 'marked';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import type { DocsValue } from '../components/Docs.js';
 import type { RichBlock } from '../components/blocks.js';
 import { enabledDocsBlocks } from '../components/blocks.js';
 import type { DocsBlockOptions } from '../components/blocks.js';
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 const key = () => crypto.randomUUID();
 type Token = {
@@ -657,6 +657,16 @@ function componentBlock(
 ): RichBlock | undefined {
   const expr = codeBodyExpr(body, 0);
   const bodyValue = expr ? parseJsxLiteral(expr.value) : decodeHtml(body.trim());
+  if (name === 'DocsBlock') {
+    try {
+      const data = (
+        typeof attrs.data === 'string' ? JSON.parse(attrs.data) : attrs.data
+      ) as RichBlock;
+      return data && typeof data._type === 'string' ? data : undefined;
+    } catch {
+      return undefined;
+    }
+  }
   if (name === 'Nodes') {
     const nodes = parseArrayAttr(attrs.nodes);
     const edges = parseArrayAttr(attrs.edges);
@@ -669,6 +679,7 @@ function componentBlock(
       edges: Array.isArray(edges) ? edges : [],
     };
   }
+  if (name === 'Quiz') return { _type: 'quiz', _key: key(), ...attrs };
   if (name === 'Code') {
     const lang = typeof attrs.language === 'string' ? attrs.language : '';
     const source = typeof attrs.source === 'string' ? attrs.source : undefined;
@@ -708,12 +719,12 @@ function inHtmlTable(source: string, index: number): boolean {
   return before.lastIndexOf('<table') > before.lastIndexOf('</table');
 }
 
-function transformCanonicalComponents(
+/** Replace supported components outside code and structured Markdown blocks. */
+export function replaceCanonicalComponents(
   source: string,
-  options: DocsBlockOptions,
-  blocks: RichBlock[],
+  replace: (block: RichBlock | undefined, raw: string, inTable: boolean) => string,
 ): string {
-  const recognized = new Set(['Nodes', 'Code', 'Embed', 'TsDocs']);
+  const recognized = new Set(['Nodes', 'Code', 'Embed', 'TsDocs', 'Quiz', 'DocsBlock']);
   const fences = codeFenceRanges(source);
   const structured = structuredBlockRanges(source);
   let fenceIndex = 0;
@@ -752,36 +763,28 @@ function transformCanonicalComponents(
     const { end, bodyEnd } = component;
     const body = opening.selfClosing ? '' : source.slice(opening.end, bodyEnd);
     const isTableCode = opening.name === 'Code' && inHtmlTable(source, index);
-    const type =
-      opening.name === 'Nodes'
-        ? 'nodes'
-        : opening.name === 'Code'
-          ? 'code'
-          : opening.name === 'Embed'
-            ? 'embed'
-            : 'tsDocs';
     const parsed = componentBlock(opening.name, opening.attributes, body);
-    if (!parsed) {
-      output += source.slice(copiedUntil, index) + rawPlaceholder(blocks, source.slice(index, end));
-      copiedUntil = end;
-      index = end - 1;
-      continue;
-    }
-    if (isTableCode) {
-      const value = String(parsed.value ?? parsed.source ?? '');
-      output +=
-        source.slice(copiedUntil, index) +
-        `<code>${value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>`;
-    } else {
-      const replacement = enabled(options, type)
-        ? richPlaceholder(blocks, parsed)
-        : rawPlaceholder(blocks, source.slice(index, end));
-      output += source.slice(copiedUntil, index) + replacement;
-    }
+    output +=
+      source.slice(copiedUntil, index) + replace(parsed, source.slice(index, end), isTableCode);
     copiedUntil = end;
     index = end - 1;
   }
   return output ? output + source.slice(copiedUntil) : source;
+}
+
+function transformCanonicalComponents(
+  source: string,
+  options: DocsBlockOptions,
+  blocks: RichBlock[],
+): string {
+  return replaceCanonicalComponents(source, (block, raw, inTable) => {
+    if (!block || !enabled(options, block._type)) return rawPlaceholder(blocks, raw);
+    if (inTable) {
+      const value = String(block.value ?? block.source ?? '');
+      return `<code>${value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>`;
+    }
+    return richPlaceholder(blocks, block);
+  });
 }
 
 function transformCallouts(
@@ -814,7 +817,7 @@ function transformCallouts(
       continue;
     }
     const open = line.match(
-      /^\s*(:{3,})(?!docs(?:\s|$))([A-Za-z][\w-]*)(?:\[([^\]\n]*)\])?\s*$/,
+      /^\s*(:{3,})(note|tip|caution|danger|example|warning)(?:\[([^\]\n]*)\])?\s*$/,
     );
     if (open) {
       stack.push({
@@ -1243,47 +1246,6 @@ export function markdownToDocsValue(markdown: string, options: DocsBlockOptions 
   return parseMarkdown(markdown, options, []);
 }
 
-function parseGroupedItems(
-  source: string,
-  options: DocsBlockOptions,
-  blocks: RichBlock[],
-): RichBlock[] | undefined {
-  const markers = [...source.matchAll(/^:::terra-item ("(?:\\.|[^"\\])*")[ \t]*\r?$/gm)];
-  if (!markers.length || source.slice(0, markers[0]!.index).trim()) return undefined;
-  const items: RichBlock[] = [];
-  let consumedUntil = 0;
-  for (let index = 0; index < markers.length; index += 1) {
-    const marker = markers[index]!;
-    const bodyStart = (marker.index ?? 0) + marker[0].length;
-    const nStart = markers[index + 1]?.index ?? source.length;
-    const closing = /^:::terra-item-end[ \t]*\r?$/gm;
-    closing.lastIndex = bodyStart;
-    const end = closing.exec(source);
-    if (!end || end.index >= nStart || source.slice(end.index + end[0].length, nStart).trim())
-      return undefined;
-    let title: string;
-    try {
-      title = JSON.parse(marker[1]!) as string;
-    } catch {
-      return undefined;
-    }
-    const body = source
-      .slice(bodyStart, end.index)
-      .replace(/^\r?\n/, '')
-      .replace(/\r?\n$/, '');
-    const content = parseMarkdown(body, options, blocks);
-    items.push({
-      _type: 'item',
-      _key: key(),
-      title,
-      ...(/DOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
-      content,
-    });
-    consumedUntil = end.index + end[0].length;
-  }
-  return source.slice(consumedUntil).trim() ? undefined : items;
-}
-
 function parseMarkdownTableCells(
   block: RichBlock,
   options: DocsBlockOptions,
@@ -1333,36 +1295,24 @@ function parseMarkdown(
 ): DocsValue {
   const inlineMath = options.inlineMath !== false && options.math !== false;
   const jsxSource = transformCanonicalComponents(markdown, options, blocks);
-  const richSource = jsxSource.replace(
-    /^(:{3,})docs ([A-Za-z]+)\s*\n([\s\S]*?)^\1\s*$/gm,
-    (source, fence: string, type: string, payload: string) => {
-      // Four-colon accordion/tab blocks use grouped Markdown items. Sending
-      // their prose through YAML first misreads list lines such as
-      // `- **Research**: ...` as aliases and can emit noisy parser warnings.
-      // Leave this form for the grouped-block parser below.
-      if (
-        fence.length >= 4 &&
-        (type === 'accordion' || type === 'tabs') &&
-        /^:::terra-item "/m.test(payload)
-      )
-        return source;
+  // Keep the existing typed and captioned table forms lossless; other rich
+  // components use the shared JSX scanner above.
+  const withTypedTables = jsxSource.replace(
+    /^(:{3,})docs table\s*\n([\s\S]*?)^\1\s*$/gm,
+    (source, _fence: string, payload: string) => {
       try {
         const data = parseYaml(payload) as RichBlock;
-        if (data && data._type === type) {
-          const norm = type === 'table' ? parseMarkdownTableCells(data, options, blocks) : data;
-          return enabled(options, type)
-            ? richPlaceholder(blocks, norm)
-            : rawPlaceholder(blocks, source);
-        }
+        if (data?._type !== 'table') return rawPlaceholder(blocks, source);
+        const table = parseMarkdownTableCells(data, options, blocks);
+        return enabled(options, 'table')
+          ? richPlaceholder(blocks, table)
+          : rawPlaceholder(blocks, source);
       } catch {
-        // Four-colon accordion and tab blocks use nested Markdown rather than a typed payload.
-        if (fence.length >= 4 && (type === 'accordion' || type === 'tabs')) return source;
+        return rawPlaceholder(blocks, source);
       }
-      if (fence.length >= 4 && (type === 'accordion' || type === 'tabs')) return source;
-      return rawPlaceholder(blocks, source);
     },
   );
-  const withCaptionTables = richSource.replace(
+  const withCaptionTables = withTypedTables.replace(
     /^:::docs table\[([^\]\r\n]*)\][ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm,
     (source, caption: string, body: string) => {
       if (!enabled(options, 'table')) return rawPlaceholder(blocks, source);
@@ -1370,32 +1320,17 @@ function parseMarkdown(
       try {
         header = decodeURIComponent(caption);
       } catch {
-        /* Keep a readable caption if an older hand-authored value is not URI-encoded. */
+        /* Keep the literal caption. */
       }
-      const tableToken = (marked.lexer(body, { gfm: true }) as Token[]).find(
-        (token) => token.type === 'table',
+      const token = (marked.lexer(body, { gfm: true }) as Token[]).find(
+        (part) => part.type === 'table',
       );
-      if (!tableToken) return rawPlaceholder(blocks, source);
-      const table = tableBlock(
-        [tableToken.header ?? [], ...(tableToken.rows ?? [])],
-        body,
-        options,
-        header,
-      );
+      if (!token) return rawPlaceholder(blocks, source);
+      const table = tableBlock([token.header ?? [], ...(token.rows ?? [])], body, options, header);
       return table ? richPlaceholder(blocks, table) : rawPlaceholder(blocks, source);
     },
   );
-  const withGroupedBlocks = withCaptionTables.replace(
-    /^(:{4,})docs (accordion|tabs)[ \t]*\r?\n([\s\S]*?)^\1[ \t]*$/gm,
-    (source, _fence: string, type: string, body: string) => {
-      if (!enabled(options, type)) return rawPlaceholder(blocks, source);
-      const items = parseGroupedItems(body, options, blocks);
-      return items
-        ? richPlaceholder(blocks, { _type: type, items })
-        : rawPlaceholder(blocks, source);
-    },
-  );
-  const withAccordions = withGroupedBlocks.replace(
+  const withAccordions = withCaptionTables.replace(
     /^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm,
     (source, delimiter: string, title: string, body: string) => {
       const type = delimiter === '===' ? 'accordion' : 'tabs';
@@ -1404,6 +1339,7 @@ function parseMarkdown(
         _type: type,
         items: [
           {
+            _type: 'item',
             title,
             ...(/DOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
             content: parseMarkdown(body, options, blocks),
@@ -1727,14 +1663,6 @@ function tableCellMarkdown(cell: unknown): string {
     .join('<br data-docs-paragraph-break>');
 }
 
-function tableCellDocumentMarkdown(cell: unknown): string {
-  if (!cell || typeof cell !== 'object') return '';
-  const value = cell as Record<string, unknown>;
-  if (Array.isArray(value.content))
-    return docsValueToMarkdown(value.content as DocsValue).trimEnd();
-  return typeof value.markdown === 'string' ? value.markdown.trimEnd() : '';
-}
-
 /**
  * GFM turns bare email addresses and URLs into link marks. In a Docs table cell,
  * that is a data change when the original Portable Text was plain text. Encode
@@ -1761,9 +1689,17 @@ function escapeTableAutolinks(markdown: string): string {
   );
 }
 
+function tableCellDocumentMarkdown(cell: unknown): string {
+  if (!cell || typeof cell !== 'object') return '';
+  const value = cell as Record<string, unknown>;
+  if (Array.isArray(value.content))
+    return docsValueToMarkdown(value.content as DocsValue).trimEnd();
+  return typeof value.markdown === 'string' ? value.markdown.trimEnd() : '';
+}
+
 function tableToMarkdown(block: RichBlock): string {
   const rows = Array.isArray(block.rows) ? (block.rows as Record<string, unknown>[]) : [];
-  const fallback = richBlockDirective(block);
+  const fallback = tableDirective(block);
   if (!rows.length) return fallback;
   const colCounts = rows.map((row) => (Array.isArray(row.cells) ? row.cells.length : 0));
   const rectangular = colCounts.every((count) => count === colCounts[0]);
@@ -1798,7 +1734,7 @@ function tableToMarkdown(block: RichBlock): string {
                   'markdown',
                 ]) &&
                 typeof paragraph.url === 'string') ||
-              ((paragraph._type === 'block' || paragraph._type === 'block') &&
+              (paragraph._type === 'block' &&
                 markdownInlineBlock(paragraph) &&
                 !paragraph.listItem &&
                 (paragraph.style === undefined || paragraph.style === 'normal'));
@@ -1862,7 +1798,7 @@ function markdownTableDirective(block: RichBlock, rows: Record<string, unknown>[
       }),
     };
   });
-  return richBlockDirective({
+  return tableDirective({
     _type: 'table',
     ...tableFields,
     _docsCellFormat: 'markdown-v1',
@@ -1870,9 +1806,16 @@ function markdownTableDirective(block: RichBlock, rows: Record<string, unknown>[
   });
 }
 
+function tableDirective(block: RichBlock): string {
+  const payload = stringifyYaml(block, { lineWidth: 0 }).replace(/\r?\n$/, '');
+  const fences = [...payload.matchAll(/^(:{3,})(?:[ \t].*)?$/gm)].map((match) => match[1]!.length);
+  const fence = ':'.repeat(Math.max(3, 1 + Math.max(0, ...fences)));
+  return fence + 'docs table\n' + payload + '\n' + fence;
+}
+
 function isListBlock(block: RichBlock): boolean {
   return (
-    (block._type === 'block' || block._type === 'block') &&
+    block._type === 'block' &&
     (block.listItem === 'bullet' || block.listItem === 'number') &&
     (block.style === undefined || block.style === 'normal') &&
     markdownInlineBlock(block)
@@ -2064,15 +2007,7 @@ function richBlockDirective(block: RichBlock): string {
   const type = String(block._type ?? '');
   if (!/^[A-Za-z][A-Za-z0-9]*$/.test(type))
     throw new Error('Cannot serialize Docs block with an invalid type.');
-  // Remove only YAML's document-ending newline. Additional final newlines can
-  // be meaningful content in block scalars (especially code values with a
-  // `|+` chomping indicator), so trimming them would silently alter the block.
-  const payload = stringifyYaml(block, { lineWidth: 0 }).replace(/\r?\n$/, '');
-  const nestedFences = [...payload.matchAll(/^(:{3,})(?:[ \t].*)?$/gm)].map(
-    (match) => match[1]!.length,
-  );
-  const fence = ':'.repeat(Math.max(3, 1 + Math.max(0, ...nestedFences)));
-  return fence + 'docs ' + type + '\n' + payload + '\n' + fence;
+  return '<DocsBlock type="' + type + '" data={' + JSON.stringify(block) + '} />';
 }
 
 function colonFence(contents: string[], minimum = 4): string {
@@ -2104,7 +2039,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
     }
     index += 1;
 
-    if (item._type === 'block' || item._type === 'block') {
+    if (item._type === 'block') {
       if (!markdownInlineBlock(item) || item.listItem !== undefined) {
         result.push(richBlockDirective(item));
         continue;
@@ -2190,7 +2125,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
 
     if (item._type === 'table') {
       const markdown = tableToMarkdown(item);
-      result.push(markdownPreservesValue(item, markdown) ? markdown : richBlockDirective(item));
+      result.push(markdownPreservesValue(item, markdown) ? markdown : tableDirective(item));
       continue;
     }
 
@@ -2198,10 +2133,20 @@ export function docsValueToMarkdown(value: DocsValue): string {
       const kind = String(item.kind ?? 'info');
       const title = String(item.title ?? kind);
       const content = nestedMarkdown(item).replace(/\n+$/, '');
-      if (/^[A-Za-z][\w-]*$/.test(kind) && !/[\]\r\n]/.test(title)) {
+      const asideType = ({ info: 'note', error: 'danger' } as Record<string, string>)[kind] ?? kind;
+      if (
+        ['note', 'tip', 'caution', 'danger', 'example', 'warning'].includes(asideType) &&
+        !/[\]\r\n]/.test(title)
+      ) {
         const fence = colonFence([content], 3);
-        const markdown = fence + kind + '[' + title + ']\n' + content + '\n' + fence;
-        result.push(markdownPreservesValue(item, markdown) ? markdown : richBlockDirective(item));
+        const opening = fence + asideType + '[' + title + ']';
+        const markdown = content
+          ? opening + '\n\n' + content + '\n\n' + fence
+          : opening + '\n\n' + fence;
+        // Aside bodies are Markdown content, so serialize them with the
+        // Starlight aside syntax even when parsing the body normalizes its
+        // internal representation (for example, a cached `markdown` field).
+        result.push(markdown);
       } else {
         result.push(richBlockDirective(item));
       }
@@ -2221,24 +2166,60 @@ export function docsValueToMarkdown(value: DocsValue): string {
         result.push(richBlockDirective(item));
         continue;
       }
+      const delimiter = item._type === 'accordion' ? '===' : '|||';
       const renderedItems = entries.map((entry) => {
         const title = typeof entry.title === 'string' ? entry.title : 'Item';
         const body = nestedMarkdown(entry).replace(/\n+$/, '');
-        return ':::terra-item ' + JSON.stringify(title) + '\n' + body + '\n:::terra-item-end';
+        return delimiter + ' [' + title.replace(/\]/g, '\\]') + ']\n' + body + '\n' + delimiter;
       });
       // Grouped Markdown supports nested typed blocks. Keep ordinary text,
       // tables, callouts, code, and other nested content readable instead of
       // wrapping the entire accordion or tab tree in YAML. Portable Text keys
       // are editor identity metadata; Markdown round trips intentionally mint
       // new keys while preserving the document structure and content.
-      const fence = colonFence(renderedItems, 4);
-      const markdown =
-        fence + 'docs ' + item._type + '\n' + renderedItems.join('\n') + '\n' + fence;
-      result.push(markdownPreservesValue(item, markdown) ? markdown : richBlockDirective(item));
+      result.push(renderedItems.join('\n\n'));
       continue;
     }
 
-    result.push(richBlockDirective(item));
+    if (item._type === 'nodes' && !extra) {
+      const attrs = Object.fromEntries(
+        Object.entries(item).filter(
+          ([name]) => !['_type', '_key', 'nodes', 'edges'].includes(name),
+        ),
+      );
+      const props = { ...attrs, nodes: item.nodes ?? [], edges: item.edges ?? [] };
+      result.push(
+        '<Nodes ' +
+          Object.entries(props)
+            .map(([name, value]) => name + '={' + JSON.stringify(value) + '}')
+            .join(' ') +
+          ' />',
+      );
+      continue;
+    }
+
+    if (item._type === 'code' && !extra) {
+      result.push(codeFence(String(item.value ?? item.source ?? ''), String(item.language ?? '')));
+      continue;
+    }
+
+    if (item._type === 'embed' && !extra) {
+      result.push(
+        '<Embed ' +
+          Object.entries(item)
+            .filter(([name]) => !['_type', '_key'].includes(name))
+            .map(
+              ([name, value]) =>
+                name + '="' + String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"',
+            )
+            .join(' ') +
+          ' />',
+      );
+      continue;
+    }
+
+    if (item._type === 'quiz' && !extra) result.push('<Quiz />');
+    else result.push(richBlockDirective(item));
   }
   return (
     result

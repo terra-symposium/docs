@@ -16,9 +16,9 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "rootDir": "src",
-    "outDir": "dist/lib"
+    "rootDir": "../src",
+    "outDir": "../dist/lib"
   },
-  "include": ["src"],
-  "exclude": ["src/content.config.ts"]
+  "include": ["../src"],
+  "exclude": ["../src/content.config.ts"]
 }

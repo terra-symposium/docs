@@ -231,8 +231,7 @@ function NestedContent({ value }: { value: unknown }): JSX.Element {
     );
 
   const member = value as RichBlock;
-  if (member._type === 'block' || member._type === 'block')
-    return <PortableTextBlockView block={member} />;
+  if (member._type === 'block') return <PortableTextBlockView block={member} />;
   if (typeof member._type === 'string' && DOCS_BLOCK_TYPES.includes(member._type as DocsBlockType))
     return <DocsRichBlock block={member} />;
   if (Array.isArray(member.content) && member.content.length)
@@ -261,14 +260,7 @@ function Diagram({ block }: { block: RichBlock }): JSX.Element {
     <figure className="docs-diagram">
       <svg role="img" aria-label="Document diagram" viewBox={`0 0 ${width} ${height}`}>
         <defs>
-          <marker
-            id="docs-arrow"
-            markerWidth="8"
-            markerHeight="8"
-            refX="7"
-            refY="4"
-            orient="auto"
-          >
+          <marker id="docs-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
             <path d="M0 0 L8 4 L0 8 Z" fill="currentColor" />
           </marker>
         </defs>
@@ -322,7 +314,6 @@ function Diagram({ block }: { block: RichBlock }): JSX.Element {
 export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
   const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
   switch (block._type) {
-    case 'block':
     case 'block':
       return <PortableTextBlockView block={block} />;
     case 'accordion':
@@ -422,17 +413,9 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
         trust: false,
       });
       return block.inline ? (
-        <span
-          className="docs-math"
-          aria-label={code}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <span className="docs-math" aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <div
-          className="docs-math"
-          aria-label={code}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <div className="docs-math" aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
       );
     }
     case 'nodes':

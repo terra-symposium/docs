@@ -72,9 +72,11 @@ const sources = import.meta.glob<string>('/docs/**/*.{md,mdx}', {
   eager: true,
 });
 const base = import.meta.env.BASE_URL;
+const includeSkills = import.meta.env.PUBLIC_TERRA_DOCS_INCLUDE_SKILLS !== 'false';
 const routes = new Map<string, string>();
 /** Visible Docs pages sorted by configured sidebar order and source path. */
 export const sitePages: SitePage[] = Object.entries(modules)
+  .filter(([file]) => includeSkills || !file.startsWith('/docs/agents/'))
   .map(([file, module]) => {
     const relativeFile = file.replace(/^\/docs\//, '');
     const isRootIndex = ['index.md', 'index.mdx'].includes(relativeFile.toLowerCase());
@@ -136,7 +138,10 @@ function titleFromSource(source: string, slug: string): string {
  */
 function routeForFile(file: string): string {
   const relative = file.replace(/^\/?docs\//, '').replace(/\.(?:md|mdx)$/i, '');
-  return relative.replace(/(?:^|\/)index$/i, '').replace(G_CLASS_2(), '');
+  return relative
+    .replace(/(?:^|\/)SKILL$/i, '')
+    .replace(/(?:^|\/)index$/i, '')
+    .replace(G_CLASS_2(), '');
 }
 
 /**

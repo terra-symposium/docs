@@ -15,11 +15,10 @@ export function getStaticPaths() {
 
 const { slug = '' } = Astro.props;
 const page = pageForSlug(slug);
-const PageContent = page?.content;
 const currentPath = pageHref(slug, base);
 ---
 
-{page && PageContent ? (
+{page ? (
 	<html lang="en">
 		<head>
 			<meta charset="utf-8" />
@@ -37,14 +36,9 @@ const currentPath = pageHref(slug, base);
 				nodes={siteNavigation}
 				currentPath={currentPath}
 				rootPath={pageHref('', base)}
+				markdown={page.markdown}
 				searchBase={base}
-			>
-				<div class="terra-docs-page-content"><PageContent /></div>
-			</DocsSiteLayout>
+			/>
 		</body>
 	</html>
 ) : null}
-
-<style is:global>
-	.terra-docs-page-content { max-width: 100%; }
-</style>

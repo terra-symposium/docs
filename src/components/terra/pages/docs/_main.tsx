@@ -490,7 +490,7 @@ const EditorSurfaces = {
     // prettier-ignore
     return (
 			<header className='terra-docs-document-header relative z-10 w-full print:!mb-8 print:border-none'>
-				<div className={cn('mx-auto w-full px-6 transition-opacity duration-200 md:px-10 print:!pb-3', compact ? 'pb-3 pt-5' : 'pb-10 pt-7', full ? 'max-w-none' : 'max-w-5xl')}>
+				<div className={cn('mx-auto w-full px-6 transition-opacity duration-200 md:px-10 print:!pb-3', compact ? 'pb-3 pt-5' : 'pb-10 pt-7', full ? 'max-w-none' : 'max-w-7xl')}>
 					<div>
 						<Label htmlFor='docs-title' className='sr-only'>
 							Title

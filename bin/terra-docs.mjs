@@ -7,9 +7,8 @@ IMPORTS
 // API
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { dirname, extname, join, relative, resolve } from 'node:path';
+import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateSkillsIndex } from './generate-skills.mjs';
 import { parse } from 'yaml';
 import { spawn } from 'node:child_process';
 import { watch } from 'node:fs';
@@ -31,7 +30,17 @@ const passthrough = [];
 for (let index = 3; index < process.argv.length; index += 1) {
   const argument = process.argv[index];
   if (
-    ['--title', '--description', '--site', '--base', '--out', '--port', '--host'].includes(argument)
+    [
+      '--title',
+      '--description',
+      '--site',
+      '--base',
+      '--out',
+      '--port',
+      '--host',
+      '--skills',
+      '--agents',
+    ].includes(argument)
   ) {
     const value = process.argv[index + 1];
     if (!value || value.startsWith('--')) {
@@ -49,9 +58,18 @@ const publicRoot = resolve(root, 'dist/public');
 const publicAssetsRoot = resolve(publicRoot, '_terra-docs/assets');
 const outputDir = options.get('--out') ?? 'dist/docs';
 const searchIndexPath = resolve(publicRoot, '_terra-docs/search-index.json');
-const skillsIndexPath = resolve(root, 'dist/cache/skills.generated.json');
 const excludedDirs = new Set(['node_modules', '.astro', 'dist']);
 const manifest = await readJson(resolve(root, 'package.json')).catch(() => ({}));
+const configuredAgents =
+  manifest.terraDocs?.includeAgents ?? manifest.terraDocs?.includeSkills ?? true;
+if (typeof configuredAgents !== 'boolean') {
+  throw new Error('package.json terraDocs.includeAgents must be true or false');
+}
+if (options.has('--agents') && options.has('--skills')) {
+  throw new Error('Use only one of --agents or --skills');
+}
+const agentsOption = options.get('--agents') ?? options.get('--skills');
+const includeAgents = agentsOption === undefined ? configuredAgents : parseBoolean(agentsOption);
 const siteTitle = options.get('--title') ?? titleFromName(manifest.name) ?? 'Documentation';
 const siteDescription = options.get('--description') ?? manifest.description ?? '';
 const base = normBase(options.get('--base') ?? '/');
@@ -63,6 +81,7 @@ const env = {
   TERRA_DOCS_OUT: outputDir,
   PUBLIC_TERRA_DOCS_TITLE: siteTitle,
   PUBLIC_TERRA_DOCS_DESCRIPTION: siteDescription,
+  PUBLIC_TERRA_DOCS_INCLUDE_AGENTS: String(includeAgents),
 };
 
 /*//////////////////////////////////////////////////
@@ -96,7 +115,9 @@ async function collectMarkdown(dir, rootDir = dir) {
  *
  */
 async function buildSearchIndex() {
-  const files = await collectMarkdown(docsRoot);
+  const files = (await collectMarkdown(docsRoot)).filter(
+    (file) => includeAgents || !isAgentsContent(file.relativePath),
+  );
   if (files.length === 0)
     throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');
   const misplaced = files.filter((file) => {
@@ -114,6 +135,7 @@ async function buildSearchIndex() {
   for (const file of files) {
     const route = file.relativePath
       .replace(MD_MDX_I_REGEX, '')
+      .replace(/(?:^|\/)SKILL$/i, '')
       .replace(/(?:^|\/)index$/i, '')
       .replace(/^\/+|\/+$/g, '');
     const previous = routeFiles.get(route);
@@ -159,6 +181,7 @@ async function copyDocsAssets(dir = docsRoot, relativeDir = '') {
  * @param relativeDir Path prefix relative to the Docs root for the destination.
  */
 async function copyAssetDir(dir, relativeDir) {
+  if (!includeAgents && isAgentsContent(relativeDir)) return;
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (entry.name.startsWith('.') || (entry.isDirectory() && excludedDirs.has(entry.name)))
       continue;
@@ -173,6 +196,18 @@ async function copyAssetDir(dir, relativeDir) {
     await mkdir(dirname(destination), { recursive: true });
     await copyFile(source, destination);
   }
+}
+
+/**
+ * Checks whether a Docs-relative path belongs to the top-level Agents section.
+ *
+ * @param relativePath Path relative to docs/.
+ *
+ * @return True when the path is inside docs/agents/.
+ */
+function isAgentsContent(relativePath) {
+  const normalized = relativePath.split(sep).join('/');
+  return normalized === 'agents' || normalized.startsWith('agents/');
 }
 
 /**
@@ -223,6 +258,19 @@ function normBase(value) {
   const trimmed = value.trim();
   if (!trimmed.startsWith('/')) throw new Error('--base must begin with /');
   return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+}
+
+/**
+ * Parses the command-line boolean used to enable or disable the generated Agents section.
+ *
+ * @param value Boolean text supplied to `--skills`.
+ *
+ * @return The parsed option value.
+ */
+function parseBoolean(value) {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new Error('--skills must be true or false');
 }
 
 /**
@@ -277,12 +325,11 @@ function runAstro(cmd) {
 }
 if (!['dev', 'build', 'preview'].includes(mode)) {
   console.error(
-    'Usage: terra-docs <dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory]',
+    'Usage: terra-docs <dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory] [--agents true|false]',
   );
   process.exit(2);
 }
 if (mode !== 'preview') {
-  await generateSkillsIndex(root, skillsIndexPath);
   await buildSearchIndex();
 }
 runAstro(mode);

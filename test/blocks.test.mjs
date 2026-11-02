@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../dist/lib/components/blocks.js';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import {
+  DOCS_BLOCK_TYPES,
+  DocsRichBlock,
+  enabledDocsBlocks,
+} from '../dist/lib/components/blocks.js';
 import { docsValueToMarkdown, markdownToDocsValue } from '../dist/lib/lib/markdown-model.js';
 import { renderMarkdown } from '../dist/lib/lib/markdown.js';
 import { stringifyDocBody } from '../dist/lib/lib/terra/runtime/content/document-markdown.js';
@@ -188,6 +194,45 @@ test('legacy rich components nested in callouts serialize and render as their co
   assert.equal(restored[0]._type, 'callout');
   assert.equal(restored[0].content[0]._type, 'code');
   assert.equal(restored[0].content[0].value, 'node_data: "graph"');
+});
+
+test('canonical Nodes components inside callouts render as diagrams in view mode', () => {
+  const node =
+    '<Nodes direction="TB" nodes={`[{"id":"start","type":"origin","data":{"title":"Script Requirements"}}]`} edges={`[]`} height={368} />';
+  const source = [
+    ':::example[Audio Compilation Process]',
+    '',
+    'The audio workflow begins here.',
+    '',
+    node,
+    '',
+    'The workflow continues here.',
+    '',
+    ':::',
+  ].join('\n');
+
+  const parsed = markdownToDocsValue(source);
+  const callout = parsed.find((block) => block._type === 'callout');
+  assert.ok(callout);
+  assert.ok(callout.content.some((block) => block._type === 'nodes'));
+  assert.equal(callout.markdown, undefined);
+
+  const html = renderToStaticMarkup(createElement(DocsRichBlock, { block: callout }));
+  assert.match(html, /terra-docs-callout-example/);
+  assert.match(html, /terra-docs-diagram/);
+  assert.match(html, /Script Requirements/);
+  assert.match(html, /The audio workflow begins here\./);
+  assert.match(html, /The workflow continues here\./);
+  assert.doesNotMatch(html, /&lt;Nodes/);
+
+  const tabs = markdownToDocsValue(['|||[Pipeline]', node, '|||'].join('\n')).find(
+    (block) => block._type === 'tabs',
+  );
+  assert.ok(tabs);
+  const tabHtml = renderToStaticMarkup(createElement(DocsRichBlock, { block: tabs }));
+  assert.match(tabHtml, /terra-docs-diagram/);
+  assert.match(tabHtml, /Script Requirements/);
+  assert.doesNotMatch(tabHtml, /&lt;Nodes/);
 });
 
 test('tables with rich cell content use readable Markdown cells and preserve the table', () => {

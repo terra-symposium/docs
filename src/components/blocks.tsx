@@ -214,6 +214,33 @@ function nestedMarkdown(value: unknown): string {
   }
   return '';
 }
+function NestedContent({ value }: { value: unknown }): JSX.Element {
+  if (Array.isArray(value))
+    return (
+      <>
+        {value.map((member, index) => (
+          <NestedContent key={index} value={member} />
+        ))}
+      </>
+    );
+  if (!value || typeof value !== 'object')
+    return typeof value === 'string' ? (
+      <div dangerouslySetInnerHTML={{ __html: renderMarkdown(value) }} />
+    ) : (
+      <>{text(value)}</>
+    );
+
+  const member = value as RichBlock;
+  if (member._type === 'block' || member._type === 'terraBlock')
+    return <PortableTextBlockView block={member} />;
+  if (typeof member._type === 'string' && DOCS_BLOCK_TYPES.includes(member._type as DocsBlockType))
+    return <DocsRichBlock block={member} />;
+  if (Array.isArray(member.content) && member.content.length)
+    return <NestedContent value={member.content} />;
+  if (typeof member.markdown === 'string')
+    return <div dangerouslySetInnerHTML={{ __html: renderMarkdown(member.markdown) }} />;
+  return <>{text(member)}</>;
+}
 function Diagram({ block }: { block: RichBlock }): JSX.Element {
   const nodes = (Array.isArray(block.nodes) ? block.nodes : []).filter(
     (node): node is Record<string, unknown> => Boolean(node) && typeof node === 'object',
@@ -304,7 +331,9 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
           {items.map((v, i) => (
             <details key={i}>
               <summary>{text(v.title)}</summary>
-              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(v)) }} />
+              <div>
+                <NestedContent value={v} />
+              </div>
             </details>
           ))}
         </div>
@@ -315,7 +344,9 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
           {items.map((v, i) => (
             <details key={i} open={i === 0}>
               <summary>{text(v.title)}</summary>
-              <div dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(v)) }} />
+              <div>
+                <NestedContent value={v} />
+              </div>
             </details>
           ))}
         </div>
@@ -332,10 +363,9 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
                     ? ((row as Record<string, unknown>).cells as unknown[])
                     : []
                   ).map((cell, j) => (
-                    <td
-                      key={j}
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(cell)) }}
-                    />
+                    <td key={j}>
+                      <NestedContent value={cell} />
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -343,15 +373,20 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
           </table>
         </section>
       );
-    case 'callout':
+    case 'callout': {
+      const content = Array.isArray(block.content) ? (block.content as RichBlock[]) : [];
+      const markdown = typeof block.markdown === 'string' ? block.markdown : undefined;
       return (
         <aside
           className={`terra-docs-callout terra-docs-callout-${text(block.kind).replace(/[^a-z0-9-]/gi, '') || 'info'}`}
         >
           <strong>{text(block.title)}</strong>
-          <div dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(block)) }} />
+          <div>
+            <NestedContent value={content.length ? content : (markdown ?? '')} />
+          </div>
         </aside>
       );
+    }
     case 'code':
       return (
         <pre className="terra-docs-code">

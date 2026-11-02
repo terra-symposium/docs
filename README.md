@@ -4,7 +4,7 @@ Docs is the shared Terra documentation workspace and Markdown site generator. A 
 
 ## Create a repository Docs site
 
-Create a repository from the [Docs starter](https://github.com/Terra-Symposium/docs-template) or install the package in an existing repository:
+Copy the [Docs starter files](https://github.com/Terra-Symposium/docs/tree/development/template) into a repository, or install the package in an existing repository:
 
 ```sh
 pnpm add -D @terra-symposium/docs
@@ -18,6 +18,8 @@ pnpm exec terra-docs build
 ```
 
 The package creates the routes, navigation, Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. `.mdx` files can import interactive examples. Optional `title`, `description`, `hue`, and `sidebar` frontmatter are available when needed. Build output defaults to `dist/docs/`.
+
+Keep agent guidance and skills in `docs/agents/`. `SKILL.md` files there route as the index page for their folder, so the complete agent tree uses normal Docs navigation, search, and asset handling. Set `terraDocs.includeSkills` to `false` in the repository's `package.json`, or pass `--skills false`, to hide the Agents section for one Docs instance; it is included by default.
 
 Configure a deployment base path with `--base /project-docs/`, and optionally set `--site`, `--title`, and `--description`. Each repository builds its own site; the starter CI checks builds and leaves deployment to the repository owner.
 

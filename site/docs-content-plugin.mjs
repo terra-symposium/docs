@@ -8,7 +8,10 @@ function publicRoute(file, docsRoot, base) {
     .split(sep)
     .join('/')
     .replace(/\.(?:md|mdx)$/i, '');
-  const route = path.replace(/(?:^|\/)index$/i, '').replace(/^\/+|\/+$/g, '');
+  const route = path
+    .replace(/(?:^|\/)SKILL$/i, '')
+    .replace(/(?:^|\/)index$/i, '')
+    .replace(/^\/+|\/+$/g, '');
   return `${base}${route ? `${route}/` : ''}`;
 }
 

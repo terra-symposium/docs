@@ -1,5 +1,16 @@
 # @terra-symposium/docs
 
+## 0.4.0
+
+### Minor Changes
+
+- Publish repository skills as Markdown pages in the Agents section, with per-instance configuration to disable the section.
+
+### Patch Changes
+
+- 8b51562: Apply Terra Docs CLI options before configuring the generated site output.
+- Align the page header, toolbar, and content spacing; unify quote styling, preserve list spacing, and compact the table of contents.
+
 ## 0.3.0
 
 ### Minor Changes

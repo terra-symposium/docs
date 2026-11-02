@@ -1,6 +1,6 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
@@ -36,11 +36,7 @@
       "import": "./dist/lib/components/LocalDocsWorkspace.js"
     },
     "./site-layout.astro": "./src/components/SiteLayout.astro",
-    "./not-found.astro": "./src/components/NotFound.astro",
-    "./skills": {
-      "types": "./site/src/components/SkillsExplorer.tsx",
-      "import": "./site/src/components/SkillsExplorer.tsx"
-    }
+    "./not-found.astro": "./src/components/NotFound.astro"
   },
   "bin": {
     "terra-docs": "bin/terra-docs.mjs"

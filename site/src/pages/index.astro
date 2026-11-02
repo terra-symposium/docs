@@ -1,9 +1,15 @@
 ---
-import { firstAvailableLeafHref } from '../lib/catalog.js';
+import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
+import { firstAvailableLeafHref, pageForSlug, pageHref, siteNavigation } from '../lib/catalog.js';
 
 const destination = firstAvailableLeafHref();
+const page = pageForSlug('');
+const title = import.meta.env.PUBLIC_TERRA_DOCS_TITLE ?? 'Documentation';
+const description = import.meta.env.PUBLIC_TERRA_DOCS_DESCRIPTION ?? '';
+const base = import.meta.env.BASE_URL;
 ---
 
+{destination ? (
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
@@ -11,9 +17,33 @@ const destination = firstAvailableLeafHref();
 		<meta name="robots" content="noindex" />
 		<meta http-equiv="refresh" content={`0;url=${destination}`} />
 		<link rel="canonical" href={destination} />
-		<title>Redirecting…</title>
+		<title>Redirecting · {title}</title>
 	</head>
 	<body>
 		<p>Redirecting to <a href={destination}>the first available page</a>.</p>
 	</body>
 </html>
+ ) : page ? (
+	<html lang="en">
+		<head>
+			<meta charset="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1" />
+			{page.description ? <meta name="description" content={page.description} /> : description ? <meta name="description" content={description} /> : null}
+			<title>{page.title} · {title}</title>
+		</head>
+		<body>
+			<DocsSiteLayout
+				title={title}
+				homeHref={pageHref('', base)}
+				description={description}
+				pageTitle={page.title}
+				hue={page.hue}
+				nodes={siteNavigation}
+				currentPath={pageHref('', base)}
+				rootPath={pageHref('', base)}
+				markdown={page.markdown}
+				searchBase={base}
+			/>
+		</body>
+	</html>
+) : null}

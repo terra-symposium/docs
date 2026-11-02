@@ -216,20 +216,22 @@ export function pageForSlug(slug: string): SitePage | undefined {
  *
  * @return The public URL for that page, or the site root when no section has a leaf.
  */
-export function firstAvailableLeafHref(): string {
+export function firstAvailableLeafHref(): string | undefined {
+  const rootHref = pageHref('', base);
   const findLeaf = (nodes: DocsNavNode[]): string | undefined => {
     for (const node of nodes) {
       if (node.children?.length) {
         const child = findLeaf(node.children);
         if (child) return child;
-      } else if (node.href) {
+      } else if (node.href && node.href !== rootHref) {
         return node.href;
       }
     }
     return undefined;
   };
 
-  return findLeaf(siteNavigation) ?? pageHref('', base);
+  const firstPage = sitePages.find((page) => !page.hidden && page.slug && page.slug !== '404');
+  return findLeaf(siteNavigation) ?? (firstPage ? pageHref(firstPage.slug, base) : undefined);
 }
 if (sitePages.length === 0)
   throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');

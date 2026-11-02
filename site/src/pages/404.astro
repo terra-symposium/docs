@@ -1,8 +1,10 @@
 ---
 import DocsNotFound from '../../../src/components/NotFound.astro';
-import { firstAvailableLeafHref } from '../lib/catalog.js';
+import { firstAvailableLeafHref, pageHref } from '../lib/catalog.js';
 
 const title = import.meta.env.PUBLIC_TERRA_DOCS_TITLE ?? 'Documentation';
+const base = import.meta.env.BASE_URL;
+const homeHref = firstAvailableLeafHref() ?? pageHref('', base);
 ---
 
 <html lang="en">
@@ -13,6 +15,6 @@ const title = import.meta.env.PUBLIC_TERRA_DOCS_TITLE ?? 'Documentation';
 		<title>Page not found · {title}</title>
 	</head>
 	<body>
-		<DocsNotFound appName={title} homeHref={firstAvailableLeafHref()} />
+		<DocsNotFound appName={title} homeHref={homeHref} />
 	</body>
 </html>

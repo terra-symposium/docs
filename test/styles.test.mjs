@@ -20,9 +20,11 @@ test('the packed Docs stylesheet is a single deterministic Styling and Docs casc
   const responsiveSidebar = style.indexOf('.md\\:block{display:block}');
   assert.ok(hiddenUtility >= 0, 'base hidden utility is present');
   assert.ok(responsiveSidebar > hiddenUtility, 'responsive sidebar variant follows base utility');
-  assert.ok(
-    style.includes('@layer utilities'),
-    'Styling effect layer is included in the package entrypoint',
+  assert.match(style, /\.grain\s*\{/);
+  assert.doesNotMatch(
+    style,
+    /@layer\s+(?:base|utilities)/,
+    'packed CSS must survive consumer Tailwind passes',
   );
 
   const nestedSelectors = [];

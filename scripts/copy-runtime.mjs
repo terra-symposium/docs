@@ -1,6 +1,7 @@
 import { appendFile, cp, mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import postcss from 'postcss';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, 'src', 'lib', 'terra');
@@ -42,7 +43,13 @@ const effects = await readFile(
   join(root, 'node_modules', '@terra-symposium', 'styling', 'dist', 'effects.css'),
   'utf8',
 );
-await appendFile(join(root, 'dist', 'lib', 'style.css'), `\n${effects}`);
+// Tailwind has already run. Leave the authored rules intact, but remove their
+// build-time layers so a consumer's Tailwind plugin can process this stylesheet.
+const effectCss = postcss.parse(effects);
+for (const rule of [...effectCss.nodes]) {
+  if (rule.type === 'atrule' && rule.name === 'layer') rule.replaceWith(...(rule.nodes ?? []));
+}
+await appendFile(join(root, 'dist', 'lib', 'style.css'), `\n${effectCss}`);
 await cp(join(root, 'node_modules', 'katex', 'dist', 'fonts'), join(root, 'dist', 'lib', 'fonts'), {
   recursive: true,
 });

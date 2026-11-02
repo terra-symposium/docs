@@ -1,6 +1,6 @@
 node_modules/
 dist/
-.terra-docs/
+dist/.terra-docs/
 coverage/
 tests/results/
 .astro/

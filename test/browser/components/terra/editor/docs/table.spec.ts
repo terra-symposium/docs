@@ -104,14 +104,14 @@ test('table.spec: Preserve inline code marks inside nested cells', async ({ page
   await expect(cell.locator('code')).toHaveText('problem');
 });
 
-test('table.spec: Render Sanity terraBlock aliases inside nested table cells', async ({ page }) => {
+test('table.spec: Render Sanity block aliases inside nested table cells', async ({ page }) => {
   const terraCell = (key: string, text: string) => ({
     _key: key,
     _type: 'cell',
     content: [
       {
         _key: `${key}-block`,
-        _type: 'terraBlock',
+        _type: 'block',
         children: [{ _key: `${key}-text`, _type: 'span', marks: [], text }],
         markDefs: [],
         style: 'normal',
@@ -211,7 +211,7 @@ test('table.spec: Render legacy Sanity text blocks with string children in cells
     content: [
       {
         _key: `${key}-block`,
-        _type: 'terraBlock',
+        _type: 'block',
         children: text,
         markDefs: [],
         style: 'normal',
@@ -258,7 +258,7 @@ test('table.spec: Import a Markdown table into the visual editor', async ({ page
   );
   await openEditor(page, value);
 
-  const table = page.locator('[data-terra-block="table"]');
+  const table = page.locator('[data-block="table"]');
   await expect(table).toBeVisible();
   await expect(table.getByRole('textbox', { name: 'Table cell 1, 1' })).toHaveValue('Name');
   const valueCell = table.getByRole('textbox', { name: 'Table cell 2, 1' });
@@ -275,7 +275,7 @@ test('table.spec: Import a Markdown table into the visual editor', async ({ page
 
 test('table.spec: Edit heading, rows and columns', async ({ page }) => {
   await openEditor(page, tableFixture);
-  const table = page.locator('[data-terra-block="table"]');
+  const table = page.locator('[data-block="table"]');
   await table.getByRole('textbox', { name: 'Table heading' }).fill('Updated heading');
   await expect
     .poll(
@@ -319,7 +319,7 @@ test('table.spec: Insert from toolbar', async ({ page }) => {
   await openEditor(page, []);
   await page.getByRole('button', { name: 'Insert content' }).click();
   await page.getByRole('option', { name: 'Table', exact: true }).click();
-  await expect(page.locator('[data-terra-block="table"]')).toBeVisible();
+  await expect(page.locator('[data-block="table"]')).toBeVisible();
   await expect
     .poll(async () =>
       JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]').some(

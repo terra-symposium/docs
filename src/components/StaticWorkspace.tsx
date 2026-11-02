@@ -15,7 +15,7 @@ import { useEffect } from 'react';
 // COMPONENTS
 import { Button } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '@terra-symposium/standards-error-boundaries/react';
-import { TerraDocsWorkspace } from './terra/Workspace.js';
+import { DocsWorkspace } from './terra/Workspace.js';
 import type { DocsQuizConfig } from './quiz.js';
 
 // TYPES
@@ -84,7 +84,7 @@ const slug = (value: string): string =>
  */
 const routeKey = (value: string): string => {
   try {
-    const url = new URL(value, 'http://terra-docs.local');
+    const url = new URL(value, 'http://docs.local');
     return `${url.pathname.replace(SHARED_REGEX, '') || '/'}${url.hash}`;
   } catch {
     return value;
@@ -99,7 +99,7 @@ const routeKey = (value: string): string => {
  */
 const storageKey = (value: string): string => {
   try {
-    const url = new URL(value, 'http://terra-docs.local');
+    const url = new URL(value, 'http://docs.local');
     return (url.pathname.replace(G_REGEX(), '') || 'index.mdx') + url.hash;
   } catch {
     return value.replace(G_REGEX(), '') || 'index.mdx';
@@ -451,7 +451,7 @@ export function DocsStaticWorkspace({
           </section>
         )}
       >
-        <TerraDocsWorkspace
+        <DocsWorkspace
           host={host}
           tree={tree}
           pathname={currentPath}

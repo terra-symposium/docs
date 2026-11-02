@@ -11,7 +11,7 @@ async function openParityFixture(page: import('@playwright/test').Page): Promise
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/parity-demo/');
   await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
-  await expect(page.locator('.terra-docs-document-header')).toBeVisible();
+  await expect(page.locator('.docs-document-header')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -60,7 +60,7 @@ for (const viewport of viewports) {
     await page.mouse.move(0, 0);
 
     await expect(page.getByRole('textbox', { name: 'Search pages' })).toHaveCount(0);
-    await expect(page.locator('.terra-docs-document-header')).toBeVisible();
+    await expect(page.locator('.docs-document-header')).toBeVisible();
     await expect(page.locator('[data-docs-toolbar-frame]')).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue(
       'Salesphere',
@@ -89,11 +89,11 @@ test('long document descriptions remain fully visible at responsive widths', asy
   await page.goto('/parity-demo/');
   await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
   await page.evaluate((value) => {
-    const key = 'terra-docs-workspace-demo-v1';
+    const key = 'docs-workspace-demo-v1';
     const fixture = JSON.parse(localStorage.getItem(key) ?? '{}');
     fixture.documents.salesphere.description = value;
     localStorage.setItem(key, JSON.stringify(fixture));
-    window.dispatchEvent(new CustomEvent('terra-docs-fixture-updated'));
+    window.dispatchEvent(new CustomEvent('docs-fixture-updated'));
   }, description);
 
   const field = page.locator('#docs-description');
@@ -140,11 +140,11 @@ test('empty descriptions show an editing hint only in Edit mode', async ({ page 
   await page.goto('/parity-demo/');
   await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
   await page.evaluate(() => {
-    const key = 'terra-docs-workspace-demo-v1';
+    const key = 'docs-workspace-demo-v1';
     const fixture = JSON.parse(localStorage.getItem(key) ?? '{}');
     fixture.documents.salesphere.description = '';
     localStorage.setItem(key, JSON.stringify(fixture));
-    window.dispatchEvent(new CustomEvent('terra-docs-fixture-updated'));
+    window.dispatchEvent(new CustomEvent('docs-fixture-updated'));
   });
 
   const description = page.locator('#docs-description');
@@ -178,11 +178,11 @@ test('Docs attachments mode uses a compact selector and preserves the empty stat
 }) => {
   await openParityFixture(page);
   await page.evaluate(() => {
-    const key = 'terra-docs-workspace-demo-v1';
+    const key = 'docs-workspace-demo-v1';
     const state = JSON.parse(localStorage.getItem(key) ?? '{}');
     if (state.documents?.salesphere) state.documents.salesphere.attachments = [];
     localStorage.setItem(key, JSON.stringify(state));
-    window.dispatchEvent(new Event('terra-docs-fixture-updated'));
+    window.dispatchEvent(new Event('docs-fixture-updated'));
   });
   await setMode(page, 'Attachments');
   await expect(page.locator('[data-docs-attachments]')).toHaveAttribute('data-loading', 'false');

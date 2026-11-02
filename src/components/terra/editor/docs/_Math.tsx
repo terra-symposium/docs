@@ -245,7 +245,7 @@ function MathEditorContent({
 }): JSX.Element {
   const math = node as { code?: string; inline?: boolean };
   return (
-    <div {...attrs} contentEditable={false} data-terra-block="math">
+    <div {...attrs} contentEditable={false} data-block="math">
       {renderMath({
         code: math.code ?? '',
         ...(math.inline === undefined ? {} : { inline: math.inline }),

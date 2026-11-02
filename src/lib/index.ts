@@ -23,7 +23,7 @@ export type {
   DocsQuizQuestion,
   DocsQuizQuestionType,
 } from '../components/quiz.js';
-export { TerraDocsWorkspace } from '../components/terra/Workspace.js';
+export { DocsWorkspace } from '../components/terra/Workspace.js';
 export { DocsLocalWorkspace } from '../components/LocalDocsWorkspace.js';
 export type { DocsLocalPage, DocsLocalWorkspaceProps } from '../components/LocalDocsWorkspace.js';
 export { ContentEditor as DocsContentEditor } from '../components/terra/editor/ContentEditor.js';
@@ -56,7 +56,7 @@ export type {
   DocsHostDocument,
   DocsHostTreeNode,
   DocsHostUser,
-  TerraDocsWorkspaceProps,
+  DocsWorkspaceProps,
 } from './host.js';
 
 export type { DocsAttachment, DocsLeaf, DocsGroup, DocsSection } from './workspace-types.js';

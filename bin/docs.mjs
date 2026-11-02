@@ -56,15 +56,15 @@ for (let index = 3; index < process.argv.length; index += 1) {
 }
 const docsRoot = resolve(root, 'docs');
 const publicRoot = resolve(root, 'dist/public');
-const publicAssetsRoot = resolve(publicRoot, '_terra-docs/assets');
+const publicAssetsRoot = resolve(publicRoot, '_docs/assets');
 const manifest = await readJson(resolve(root, 'package.json')).catch(() => ({}));
-const docsConfig = manifest.terraDocs ?? {};
+const docsConfig = manifest.docs ?? {};
 const outputDir = options.get('--out') ?? docsConfig.out ?? 'dist/docs';
-const searchIndexPath = resolve(publicRoot, '_terra-docs/search-index.json');
+const searchIndexPath = resolve(publicRoot, '_docs/search-index.json');
 const excludedDirs = new Set(['node_modules', '.astro', 'dist']);
 const configuredAgents = docsConfig.includeAgents ?? docsConfig.includeSkills ?? true;
 if (typeof configuredAgents !== 'boolean') {
-  throw new Error('package.json terraDocs.includeAgents must be true or false');
+  throw new Error('package.json docs.includeAgents must be true or false');
 }
 if (options.has('--agents') && options.has('--skills')) {
   throw new Error('Use only one of --agents or --skills');
@@ -76,13 +76,13 @@ const siteDescription = options.get('--description') ?? docsConfig.description ?
 const base = normBase(options.get('--base') ?? docsConfig.base ?? '/');
 const env = {
   ...process.env,
-  TERRA_DOCS_ROOT: root,
-  TERRA_DOCS_SITE: options.get('--site') ?? docsConfig.site ?? '',
-  TERRA_DOCS_BASE: base,
-  TERRA_DOCS_OUT: outputDir,
-  PUBLIC_TERRA_DOCS_TITLE: siteTitle,
-  PUBLIC_TERRA_DOCS_DESCRIPTION: siteDescription,
-  PUBLIC_TERRA_DOCS_INCLUDE_AGENTS: String(includeAgents),
+  DOCS_ROOT: root,
+  DOCS_SITE: options.get('--site') ?? docsConfig.site ?? '',
+  DOCS_BASE: base,
+  DOCS_OUT: outputDir,
+  PUBLIC_DOCS_TITLE: siteTitle,
+  PUBLIC_DOCS_DESCRIPTION: siteDescription,
+  PUBLIC_DOCS_INCLUDE_AGENTS: String(includeAgents),
 };
 
 /*//////////////////////////////////////////////////
@@ -328,7 +328,7 @@ function runAstro(cmd) {
 }
 if (!['dev', 'build', 'preview'].includes(mode)) {
   console.error(
-    'Usage: terra-docs <docs|dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory] [--agents true|false]',
+    'Usage: docs <docs|dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory] [--agents true|false]',
   );
   process.exit(2);
 }

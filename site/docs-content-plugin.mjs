@@ -51,7 +51,7 @@ function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
   const extension = extname(resolvedPath).toLowerCase();
   const rewritten = markdownExtensions.has(extension)
     ? publicRoute(resolvedPath, docsRoot, base)
-    : `${base}_terra-docs/assets/${relativePath.split(sep).join('/')}`;
+    : `${base}_docs/assets/${relativePath.split(sep).join('/')}`;
   return `${bracketed ? `<${rewritten}${query}${fragment}>` : `${rewritten}${query}${fragment}`}${suffix}`;
 }
 
@@ -63,7 +63,7 @@ function mapOutsideCode(source, callback) {
 export function docsContentPlugin({ root, base }) {
   const docsRoot = resolve(root, 'docs');
   return {
-    name: 'terra-docs-content-assets',
+    name: 'docs-content-assets',
     enforce: 'pre',
     transform(source, id) {
       if (id.includes('?') || !markdownExtensions.has(extname(id).toLowerCase())) return null;

@@ -28,11 +28,11 @@ function encodeInlineMathPlaceholder(code: string): string {
   const hex = Array.from(code, (character) =>
     (character.codePointAt(0) ?? 0).toString(16).padStart(6, '0'),
   ).join('');
-  return `TERRADOCSMATH${hex}END`;
+  return `DOCSMATH${hex}END`;
 }
 
 function decodeInlineMathPlaceholder(value: string): string | undefined {
-  const match = value.match(/^TERRADOCSMATH([0-9a-f]+)END$/i);
+  const match = value.match(/^DOCSMATH([0-9a-f]+)END$/i);
   if (!match || match[1]!.length % 6 !== 0) return undefined;
   const codepoints: number[] = [];
   for (let offset = 0; offset < match[1]!.length; offset += 6) {
@@ -44,7 +44,7 @@ function decodeInlineMathPlaceholder(value: string): string | undefined {
 }
 
 function restoreInlineMathPlaceholders(value: string): string {
-  return value.replace(/TERRADOCSMATH[0-9a-f]+END/gi, (placeholder) => {
+  return value.replace(/DOCSMATH[0-9a-f]+END/gi, (placeholder) => {
     const code = decodeInlineMathPlaceholder(placeholder);
     return code === undefined ? placeholder : `$${code}$`;
   });
@@ -57,7 +57,7 @@ function withGenInlineMathTokens(tokens: Token[] | undefined): Token[] {
       result.push(token);
       continue;
     }
-    const matches = [...token.raw.matchAll(/TERRADOCSMATH[0-9a-f]+END/gi)];
+    const matches = [...token.raw.matchAll(/DOCSMATH[0-9a-f]+END/gi)];
     if (!matches.length) {
       result.push(token);
       continue;
@@ -314,15 +314,15 @@ function containsUnsupportedInlineHtml(tokens: Token[] | undefined): boolean {
 }
 
 function enabled(options: DocsBlockOptions, type: string): boolean {
-  // Imported Terra Portable Text paragraphs are part of the document model itself,
+  // Imported Portable Text paragraphs are part of the document model itself,
   // not optional rich blocks. Canonical JSON directives let local hosts retain
   // their marks and inline objects without a lossy Markdown round trip.
-  if (type === 'block' || type === 'terraBlock') return true;
+  if (type === 'block' || type === 'block') return true;
   return enabledDocsBlocks(options).includes(type as never);
 }
 
 function richPlaceholder(blocks: RichBlock[], block: RichBlock): string {
-  const placeholder = `TERRADOCSBLOCK${blocks.length}PLACEHOLDER`;
+  const placeholder = `DOCSBLOCK${blocks.length}PLACEHOLDER`;
   blocks.push({ ...block, _key: block._key ?? key() });
   return `\n\n${placeholder}\n\n`;
 }
@@ -455,8 +455,8 @@ function protectMarkdownInlineMath(source: string, inlineMath: boolean): string 
 
 function structuredBlockRanges(source: string): SourceRange[] {
   const ranges = [
-    ...source.matchAll(/^(:{3,})terra-docs [A-Za-z]+(?:\[[^\]\n]*\])?\s*\r?\n[\s\S]*?^\1\s*$/gm),
-    ...source.matchAll(/^(:{4,})terra-docs (?:accordion|tabs)\s*\r?\n[\s\S]*?^\1\s*$/gm),
+    ...source.matchAll(/^(:{3,})docs [A-Za-z]+(?:\[[^\]\n]*\])?\s*\r?\n[\s\S]*?^\1\s*$/gm),
+    ...source.matchAll(/^(:{4,})docs (?:accordion|tabs)\s*\r?\n[\s\S]*?^\1\s*$/gm),
   ];
   return ranges
     .map((match) => ({ start: match.index ?? 0, end: (match.index ?? 0) + match[0].length }))
@@ -814,7 +814,7 @@ function transformCallouts(
       continue;
     }
     const open = line.match(
-      /^\s*(:{3,})(?!terra-docs(?:\s|$))([A-Za-z][\w-]*)(?:\[([^\]\n]*)\])?\s*$/,
+      /^\s*(:{3,})(?!docs(?:\s|$))([A-Za-z][\w-]*)(?:\[([^\]\n]*)\])?\s*$/,
     );
     if (open) {
       stack.push({
@@ -847,7 +847,7 @@ function transformCallouts(
           kind: range.kind,
           title: range.title || range.kind,
           content,
-          ...(/TERRADOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
+          ...(/DOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
         })
       : rawPlaceholder(blocks, raw);
     source = source.slice(0, range.start) + replacement + source.slice(range.end);
@@ -1163,7 +1163,7 @@ function htmlTableBlock(
       );
       const cellBlocks: RichBlock[] = [];
       const cellMarkdownWithBlocks = markdown.replace(
-        /TERRADOCSBLOCK(\d+)PLACEHOLDER/g,
+        /DOCSBLOCK(\d+)PLACEHOLDER/g,
         (placeholder, indexText: string) => {
           const original = blocks[Number(indexText)];
           return original ? richPlaceholder(cellBlocks, original) : placeholder;
@@ -1276,7 +1276,7 @@ function parseGroupedItems(
       _type: 'item',
       _key: key(),
       title,
-      ...(/TERRADOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
+      ...(/DOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
       content,
     });
     consumedUntil = end.index + end[0].length;
@@ -1334,7 +1334,7 @@ function parseMarkdown(
   const inlineMath = options.inlineMath !== false && options.math !== false;
   const jsxSource = transformCanonicalComponents(markdown, options, blocks);
   const richSource = jsxSource.replace(
-    /^(:{3,})terra-docs ([A-Za-z]+)\s*\n([\s\S]*?)^\1\s*$/gm,
+    /^(:{3,})docs ([A-Za-z]+)\s*\n([\s\S]*?)^\1\s*$/gm,
     (source, fence: string, type: string, payload: string) => {
       // Four-colon accordion/tab blocks use grouped Markdown items. Sending
       // their prose through YAML first misreads list lines such as
@@ -1363,7 +1363,7 @@ function parseMarkdown(
     },
   );
   const withCaptionTables = richSource.replace(
-    /^:::terra-docs table\[([^\]\r\n]*)\][ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm,
+    /^:::docs table\[([^\]\r\n]*)\][ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm,
     (source, caption: string, body: string) => {
       if (!enabled(options, 'table')) return rawPlaceholder(blocks, source);
       let header = caption;
@@ -1386,7 +1386,7 @@ function parseMarkdown(
     },
   );
   const withGroupedBlocks = withCaptionTables.replace(
-    /^(:{4,})terra-docs (accordion|tabs)[ \t]*\r?\n([\s\S]*?)^\1[ \t]*$/gm,
+    /^(:{4,})docs (accordion|tabs)[ \t]*\r?\n([\s\S]*?)^\1[ \t]*$/gm,
     (source, _fence: string, type: string, body: string) => {
       if (!enabled(options, type)) return rawPlaceholder(blocks, source);
       const items = parseGroupedItems(body, options, blocks);
@@ -1405,7 +1405,7 @@ function parseMarkdown(
         items: [
           {
             title,
-            ...(/TERRADOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
+            ...(/DOCSBLOCK\d+PLACEHOLDER/.test(body) ? {} : { markdown: body }),
             content: parseMarkdown(body, options, blocks),
           },
         ],
@@ -1426,7 +1426,7 @@ function parseMarkdown(
   const result: RichBlock[] = [];
   for (const token of parsed) {
     if (token.type === 'space') continue;
-    const marker = token.raw.trim().match(/^TERRADOCSBLOCK(\d+)PLACEHOLDER$/);
+    const marker = token.raw.trim().match(/^DOCSBLOCK(\d+)PLACEHOLDER$/);
     if (marker) {
       const block = blocks[Number(marker[1])];
       if (block) result.push(block);
@@ -1798,7 +1798,7 @@ function tableToMarkdown(block: RichBlock): string {
                   'markdown',
                 ]) &&
                 typeof paragraph.url === 'string') ||
-              ((paragraph._type === 'block' || paragraph._type === 'terraBlock') &&
+              ((paragraph._type === 'block' || paragraph._type === 'block') &&
                 markdownInlineBlock(paragraph) &&
                 !paragraph.listItem &&
                 (paragraph.style === undefined || paragraph.style === 'normal'));
@@ -1832,7 +1832,7 @@ function tableToMarkdown(block: RichBlock): string {
   ].join('\n');
   const caption = String(block.header ?? 'Table');
   return caption !== 'Table'
-    ? ':::terra-docs table[' + encodeURIComponent(caption) + ']\n' + markdown + '\n:::'
+    ? ':::docs table[' + encodeURIComponent(caption) + ']\n' + markdown + '\n:::'
     : markdown;
 }
 
@@ -1872,7 +1872,7 @@ function markdownTableDirective(block: RichBlock, rows: Record<string, unknown>[
 
 function isListBlock(block: RichBlock): boolean {
   return (
-    (block._type === 'block' || block._type === 'terraBlock') &&
+    (block._type === 'block' || block._type === 'block') &&
     (block.listItem === 'bullet' || block.listItem === 'number') &&
     (block.style === undefined || block.style === 'normal') &&
     markdownInlineBlock(block)
@@ -1913,7 +1913,7 @@ function nestedMarkdown(block: Record<string, unknown>): string {
   if (
     typeof block.markdown === 'string' &&
     block.markdown &&
-    !/TERRADOCSBLOCK\d+PLACEHOLDER/.test(block.markdown)
+    !/DOCSBLOCK\d+PLACEHOLDER/.test(block.markdown)
   )
     return block.markdown;
   return Array.isArray(block.content)
@@ -1924,7 +1924,7 @@ function nestedMarkdown(block: Record<string, unknown>): string {
 function emptyPortableTextParagraph(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const block = value as Record<string, unknown>;
-  if (block._type !== 'block' && block._type !== 'terraBlock') return false;
+  if (block._type !== 'block' && block._type !== 'block') return false;
   if (
     Object.keys(block).some(
       (name) => !['_type', '_key', 'style', 'markDefs', 'children'].includes(name),
@@ -1953,7 +1953,7 @@ function semanticMarkdownValue(value: unknown): unknown {
 
   const block = value as Record<string, unknown>;
   const type = block._type;
-  if (type === 'block' || type === 'terraBlock') {
+  if (type === 'block' || type === 'block') {
     const definitions = new Map(
       (Array.isArray(block.markDefs) ? block.markDefs : [])
         .filter((i): i is Record<string, unknown> => Boolean(i) && typeof i === 'object')
@@ -2072,7 +2072,7 @@ function richBlockDirective(block: RichBlock): string {
     (match) => match[1]!.length,
   );
   const fence = ':'.repeat(Math.max(3, 1 + Math.max(0, ...nestedFences)));
-  return fence + 'terra-docs ' + type + '\n' + payload + '\n' + fence;
+  return fence + 'docs ' + type + '\n' + payload + '\n' + fence;
 }
 
 function colonFence(contents: string[], minimum = 4): string {
@@ -2104,7 +2104,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
     }
     index += 1;
 
-    if (item._type === 'block' || item._type === 'terraBlock') {
+    if (item._type === 'block' || item._type === 'block') {
       if (!markdownInlineBlock(item) || item.listItem !== undefined) {
         result.push(richBlockDirective(item));
         continue;
@@ -2233,7 +2233,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
       // new keys while preserving the document structure and content.
       const fence = colonFence(renderedItems, 4);
       const markdown =
-        fence + 'terra-docs ' + item._type + '\n' + renderedItems.join('\n') + '\n' + fence;
+        fence + 'docs ' + item._type + '\n' + renderedItems.join('\n') + '\n' + fence;
       result.push(markdownPreservesValue(item, markdown) ? markdown : richBlockDirective(item));
       continue;
     }

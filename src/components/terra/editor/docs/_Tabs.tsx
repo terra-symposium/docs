@@ -195,7 +195,7 @@ function SectionsEditor({
   });
   return (
     <ErrorBoundary name="SectionsEditor">
-      <div {...attrs} contentEditable={false} data-terra-block={kind}>
+      <div {...attrs} contentEditable={false} data-block={kind}>
         {kind === 'tabs' ? (
           <TabsGroup onAdd={add} onDelete={remove} onRename={(v, t) => rename(Number(v), t)}>
             {content}

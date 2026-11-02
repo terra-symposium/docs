@@ -43,7 +43,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run build && pnpm exec terra-docs build
+      - run: pnpm run build && pnpm exec docs build
 
   check:
     if: github.event_name == 'pull_request'

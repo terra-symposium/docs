@@ -8,7 +8,7 @@
 
 ### Patch Changes
 
-- 8b51562: Apply Terra Docs CLI options before configuring the generated site output.
+- 8b51562: Apply Docs CLI options before configuring the generated site output.
 - Align the page header, toolbar, and content spacing; unify quote styling, preserve list spacing, and compact the table of contents.
 
 ## 0.3.0

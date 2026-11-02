@@ -22,11 +22,11 @@ export async function openEditor(
       Object.assign(window, {
         __contentFixture: fixture,
         __contentOptions: settings,
-        __terraDocsMockResponses: settings.mockResponses,
+        __docsMockResponses: settings.mockResponses,
       });
     },
     { fixture: content, settings: options },
   );
   await page.goto('/editor-harness/');
-  await page.locator('[data-terra-content-editor]').first().waitFor();
+  await page.locator('[data-content-editor]').first().waitFor();
 }

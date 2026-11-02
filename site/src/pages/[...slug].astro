@@ -2,8 +2,8 @@
 import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
 import { pageForSlug, pageHref, siteNavigation, sitePages } from '../lib/catalog.js';
 
-const title = import.meta.env.PUBLIC_TERRA_DOCS_TITLE ?? 'Documentation';
-const description = import.meta.env.PUBLIC_TERRA_DOCS_DESCRIPTION ?? '';
+const title = import.meta.env.PUBLIC_DOCS_TITLE ?? 'Documentation';
+const description = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
 const base = import.meta.env.BASE_URL;
 
 export function getStaticPaths() {

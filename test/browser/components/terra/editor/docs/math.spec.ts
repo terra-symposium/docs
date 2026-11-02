@@ -8,7 +8,7 @@ const blockFixture = [
 const inlineFixture = [
   {
     _key: 'inline-math-paragraph',
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [
@@ -75,13 +75,13 @@ test('math.spec: Render inline within a paragraph', async ({ page }) => {
     }
   });
   await openEditor(page, inlineFixture);
-  const inline = page.locator('[data-terra-inline="math"]');
+  const inline = page.locator('[data-content-inline="math"]');
   await expect(inline.locator('.katex')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await expect
     .poll(() => page.evaluate(() => document.fonts.check('16px "KaTeX_Main"')))
     .toBe(true);
   expect(missingKatexFonts).toEqual([]);
-  await expect(page.locator('[data-terra-content-editor]')).toContainText('Equation');
-  await expect(page.locator('[data-terra-content-editor]')).toContainText('is useful.');
+  await expect(page.locator('[data-content-editor]')).toContainText('Equation');
+  await expect(page.locator('[data-content-editor]')).toContainText('is useful.');
 });

@@ -7,7 +7,7 @@ export default tseslint.config(
     ignores: [
       '**/.astro/**',
       '**/dist/**',
-      '**/.terra-docs/**',
+      '**/.docs/**',
       '**/node_modules/**',
       '**/tests/results/**',
       '**/coverage/**',
@@ -24,7 +24,7 @@ export default tseslint.config(
     languageOptions: { globals: globals.browser },
   },
   {
-    // The imported Terra editor still carries unchecked types and placeholder bindings.
+    // The imported Content editor still carries unchecked types and placeholder bindings.
     files: ['src/components/terra/**/*.{ts,tsx}', 'src/lib/terra/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/ban-ts-comment': 'off',

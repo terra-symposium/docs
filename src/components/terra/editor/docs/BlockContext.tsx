@@ -58,7 +58,7 @@ export function BlockContext({
                 }
                 if (!nActions.length) {
                   const block = (event.target as HTMLElement).closest<HTMLElement>(
-                    '[data-docs-editor-block], [data-docs-block], [data-terra-block]',
+                    '[data-docs-editor-block], [data-docs-block], [data-block]',
                   );
                   if (!block) {
                     event.stopPropagation();

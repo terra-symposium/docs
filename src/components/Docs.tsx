@@ -19,7 +19,7 @@ export type DocsProps = {
 /** Controlled editor surface backed by the canonical Docs editor. */
 export function Docs(props: DocsProps): JSX.Element {
   return (
-    <div className={['terra-docs', props.className].filter(Boolean).join(' ')}>
+    <div className={['docs', props.className].filter(Boolean).join(' ')}>
       <ContentEditor
         content={props.value}
         readOnly={props.mode === 'view'}

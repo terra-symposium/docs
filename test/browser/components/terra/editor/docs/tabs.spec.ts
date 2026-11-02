@@ -12,7 +12,7 @@ const XL_VIEWPORT_TEST = {
 
 const paragraph = (key: string, text: string) => ({
   _key: key,
-  _type: 'terraBlock' as const,
+  _type: 'block' as const,
   style: 'normal' as const,
   markDefs: [],
   children: [{ _key: `${key}-span`, _type: 'span' as const, marks: [], text }],
@@ -40,7 +40,7 @@ const tabsFixture = [
 
 test('tabs.spec: Switch tabs and emit structure edits', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, tabsFixture);
-  const tabs = page.locator('[data-terra-block="tabs"]');
+  const tabs = page.locator('[data-block="tabs"]');
   const firstTab = tabs.getByRole('tab', { name: 'First topic' });
   const firstPanelId = await firstTab.getAttribute('aria-controls');
   expect(firstPanelId).toBeTruthy();
@@ -100,7 +100,7 @@ test('tabs.spec: Switch tabs and emit structure edits', XL_VIEWPORT_TEST, async 
 test('tabs.spec: Emit active tab edits', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, tabsFixture);
   const nested = page
-    .locator('[data-terra-block="tabs"]')
+    .locator('[data-block="tabs"]')
     .getByRole('textbox', { name: 'Document editor' });
   await nested.click();
   await page.keyboard.press('End');
@@ -208,7 +208,7 @@ test('tabs.spec: Render source-backed table cells inside read-only tabs', async 
   await expect(tabs).toBeVisible();
 });
 
-test('tabs.spec: Render Sanity terraBlock cells inside production-shaped nested tables', async ({
+test('tabs.spec: Render Sanity block cells inside production-shaped nested tables', async ({
   page,
 }) => {
   const terraCell = (key: string, text: string) => ({
@@ -217,7 +217,7 @@ test('tabs.spec: Render Sanity terraBlock cells inside production-shaped nested 
     content: [
       {
         _key: `${key}-block`,
-        _type: 'terraBlock',
+        _type: 'block',
         children: [{ _key: `${key}-span`, _type: 'span', marks: [], text }],
         markDefs: [],
         style: 'normal',
@@ -301,7 +301,7 @@ test('tabs.spec: Render production legacy string children in table cells', async
     content: [
       {
         _key: `${key}-block`,
-        _type: 'terraBlock',
+        _type: 'block',
         children: text,
         markDefs: [],
         style: 'normal',

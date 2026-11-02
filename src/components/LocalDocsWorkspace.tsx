@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { markdownToDocsValue } from '../lib/markdown-model.js';
 import type { DocsQuizConfig } from './quiz.js';
-import { TerraDocsWorkspace } from './terra/Workspace.js';
+import { DocsWorkspace } from './terra/Workspace.js';
 import type { DocsBlockOptions } from './blocks.js';
 import type {
   DocsActionOperation,
@@ -277,7 +277,7 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
   }, [description, homePath, hue, pages, pathname, rootPath, title, tree]);
 
   return (
-    <TerraDocsWorkspace
+    <DocsWorkspace
       host={host}
       tree={tree}
       pathname={pathname}

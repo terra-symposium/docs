@@ -15,7 +15,7 @@ const codeFixture = [
 ] satisfies Content;
 
 test('code.spec: Render source and emit edits', XL_VIEWPORT_TEST, async ({ page }) => {
-  const code = page.locator('[data-terra-block="code"] .cm-content');
+  const code = page.locator('[data-block="code"] .cm-content');
   await test.step('Inject Code and verify it renders', async () => {
     await openEditor(page, codeFixture);
     await expect(code).toContainText('const answer = 1;');
@@ -34,7 +34,7 @@ test('code.spec: Render source and emit edits', XL_VIEWPORT_TEST, async ({ page 
 
 test('code.spec: Change language and copy source', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, codeFixture);
-  const code = page.locator('[data-terra-block="code"]');
+  const code = page.locator('[data-block="code"]');
   await code.getByRole('combobox').click();
   await page.getByRole('option', { name: 'javascript' }).click();
   await expect
@@ -53,7 +53,7 @@ test('code.spec: Change language and copy source', XL_VIEWPORT_TEST, async ({ pa
 
 test('code.spec: Preserve entered newlines', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, codeFixture);
-  const code = page.locator('[data-terra-block="code"] .cm-content');
+  const code = page.locator('[data-block="code"] .cm-content');
   await code.click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.press('Enter');

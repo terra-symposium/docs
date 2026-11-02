@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { colors, flattenColors, invert } from '@terra-symposium/styling';
-import { DocsLocalWorkspace, TerraDocsWorkspace } from '@terra-symposium/docs';
+import { DocsLocalWorkspace, DocsWorkspace } from '@terra-symposium/docs';
 import {
   createWorkspaceDemoHost,
   createWorkspaceDemoSeed,
@@ -111,11 +111,11 @@ export default function WorkspaceDemo({
       setState(readWorkspaceDemoState());
     };
     syncFixture();
-    window.addEventListener('terra-docs-fixture-updated', syncFixture);
+    window.addEventListener('docs-fixture-updated', syncFixture);
     window.addEventListener('popstate', syncFixture);
     if (syncParentOnNavigate) document.addEventListener('docs:navigate', syncLocation);
     return () => {
-      window.removeEventListener('terra-docs-fixture-updated', syncFixture);
+      window.removeEventListener('docs-fixture-updated', syncFixture);
       window.removeEventListener('popstate', syncFixture);
       if (syncParentOnNavigate) document.removeEventListener('docs:navigate', syncLocation);
     };
@@ -177,7 +177,7 @@ export default function WorkspaceDemo({
       {...(quizEnabled ? { quiz: demoQuiz } : {})}
     />
   ) : (
-    <TerraDocsWorkspace
+    <DocsWorkspace
       tree={routedWorkspaceTree(state, false)}
       host={host}
       pathname={

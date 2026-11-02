@@ -7,7 +7,7 @@ DOCS
 //////////////////////////////////////////////////*/
 
 /* Use one article quote treatment in both Markdown prose and portable content. */
-:is(.prose, .terra-docs-content) blockquote {
+:is(.prose, .docs-content) blockquote {
   display: flow-root;
   margin-block: 1.5rem;
   padding: 1rem;
@@ -20,20 +20,20 @@ DOCS
   line-height: inherit;
   quotes: none;
 }
-:is(.prose, .terra-docs-content) blockquote > :first-child {
+:is(.prose, .docs-content) blockquote > :first-child {
   margin-block-start: 0;
 }
-:is(.prose, .terra-docs-content) blockquote > :last-child {
+:is(.prose, .docs-content) blockquote > :last-child {
   margin-block-end: 0;
 }
-:is(.prose, .terra-docs-content) blockquote p:first-of-type::before,
-:is(.prose, .terra-docs-content) blockquote p:last-of-type::after {
+:is(.prose, .docs-content) blockquote p:first-of-type::before,
+:is(.prose, .docs-content) blockquote p:last-of-type::after {
   content: none;
 }
 
 /* Give callouts consistent separation in both the Docs article and Portable Text
    content surfaces. Portable Text does not always use the `.prose` wrapper. */
-:is(.prose, .terra-docs-content) aside[data-docs-aside] {
+:is(.prose, .docs-content) aside[data-docs-aside] {
   display: flow-root;
   margin-block: 0 2.5rem !important;
 }
@@ -98,26 +98,26 @@ DOCS
 
 /* Portable Text emits one list wrapper per block. Match the original Docs
    list rhythm while preserving the source level and ordered-list start value. */
-.terra-docs-content :is(ul, ol)[data-docs-list-level] {
+.docs-content :is(ul, ol)[data-docs-list-level] {
   list-style-position: outside;
   margin-block: 0;
   padding-inline-start: 1.5rem;
 }
 /* Keep list-item wrappers tight and put block spacing only after the list run. */
-.terra-docs-content > [data-list-item]:not(:has(+ [data-list-item])),
-.terra-docs-content
+.docs-content > [data-list-item]:not(:has(+ [data-list-item])),
+.docs-content
   > :is(ul, ol)[data-docs-list-level]:not(:has(+ :is(ul, ol)[data-docs-list-level])) {
   margin-block-end: 1rem;
 }
-.terra-docs-content :is(ul, ol)[data-docs-list-level] > li {
+.docs-content :is(ul, ol)[data-docs-list-level] > li {
   line-height: 1.5;
   margin-block: 0;
 }
-.terra-docs-content :is(ul, ol)[data-docs-list-level] > li > p {
+.docs-content :is(ul, ol)[data-docs-list-level] > li > p {
   line-height: 1.5;
   margin-block: 0;
 }
-.terra-docs-content > [data-list-item] {
+.docs-content > [data-list-item] {
   margin-block: 0;
 }
 

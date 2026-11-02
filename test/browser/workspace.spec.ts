@@ -22,9 +22,9 @@ test.beforeEach(async ({ page }) => {
     );
   });
   await page.addInitScript(() => {
-    const resetKey = 'terra-docs-fixture-initialized';
+    const resetKey = 'docs-fixture-initialized';
     if (sessionStorage.getItem(resetKey) === 'true') return;
-    localStorage.removeItem('terra-docs-workspace-demo-v1');
+    localStorage.removeItem('docs-workspace-demo-v1');
     sessionStorage.setItem(resetKey, 'true');
   });
 });
@@ -44,8 +44,8 @@ test('standalone Astro pages mount the extracted read-only workspace with their 
   await expect(page.getByRole('combobox', { name: 'Mode' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Search pages' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Install an instance' })).toBeVisible();
-  await page.screenshot({ path: '/tmp/terra-docs-static-desktop.png', fullPage: true });
-  const mobileHeader = page.locator('.terra-docs-workspace header.md\\:hidden');
+  await page.screenshot({ path: '/tmp/docs-static-desktop.png', fullPage: true });
+  const mobileHeader = page.locator('.docs-workspace header.md\\:hidden');
   await expect
     .poll(() => mobileHeader.evaluate((element) => getComputedStyle(element).display))
     .toBe('none');
@@ -53,12 +53,12 @@ test('standalone Astro pages mount the extracted read-only workspace with their 
   await expect
     .poll(() => mobileHeader.evaluate((element) => getComputedStyle(element).display))
     .toBe('none');
-  await page.screenshot({ path: '/tmp/terra-docs-static-breakpoint.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/docs-static-breakpoint.png', fullPage: true });
   await page.setViewportSize({ width: 767, height: 900 });
   await expect
     .poll(() => mobileHeader.evaluate((element) => getComputedStyle(element).display))
     .toBe('flex');
-  await page.screenshot({ path: '/tmp/terra-docs-static-mobile.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/docs-static-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   await page.getByRole('combobox', { name: 'Section' }).click();
@@ -88,11 +88,11 @@ test(
     const sectionSelect = page.getByRole('combobox', { name: 'Section' });
     await expect(sectionSelect).toBeVisible();
     await page.evaluate(() => {
-      const key = 'terra-docs-workspace-demo-v1';
+      const key = 'docs-workspace-demo-v1';
       const fixture = JSON.parse(localStorage.getItem(key) ?? '{}');
       fixture.tree = fixture.tree.slice(0, 1);
       localStorage.setItem(key, JSON.stringify(fixture));
-      window.dispatchEvent(new CustomEvent('terra-docs-fixture-updated'));
+      window.dispatchEvent(new CustomEvent('docs-fixture-updated'));
     });
 
     await expect(sectionSelect).toHaveCount(0);
@@ -105,7 +105,7 @@ test('local Markdown thematic breaks render as visible dividers in the Docs work
 }) => {
   await page.addInitScript(
     (fixture) => {
-      Object.assign(window, { __terraDocsLocalWorkspaceFixture: fixture });
+      Object.assign(window, { __docsLocalWorkspaceFixture: fixture });
     },
     {
       tree: [
@@ -158,7 +158,7 @@ test('Markdown ordered lists keep consecutive numbering and restart after a para
 }) => {
   await page.addInitScript(
     (fixture) => {
-      Object.assign(window, { __terraDocsLocalWorkspaceFixture: fixture });
+      Object.assign(window, { __docsLocalWorkspaceFixture: fixture });
     },
     {
       tree: [
@@ -274,7 +274,7 @@ test('section hues update without reload and color the page root, links, and dia
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.addInitScript(
     (fixture) => {
-      Object.assign(window, { __terraDocsLocalWorkspaceFixture: fixture });
+      Object.assign(window, { __docsLocalWorkspaceFixture: fixture });
     },
     {
       tree: [
@@ -445,11 +445,11 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
   await expect(page.getByRole('button', { name: 'Actions for group Start here' })).toHaveCount(0);
 
   const toolbarPosition = await page.evaluate(() => {
-    const header = document.querySelector('.terra-docs-document-header');
+    const header = document.querySelector('.docs-document-header');
     const toolbar = document.querySelector('[data-docs-toolbar-frame]');
     const mode = document.querySelector<HTMLElement>('[aria-label="Mode"]');
     const proseHeading = document.querySelector<HTMLElement>('[data-docs-view-root] h2');
-    const workspace = document.querySelector<HTMLElement>('.terra-docs-workspace');
+    const workspace = document.querySelector<HTMLElement>('.docs-workspace');
     return {
       followsHeader:
         !!header &&
@@ -473,7 +473,7 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
   expect(toolbarPosition.headingMarginTop).toBe('48px');
   const hostPalette = await page.evaluate(() => {
     const host = document.querySelector('.workspace-demo-theme');
-    const workspace = document.querySelector('.terra-docs-workspace');
+    const workspace = document.querySelector('.docs-workspace');
     return {
       host: host ? getComputedStyle(host).getPropertyValue('--primaryLight9').trim() : '',
       workspace: workspace
@@ -484,7 +484,7 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
   expect(hostPalette.host).not.toBe('');
   expect(hostPalette.workspace).toBe(hostPalette.host);
 
-  const mobileHeader = page.locator('.terra-docs-workspace header.md\\:hidden');
+  const mobileHeader = page.locator('.docs-workspace header.md\\:hidden');
   await expect
     .poll(() => mobileHeader.evaluate((element) => getComputedStyle(element).display))
     .toBe('none');
@@ -543,7 +543,7 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
   await expect(page.getByRole('menuitem', { name: 'Delete page' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Duplicate page' })).toBeVisible();
   await page.waitForTimeout(250);
-  await page.screenshot({ path: '/tmp/terra-docs-leaf-context-menu.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/docs-leaf-context-menu.png', fullPage: true });
   await page.keyboard.press('Escape');
   await leaf.hover();
   await expect(page.getByRole('button', { name: 'Reorder item' }).last()).toBeVisible();
@@ -554,13 +554,13 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
     .poll(() =>
       page.evaluate(() =>
         (
-          window as Window & { __terraDocsActionCalls?: Array<{ operation: string }> }
-        ).__terraDocsActionCalls?.some((call) => call.operation === 'write.doc.reorder'),
+          window as Window & { __docsActionCalls?: Array<{ operation: string }> }
+        ).__docsActionCalls?.some((call) => call.operation === 'write.doc.reorder'),
       ),
     )
     .toBe(true);
 
-  await page.screenshot({ path: '/tmp/terra-docs-shared-desktop.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/docs-shared-desktop.png', fullPage: true });
 });
 
 test(
@@ -574,7 +574,7 @@ test(
   },
   async ({ page }) => {
     await page.addInitScript(() => {
-      const key = 'terra-docs-document-instance-count';
+      const key = 'docs-document-instance-count';
       const current = Number(sessionStorage.getItem(key) ?? '0');
       sessionStorage.setItem(key, String(current + 1));
     });
@@ -605,7 +605,7 @@ test(
     await expect(editor).toContainText('Start with the product');
     await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
     await expect
-      .poll(() => page.evaluate(() => sessionStorage.getItem('terra-docs-document-instance-count')))
+      .poll(() => page.evaluate(() => sessionStorage.getItem('docs-document-instance-count')))
       .toBe('1');
   },
 );
@@ -629,7 +629,7 @@ test(
       document.addEventListener('docs:navigate', (event) => {
         const detail = (event as CustomEvent<{ pathname?: string }>).detail;
         if (detail.pathname && detail.pathname !== window.location.pathname) {
-          sessionStorage.setItem('terra-docs-stale-navigation', detail.pathname);
+          sessionStorage.setItem('docs-stale-navigation', detail.pathname);
         }
       });
     });
@@ -645,7 +645,7 @@ test(
     await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Leaf two');
     await expect(content).toContainText('Content from the second static leaf.');
     await expect
-      .poll(() => page.evaluate(() => sessionStorage.getItem('terra-docs-stale-navigation')))
+      .poll(() => page.evaluate(() => sessionStorage.getItem('docs-stale-navigation')))
       .toBeNull();
     expect(loadCount).toBe(2);
   },
@@ -675,7 +675,7 @@ test('view headings keep hover permalinks and the sidebar table of contents beha
     .toBe(`${origin}/workspace-demo/#start-with-the-product`);
 
   await page.evaluate(() => {
-    const key = 'terra-docs-workspace-demo-v1';
+    const key = 'docs-workspace-demo-v1';
     const state = JSON.parse(localStorage.getItem(key) ?? '{}');
     state.documents.salesphere.content.push({
       _key: 'heading-navigation-tail',
@@ -728,8 +728,8 @@ test('shared workspace performs deletion and opens attachment management from it
     .poll(() =>
       page.evaluate(() =>
         (
-          window as Window & { __terraDocsActionCalls?: Array<{ operation: string }> }
-        ).__terraDocsActionCalls?.some((call) => call.operation === 'write.doc.rm'),
+          window as Window & { __docsActionCalls?: Array<{ operation: string }> }
+        ).__docsActionCalls?.some((call) => call.operation === 'write.doc.rm'),
       ),
     )
     .toBe(true);
@@ -802,7 +802,7 @@ test('tree create, rename, duplicate, download, and delete persist through the o
   await expect(duplicate).toHaveCount(0);
 
   const storedBeforeReload = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}'),
+    JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}'),
   );
   expect(
     Object.values(storedBeforeReload.documents).map((item: { title: string }) => item.title),
@@ -838,7 +838,7 @@ test('group create, rename, reorder, and delete use the shared sidebar actions',
   await expect
     .poll(async () =>
       page.evaluate(() => {
-        const state = JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}');
+        const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
         return state.tree.some((node: { title?: string }) => node.title === 'Group lifecycle');
       }),
     )
@@ -859,7 +859,7 @@ test('group create, rename, reorder, and delete use the shared sidebar actions',
   await createDialog.getByRole('button', { name: 'Save', exact: true }).click();
 
   const sectionId = await page.evaluate(() => {
-    const state = JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}');
+    const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
     return state.tree.find((node: { title?: string }) => node.title === 'Group lifecycle').origName;
   });
   const group = page
@@ -881,7 +881,7 @@ test('group create, rename, reorder, and delete use the shared sidebar actions',
   await expect(renamedGroup).toBeVisible();
 
   const generalGroupId = await page.evaluate(() => {
-    const state = JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}');
+    const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
     return state.tree
       .find((node: { title?: string }) => node.title === 'Group lifecycle')
       .children.find((node: { title?: string }) => node.title === 'General').origName;
@@ -895,7 +895,7 @@ test('group create, rename, reorder, and delete use the shared sidebar actions',
   await expect
     .poll(async () =>
       page.evaluate(() => {
-        const value = JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}');
+        const value = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
         return value.tree
           .find((node: { title?: string }) => node.title === 'Group lifecycle')
           .children.map((node: { title?: string }) => node.title);
@@ -917,7 +917,7 @@ test('group create, rename, reorder, and delete use the shared sidebar actions',
       .filter({ hasText: 'Regression renamed' }),
   ).toHaveCount(0);
   const remainingGroups = await page.evaluate((id) => {
-    const state = JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}');
+    const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
     return state.tree.find((node: { origName?: string }) => node.origName === id).children;
   }, sectionId);
   expect(remainingGroups.map((node: { title?: string }) => node.title)).toEqual(['General']);
@@ -944,7 +944,7 @@ test('leaf reorder is stored and appears in the same order after reload', async 
     .poll(
       () =>
         page.evaluate(() => {
-          const state = JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}');
+          const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
           return state.tree[0].children[0].children.map(
             (node: { origName: string }) => node.origName,
           );
@@ -968,7 +968,7 @@ test('merging selected pages through the sidebar retains source content and all 
   await waitForWorkspaceReady(page);
 
   await page.evaluate(() => {
-    const key = 'terra-docs-workspace-demo-v1';
+    const key = 'docs-workspace-demo-v1';
     const state = JSON.parse(localStorage.getItem(key) ?? '{}');
     const attachment = {
       id: 'runtime-map-attachment',
@@ -1009,14 +1009,14 @@ test('merging selected pages through the sidebar retains source content and all 
   );
 
   const persisted = await page.evaluate(() => {
-    const state = JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}');
+    const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
     return {
       runtimeMapExists: Boolean(state.documents['runtime-map']),
       merged: state.documents.salesphere,
       runtimeAssetOwner: state.assets['/assets/runtime-trace.zip']?.docId,
       retargetWasCalled: (
-        window as Window & { __terraDocsActionCalls?: Array<{ operation: string }> }
-      ).__terraDocsActionCalls?.some((call) => call.operation === 'write.doc.retargetSources'),
+        window as Window & { __docsActionCalls?: Array<{ operation: string }> }
+      ).__docsActionCalls?.some((call) => call.operation === 'write.doc.retargetSources'),
     };
   });
   expect(persisted.runtimeMapExists).toBe(false);
@@ -1062,8 +1062,8 @@ test('attachment upload, open, download, and deletion persist across reloads', a
     .poll(() =>
       page.evaluate(() =>
         (
-          window as Window & { __terraDocsActionCalls?: Array<{ operation: string }> }
-        ).__terraDocsActionCalls?.some((call) => call.operation === 'write.asset.upload'),
+          window as Window & { __docsActionCalls?: Array<{ operation: string }> }
+        ).__docsActionCalls?.some((call) => call.operation === 'write.asset.upload'),
       ),
     )
     .toBe(true);
@@ -1092,7 +1092,7 @@ test('attachment upload, open, download, and deletion persist across reloads', a
   await expect(page.getByText(filename, { exact: true })).toHaveCount(0);
 
   const stateWithoutAttachment = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}'),
+    JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}'),
   );
   expect(stateWithoutAttachment.documents.salesphere.attachments).not.toContainEqual(
     expect.objectContaining({ name: filename }),
@@ -1126,7 +1126,7 @@ test('visual edits save, reload, and restore a prior revision through history', 
   await expect(title).toHaveValue('Salesphere saved title');
 
   const saved = await page.evaluate(() =>
-    JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}'),
+    JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}'),
   );
   expect(saved.documents.salesphere.title).toBe('Salesphere saved title');
   expect(JSON.stringify(saved.documents.salesphere.content)).toContain(
@@ -1240,7 +1240,7 @@ test('section creation is retained, and menus remain keyboard accessible and por
   await expect
     .poll(async () =>
       page.evaluate(() => {
-        const value = JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}');
+        const value = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
         return value.tree.some((node: { title?: string }) => node.title === 'Created from browser');
       }),
     )
@@ -1266,7 +1266,7 @@ test('remote editors get visual authoring controls while Code remains document c
   await expect(page.getByRole('button', { name: 'Save' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Block type' })).toBeVisible();
   await expect(page.getByText('e.replace is not a function')).toHaveCount(0);
-  await page.screenshot({ path: '/tmp/terra-docs-edit-desktop.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/docs-edit-desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Insert content' }).click();
   const insertMenu = page.getByRole('listbox');
   await expect(insertMenu.getByRole('option', { name: 'Accordion', exact: true })).toBeVisible();
@@ -1300,7 +1300,7 @@ test('local read-only workspaces expose View and Attachments, with leaf files in
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: '/tmp/terra-docs-shared-mobile.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/docs-shared-mobile.png', fullPage: true });
 });
 
 test('host branding stays in the sidebar while leaf metadata stays in the document header', async ({
@@ -1309,7 +1309,7 @@ test('host branding stays in the sidebar while leaf metadata stays in the docume
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/workspace-readonly/');
   await expect(page.getByRole('link', { name: 'Salesphere Docs' })).toBeVisible();
-  const header = page.locator('.terra-docs-document-header');
+  const header = page.locator('.docs-document-header');
   await expect(header).toContainText('Salesphere');
   await expect(header).toContainText('A page level description for the Salesphere overview.');
   await expect(header).not.toContainText('Product and engineering documentation.');

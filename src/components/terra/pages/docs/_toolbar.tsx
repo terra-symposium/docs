@@ -1371,7 +1371,7 @@ const TOOLBAR_COMPONENTS = {
               else if (
                 el
                   ?.closest('td, th')
-                  ?.closest('[data-docs-editor-block="DocsTable"], [data-terra-block="table"]')
+                  ?.closest('[data-docs-editor-block="DocsTable"], [data-block="table"]')
               )
                 savedBlock.current = null;
               const blockVal = el

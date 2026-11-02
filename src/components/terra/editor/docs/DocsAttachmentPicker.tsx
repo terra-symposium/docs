@@ -110,7 +110,7 @@ export function DocsAttachmentPicker({
                 const linkKey = crypto.randomUUID();
                 onConfirm({
                   _key: crypto.randomUUID(),
-                  _type: 'terraBlock',
+                  _type: 'block',
                   children: [
                     {
                       _key: crypto.randomUUID(),

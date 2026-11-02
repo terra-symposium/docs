@@ -147,7 +147,7 @@ function CodeEditor({
           {...attrs}
           ref={boundary}
           contentEditable={false}
-          data-terra-block="code"
+          data-block="code"
           data-docs-editor-block="code"
         >
           <CodeBlock

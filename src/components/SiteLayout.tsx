@@ -8,7 +8,7 @@ import type { DocsQuizConfig } from './quiz.js';
  * Compatibility adapter for static React sites.
  *
  * All navigation, page chrome, modes, and document rendering are delegated to
- * the same TerraDocsWorkspace used by the local and remote host adapters.
+ * the same DocsWorkspace used by the local and remote host adapters.
  */
 export function DocsSiteLayout({
   title,

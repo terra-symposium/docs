@@ -17,7 +17,7 @@ declare global {
       readOnly?: boolean;
       toolbar?: boolean;
     };
-    __terraDocsMockResponses?: Record<
+    __docsMockResponses?: Record<
       string,
       { data?: unknown; dataByInput?: Record<string, unknown>; error?: string }
     >;
@@ -28,7 +28,7 @@ function mapContent(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(mapContent);
   if (!value || typeof value !== 'object') return value;
   const node = value as Record<string, unknown>;
-  const type = node._type === 'terraBlock' ? 'block' : node._type;
+  const type = node._type === 'block' ? 'block' : node._type;
   return Object.fromEntries(
     Object.entries(node).map(([key, entry]) => [key, key === '_type' ? type : mapContent(entry)]),
   );
@@ -48,7 +48,7 @@ const host: DocsHostAdapter = {
     op: DocsActionOperation,
     input?: unknown,
   ): Promise<{ data?: T; error?: unknown }> {
-    const mock = typeof window === 'undefined' ? undefined : window.__terraDocsMockResponses?.[op];
+    const mock = typeof window === 'undefined' ? undefined : window.__docsMockResponses?.[op];
     if (mock?.error) return { error: new Error(mock.error) };
     const inputKey =
       input && typeof input === 'object' && 'source' in input
@@ -79,7 +79,7 @@ export default function EditorHarness(): JSX.Element {
   return (
     <StrictMode>
       <div className="docs-theme-scope">
-        <main className="terra-docs-workspace mx-auto min-h-svh max-w-5xl p-6">
+        <main className="docs-workspace mx-auto min-h-svh max-w-5xl p-6">
           <ContentEditor
             content={content}
             {...(options.attachments ? { docsAttachments: options.attachments } : {})}

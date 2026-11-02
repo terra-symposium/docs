@@ -231,7 +231,7 @@ function NestedContent({ value }: { value: unknown }): JSX.Element {
     );
 
   const member = value as RichBlock;
-  if (member._type === 'block' || member._type === 'terraBlock')
+  if (member._type === 'block' || member._type === 'block')
     return <PortableTextBlockView block={member} />;
   if (typeof member._type === 'string' && DOCS_BLOCK_TYPES.includes(member._type as DocsBlockType))
     return <DocsRichBlock block={member} />;
@@ -258,11 +258,11 @@ function Diagram({ block }: { block: RichBlock }): JSX.Element {
     ]),
   );
   return (
-    <figure className="terra-docs-diagram">
+    <figure className="docs-diagram">
       <svg role="img" aria-label="Document diagram" viewBox={`0 0 ${width} ${height}`}>
         <defs>
           <marker
-            id="terra-docs-arrow"
+            id="docs-arrow"
             markerWidth="8"
             markerHeight="8"
             refX="7"
@@ -283,7 +283,7 @@ function Diagram({ block }: { block: RichBlock }): JSX.Element {
               x2={to.x}
               y2={to.y}
               stroke="currentColor"
-              markerEnd="url(#terra-docs-arrow)"
+              markerEnd="url(#docs-arrow)"
             />
           ) : null;
         })}
@@ -323,11 +323,11 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
   const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
   switch (block._type) {
     case 'block':
-    case 'terraBlock':
+    case 'block':
       return <PortableTextBlockView block={block} />;
     case 'accordion':
       return (
-        <div className="terra-docs-accordions">
+        <div className="docs-accordions">
           {items.map((v, i) => (
             <details key={i}>
               <summary>{text(v.title)}</summary>
@@ -340,7 +340,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
       );
     case 'tabs':
       return (
-        <div className="terra-docs-tabs" role="tablist">
+        <div className="docs-tabs" role="tablist">
           {items.map((v, i) => (
             <details key={i} open={i === 0}>
               <summary>{text(v.title)}</summary>
@@ -353,7 +353,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
       );
     case 'table':
       return (
-        <section className="terra-docs-table">
+        <section className="docs-table">
           <strong>{text(block.header)}</strong>
           <table>
             <tbody>
@@ -378,7 +378,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
       const markdown = typeof block.markdown === 'string' ? block.markdown : undefined;
       return (
         <aside
-          className={`terra-docs-callout terra-docs-callout-${text(block.kind).replace(/[^a-z0-9-]/gi, '') || 'info'}`}
+          className={`docs-callout docs-callout-${text(block.kind).replace(/[^a-z0-9-]/gi, '') || 'info'}`}
         >
           <strong>{text(block.title)}</strong>
           <div>
@@ -389,7 +389,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
     }
     case 'code':
       return (
-        <pre className="terra-docs-code">
+        <pre className="docs-code">
           <code data-language={text(block.language)}>{text(block.value)}</code>
         </pre>
       );
@@ -423,13 +423,13 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
       });
       return block.inline ? (
         <span
-          className="terra-docs-math"
+          className="docs-math"
           aria-label={code}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
         <div
-          className="terra-docs-math"
+          className="docs-math"
           aria-label={code}
           dangerouslySetInnerHTML={{ __html: html }}
         />
@@ -440,13 +440,13 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
     case 'raw':
       return (
         <div
-          className="terra-docs-raw"
+          className="docs-raw"
           dangerouslySetInnerHTML={{ __html: renderMarkdown(text(block.markdown)) }}
         />
       );
     case 'tsDocs':
       return (
-        <section className="terra-docs-tsdocs">
+        <section className="docs-tsdocs">
           <strong>TypeScript: {text(block.scope)}</strong>
           {block.markdown && <p>{text(block.markdown)}</p>}
         </section>
@@ -487,7 +487,7 @@ function BlockEditor({
   const nodes = Array.isArray(block.nodes) ? (block.nodes as Record<string, unknown>[]) : [];
   const edges = Array.isArray(block.edges) ? (block.edges as Record<string, unknown>[]) : [];
   return (
-    <div className="terra-docs-rich-editor">
+    <div className="docs-rich-editor">
       <DocsRichBlock block={block} />
       {!readOnly && (
         <>
@@ -495,7 +495,7 @@ function BlockEditor({
             Edit {type}
           </button>
           {expanded && (
-            <div className="terra-docs-rich-fields">
+            <div className="docs-rich-fields">
               {fields.map((field) => {
                 const value = block[field.name];
                 if (field.name === 'items')
@@ -503,7 +503,7 @@ function BlockEditor({
                     <fieldset key="items">
                       <legend>Items</legend>
                       {items.map((v, r) => (
-                        <div className="terra-docs-rich-item" key={r}>
+                        <div className="docs-rich-item" key={r}>
                           <label>
                             Title
                             <input
@@ -566,7 +566,7 @@ function BlockEditor({
                           ? (row.cells as Record<string, unknown>[])
                           : [];
                         return (
-                          <div key={rowIndex} className="terra-docs-rich-item">
+                          <div key={rowIndex} className="docs-rich-item">
                             {cells.map((cell, cellIndex) => (
                               <label key={cellIndex}>
                                 Cell {cellIndex + 1}
@@ -652,7 +652,7 @@ function BlockEditor({
                     <fieldset key="nodes">
                       <legend>Diagram nodes</legend>
                       {nodes.map((node, v) => (
-                        <div key={v} className="terra-docs-rich-item">
+                        <div key={v} className="docs-rich-item">
                           <label>
                             ID
                             <input
@@ -720,7 +720,7 @@ function BlockEditor({
                     <fieldset key="edges">
                       <legend>Connections</legend>
                       {edges.map((edge, v) => (
-                        <div key={v} className="terra-docs-rich-item">
+                        <div key={v} className="docs-rich-item">
                           {(['source', 'target'] as const).map((name) => (
                             <label key={name}>
                               {name}

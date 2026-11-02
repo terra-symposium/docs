@@ -35,7 +35,7 @@ test('default registry inserts code content and exposes every shared block', asy
     await expect(blocks.getByRole('option', { name: block, exact: true })).toBeVisible();
   }
   await blocks.getByRole('option', { name: 'Code', exact: true }).click();
-  await expect(page.locator('[data-terra-block="code"]')).toBeVisible();
+  await expect(page.locator('[data-block="code"]')).toBeVisible();
   await expect
     .poll(async () => {
       const value = JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]');

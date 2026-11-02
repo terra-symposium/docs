@@ -24,7 +24,7 @@ const imageFixture = [
 
 test('image.spec: Render metadata and emit field edits', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, imageFixture);
-  const image = page.locator('[data-terra-block="docImage"]');
+  const image = page.locator('[data-block="docImage"]');
   await expect(image.getByRole('img', { name: 'A one-pixel Terra image' })).toBeVisible();
   await expect(image.getByText('Original caption')).toBeVisible();
 
@@ -53,9 +53,9 @@ test('image.spec: Render metadata and emit field edits', XL_VIEWPORT_TEST, async
 test('image.spec: Delete only the selected block', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, imageFixture);
   await page
-    .locator('[data-terra-block="docImage"]')
+    .locator('[data-block="docImage"]')
     .getByRole('button', { name: 'Delete image' })
     .click();
-  await expect(page.locator('[data-terra-block="docImage"]')).toHaveCount(0);
+  await expect(page.locator('[data-block="docImage"]')).toHaveCount(0);
   await expect(page.getByTestId('editor-output')).toContainText('[]');
 });

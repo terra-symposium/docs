@@ -120,7 +120,7 @@ function ImgEditor({
         {...attrs}
         contentEditable={false}
         className="my-8 rounded-xl border border-secondary-6 bg-secondary-1/40 p-4 shadow-sm sm:p-5"
-        data-terra-block="docImage"
+        data-block="docImage"
       >
         <div className="flex items-center gap-3 border-b border-secondary-5 pb-3 text-primary-12">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary-3 text-secondary-11">

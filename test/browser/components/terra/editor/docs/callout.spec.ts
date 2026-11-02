@@ -15,7 +15,7 @@ const calloutFixture = [
     content: [
       {
         _key: 'callout-paragraph',
-        _type: 'terraBlock',
+        _type: 'block',
         style: 'normal',
         markDefs: [],
         children: [{ _key: 'callout-text', _type: 'span', marks: [], text: 'Nested explanation' }],
@@ -26,7 +26,7 @@ const calloutFixture = [
 
 test('callout.spec: Render content and emit title edits', async ({ page }) => {
   await openEditor(page, calloutFixture);
-  const callout = page.locator('[data-terra-block="callout"]');
+  const callout = page.locator('[data-block="callout"]');
   await expect(callout).toHaveAttribute('data-docs-aside', 'example');
   await expect(callout).toContainText('Nested explanation');
   await callout.getByRole('textbox', { name: 'Callout title' }).fill('Updated example');
@@ -42,7 +42,7 @@ test('callout.spec: Render content and emit title edits', async ({ page }) => {
 test('callout.spec: Emit nested content edits', async ({ page }) => {
   await openEditor(page, calloutFixture);
   const nested = page
-    .locator('[data-terra-block="callout"]')
+    .locator('[data-block="callout"]')
     .getByRole('textbox', { name: 'Document editor' });
   await nested.click();
   await page.keyboard.press('End');
@@ -63,7 +63,7 @@ test('callout.spec: Imported directives retain rich body while edited content se
     page,
     markdownToDocsValue(':::warning[Check this]\nReview **the source**.\n:::'),
   );
-  const callout = page.locator('[data-terra-block="callout"]');
+  const callout = page.locator('[data-block="callout"]');
   await expect(callout).toContainText('Review the source.');
   const nested = callout.getByRole('textbox', { name: 'Document editor' });
   await nested.click();

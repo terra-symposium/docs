@@ -13,13 +13,13 @@ pnpm add -D @terra-symposium/docs
 Add Markdown files under `docs/`, then run:
 
 ```sh
-pnpm exec terra-docs dev
-pnpm exec terra-docs build
+pnpm exec docs dev
+pnpm exec docs build
 ```
 
 The package creates the routes, navigation, Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. `.mdx` files can import interactive examples. Optional `title`, `description`, `hue`, and `sidebar` frontmatter are available when needed. Build output defaults to `dist/docs/`.
 
-Move the full agent tree into `docs/agents/`. `SKILL.md` files there route as the index page for their folder, so the complete tree uses normal Docs navigation, search, and asset handling. The Agents section is included by default. Set `terraDocs.includeAgents` to `false` in the repository's `package.json`, or pass `--agents false`, to hide it for one Docs instance.
+Move the full agent tree into `docs/agents/`. `SKILL.md` files there route as the index page for their folder, so the complete tree uses normal Docs navigation, search, and asset handling. The Agents section is included by default. Set `docs.includeAgents` to `false` in the repository's `package.json`, or pass `--agents false`, to hide it for one Docs instance.
 
 Configure a deployment base path with `--base /project-docs/`, and optionally set `--site`, `--title`, and `--description`. Each repository builds its own site; the starter CI checks builds and leaves deployment to the repository owner.
 
@@ -54,9 +54,9 @@ Build commands: `pnpm run check`, `pnpm run build`, `pnpm run build:demo`, and `
 
 The reusable block registry includes accordions, tabs, tables, callouts, code, images, embeds, math, diagrams, raw Markdown, and TypeScript documentation. All are available by default; hosts can disable individual members with the `blocks` prop. Local repository pages stay read-only in the browser.
 
-Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, generate }}` on `DocsLocalWorkspace`, `DocsStaticWorkspace`, or `TerraDocsWorkspace`. The `generate` callback receives the current leaf title and Markdown plus the requested question count and types, and must return `{ title, questions }`. Multiple-choice questions use `{ type: 'multipleChoice', prompt, opts, answer, explanation?, section? }`; keyword questions use `{ type: 'keyword', prompt, answers, keywords?, explanation?, section? }`. Hosts should implement that callback through a server endpoint and keep `OPENAI_API_KEY` in server-side secret storage. The shared Docs package never accepts or stores API keys.
+Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, generate }}` on `DocsLocalWorkspace`, `DocsStaticWorkspace`, or `DocsWorkspace`. The `generate` callback receives the current leaf title and Markdown plus the requested question count and types, and must return `{ title, questions }`. Multiple-choice questions use `{ type: 'multipleChoice', prompt, opts, answer, explanation?, section? }`; keyword questions use `{ type: 'keyword', prompt, answers, keywords?, explanation?, section? }`. Hosts should implement that callback through a server endpoint and keep `OPENAI_API_KEY` in server-side secret storage. The shared Docs package never accepts or stores API keys.
 
-Individual leaves can expose the same flow with a `:::terra-docs quiz` Markdown block. The repository-level toolbar option is off by default.
+Individual leaves can expose the same flow with a `:::docs quiz` Markdown block. The repository-level toolbar option is off by default.
 
 ## Embed a Docs workspace
 
@@ -95,4 +95,4 @@ const sections: DocsSection[] = [
 </DocsSiteLayout>;
 ```
 
-`DocsSiteLayout` delegates to the canonical shared workspace and is intended for static React pages. Repository-backed hosts should use `DocsLocalWorkspace`, which loads each leaf and its adjacent attachments from the host-provided tree and remains read-only. Remote hosts should use `TerraDocsWorkspace` with a `DocsHostAdapter`; that adapter supplies the original tree controls and performs create, rename, duplicate, reorder, attachment, export, and delete operations after applying the host's own permission checks.
+`DocsSiteLayout` delegates to the canonical shared workspace and is intended for static React pages. Repository-backed hosts should use `DocsLocalWorkspace`, which loads each leaf and its adjacent attachments from the host-provided tree and remains read-only. Remote hosts should use `DocsWorkspace` with a `DocsHostAdapter`; that adapter supplies the original tree controls and performs create, rename, duplicate, reorder, attachment, export, and delete operations after applying the host's own permission checks.

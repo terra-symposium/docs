@@ -22,7 +22,7 @@ const accordionFixture = [
         content: [
           {
             _key: 'first-paragraph',
-            _type: 'terraBlock',
+            _type: 'block',
             style: 'normal',
             markDefs: [],
             children: [
@@ -45,7 +45,7 @@ test(
   XL_VIEWPORT_TEST,
   async ({ page }) => {
     await openEditor(page, accordionFixture);
-    const accordion = page.locator('[data-terra-block="accordion"]');
+    const accordion = page.locator('[data-block="accordion"]');
     await accordion.getByRole('button', { name: 'Toggle First section' }).click();
     await expect(accordion.getByText('Nested accordion explanation')).toBeVisible();
 
@@ -75,7 +75,7 @@ test(
 
 test('accordion.spec: Emit nested content edits', XL_VIEWPORT_TEST, async ({ page }) => {
   await openEditor(page, accordionFixture);
-  const accordion = page.locator('[data-terra-block="accordion"]');
+  const accordion = page.locator('[data-block="accordion"]');
   await accordion.getByRole('button', { name: 'Toggle First section' }).click();
   const nested = accordion.getByRole('textbox', { name: 'Document editor' });
   await nested.click();

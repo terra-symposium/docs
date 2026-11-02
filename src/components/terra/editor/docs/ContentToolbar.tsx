@@ -41,7 +41,7 @@ import type { JSX, MouseEvent, MouseEventHandler, ReactNode } from 'react';
 type DocsInsertionType = DocsBlockType | 'attachment';
 type DocsInsertion = { label: string; type: DocsInsertionType; value: string };
 
-/** Keep the Docs insertion order and labels from Terra's original editor. */
+/** Keep the Docs insertion order and labels from the original shared editor. */
 const DOCS_INSERTIONS: readonly DocsInsertion[] = [
   { label: 'Math', type: 'math', value: 'docs:math' },
   { label: 'Code', type: 'code', value: 'docs:code' },
@@ -57,8 +57,8 @@ const DOCS_INSERTIONS: readonly DocsInsertion[] = [
   { label: 'Accordion', type: 'accordion', value: 'docs:accordion' },
 ];
 
-/** Formatting and insertion controls mechanically adapted from Terra's original Docs toolbar. */
-export function TerraToolbar({
+/** Formatting and insertion controls mechanically adapted from the original Docs toolbar. */
+export function ContentToolbar({
   actions,
   attachments,
   blocks,
@@ -118,7 +118,7 @@ export function TerraToolbar({
     editor.send({ type: 'focus' });
   };
   const insertAttachment = (member: Record<string, unknown>): void => {
-    if (member._type === 'terraBlock') {
+    if (member._type === 'block') {
       editor.send({
         type: 'insert.block',
         block: { ...member, _type: 'block' },
@@ -144,7 +144,7 @@ export function TerraToolbar({
   const availableBlocks = enabledDocsBlocks(blocks);
 
   return (
-    <ErrorBoundary name="TerraToolbar">
+    <ErrorBoundary name="ContentToolbar">
       <div
         className="flex flex-wrap items-center gap-1.5 rounded-xl border border-primary-7 bg-primary-3 px-3 py-2 shadow-lg shadow-primary-12/20 sm:px-4"
         role="toolbar"

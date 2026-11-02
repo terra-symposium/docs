@@ -39,16 +39,16 @@
     "./not-found.astro": "./src/components/NotFound.astro"
   },
   "bin": {
-    "terra-docs": "bin/terra-docs.mjs"
+    "docs": "bin/docs.mjs"
   },
-  "terraDocs": {
+  "docs": {
     "title": "Docs",
     "description": "Docs workspace and Markdown site generator.",
     "out": "dist/docs"
   },
   "scripts": {
     "dev": "terra-quality-dev -- vite --host 127.0.0.1 --open",
-    "docs": "pnpm run build && node bin/terra-docs.mjs docs",
+    "docs": "pnpm run build && node bin/docs.mjs docs",
     "build": "rm -rf dist/lib && tsc && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss tailwind.postcss.config.cjs -c tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
     "check": "prettier --check . && eslint . && tsc --noEmit && tsc -p tsconfig.demo.json",
     "test:browser": "pnpm run build && pnpm exec astro build --config config/astro.config.mjs && node scripts/acquire-playwright-port.mjs && pnpm exec playwright test --config config/playwright.config.ts",

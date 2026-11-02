@@ -206,7 +206,7 @@ const EditorSurfaces = {
       let frame = 0;
       const mountObserver = {
         check(): void {
-          const root = body.querySelector<HTMLElement>('[data-terra-content-editor]');
+          const root = body.querySelector<HTMLElement>('[data-content-editor]');
           if (root) {
             setEditorMount(surface.path, 'root', true);
             observer.disconnect();
@@ -342,7 +342,7 @@ const EditorSurfaces = {
               onChange={(c) => {
                 surface.onBodyChange(
                   toPortableBody(
-                    c.map((b) => (b._type === 'terraBlock' ? { ...b, _type: 'block' } : b)),
+                    c.map((b) => (b._type === 'block' ? { ...b, _type: 'block' } : b)),
                   ),
                 );
               }}
@@ -489,7 +489,7 @@ const EditorSurfaces = {
     // RENDER
     // prettier-ignore
     return (
-			<header className='terra-docs-document-header relative z-10 w-full print:!mb-8 print:border-none'>
+			<header className='docs-document-header relative z-10 w-full print:!mb-8 print:border-none'>
 				<div className={cn('mx-auto w-full px-6 transition-opacity duration-200 md:px-10 print:!pb-3', compact ? 'pb-3 pt-5' : 'pb-10 pt-7', full ? 'max-w-none' : 'max-w-7xl')}>
 					<div>
 						<Label htmlFor='docs-title' className='sr-only'>
@@ -676,7 +676,7 @@ export default function Scaffold({
   const [currDoc, setCurrDoc] = useState({ pathname: initPathname, path: initPath, title: initTitle, description: initDesc, contributors, updatedAt: initUpdatedAt, source: initSrc || (typeof initContent === 'string' ? initContent : ''), content: toPortableBody(initContent), compiledMDX: initMdx, versions: [] as DocVer[] });
 
   // The shared Docs index route opens the first readable leaf in the first section
-  // that contains one, so each Terra Docs host gets a useful landing page without
+  // that contains one, so each Docs host gets a useful landing page without
   // needing a separately authored index document.
   useEffect(() => {
     if (standalone || staticContent) return;
@@ -1033,7 +1033,7 @@ export default function Scaffold({
   }
   return (
     <SidebarProvider
-      className="terra-docs-workspace font-docs"
+      className="docs-workspace font-docs"
       open={hydrated ? navigationState.open : true}
       onOpenChange={(n) => {
         $sidebar.set(n);

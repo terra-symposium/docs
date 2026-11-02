@@ -4,7 +4,7 @@ export const quizDemoLeaf = {
   path: 'content/course/quiz-leaf/index.md',
   title: 'Course Leaf',
   markdown:
-    'Leaf source: routing sends packets between networks.\n\n:::terra-docs quiz\n_type: quiz\n:::',
+    'Leaf source: routing sends packets between networks.\n\n:::docs quiz\n_type: quiz\n:::',
 };
 
 /** Stable sample response for review, run, and score coverage. */

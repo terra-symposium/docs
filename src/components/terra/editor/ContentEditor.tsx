@@ -15,7 +15,7 @@ import { NodePlugin } from '@portabletext/editor/plugins';
 import { DOCS_BLOCK_TYPES } from '../../blocks.js';
 import type { DocsBlockOptions, DocsBlockType } from '../../blocks.js';
 import { BlockContext } from './docs/BlockContext.js';
-import { TERRA_CONTENT_PROSE_CLASS } from './terra-content.styles.js';
+import { CONTENT_PROSE_CLASS } from './content.styles.js';
 import { renderCallout } from './docs/_Callout.js';
 import { renderCode } from './docs/_DocsCode.js';
 import { renderImage } from './docs/_DocsImage.js';
@@ -29,7 +29,7 @@ import { TsDocs } from './docs/_TsDocs.js';
 import { DocsQuizBlock } from '../../quiz.js';
 import MathInline from './docs/_math_inline.js';
 import { DocsHeading } from './docs/heading.js';
-import { TerraToolbar } from './docs/TerraToolbar.js';
+import { ContentToolbar } from './docs/ContentToolbar.js';
 import type { DocsHostAttachment } from '../../../lib/host.js';
 import { createDocsSchema, safeLink } from '../../../lib/schema.js';
 import { ErrorBoundary } from '../ui.js';
@@ -137,7 +137,7 @@ function normNestedContent(value: unknown, options: DocsBlockOptions): unknown {
 /** Translate the stored Terra text-block alias into Portable Text's editor member. */
 function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): EditorValue {
   return value.filter(isMember).map((member) => {
-    if (member._type === 'block' || member._type === 'terraBlock') {
+    if (member._type === 'block' || member._type === 'block') {
       const { c, children, ...rest } = member;
       return {
         ...rest,
@@ -223,13 +223,13 @@ function restoreTextChildren(value: unknown): unknown {
 }
 
 /** Restore editor aliases and recursively preserve nested Portable Text source. */
-function toTerraValue(value: EditorValue): unknown[] {
+function toContentValue(value: EditorValue): unknown[] {
   return value.map((block) => {
     const member = block as unknown as ContentMember;
     if (member._type === 'block')
       return {
         ...member,
-        _type: 'terraBlock',
+        _type: 'block',
         children: restoreTextChildren(member.children),
       };
     if (member._type === 'todoBlock' && isPreservedMember(member.source)) return member.source;
@@ -237,7 +237,7 @@ function toTerraValue(value: EditorValue): unknown[] {
       return {
         ...member,
         content: Array.isArray(member.content)
-          ? toTerraValue(member.content as EditorValue)
+          ? toContentValue(member.content as EditorValue)
           : member.content,
       };
     if (member._type === 'tabs' || member._type === 'accordion')
@@ -249,7 +249,7 @@ function toTerraValue(value: EditorValue): unknown[] {
                 ? {
                     ...i,
                     content: Array.isArray(i.content)
-                      ? toTerraValue(i.content as EditorValue)
+                      ? toContentValue(i.content as EditorValue)
                       : i.content,
                   }
                 : i,
@@ -270,7 +270,7 @@ function toTerraValue(value: EditorValue): unknown[] {
                             ? {
                                 ...cell,
                                 content: Array.isArray(cell.content)
-                                  ? toTerraValue(cell.content as EditorValue)
+                                  ? toContentValue(cell.content as EditorValue)
                                   : cell.content,
                               }
                             : cell,
@@ -333,7 +333,7 @@ function OrderedListItem({
   );
 }
 
-function TerraTextBlock({ attributes: attrs, children, node, readOnly }: any): JSX.Element {
+function ContentTextBlock({ attributes: attrs, children, node, readOnly }: any): JSX.Element {
   const content = renderTextStyle(node.style, children, readOnly);
   if (!node.listItem)
     return (
@@ -393,7 +393,7 @@ function ContentChangeListener({ onChange }: { onChange: (content: unknown[]) =>
   useEffect(() => {
     if (previous.current === value) return;
     previous.current = value;
-    onChange(toTerraValue(value as EditorValue));
+    onChange(toContentValue(value as EditorValue));
   }, [onChange, value]);
   return null;
 }
@@ -418,7 +418,7 @@ function validNesting(value: unknown, depth = 0): true | string {
   return true;
 }
 
-/** Portable Docs editor profile extracted from Terra's shared content editor. */
+/** Portable Docs editor profile extracted from the shared content editor. */
 export function ContentEditor({
   content = [],
   onChange,
@@ -455,7 +455,7 @@ export function ContentEditor({
   const nodes = [
     defineTextBlock({
       type: 'block',
-      render: (props) => <TerraTextBlock {...props} />,
+      render: (props) => <ContentTextBlock {...props} />,
     }),
     ...Object.entries(rendererByType)
       .filter(([type]) => blocks[type as DocsBlockType] !== false)
@@ -482,12 +482,12 @@ export function ContentEditor({
         {!readOnly && <ContentChangeListener onChange={updateContent} />}
         {!readOnly && toolbar && (
           <div className="not-prose sticky top-3 z-20 mb-3">
-            <TerraToolbar
+            <ContentToolbar
               nested={nested}
               actions={toolbarActions}
               attachments={docsAttachments}
               blocks={blocks}
-              onChange={(value) => updateContent(toTerraValue(value as EditorValue))}
+              onChange={(value) => updateContent(toContentValue(value as EditorValue))}
             />
           </div>
         )}
@@ -496,13 +496,13 @@ export function ContentEditor({
           <section
             aria-label={readOnly ? 'Content preview' : 'Content editor'}
             className="bg-transparent"
-            data-terra-content-editor
+            data-content-editor
           >
             <div className={nested ? (readOnly ? '' : 'my-4 min-h-24') : 'my-6 min-h-96'}>
               <PortableTextEditable
                 aria-label={readOnly ? 'Document viewer' : 'Document editor'}
                 aria-readonly={readOnly || undefined}
-                className={`terra-docs-content ${TERRA_CONTENT_PROSE_CLASS} outline-none`}
+                className={`docs-content ${CONTENT_PROSE_CLASS} outline-none`}
                 contentEditable={!readOnly}
                 renderListItem={({ block, children, level, value }) => {
                   const item = (

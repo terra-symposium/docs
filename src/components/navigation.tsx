@@ -26,7 +26,7 @@ export function DocsNavigation({
   const [accent] = colors(hue);
   const style = { '--docs-accent': `rgb(${accent.light[8]})` } as CSSProperties;
   const render = (items: DocsNavNode[]): JSX.Element => (
-    <ul className="terra-docs-nav-list">
+    <ul className="docs-nav-list">
       {items.map((node, i) => (
         <li key={`${node.href ?? node.title}-${i}`}>
           {node.href ? (
@@ -42,7 +42,7 @@ export function DocsNavigation({
     </ul>
   );
   return (
-    <nav className="terra-docs-nav" aria-label="Documentation" style={style}>
+    <nav className="docs-nav" aria-label="Documentation" style={style}>
       {render(nodes)}
     </nav>
   );

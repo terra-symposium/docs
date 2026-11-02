@@ -42,8 +42,8 @@ async function openQuizWorkspace(
   await page.addInitScript(
     ({ docsFixture, quizHarness }) => {
       Object.assign(window, {
-        __terraDocsLocalWorkspaceFixture: docsFixture,
-        __terraDocsQuizHarness: quizHarness,
+        __docsLocalWorkspaceFixture: docsFixture,
+        __docsQuizHarness: quizHarness,
       });
     },
     { docsFixture: fixture, quizHarness: { response, ...config } },
@@ -111,7 +111,7 @@ test(
     await expect(page.getByRole('region', { name: 'Quiz generator' })).toBeVisible();
 
     // An opt-in block remains useful even with the global toolbar disabled.
-    const block = page.locator('[data-docs-view-root] .terra-docs-quiz').last();
+    const block = page.locator('[data-docs-view-root] .docs-quiz').last();
     await block.getByLabel('Number of questions').fill('1');
     await block.getByRole('button', { name: 'Generate quiz' }).click();
     await expect(block.getByText('Question 1 · Multiple choice')).toBeVisible();

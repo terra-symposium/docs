@@ -111,7 +111,7 @@ export function DocsSiteSearch({ base = '/' }: Props) {
   }, []);
   useEffect(() => {
     if (!opened || loaded) return;
-    fetch(`${normBase}_terra-docs/search-index.json`)
+    fetch(`${normBase}_docs/search-index.json`)
       .then((response) => {
         if (!response.ok) throw new Error(`Search index returned ${response.status}`);
         return response.json() as Promise<SearchDocument[]>;

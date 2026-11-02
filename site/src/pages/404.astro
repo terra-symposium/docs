@@ -2,7 +2,7 @@
 import DocsNotFound from '../../../src/components/NotFound.astro';
 import { firstAvailableLeafHref, pageHref } from '../lib/catalog.js';
 
-const title = import.meta.env.PUBLIC_TERRA_DOCS_TITLE ?? 'Documentation';
+const title = import.meta.env.PUBLIC_DOCS_TITLE ?? 'Documentation';
 const base = import.meta.env.BASE_URL;
 const homeHref = firstAvailableLeafHref() ?? pageHref('', base);
 ---

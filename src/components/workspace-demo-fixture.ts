@@ -8,7 +8,7 @@ import type {
 } from '../lib/host.js';
 import type { DocVer } from '../lib/terra/runtime/types.js';
 
-export const WORKSPACE_DEMO_STORAGE_KEY = 'terra-docs-workspace-demo-v1';
+export const WORKSPACE_DEMO_STORAGE_KEY = 'docs-workspace-demo-v1';
 export const WORKSPACE_DEMO_PATH = '/workspace-demo/';
 
 export type WorkspaceDemoAsset = DocsHostAttachment & {
@@ -264,7 +264,7 @@ export function readWorkspaceDemoState(): WorkspaceDemoState {
 export function writeWorkspaceDemoState(state: WorkspaceDemoState): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(WORKSPACE_DEMO_STORAGE_KEY, JSON.stringify(state));
-  window.dispatchEvent(new CustomEvent('terra-docs-fixture-updated'));
+  window.dispatchEvent(new CustomEvent('docs-fixture-updated'));
 }
 
 export function buildWorkspaceRoute(sectionId?: string, groupId?: string, leafId?: string): string {
@@ -565,10 +565,10 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
     ): Promise<DocsActionResult<T>> {
       if (typeof window !== 'undefined') {
         const browserWindow = window as Window & {
-          __terraDocsActionCalls?: Array<{ operation: string; input?: unknown }>;
+          __docsActionCalls?: Array<{ operation: string; input?: unknown }>;
         };
-        browserWindow.__terraDocsActionCalls ??= [];
-        browserWindow.__terraDocsActionCalls.push({ operation: op, input: clone(input) });
+        browserWindow.__docsActionCalls ??= [];
+        browserWindow.__docsActionCalls.push({ operation: op, input: clone(input) });
       }
 
       const request = asRecord(input);

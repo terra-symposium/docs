@@ -5,16 +5,16 @@ import type { JSX } from 'react';
 
 declare global {
   interface Window {
-    __terraDocsLocalWorkspaceFixture?: DocsLocalWorkspaceProps;
-    __terraDocsQuizHarness?: { failure?: string; response?: unknown; toolbar?: boolean };
+    __docsLocalWorkspaceFixture?: DocsLocalWorkspaceProps;
+    __docsQuizHarness?: { failure?: string; response?: unknown; toolbar?: boolean };
   }
 }
 
 function HarnessContent(): JSX.Element {
   const [fixture] = useState(() =>
-    typeof window === 'undefined' ? undefined : window.__terraDocsLocalWorkspaceFixture,
+    typeof window === 'undefined' ? undefined : window.__docsLocalWorkspaceFixture,
   );
-  const quizHarness = typeof window === 'undefined' ? undefined : window.__terraDocsQuizHarness;
+  const quizHarness = typeof window === 'undefined' ? undefined : window.__docsQuizHarness;
   const quiz =
     fixture?.quiz ??
     (quizHarness

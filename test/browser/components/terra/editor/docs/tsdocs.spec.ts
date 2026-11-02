@@ -19,7 +19,7 @@ const scopedFixture = [
 const paragraph = (text: string): Content => [
   {
     _key: `${text}-block`,
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [{ _key: `${text}-span`, _type: 'span', marks: [], text }],

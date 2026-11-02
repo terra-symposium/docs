@@ -50,7 +50,7 @@ function withoutPortableTextKeys(value) {
       };
     });
   }
-  if (normalized._type === 'block' || normalized._type === 'terraBlock')
+  if (normalized._type === 'block' || normalized._type === 'block')
     normalized._type = 'textBlock';
   return normalized;
 }
@@ -66,7 +66,7 @@ test('Markdown keeps existing accordion syntax and unsupported source across con
   const source =
     '## Heading\n\n=== [Item]\nOriginal **content**\n===\n\n<custom-widget value="1"></custom-widget>\n';
   const result = docsValueToMarkdown(markdownToDocsValue(source));
-  assert.match(result, /::::terra-docs accordion/);
+  assert.match(result, /::::docs accordion/);
   assert.match(result, /:::terra-item "Item"\nOriginal \*\*content\*\*\n:::terra-item-end/);
   assert.match(result, /<custom-widget value="1"><\/custom-widget>/);
 });
@@ -74,7 +74,7 @@ test('Markdown keeps existing accordion syntax and unsupported source across con
 test('structured block containers round-trip without losing source fields', () => {
   for (const type of DOCS_BLOCK_TYPES.filter((item) => item !== 'accordion' && item !== 'tabs')) {
     const block = { _type: type, _key: 'stable', value: 'example', extra: { nested: true } };
-    const source = `:::terra-docs ${type}\n${JSON.stringify(block)}\n:::\n`;
+    const source = `:::docs ${type}\n${JSON.stringify(block)}\n:::\n`;
     const restored = markdownToDocsValue(source);
     assert.equal(restored.length, 1, type);
     assert.equal(restored[0]._type, type);
@@ -84,7 +84,7 @@ test('structured block containers round-trip without losing source fields', () =
 });
 
 test('the quiz Markdown directive round-trips as a shared renderable Docs block', () => {
-  const source = ':::terra-docs quiz\n_type: quiz\n:::\n';
+  const source = ':::docs quiz\n_type: quiz\n:::\n';
   const value = markdownToDocsValue(source);
   assert.equal(value.length, 1);
   assert.equal(value[0]._type, 'quiz');
@@ -113,7 +113,7 @@ test('complex rich blocks use readable typed YAML and render instead of showing 
     ],
   };
   const markdown = docsValueToMarkdown([diagram]);
-  assert.match(markdown, /^:::terra-docs nodes\n(?:_key: readable-diagram\n)?_type: nodes/m);
+  assert.match(markdown, /^:::docs nodes\n(?:_key: readable-diagram\n)?_type: nodes/m);
   assert.match(markdown, /title: Input/);
   assert.doesNotMatch(markdown, /"_type"\s*:/);
   assert.deepEqual(markdownToDocsValue(markdown), [diagram]);
@@ -128,8 +128,8 @@ test('complex rich blocks use readable typed YAML and render instead of showing 
   const rendered = renderMarkdown(nestedMarkdown);
   const restored = markdownToDocsValue(nestedMarkdown);
   assert.doesNotMatch(nestedMarkdown, /"_type"\s*:/);
-  assert.match(rendered, /terra-docs-callout/);
-  assert.match(rendered, /terra-docs-diagram/);
+  assert.match(rendered, /docs-callout/);
+  assert.match(rendered, /docs-diagram/);
   assert.doesNotMatch(rendered, /_type:\s*nodes/);
   assert.equal(restored[0]._type, 'callout');
   assert.equal(restored[0].kind, 'note');
@@ -147,7 +147,7 @@ test('typed rich blocks preserve intentional trailing newlines in code values', 
   };
   const markdown = docsValueToMarkdown([code]);
 
-  assert.match(markdown, /^:::terra-docs code\n/m);
+  assert.match(markdown, /^:::docs code\n/m);
   assert.deepEqual(markdownToDocsValue(markdown), [code]);
   assert.match(renderMarkdown(markdown), /GET \/index\.html HTTP\/1\.1/);
 });
@@ -160,7 +160,7 @@ test('raw blocks use typed source when bare Markdown would change them into para
   };
   const markdown = docsValueToMarkdown([raw]);
 
-  assert.match(markdown, /^:::terra-docs raw\n/m);
+  assert.match(markdown, /^:::docs raw\n/m);
   assert.deepEqual(markdownToDocsValue(markdown), [raw]);
 });
 
@@ -183,12 +183,12 @@ test('legacy rich components nested in callouts serialize and render as their co
   assert.equal(parsed[0].content[0].value, 'node_data: "graph"');
 
   const markdown = docsValueToMarkdown(parsed);
-  assert.doesNotMatch(markdown, /TERRADOCSBLOCK\d+PLACEHOLDER/);
+  assert.doesNotMatch(markdown, /DOCSBLOCK\d+PLACEHOLDER/);
   assert.match(markdown, /```yaml\nnode_data: "graph"\n```/);
   const rendered = renderMarkdown(markdown);
-  assert.match(rendered, /terra-docs-callout/);
+  assert.match(rendered, /docs-callout/);
   assert.match(rendered, /node_data:/);
-  assert.doesNotMatch(rendered, /TERRADOCSBLOCK|_type: code/);
+  assert.doesNotMatch(rendered, /DOCSBLOCK|_type: code/);
 
   const restored = markdownToDocsValue(markdown);
   assert.equal(restored[0]._type, 'callout');
@@ -218,8 +218,8 @@ test('canonical Nodes components inside callouts render as diagrams in view mode
   assert.equal(callout.markdown, undefined);
 
   const html = renderToStaticMarkup(createElement(DocsRichBlock, { block: callout }));
-  assert.match(html, /terra-docs-callout-example/);
-  assert.match(html, /terra-docs-diagram/);
+  assert.match(html, /docs-callout-example/);
+  assert.match(html, /docs-diagram/);
   assert.match(html, /Script Requirements/);
   assert.match(html, /The audio workflow begins here\./);
   assert.match(html, /The workflow continues here\./);
@@ -230,14 +230,14 @@ test('canonical Nodes components inside callouts render as diagrams in view mode
   );
   assert.ok(tabs);
   const tabHtml = renderToStaticMarkup(createElement(DocsRichBlock, { block: tabs }));
-  assert.match(tabHtml, /terra-docs-diagram/);
+  assert.match(tabHtml, /docs-diagram/);
   assert.match(tabHtml, /Script Requirements/);
   assert.doesNotMatch(tabHtml, /&lt;Nodes/);
 });
 
 test('tables with rich cell content use readable Markdown cells and preserve the table', () => {
   const paragraph = (key, text, marks = [], listItem, level) => ({
-    _type: 'terraBlock',
+    _type: 'block',
     _key: key,
     style: 'normal',
     markDefs: marks.includes('resource')
@@ -306,13 +306,13 @@ test('tables with rich cell content use readable Markdown cells and preserve the
   };
 
   const markdown = docsValueToMarkdown([table]);
-  assert.match(markdown, /^:::terra-docs table\n/m);
+  assert.match(markdown, /^:::docs table\n/m);
   assert.match(markdown, /_docsCellFormat: markdown-v1/);
   assert.match(markdown, /markdown: \|-/);
   assert.match(markdown, /- Preserves order/);
   assert.match(markdown, /\[Read the guide\]\(https:\/\/example\.test\/guide\)/);
   assert.match(markdown, /\n[ \t]+```python\n[ \t]+items = \[1, 2, 3\]\n[ \t]+```/);
-  assert.doesNotMatch(markdown, /_type: (?:terraBlock|block|span)\b/);
+  assert.doesNotMatch(markdown, /_type: (?:block|block|span)\b/);
   assert.doesNotMatch(markdown, /children:\n|markDefs:\n|content:\n/);
 
   const rendered = renderMarkdown(markdown);
@@ -331,7 +331,7 @@ test('tables with rich cell content use readable Markdown cells and preserve the
 
 test('tables with multiple plain-text paragraphs per cell use readable GFM and retain paragraph boundaries', () => {
   const paragraph = (key, text, marks = []) => ({
-    _type: 'terraBlock',
+    _type: 'block',
     _key: key,
     style: 'normal',
     markDefs: [],
@@ -374,7 +374,7 @@ test('tables with multiple plain-text paragraphs per cell use readable GFM and r
     markdown,
     /Released Monday\.<br data-docs-paragraph-break>\*\*Complete before lecture\.\*\*<br data-docs-paragraph-break>Product<br>Operation: Usability/,
   );
-  assert.doesNotMatch(markdown, /^:::terra-docs table/m);
+  assert.doesNotMatch(markdown, /^:::docs table/m);
   assert.deepEqual(
     withoutPortableTextKeys(markdownToDocsValue(markdown)),
     withoutPortableTextKeys([table]),
@@ -395,7 +395,7 @@ test('escaped punctuation inside a table link stays one link annotation', () => 
             _type: 'cell',
             content: [
               {
-                _type: 'terraBlock',
+                _type: 'block',
                 style: 'normal',
                 markDefs: [],
                 children: [{ _type: 'span', text: 'Source', marks: [] }],
@@ -411,7 +411,7 @@ test('escaped punctuation inside a table link stays one link annotation', () => 
             _type: 'cell',
             content: [
               {
-                _type: 'terraBlock',
+                _type: 'block',
                 style: 'normal',
                 markDefs: [
                   { _type: 'link', _key: 'source-link', href: 'https://example.test/source' },
@@ -436,7 +436,7 @@ test('escaped punctuation inside a table link stays one link annotation', () => 
 test('Portable Text fallback directives render as formatted document content', () => {
   const paragraph = {
     _key: 'paragraph-with-unsupported-metadata',
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [{ _key: 'reference', _type: 'link', href: 'https://example.test/page' }],
     children: [
@@ -446,12 +446,12 @@ test('Portable Text fallback directives render as formatted document content', (
     customMetadata: { source: 'Sanity' },
   };
   const markdown = docsValueToMarkdown([paragraph]);
-  assert.match(markdown, /^:::terra-docs terraBlock/m);
+  assert.match(markdown, /^:::docs block/m);
   const rendered = renderMarkdown(markdown);
   assert.match(rendered, /<p>/);
   assert.match(rendered, /<strong>Readable <\/strong>/);
   assert.match(rendered, /<a href="https:\/\/example\.test\/page">text<\/a>/);
-  assert.doesNotMatch(rendered, /customMetadata|_type: terraBlock/);
+  assert.doesNotMatch(rendered, /customMetadata|_type: block/);
   assert.deepEqual(markdownToDocsValue(markdown), [paragraph]);
 });
 
@@ -483,7 +483,7 @@ test('structured block JSON is opaque to component parsing', () => {
     ],
   };
   const restored = markdownToDocsValue(
-    `:::terra-docs table\n${JSON.stringify(value, null, 2)}\n:::\n`,
+    `:::docs table\n${JSON.stringify(value, null, 2)}\n:::\n`,
   );
   assert.deepEqual(restored[0], value);
 });
@@ -491,7 +491,7 @@ test('structured block JSON is opaque to component parsing', () => {
 test('canonical Portable Text paragraph directives preserve marks and inline math exactly', () => {
   const value = {
     _key: 'paragraph-under-test',
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [{ _key: 'source-link', _type: 'link', href: '/#leaf' }],
     children: [
@@ -500,14 +500,14 @@ test('canonical Portable Text paragraph directives preserve marks and inline mat
       { _key: 'equation', _type: 'math', code: 'x^2', inline: true },
     ],
   };
-  const source = `:::terra-docs terraBlock\n${JSON.stringify(value)}\n:::`;
+  const source = `:::docs block\n${JSON.stringify(value)}\n:::`;
   assert.deepEqual(markdownToDocsValue(source), [value]);
 });
 
 test('adjacent overlapping inline marks remain readable Markdown and round-trip without duplication', () => {
   const value = {
     _key: 'overlapping-marks',
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [
@@ -576,7 +576,7 @@ test('grouped accordion and tab data keeps its block boundaries on Markdown roun
       ],
     };
     const markdown = docsValueToMarkdown([value]);
-    assert.match(markdown, new RegExp(`^::::terra-docs ${type}`, 'm'));
+    assert.match(markdown, new RegExp(`^::::docs ${type}`, 'm'));
     assert.equal(markdownToDocsValue(markdown)[0].items.length, 2);
     assert.deepEqual(
       markdownToDocsValue(markdown)[0].items.map((item) => item.title),
@@ -587,7 +587,7 @@ test('grouped accordion and tab data keeps its block boundaries on Markdown roun
 
 test('grouped blocks keep nested rich content readable instead of serializing ordinary text as YAML', () => {
   const paragraph = (key, value) => ({
-    _type: 'terraBlock',
+    _type: 'block',
     _key: `${key}-block`,
     style: 'normal',
     markDefs: [],
@@ -664,27 +664,27 @@ test('grouped blocks keep nested rich content readable instead of serializing or
   };
 
   const markdown = docsValueToMarkdown([value]);
-  assert.match(markdown, /^::::terra-docs accordion/m);
+  assert.match(markdown, /^::::docs accordion/m);
   assert.match(markdown, /:::terra-item "Contacts and resources"/);
   assert.match(markdown, /\*\*subject team\*\*/);
-  assert.match(markdown, /:::terra-docs table\[Contacts\]/);
+  assert.match(markdown, /:::docs table\[Contacts\]/);
   assert.match(markdown, /ada&#64;example\.test/);
   assert.match(markdown, /https&#58;\/\/example\.test\/contact/);
   assert.match(markdown, /```text\nweek = 1\n```/);
   assert.match(markdown, /:::note\[Bring your student card\]/);
-  assert.doesNotMatch(markdown, /_type: (?:item|terraBlock|block|span)/);
+  assert.doesNotMatch(markdown, /_type: (?:item|block|block|span)/);
 
   const restored = markdownToDocsValue(markdown);
   assert.deepEqual(withoutPortableTextKeys(restored), withoutPortableTextKeys([value]));
   const rendered = renderMarkdown(markdown);
-  assert.match(rendered, /class="terra-docs-accordions"/);
+  assert.match(rendered, /class="docs-accordions"/);
   assert.match(rendered, /<summary>Contacts and resources<\/summary>/);
   assert.match(rendered, /week = 1/);
-  assert.doesNotMatch(rendered, /_type: (?:item|terraBlock|block|span)/);
+  assert.doesNotMatch(rendered, /_type: (?:item|block|block|span)/);
 });
 
 test('grouped Markdown with colon-labeled list items bypasses YAML parsing', () => {
-  const source = `::::terra-docs accordion
+  const source = `::::docs accordion
 :::terra-item "Part B: SMEs"
 :::note[Instructions]
 Identify suitable companies and provide:
@@ -717,7 +717,7 @@ Identify suitable companies and provide:
   assert.match(rendered, /<summary>Part B: SMEs<\/summary>/);
   assert.match(rendered, /<strong>Research<\/strong>:/);
   assert.match(rendered, /<strong>Accomplishments<\/strong>:/);
-  assert.doesNotMatch(rendered, /_type: (?:item|terraBlock|block|span)/);
+  assert.doesNotMatch(rendered, /_type: (?:item|block|block|span)/);
 });
 
 test('nested standalone math keeps its block boundary in callouts and grouped blocks', () => {
@@ -739,15 +739,15 @@ test('nested standalone math keeps its block boundary in callouts and grouped bl
     const markdown = docsValueToMarkdown([value]);
     assert.match(
       markdown,
-      value._type === 'callout' ? /^:{3,}note\[Formula\]/m : /^:{4,}terra-docs accordion/m,
+      value._type === 'callout' ? /^:{3,}note\[Formula\]/m : /^:{4,}docs accordion/m,
     );
     assert.match(markdown, /_type: math/);
     assert.deepEqual(
       withoutPortableTextKeys(markdownToDocsValue(markdown)),
       withoutPortableTextKeys([value]),
     );
-    assert.doesNotMatch(renderMarkdown(markdown), /TERRADOCSBLOCK|_type: math/);
-    assert.match(renderMarkdown(markdown), /terra-docs-math/);
+    assert.doesNotMatch(renderMarkdown(markdown), /DOCSBLOCK|_type: math/);
+    assert.match(renderMarkdown(markdown), /docs-math/);
   }
 });
 
@@ -851,7 +851,7 @@ test('nested callout directives keep each original level as a block', () => {
 
 test('nested callouts use deeper fences and keep Markdown tables and text readable', () => {
   const paragraph = (text) => ({
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [{ _type: 'span', text, marks: [] }],
@@ -899,7 +899,7 @@ test('nested callouts use deeper fences and keep Markdown tables and text readab
   assert.match(markdown, /^:::note\[Remember\]/m);
   assert.match(markdown, /\| Category \| Details \|/);
   assert.match(markdown, /Classes and objects are the primary building blocks\./);
-  assert.doesNotMatch(markdown, /_type: (?:terraBlock|block|span)/);
+  assert.doesNotMatch(markdown, /_type: (?:block|block|span)/);
 
   const restored = markdownToDocsValue(markdown);
   assert.equal(restored[0]._type, 'callout');
@@ -917,9 +917,9 @@ test('nested callouts use deeper fences and keep Markdown tables and text readab
   assert.equal(docsValueToMarkdown(restored), markdown);
   const rendered = renderMarkdown(markdown);
   assert.match(rendered, /<table[\s>]/);
-  assert.match(rendered, /terra-docs-callout/);
+  assert.match(rendered, /docs-callout/);
   assert.match(rendered, /Classes and objects are the primary building blocks\./);
-  assert.doesNotMatch(rendered, /_type: (?:terraBlock|block|span)/);
+  assert.doesNotMatch(rendered, /_type: (?:block|block|span)/);
 });
 
 test('visually empty Portable Text paragraphs do not force nested callouts into YAML', () => {
@@ -930,18 +930,18 @@ test('visually empty Portable Text paragraphs do not force nested callouts into 
       title: 'Notation Standard',
       content: [
         {
-          _type: 'terraBlock',
+          _type: 'block',
           style: 'normal',
           markDefs: [],
           children: [{ _type: 'span', text: 'Use Crow’s Foot notation.', marks: [] }],
         },
-        { _type: 'terraBlock', style: 'normal', markDefs: [], children: [] },
+        { _type: 'block', style: 'normal', markDefs: [], children: [] },
       ],
     },
   ];
   const markdown = docsValueToMarkdown(source);
   assert.match(markdown, /^:::note\[Notation Standard\]/m);
-  assert.doesNotMatch(markdown, /_type: (?:terraBlock|block|span)/);
+  assert.doesNotMatch(markdown, /_type: (?:block|block|span)/);
   const restored = markdownToDocsValue(markdown);
   assert.equal(restored[0].content.length, 1);
   assert.equal(restored[0].content[0].children[0].text, 'Use Crow’s Foot notation.');
@@ -961,12 +961,12 @@ test('invalid canonical component payloads are preserved as raw source', () => {
 });
 
 test('rich Markdown rendering escapes unsafe content and supports block opt-out', () => {
-  const source = ':::terra-docs callout\n{"_type":"callout","title":"Safe","content":"Hello"}\n:::';
-  assert.match(renderMarkdown(source), /terra-docs-callout/);
-  assert.doesNotMatch(renderMarkdown(source, { callout: false }), /terra-docs-callout/);
+  const source = ':::docs callout\n{"_type":"callout","title":"Safe","content":"Hello"}\n:::';
+  assert.match(renderMarkdown(source), /docs-callout/);
+  assert.doesNotMatch(renderMarkdown(source, { callout: false }), /docs-callout/);
   assert.doesNotMatch(
     renderMarkdown(
-      ':::terra-docs docImage\n{"_type":"docImage","url":"javascript:alert(1)","alt":"bad"}\n:::',
+      ':::docs docImage\n{"_type":"docImage","url":"javascript:alert(1)","alt":"bad"}\n:::',
     ),
     /src="javascript:/,
   );
@@ -997,7 +997,7 @@ test('inline math survives Markdown escapes split across lexer tokens', () => {
 test('math delimiters embedded in a Portable Text span remain supported inline math', () => {
   const value = [
     {
-      _type: 'terraBlock',
+      _type: 'block',
       style: 'normal',
       markDefs: [],
       children: [{ _type: 'span', text: 'The program $P$ is modified.', marks: [] }],
@@ -1032,7 +1032,7 @@ test('escaped dollar delimiters in plain spans stay literal across Markdown roun
 test('multiline headings stay one readable heading across Markdown round trips', () => {
   const value = [
     {
-      _type: 'terraBlock',
+      _type: 'block',
       style: 'h2',
       markDefs: [],
       children: [
@@ -1090,7 +1090,7 @@ test('GFM tables become editable table blocks and survive a Markdown round trip'
 
 test('GFM tables keep multiline code-marked cells readable and lossless', () => {
   const paragraph = (text, marks = []) => ({
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [{ _type: 'span', text, marks }],
@@ -1124,14 +1124,14 @@ test('GFM tables keep multiline code-marked cells readable and lossless', () => 
   const markdown = docsValueToMarkdown(value);
   assert.match(markdown, /^\| Lab \| Location \|$/m);
   assert.match(markdown, /<code>&#10;\{CB11\.07\.406&#96;\}&#10;<\/code>/);
-  assert.doesNotMatch(markdown, /^:::terra-docs table$/m);
+  assert.doesNotMatch(markdown, /^:::docs table$/m);
   const restored = markdownToDocsValue(markdown).find((block) => block._type === 'table');
   assert.deepEqual(withoutPortableTextKeys(restored), withoutPortableTextKeys(value[0]));
 });
 
 test('tables with structured or list content keep the source readable and round-trip list metadata', () => {
   const paragraph = (text, listItem) => ({
-    _type: 'terraBlock',
+    _type: 'block',
     _key: `block-${text}`,
     style: 'normal',
     ...(listItem ? { listItem, level: 1 } : {}),
@@ -1167,12 +1167,12 @@ test('tables with structured or list content keep the source readable and round-
   };
 
   const markdown = docsValueToMarkdown([value]);
-  assert.match(markdown, /^:::terra-docs table\n/m);
+  assert.match(markdown, /^:::docs table\n/m);
   assert.match(markdown, /_docsCellFormat: markdown-v1/);
   assert.match(markdown, /- Draft: Week 4\n\s+- Final: Week 8/);
   assert.doesNotMatch(
     markdown,
-    /_type: (?:terraBlock|block|span)\b|children:\n|markDefs:\n|content:\n/,
+    /_type: (?:block|block|span)\b|children:\n|markDefs:\n|content:\n/,
   );
   assert.doesNotMatch(markdown, /^\| Assessment \| Due \|$/m);
   assert.deepEqual(
@@ -1183,13 +1183,13 @@ test('tables with structured or list content keep the source readable and round-
 
 test('simple tables preserve deliberately empty cells as readable GFM', () => {
   const empty = {
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [{ _type: 'span', text: '', marks: [] }],
   };
   const text = (value) => ({
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [{ _type: 'span', text: value, marks: [] }],
@@ -1221,7 +1221,7 @@ test('simple tables preserve deliberately empty cells as readable GFM', () => {
 
   const markdown = docsValueToMarkdown(value);
   assert.match(markdown, /^\| {2}\| Location \| Description \|$/m);
-  assert.doesNotMatch(markdown, /^:::terra-docs table$/m);
+  assert.doesNotMatch(markdown, /^:::docs table$/m);
   const restored = markdownToDocsValue(markdown)[0];
   assert.equal(restored._type, 'table');
   assert.equal(restored.rows[0].cells[0].content[0].children[0].text, '');
@@ -1230,7 +1230,7 @@ test('simple tables preserve deliberately empty cells as readable GFM', () => {
 
 test('empty Sanity paragraphs do not turn a rich table into a Portable Text source dump', () => {
   const paragraph = (text, listItem) => ({
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     ...(listItem ? { listItem, level: 1 } : {}),
@@ -1261,18 +1261,18 @@ test('empty Sanity paragraphs do not turn a rich table into a Portable Text sour
   };
 
   const markdown = docsValueToMarkdown([table]);
-  assert.match(markdown, /^:::terra-docs table\n/m);
+  assert.match(markdown, /^:::docs table\n/m);
   assert.match(markdown, /_docsCellFormat: markdown-v1/);
   assert.match(markdown, /- First item/);
   assert.doesNotMatch(
     markdown,
-    /_type: (?:terraBlock|block|span)\b|children:\n|markDefs:\n|content:\n/,
+    /_type: (?:block|block|span)\b|children:\n|markDefs:\n|content:\n/,
   );
 
   const rendered = renderMarkdown(markdown);
   assert.match(rendered, /<table[\s>]/);
   assert.match(rendered, /First item/);
-  assert.doesNotMatch(rendered, /_docsCellFormat|_type: terraBlock/);
+  assert.doesNotMatch(rendered, /_docsCellFormat|_type: block/);
 
   const restored = markdownToDocsValue(markdown);
   assert.equal(restored[0]._type, 'table');
@@ -1285,7 +1285,7 @@ test('tables with uneven Sanity rows keep the original cells without padded colu
     _type: 'cell',
     content: [
       {
-        _type: 'terraBlock',
+        _type: 'block',
         style: 'normal',
         markDefs: [],
         children: [{ _type: 'span', text, marks: [] }],
@@ -1302,11 +1302,11 @@ test('tables with uneven Sanity rows keep the original cells without padded colu
   };
 
   const markdown = docsValueToMarkdown([table]);
-  assert.match(markdown, /^:::terra-docs table\n/m);
+  assert.match(markdown, /^:::docs table\n/m);
   assert.match(markdown, /_docsCellFormat: markdown-v1/);
   assert.doesNotMatch(
     markdown,
-    /_type: (?:terraBlock|block|span)\b|children:\n|markDefs:\n|content:\n/,
+    /_type: (?:block|block|span)\b|children:\n|markDefs:\n|content:\n/,
   );
   const restored = markdownToDocsValue(markdown);
   assert.equal(restored[0].rows[1].cells.length, 1);
@@ -1406,7 +1406,7 @@ test('HTML table math with letter subscripts is parsed before Markdown emphasis'
     [formula],
   );
   const roundTrip = docsValueToMarkdown(markdownToDocsValue(source));
-  assert.doesNotMatch(roundTrip, /TERRADOCSMATH/);
+  assert.doesNotMatch(roundTrip, /DOCSMATH/);
   assert.match(roundTrip, new RegExp(formula.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
@@ -1428,7 +1428,7 @@ test('Markdown table math with letter subscripts is parsed before emphasis', () 
     [formula],
   );
   const roundTrip = docsValueToMarkdown(value);
-  assert.doesNotMatch(roundTrip, /TERRADOCSMATH/);
+  assert.doesNotMatch(roundTrip, /DOCSMATH/);
   assert.match(roundTrip, new RegExp(formula.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   const prose = value.find((block) => block._type === 'block');
   assert.ok(prose);
@@ -1483,7 +1483,7 @@ test('Markdown and HTML table images stay structured and round-trip as readable 
   );
   const htmlRoundTrip = docsValueToMarkdown([htmlTable]);
   assert.match(htmlRoundTrip, /!\[Inline diagram\]\(\.\/inline\.png "Inline title"\)/);
-  assert.doesNotMatch(htmlRoundTrip, /:::terra-docs table/);
+  assert.doesNotMatch(htmlRoundTrip, /:::docs table/);
 });
 
 test('images, headings, quotes, lists, fenced code and display math retain their visual block types', () => {
@@ -1539,13 +1539,13 @@ test('images, headings, quotes, lists, fenced code and display math retain their
 test('ordinary Portable Text stays readable and mixed nested list kinds keep their depth', () => {
   const source = [
     {
-      _type: 'terraBlock',
+      _type: 'block',
       style: 'h3',
       markDefs: [],
       children: [{ _type: 'span', text: 'Preparation', marks: [] }],
     },
     {
-      _type: 'terraBlock',
+      _type: 'block',
       style: 'normal',
       markDefs: [{ _type: 'link', _key: 'link-1', href: 'https://example.test/guide' }],
       children: [
@@ -1557,7 +1557,7 @@ test('ordinary Portable Text stays readable and mixed nested list kinds keep the
       ],
     },
     {
-      _type: 'terraBlock',
+      _type: 'block',
       style: 'normal',
       listItem: 'number',
       level: 1,
@@ -1565,7 +1565,7 @@ test('ordinary Portable Text stays readable and mixed nested list kinds keep the
       children: [{ _type: 'span', text: 'Install the tool', marks: [] }],
     },
     {
-      _type: 'terraBlock',
+      _type: 'block',
       style: 'normal',
       listItem: 'bullet',
       level: 2,
@@ -1573,7 +1573,7 @@ test('ordinary Portable Text stays readable and mixed nested list kinds keep the
       children: [{ _type: 'span', text: 'Choose the shell', marks: [] }],
     },
     {
-      _type: 'terraBlock',
+      _type: 'block',
       style: 'normal',
       listItem: 'number',
       level: 1,
@@ -1586,7 +1586,7 @@ test('ordinary Portable Text stays readable and mixed nested list kinds keep the
   assert.match(markdown, /^### Preparation/m);
   assert.match(markdown, /\[\*\*the guide\*\*\]\(https:\/\/example\.test\/guide\)/);
   assert.match(markdown, /1\. Install the tool\n {3}- Choose the shell\n2\. Verify the install/);
-  assert.doesNotMatch(markdown, /:::terra-docs terraBlock/);
+  assert.doesNotMatch(markdown, /:::docs block/);
 
   const restored = markdownToDocsValue(markdown);
   assert.deepEqual(

@@ -155,7 +155,7 @@ export type DocsCustomBlock = {
 };
 
 /** Root inputs required to mount the original Docs workspace. */
-export type TerraDocsWorkspaceProps = {
+export type DocsWorkspaceProps = {
   host: DocsHostAdapter;
   tree: DocsHostTreeNode[];
   pathname: string;

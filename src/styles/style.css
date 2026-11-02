@@ -6,25 +6,25 @@
 @import './docs-theme.css';
 @import './prose.css';
 @tailwind utilities;
-.terra-docs {
+.docs {
   color: inherit;
   font-family: inherit;
 }
 
 @media (max-width: 480px) {
-  .terra-docs-toolbar {
+  .docs-toolbar {
     gap: 2px;
     padding: 6px;
   }
-  .terra-docs-toolbar button.terra-docs-select {
+  .docs-toolbar button.docs-select {
     width: 112px;
   }
-  .terra-docs-toolbar-divider {
+  .docs-toolbar-divider {
     margin: 0 2px;
   }
 }
 
-.terra-docs-link-dialog {
+.docs-link-dialog {
   width: min(360px, calc(100vw - 32px));
   padding: 20px;
   border: 1px solid #c9d2cb;
@@ -35,18 +35,18 @@
     14px/1.5 system-ui,
     sans-serif;
 }
-.terra-docs-link-dialog::backdrop {
+.docs-link-dialog::backdrop {
   background: #16251f55;
 }
-.terra-docs-link-dialog h2 {
+.docs-link-dialog h2 {
   margin: 0 0 16px;
   font-size: 18px;
 }
-.terra-docs-link-dialog label {
+.docs-link-dialog label {
   display: block;
   margin-bottom: 6px;
 }
-.terra-docs-link-dialog input {
+.docs-link-dialog input {
   box-sizing: border-box;
   width: 100%;
   padding: 8px 10px;
@@ -54,54 +54,54 @@
   border-radius: 6px;
   font: inherit;
 }
-.terra-docs-link-dialog form > div {
+.docs-link-dialog form > div {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
 }
-.terra-docs-link-dialog button {
+.docs-link-dialog button {
   width: auto;
   padding: 6px 12px;
   border-color: #c9d2cb;
 }
-.terra-docs-link-dialog button[type='submit'] {
+.docs-link-dialog button[type='submit'] {
   background: #234c3c;
   color: white;
 }
-.terra-docs-link-dialog [role='alert'] {
+.docs-link-dialog [role='alert'] {
   color: #a12b2b;
 }
 
-.terra-docs-nav {
+.docs-nav {
   font:
     14px/1.5 system-ui,
     sans-serif;
 }
-.terra-docs-nav-list {
+.docs-nav-list {
   list-style: none;
   margin: 0;
   padding-left: 1rem;
 }
-.terra-docs-nav > .terra-docs-nav-list {
+.docs-nav > .docs-nav-list {
   padding-left: 0;
 }
-.terra-docs-nav li {
+.docs-nav li {
   margin: 0.15rem 0;
 }
-.terra-docs-nav a {
+.docs-nav a {
   color: inherit;
   display: block;
   padding: 4px 8px;
   border-radius: 4px;
   text-decoration: none;
 }
-.terra-docs-nav a:hover,
-.terra-docs-nav a[aria-current='page'] {
+.docs-nav a:hover,
+.docs-nav a[aria-current='page'] {
   color: var(--docs-accent, #25634e);
   background: color-mix(in srgb, var(--docs-accent, #25634e) 10%, white);
 }
-.terra-docs-nav span {
+.docs-nav span {
   display: block;
   padding: 10px 8px 4px;
   color: #68726b;
@@ -112,164 +112,164 @@
 }
 
 @media (max-width: 760px) {
-  .terra-docs-site-header {
+  .docs-site-header {
     padding: 0 0 16px;
     margin-bottom: 16px;
   }
-  .terra-docs-site-layout {
+  .docs-site-layout {
     display: block;
     padding: 0 18px;
   }
-  .terra-docs-site-sidebar {
+  .docs-site-sidebar {
     position: static;
     max-height: 35vh;
     border-right: 0;
-    border-bottom: 1px solid var(--terra-docs-border);
+    border-bottom: 1px solid var(--docs-border);
     padding: 14px 0;
   }
-  .terra-docs-site-main {
+  .docs-site-main {
     padding: 24px 0 56px;
   }
 }
 
-.terra-docs-accordion,
-.terra-docs-tab {
+.docs-accordion,
+.docs-tab {
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   border-radius: 0.5rem;
   margin-block: 0.75rem;
   padding: 0.5rem 0.75rem;
 }
 
-.terra-docs-accordion > summary,
-.terra-docs-tab > summary {
+.docs-accordion > summary,
+.docs-tab > summary {
   cursor: pointer;
   font-weight: 600;
 }
 
-.terra-docs-accordion > summary:focus-visible,
-.terra-docs-tab > summary:focus-visible {
+.docs-accordion > summary:focus-visible,
+.docs-tab > summary:focus-visible {
   outline: 2px solid var(--docs-accent, #25634e);
   outline-offset: 3px;
 }
 
-.terra-docs-rich-editor {
+.docs-rich-editor {
   margin: 12px 0;
   padding: 14px;
-  border: 1px solid var(--terra-docs-border);
+  border: 1px solid var(--docs-border);
   border-radius: 10px;
   background: #fbfcfa;
 }
-.terra-docs-rich-editor > button,
-.terra-docs-rich-fields button,
-.terra-docs-attachment-upload {
+.docs-rich-editor > button,
+.docs-rich-fields button,
+.docs-attachment-upload {
   display: inline-flex;
   align-items: center;
   min-height: 34px;
   padding: 6px 10px;
-  border: 1px solid var(--terra-docs-border);
+  border: 1px solid var(--docs-border);
   border-radius: 6px;
   background: white;
-  color: var(--terra-docs-ink);
+  color: var(--docs-ink);
   cursor: pointer;
 }
-.terra-docs-rich-fields {
+.docs-rich-fields {
   display: grid;
   gap: 12px;
   margin-top: 12px;
 }
-.terra-docs-rich-fields fieldset {
+.docs-rich-fields fieldset {
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid var(--terra-docs-border);
+  border: 1px solid var(--docs-border);
   border-radius: 8px;
 }
-.terra-docs-rich-fields label {
+.docs-rich-fields label {
   display: grid;
   gap: 4px;
   font-size: 13px;
   font-weight: 600;
 }
-.terra-docs-rich-fields input,
-.terra-docs-rich-fields textarea,
-.terra-docs-rich-fields select {
+.docs-rich-fields input,
+.docs-rich-fields textarea,
+.docs-rich-fields select {
   min-height: 34px;
   padding: 6px;
-  border: 1px solid var(--terra-docs-border);
+  border: 1px solid var(--docs-border);
   border-radius: 5px;
   font: inherit;
 }
-.terra-docs-rich-fields textarea {
+.docs-rich-fields textarea {
   min-height: 70px;
 }
-.terra-docs-rich-item {
+.docs-rich-item {
   display: grid;
   gap: 8px;
   padding: 10px;
-  border: 1px solid var(--terra-docs-border);
+  border: 1px solid var(--docs-border);
   border-radius: 6px;
 }
-.terra-docs-callout {
+.docs-callout {
   margin: 14px 0;
   padding: 12px 16px;
-  border-left: 4px solid var(--terra-docs-accent, #216750);
+  border-left: 4px solid var(--docs-accent, #216750);
   background: #edf4ef;
 }
-.terra-docs-callout-warning {
+.docs-callout-warning {
   border-color: #b16d22;
   background: #fff4e5;
 }
-.terra-docs-callout-error {
+.docs-callout-error {
   border-color: #a53d43;
   background: #fff0f0;
 }
-.terra-docs-diagram svg {
+.docs-diagram svg {
   display: block;
   width: 100%;
   max-height: 560px;
-  color: var(--terra-docs-accent, #216750);
+  color: var(--docs-accent, #216750);
 }
-.terra-docs-diagram text {
-  fill: var(--terra-docs-ink);
+.docs-diagram text {
+  fill: var(--docs-ink);
   font:
     14px system-ui,
     sans-serif;
 }
-.terra-docs-diagram figcaption {
-  color: var(--terra-docs-muted);
+.docs-diagram figcaption {
+  color: var(--docs-muted);
   font-size: 12px;
 }
-.terra-docs-tabs,
-.terra-docs-accordions {
+.docs-tabs,
+.docs-accordions {
   display: grid;
   gap: 8px;
   margin: 12px 0;
 }
-.terra-docs-tabs details,
-.terra-docs-accordions details {
+.docs-tabs details,
+.docs-accordions details {
   padding: 9px 12px;
-  border: 1px solid var(--terra-docs-border);
+  border: 1px solid var(--docs-border);
   border-radius: 7px;
 }
-.terra-docs-tabs summary,
-.terra-docs-accordions summary {
+.docs-tabs summary,
+.docs-accordions summary {
   cursor: pointer;
   font-weight: 600;
 }
-.terra-docs-table {
+.docs-table {
   overflow-x: auto;
 }
-.terra-docs-table table {
+.docs-table table {
   width: 100%;
   border-collapse: collapse;
 }
-.terra-docs-table td {
+.docs-table td {
   padding: 8px;
-  border: 1px solid var(--terra-docs-border);
+  border: 1px solid var(--docs-border);
 }
-.terra-docs-math {
+.docs-math {
   overflow-x: auto;
 }
-.terra-docs-attachment-upload {
+.docs-attachment-upload {
   margin-bottom: 12px;
 }

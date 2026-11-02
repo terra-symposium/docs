@@ -4,11 +4,11 @@ import type { JSX } from 'react';
 import { docsHueTheme, resolveDocsTreeHue } from '../../lib/docs-theme.js';
 import Scaffold from './pages/docs/_main.js';
 import { configureDocsHost } from '../../lib/host-runtime.js';
-import type { TerraDocsWorkspaceProps } from '../../lib/host.js';
+import type { DocsWorkspaceProps } from '../../lib/host.js';
 import { DocsQuizProvider } from '../quiz.js';
 
 /** The source-preserving shared Docs workspace used by host route adapters. */
-export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element {
+export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
   configureDocsHost(props.host, props.customBlocks);
   const portalThemeRoot = useRef<HTMLDivElement>(null);
   const [aPath, setActivePath] = useState(props.pathname);
@@ -86,7 +86,7 @@ export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element 
 
   useEffect(() => {
     const wrapper = portalThemeRoot.current;
-    const workspace = wrapper?.querySelector<HTMLElement>('.terra-docs-workspace');
+    const workspace = wrapper?.querySelector<HTMLElement>('.docs-workspace');
     if (!workspace || typeof document === 'undefined') return;
 
     // Radix keeps the original Docs portal behavior and mounts menus/dialogs

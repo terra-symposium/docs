@@ -63,7 +63,7 @@ function CalloutEditor({
         {...attrs}
         contentEditable={false}
         className="docs-block rounded-md border border-primary-5 p-4"
-        data-terra-block="callout"
+        data-block="callout"
         data-docs-aside={block.kind ?? 'note'}
       >
         <Input

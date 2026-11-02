@@ -13,7 +13,7 @@ const XL_VIEWPORT_TEST = {
 const textFixture = [
   {
     _key: 'paragraph',
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [{ _key: 'paragraph-text', _type: 'span', marks: [], text: 'Editor text' }],
@@ -23,7 +23,7 @@ const textFixture = [
 const migratedTableFixture = [
   {
     _key: 'before-table',
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [{ _key: 'before-text', _type: 'span', marks: ['strong'], text: 'Before table' }],
@@ -77,7 +77,7 @@ const migratedTableFixture = [
   },
   {
     _key: 'after-table',
-    _type: 'terraBlock',
+    _type: 'block',
     style: 'normal',
     markDefs: [],
     children: [{ _key: 'after-text', _type: 'span', marks: [], text: 'After table' }],
@@ -97,7 +97,7 @@ test(
     }
     await blocks.getByRole('option', { name: 'Table', exact: true }).click();
 
-    await expect(page.locator('[data-terra-block="table"]')).toBeVisible();
+    await expect(page.locator('[data-block="table"]')).toBeVisible();
     await expect
       .poll(async () => {
         const content = JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]');
@@ -127,7 +127,7 @@ test(
   XL_VIEWPORT_TEST,
   async ({ page }) => {
     await openEditor(page, migratedTableFixture, { persistKey: 'docs-migrated-table' });
-    const table = page.locator('[data-terra-block="table"]');
+    const table = page.locator('[data-block="table"]');
     await expect(table).toBeVisible();
     await expect(page.getByText('Before table', { exact: true })).toBeVisible();
     await expect(page.getByText('After table', { exact: true })).toBeVisible();
@@ -142,10 +142,10 @@ test(
           value: content[1]?.rows?.[1]?.cells?.[0]?.content?.[0]?.children?.[0]?.text,
         };
       })
-      .toEqual({ blockTypes: ['terraBlock', 'table', 'terraBlock'], value: 'Updated value' });
+      .toEqual({ blockTypes: ['block', 'table', 'block'], value: 'Updated value' });
 
     await page.reload();
-    await expect(page.locator('[data-terra-block="table"]')).toBeVisible();
+    await expect(page.locator('[data-block="table"]')).toBeVisible();
     await expect(page.getByText('Before table', { exact: true })).toBeVisible();
     await expect(page.getByText('After table', { exact: true })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Table cell 2, 1' })).toHaveValue(
@@ -161,7 +161,7 @@ test(
     const nestedContent = [
       {
         _key: 'nested-text',
-        _type: 'terraBlock',
+        _type: 'block',
         style: 'normal',
         markDefs: [],
         children: [{ _key: 'nested-span', _type: 'span', text: 'Nested text', marks: [] }],
@@ -176,7 +176,7 @@ test(
     await openEditor(page, [container]);
     await page.getByRole('button', { name: 'Toggle Section', exact: true }).click();
     await page
-      .locator('[data-terra-block="accordion"]')
+      .locator('[data-block="accordion"]')
       .getByRole('button', { name: 'Insert content', exact: true })
       .click();
     const menu = page.getByRole('listbox');

@@ -44,7 +44,7 @@ function markdownCalloutRanges(source: string): CalloutRange[] {
     }
 
     const open = line.match(
-      /^ {0,3}(:{3,})(?!(?:terra-docs|terra-item(?:-end)?)(?:\s|$))([A-Za-z][\w-]*)(?:\[([^\]\n]*)\])?[ \t]*$/,
+      /^ {0,3}(:{3,})(?!(?:docs|terra-item(?:-end)?)(?:\s|$))([A-Za-z][\w-]*)(?:\[([^\]\n]*)\])?[ \t]*$/,
     );
     if (open) {
       stack.push({
@@ -101,7 +101,7 @@ function renderGroupedBlocks(
   placeholder: (html: string) => string,
 ): string {
   const grouped = markdown.replace(
-    /^(:{4,})terra-docs (accordion|tabs)[ \t]*\r?\n([\s\S]*?)^\1[ \t]*$/gm,
+    /^(:{4,})docs (accordion|tabs)[ \t]*\r?\n([\s\S]*?)^\1[ \t]*$/gm,
     (source, _fence: string, type: string, body: string) => {
       const markers = [...body.matchAll(/^:::terra-item ("(?:\\.|[^"\\])*")[ \t]*\r?$/gm)];
       const items: { title: string; markdown: string }[] = [];
@@ -151,10 +151,10 @@ function renderGroupedBlocks(
       const content = renderMarkdown(body, options);
       if (delimiter === '===')
         return placeholder(
-          `<details class="terra-docs-accordion"><summary>${summary}</summary>${content}</details>`,
+          `<details class="docs-accordion"><summary>${summary}</summary>${content}</details>`,
         );
       return placeholder(
-        `<details class="terra-docs-tab"><summary>${summary}</summary>${content}</details>`,
+        `<details class="docs-tab"><summary>${summary}</summary>${content}</details>`,
       );
     },
   );
@@ -164,7 +164,7 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
   const rendered: string[] = [];
   const parser = new Marked({ gfm: true });
   const placeholder = (html: string) => {
-    const marker = `TERRADOCSRICHPLACEHOLDER${rendered.length}END`;
+    const marker = `DOCSRICHPLACEHOLDER${rendered.length}END`;
     rendered.push(html);
     return marker;
   };
@@ -174,14 +174,14 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
   // of being replaced by placeholders that cannot cross the callout boundary.
   const callouts = renderCallouts(grouped, options, placeholder);
   const captioned = callouts.replace(
-    /^:::terra-docs table\[([^\]\r\n]*)\][ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm,
+    /^:::docs table\[([^\]\r\n]*)\][ \t]*\r?\n([\s\S]*?)^:::[ \t]*$/gm,
     (source, caption: string, body: string) => {
       try {
         const decoded = decodeURIComponent(caption);
         const label = sanitizeHtml(decoded, { allowedTags: [], allowedAttributes: {} });
         const table = parser.parse(body, { async: false });
         return placeholder(
-          '<section class="terra-docs-table"><strong>' + label + '</strong>' + table + '</section>',
+          '<section class="docs-table"><strong>' + label + '</strong>' + table + '</section>',
         );
       } catch {
         return placeholder(
@@ -191,7 +191,7 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
     },
   );
   const portable = captioned.replace(
-    /^(:{3,})terra-docs ([A-Za-z]+)\s*\n([\s\S]*?)^\1\s*$/gm,
+    /^(:{3,})docs ([A-Za-z]+)\s*\n([\s\S]*?)^\1\s*$/gm,
     (source, fence: string, type: string, payload: string) => {
       // Grouped accordion/tab Markdown is not YAML. Keep it for the dedicated
       // grouped renderer so ordinary prose and list labels are never parsed as
@@ -204,7 +204,7 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
         return source;
       try {
         const data = parseYaml(payload) as RichBlock;
-        if (data?._type === type && (type === 'block' || type === 'terraBlock')) {
+        if (data?._type === type && (type === 'block' || type === 'block')) {
           return placeholder(renderToStaticMarkup(createElement(DocsRichBlock, { block: data })));
         }
         if (!enabledDocsBlocks(options).includes(type as never) || data?._type !== type) {
@@ -282,7 +282,7 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
     allowedSchemes: ['http', 'https', 'mailto'],
   });
   return s.replace(
-    /TERRADOCSRICHPLACEHOLDER(\d+)END/g,
+    /DOCSRICHPLACEHOLDER(\d+)END/g,
     (_match, i: string) => rendered[Number(i)] ?? '',
   );
 }

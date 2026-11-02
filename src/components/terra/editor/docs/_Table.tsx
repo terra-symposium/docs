@@ -115,7 +115,7 @@ function TableEditor({
         {...attrs}
         contentEditable={false}
         className="my-6 overflow-x-auto rounded-md border border-primary-5 p-3"
-        data-terra-block="table"
+        data-block="table"
       >
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Input

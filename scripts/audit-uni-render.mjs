@@ -331,7 +331,7 @@ function renderedInlineRuns(spans, pagePath) {
   return runs;
 }
 function expectedTopType(type) {
-  if (type === 'terraBlock' || type === 'block') return 'text';
+  if (type === 'block' || type === 'block') return 'text';
   return type;
 }
 
@@ -1112,7 +1112,7 @@ for (let index = 0; index < leaves.length; index++) {
 
   const sourceTextBlocks = [];
   walk(parsed, (item) => {
-    if (item._type === 'terraBlock' || item._type === 'block') sourceTextBlocks.push(item);
+    if (item._type === 'block' || item._type === 'block') sourceTextBlocks.push(item);
   });
   const sourceContentTextBlocks = sourceTextBlocks.filter((block) =>
     normalizeText((block.children ?? []).map(plainText).join('')),

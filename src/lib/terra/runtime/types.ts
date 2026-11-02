@@ -393,6 +393,6 @@ export const PROBLEM_BLOCK_TYPES = [
   'tabs',
   'accordion',
 ] as const;
-export const TERRA_CONTAINER_TYPES = ['tabs', 'accordion', 'callout'] as const;
+export const CONTAINER_TYPES = ['tabs', 'accordion', 'callout'] as const;
 export const ARTICLE_INLINE_SCHEMAS = {};
 export const PROBLEM_BLOCK_SCHEMAS = {};

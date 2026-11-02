@@ -61,4 +61,4 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - uses: Terra-Symposium/standards/packages/testing@3d782b9dfc4cc5b421ccbe395d65aacec9d8956d
         with:
-          manifest: .terra-tests.json
+          manifest: tests/terra-tests.json

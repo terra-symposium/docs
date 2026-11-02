@@ -5,13 +5,13 @@
       "name": "unit",
       "command": "pnpm",
       "args": ["test"],
-      "owns": ["test/*.test.mjs"]
+      "owns": ["test/*.test.mjs", "test/fixtures/**"]
     },
     {
       "name": "browser",
       "command": "pnpm",
       "args": ["run", "test:browser"],
-      "owns": ["test/browser"]
+      "owns": ["test/browser/**"]
     },
     {
       "name": "consumer",

@@ -3,7 +3,7 @@ title: Develop Docs
 description: Work on the package and documentation site.
 ---
 
-Use Node.js from `.nvmrc` and pnpm 10.30.3:
+Use Node.js from `config/.nvmrc` and pnpm 10.30.3:
 
 ```sh
 corepack enable

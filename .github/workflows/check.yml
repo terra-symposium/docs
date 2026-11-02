@@ -16,7 +16,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version-file: config/.nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check
@@ -28,7 +28,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version-file: config/.nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vite build --config config/vite.config.ts
@@ -40,7 +40,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version-file: config/.nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build && pnpm exec docs build
@@ -55,10 +55,10 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version-file: config/.nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - uses: Terra-Symposium/standards/packages/testing@3d782b9dfc4cc5b421ccbe395d65aacec9d8956d
         with:
-          manifest: tests/terra-tests.json
+          manifest: config/terra-tests.json

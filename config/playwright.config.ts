@@ -8,6 +8,7 @@ const baseURL = `http://127.0.0.1:${port}`;
 export default withResponsivePlaywright(
   defineConfig({
     testDir: resolve(process.cwd(), 'test/browser'),
+    outputDir: resolve(process.cwd(), 'tests/results/playwright-output'),
     projects: [{ name: 'chromium' }],
     use: { baseURL, browserName: 'chromium' },
     expect: {

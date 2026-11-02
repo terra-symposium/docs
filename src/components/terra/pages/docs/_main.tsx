@@ -675,6 +675,35 @@ export default function Scaffold({
   // prettier-ignore
   const [currDoc, setCurrDoc] = useState({ pathname: initPathname, path: initPath, title: initTitle, description: initDesc, contributors, updatedAt: initUpdatedAt, source: initSrc || (typeof initContent === 'string' ? initContent : ''), content: toPortableBody(initContent), compiledMDX: initMdx, versions: [] as DocVer[] });
 
+  // The shared Docs index route opens the first readable leaf in the first section
+  // that contains one, so each Terra Docs host gets a useful landing page without
+  // needing a separately authored index document.
+  useEffect(() => {
+    if (standalone || staticContent) return;
+    const currentPath = (initPathname || '').replace(/\/+$/, '') || '/';
+    const rootPath = docsRootPath().replace(/\/+$/, '') || '/';
+    if (currentPath !== rootPath) return;
+
+    const firstLeaf = (nodes: TreeType[]): Extract<TreeType, { type: 'leaf' }> | null => {
+      for (const node of nodes) {
+        if (node.type === 'leaf' && node.url) return node;
+        if (node.type === 'branch' && node.children?.length) {
+          const leaf = firstLeaf(node.children);
+          if (leaf) return leaf;
+        }
+      }
+      return null;
+    };
+    for (const section of tree) {
+      if (section.type !== 'branch') continue;
+      const leaf = firstLeaf(section.children ?? []);
+      if (leaf?.url && leaf.url !== initPathname) {
+        window.location.replace(leaf.url);
+        return;
+      }
+    }
+  }, [initPathname, standalone, staticContent, tree]);
+
   // 1. ASTRO VIEW TRANSITION / HMR PROP SYNC
   // Force component state to update if Astro swaps the underlying page and injects new props into this instance.
   useEffect(() => {

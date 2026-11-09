@@ -53,7 +53,10 @@ test('standalone Astro pages mount the extracted read-only workspace with their 
   await expect
     .poll(() => mobileHeader.evaluate((element) => getComputedStyle(element).display))
     .toBe('none');
-  await page.screenshot({ path: testInfo.outputPath('docs-static-breakpoint.png'), fullPage: true });
+  await page.screenshot({
+    path: testInfo.outputPath('docs-static-breakpoint.png'),
+    fullPage: true,
+  });
   await page.setViewportSize({ width: 767, height: 900 });
   await expect
     .poll(() => mobileHeader.evaluate((element) => getComputedStyle(element).display))
@@ -546,7 +549,10 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
   await expect(page.getByRole('menuitem', { name: 'Delete page' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Duplicate page' })).toBeVisible();
   await page.waitForTimeout(250);
-  await page.screenshot({ path: testInfo.outputPath('docs-leaf-context-menu.png'), fullPage: true });
+  await page.screenshot({
+    path: testInfo.outputPath('docs-leaf-context-menu.png'),
+    fullPage: true,
+  });
   await page.keyboard.press('Escape');
   await leaf.hover();
   await expect(page.getByRole('button', { name: 'Reorder item' }).last()).toBeVisible();
@@ -785,7 +791,9 @@ test('tree create and rename persist through the original context menu', async (
     'Regression page renamed',
   );
   await page.reload({ waitUntil: 'commit' });
-  await expect(page.getByRole('link', { name: 'Regression page renamed', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Regression page renamed', exact: true }),
+  ).toBeVisible();
 });
 
 test('tree duplicate, download, and delete persist through the original context menu', async ({
@@ -916,7 +924,6 @@ test('group create, rename, and reorder use the shared sidebar actions', async (
     )
     .toEqual(['Regression renamed', 'General']);
   await expect(renamedGroup).toBeVisible();
-
 });
 
 test('group deletion removes its sidebar branch and preserves the remaining section content', async ({
@@ -937,9 +944,7 @@ test('group deletion removes its sidebar branch and preserves the remaining sect
   await sidebarContent.dispatchEvent('contextmenu', { button: 2, clientX: 16, clientY: 160 });
   await page.getByRole('menuitem', { name: 'Add group', exact: true }).click();
   const createDialog = page.getByRole('dialog', { name: 'Add Group' });
-  await createDialog
-    .getByRole('textbox', { name: 'Group name' })
-    .fill('Regression deletion group');
+  await createDialog.getByRole('textbox', { name: 'Group name' }).fill('Regression deletion group');
   await createDialog.getByRole('button', { name: 'Save', exact: true }).click();
   const group = page
     .locator(`[data-docs-drop^="branch:${sectionId}/"]`)
@@ -1301,7 +1306,9 @@ test('section creation is retained, and menus remain keyboard accessible and por
   await expect(page.getByRole('option', { name: 'Created from browser' })).toBeVisible();
 });
 
-test('section rename, color, and deletion persist through the section actions', async ({ page }) => {
+test('section rename, color, and deletion persist through the section actions', async ({
+  page,
+}) => {
   await page.goto('/workspace-demo/', { waitUntil: 'domcontentloaded' });
   await waitForWorkspaceReady(page);
 
@@ -1323,7 +1330,9 @@ test('section rename, color, and deletion persist through the section actions', 
   await sectionActions.click();
   await page.getByRole('menuitem', { name: 'Rename section', exact: true }).click();
   const renameDialog = page.getByRole('dialog', { name: 'Rename Section' });
-  await renameDialog.getByRole('textbox', { name: 'Section name' }).fill('Section lifecycle renamed');
+  await renameDialog
+    .getByRole('textbox', { name: 'Section name' })
+    .fill('Section lifecycle renamed');
   await renameDialog.getByRole('button', { name: 'Save', exact: true }).click();
 
   sectionActions = page.getByRole('button', {

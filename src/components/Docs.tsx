@@ -1,7 +1,10 @@
-import { ContentEditor } from './terra/editor/ContentEditor.js';
+import { lazy, Suspense, type JSX } from 'react';
 import type { DocsBlockOptions } from './blocks.js';
 import type { PortableTextBlock } from '@portabletext/editor';
-import type { JSX } from 'react';
+
+const ContentEditor = lazy(() =>
+  import('./terra/editor/ContentEditor.js').then((module) => ({ default: module.ContentEditor })),
+);
 
 /** Portable Text blocks supplied and retained by the host application. */
 export type DocsValue = PortableTextBlock[];
@@ -20,14 +23,16 @@ export type DocsProps = {
 export function Docs(props: DocsProps): JSX.Element {
   return (
     <div className={['docs', props.className].filter(Boolean).join(' ')}>
-      <ContentEditor
-        content={props.value}
-        readOnly={props.mode === 'view'}
-        {...(props.blocks !== undefined ? { blocks: props.blocks } : {})}
-        {...(props.mode === 'edit'
-          ? { onChange: (value: unknown[]) => props.onChange(value as DocsValue) }
-          : {})}
-      />
+      <Suspense fallback={null}>
+        <ContentEditor
+          content={props.value}
+          readOnly={props.mode === 'view'}
+          {...(props.blocks !== undefined ? { blocks: props.blocks } : {})}
+          {...(props.mode === 'edit'
+            ? { onChange: (value: unknown[]) => props.onChange(value as DocsValue) }
+            : {})}
+        />
+      </Suspense>
     </div>
   );
 }

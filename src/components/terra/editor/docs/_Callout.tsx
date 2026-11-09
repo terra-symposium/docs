@@ -2,7 +2,7 @@
 /** Docs callout renderer with view and edit modes. */
 
 import { useEditor } from '@portabletext/editor';
-import { ContentEditor } from '../ContentEditor.js';
+import { TerraContentEditor } from './_editor.js';
 import { ErrorBoundary } from '../../ui.js';
 import { Input } from '@terra-symposium/styling/ui';
 
@@ -30,7 +30,7 @@ function Callout({ block }: { block: CalloutBlock }): JSX.Element {
         data-docs-aside={block.kind ?? 'note'}
       >
         <h4 className="title">{block.title ?? block.kind ?? 'Note'}</h4>
-        <ContentEditor
+        <TerraContentEditor
           content={(block.content ?? []) as unknown as ContentData}
           docsAttachments={[]}
           memberProfile="docs"
@@ -78,7 +78,7 @@ function CalloutEditor({
             })
           }
         />
-        <ContentEditor
+        <TerraContentEditor
           content={(block.content ?? []) as unknown as ContentData}
           docsAttachments={[]}
           memberProfile="docs"

@@ -6,14 +6,13 @@
 IMPORTS
 //////////////////////////////////////////////////*/
 
-// API
 import '../../../src/styles/style.css';
 import '../styles/style.css';
 import { createRoot } from 'react-dom/client';
 import { createElement, useState } from 'react';
 
 // COMPONENTS
-import { Docs } from '../../../src/lib/index.js';
+import { Docs } from '../../../src/components/Docs.js';
 import { ErrorBoundary as TerraRootErrorBoundary } from '@terra-symposium/standards-quality/error-boundaries/react';
 import { StrictMode } from 'react';
 

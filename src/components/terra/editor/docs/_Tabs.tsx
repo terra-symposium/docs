@@ -6,7 +6,7 @@ import { AccordionGroup, AccordionItem, TabsGroup, TabsItem } from '../_blocks.j
 import { Add as AddIcon } from '@carbon/icons-react';
 import { ErrorBoundary } from '../../ui.js';
 import { Button } from '@terra-symposium/styling/ui';
-import { ContentEditor } from '../ContentEditor.js';
+import { TerraContentEditor } from './_editor.js';
 
 import type { DocBody } from '../../../../lib/terra/runtime/types.js';
 import type { DocsNestedContent } from '../../../../lib/terra/runtime/types.js';
@@ -46,7 +46,7 @@ function TabsBlock({ block }: { block: DocsBlock<'tabs'> }): JSX.Element {
               key={key(i, `${v}`)}
               title={typeof entry.title === 'string' ? entry.title : `Tab ${v + 1}`}
             >
-              <ContentEditor
+              <TerraContentEditor
                 content={
                   (Array.isArray(entry.content) ? entry.content : []) as unknown as ContentData
                 }
@@ -82,7 +82,7 @@ function AccordionBlock({ block }: { block: DocsBlock<'accordion'> }): JSX.Eleme
               key={key(i, `${v}`)}
               title={typeof entry.title === 'string' ? entry.title : `Item ${v + 1}`}
             >
-              <ContentEditor
+              <TerraContentEditor
                 content={
                   (Array.isArray(entry.content) ? entry.content : []) as unknown as ContentData
                 }
@@ -159,7 +159,7 @@ function SectionsEditor({
     const title =
       typeof i.title === 'string' ? i.title : kind === 'tabs' ? `Tab ${v + 1}` : `Item ${v + 1}`;
     const nested = (
-      <ContentEditor
+      <TerraContentEditor
         content={(i.content ?? []) as unknown as ContentData}
         docsAttachments={[]}
         memberProfile="docs"

@@ -3,7 +3,7 @@
 
 import { useEditor } from '@portabletext/editor';
 import { Add as AddIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
-import { ContentEditor } from '../ContentEditor.js';
+import { TerraContentEditor } from './_editor.js';
 import { ErrorBoundary } from '../../ui.js';
 import { Button } from '@terra-symposium/styling/ui';
 import { Input } from '@terra-symposium/styling/ui';
@@ -53,7 +53,7 @@ function Table({ block }: { block: TableBlock }): React.JSX.Element {
   const count = rows.reduce((m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0), 0);
   const renderCell = (c: DocTableCell | undefined): React.JSX.Element | null =>
     c ? (
-      <ContentEditor
+      <TerraContentEditor
         content={(Array.isArray(c.content) ? c.content : []) as unknown as ContentData}
         docsAttachments={[]}
         memberProfile="docs"

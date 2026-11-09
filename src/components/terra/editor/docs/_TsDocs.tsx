@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react';
 import { AlertError } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../../ui.js';
 import { Empty } from '../../ui.js';
-import { ContentEditor } from '../ContentEditor.js';
+import { TerraContentEditor } from './_editor.js';
 
 // TYPES
 import type { DocsBlock } from '../types.js';
@@ -124,7 +124,7 @@ function TsDocsRenderer({
         {items.map((d) => (
           <section key={d.slug} id={d.slug.replaceAll('/', '-')}>
             {items.length > 1 && <h2>{d.title}</h2>}
-            <ContentEditor
+            <TerraContentEditor
               content={d.body as unknown as ContentData}
               docsAttachments={[]}
               memberProfile="docs"

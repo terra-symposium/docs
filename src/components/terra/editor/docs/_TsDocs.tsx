@@ -54,7 +54,9 @@ function TsDocsRenderer({
           data: d,
           error: e,
         }: {
-          data?: { docs?: Array<{ slug: string; title: string; body: string }> } | null;
+          data?: {
+            docs?: Array<{ slug: string; title: string; body: string }>;
+          } | null;
           error?: unknown;
         }) => {
           if (e || !d?.docs) throw e || new Error('Failed to fetch tsdocs');

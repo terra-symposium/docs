@@ -234,7 +234,7 @@ export const TransitionCtx = createContext<{
 } | null>(null);
 
 export const EditStateCtx = createContext<{
-  busy: import('../runtime/types.js').EditorState['busy'];
+  busy: string | null;
   code: string;
   draft: import('../runtime/types.js').Draft;
   dirty: boolean;
@@ -243,7 +243,6 @@ export const EditStateCtx = createContext<{
   references?: import('react').MutableRefObject<import('../runtime/types.js').EditorRefs>;
   setSrc?: (val: string) => void;
   source?: string;
-  state?: import('../runtime/types.js').EditorState;
   save: (code?: string, opts?: { force?: boolean; format?: boolean }) => void;
   setCode: (val: string) => void;
   update: (patch: Partial<import('../runtime/types.js').Draft>) => void;
@@ -257,11 +256,11 @@ export const EditStateCtx = createContext<{
  */
 export const EditorSurfaceCtx = createContext<EditorSurface | null>(null);
 
-export const $editorMounts = atom<{
-  expected: string[];
-  mounted: string[];
-  path: string | null;
-}>({ expected: [], mounted: [], path: null });
+export const $editorMounts = atom<{ expected: string[]; mounted: string[]; path: string | null }>({
+  expected: [],
+  mounted: [],
+  path: null,
+});
 const assignments = new Map<string, string>();
 
 /**

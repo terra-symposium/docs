@@ -101,10 +101,14 @@ export function NodesBlock({
       <NodesRenderer
         {...(block.nodes === undefined
           ? {}
-          : { nodes: block.nodes as unknown as NonNullable<NodesProps['nodes']> })}
+          : {
+              nodes: block.nodes as unknown as NonNullable<NodesProps['nodes']>,
+            })}
         {...(block.edges === undefined
           ? {}
-          : { edges: block.edges as unknown as NonNullable<NodesProps['edges']> })}
+          : {
+              edges: block.edges as unknown as NonNullable<NodesProps['edges']>,
+            })}
         {...(block.direction === 'TB' || block.direction === 'LR'
           ? { direction: block.direction }
           : {})}

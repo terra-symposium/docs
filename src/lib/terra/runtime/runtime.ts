@@ -2,16 +2,6 @@ import { cn as stylingCn } from '@terra-symposium/styling/ui';
 import { getDocsHostAdapter } from '../../host-runtime.js';
 
 export const cn = stylingCn;
-export function isDevOrigin(value: string | URL): boolean {
-  const hostCheck = getDocsHostAdapter()?.isDevelopmentOrigin;
-  if (hostCheck) return hostCheck(String(value));
-  try {
-    const host = new URL(value).hostname;
-    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
-  } catch {
-    return false;
-  }
-}
 export const isRec = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === 'object' && !Array.isArray(value));
 export const isString = (value: unknown): value is string => typeof value === 'string';
@@ -29,16 +19,12 @@ export const createTrace =
     if (enabled) console.debug(`[${scope}] ${event}`, detail ?? '');
   };
 export const notify = ({ error: reason, fallback }: { error: unknown; fallback: string }): void => {
-  const message = reason instanceof Error ? reason.message : fallback;
   if (typeof document !== 'undefined')
     document.dispatchEvent(
-      new CustomEvent('docs:notify', { detail: { message, variant: 'error' } }),
+      new CustomEvent('docs:notify', {
+        detail: { message: reason instanceof Error ? reason.message : fallback, variant: 'error' },
+      }),
     );
-};
-export const hash = (value: string): number => {
-  let result = 0;
-  for (const char of value) result = (result * 31 + char.charCodeAt(0)) | 0;
-  return result;
 };
 export const canonicalId = (value: string): string =>
   value
@@ -65,11 +51,14 @@ export function resolvedEdges(graph: unknown): ArcEdge[] {
   );
   const terminalKey = nodes.find((node) => node.type === 'terminal')?._key;
   if (typeof terminalKey !== 'string') return edges;
-  const sources = new Set(edges.flatMap((edge) => (edge.source ? [edge.source] : [])));
   return [
     ...edges,
     ...nodes.flatMap((node) => {
-      if (node.type !== 'content' || typeof node._key !== 'string' || sources.has(node._key))
+      if (
+        node.type !== 'content' ||
+        typeof node._key !== 'string' ||
+        edges.some((edge) => edge.source === node._key)
+      )
         return [];
       return [
         {
@@ -88,6 +77,3 @@ export function setDocumentTitle(title: string): void {
 }
 export const isDarkMode = (): boolean =>
   typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-export const getImg = (id: string, width?: number): { url: () => string } => ({
-  url: () => getDocsHostAdapter()?.assetUrl?.(id, width) ?? '',
-});

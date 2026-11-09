@@ -13,6 +13,7 @@ import { getHue } from '@terra-symposium/styling';
 
 // TYPES
 import type { DocsNavNode } from '../../../src/components/navigation.js';
+import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -23,33 +24,22 @@ CONFIG
  *
  * @return A global regular expression for replacing route word separators.
  */
-const G_REGEX = () => /[-_]+/g;
+const G_REGEX = () => TerraQualityRegex.REGEX_G_REGEX_8();
 /**
  * Matches the first Unicode letter after a word boundary for title capitalization.
  *
  * @return A global Unicode-aware regular expression for capitalizing word initials.
  */
-const B_P_L_GU_REGEX = () => /\b\p{L}/gu;
+const B_P_L_GU_REGEX = () => TerraQualityRegex.REGEX_B_P_L_GU_REGEX();
 /**
  * Matches leading or trailing slashes that should be removed from a path.
  *
  * @return A regular expression that matches leading or trailing slashes.
  */
-const G_CLASS_2 = () => /^\/+|\/+$/g;
+const G_CLASS_2 = () => TerraQualityRegex.REGEX_G_REGEX_35();
 /** Matches a leading YAML frontmatter block in a Markdown or MDX page. */
 const S_N_S_S_N_S_N_REGEX = /^---\s*\n[\s\S]*?\n---\s*\n/;
-type SidebarFrontmatter = { label?: string; order?: number; hidden?: boolean };
-type DocsFrontmatter = {
-  title?: string;
-  description?: string;
-  hue?: number | null;
-  label?: string;
-  order?: number;
-  hidden?: boolean;
-  visibility?: 'visible' | 'hidden';
-  sidebar?: SidebarFrontmatter;
-};
-type ContentModule = { Content?: unknown; default?: unknown; frontmatter?: DocsFrontmatter };
+
 /**
  * Renderable Docs page metadata derived from its Markdown source and frontmatter.
  */
@@ -65,34 +55,65 @@ export type SitePage = {
   content: unknown;
   markdown: string;
 };
-const modules = import.meta.glob<ContentModule>('/docs/**/*.{md,mdx}', { eager: true });
-const sources = import.meta.glob<string>('/docs/**/*.{md,mdx}', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-});
+const pageInputs = {
+  modules: import.meta.glob<{
+    Content?: unknown;
+    default?: unknown;
+    frontmatter?: {
+      title?: string;
+      description?: string;
+      hue?: number | null;
+      label?: string;
+      order?: number;
+      hidden?: boolean;
+      visibility?: 'visible' | 'hidden';
+      sidebar?: { label?: string; order?: number; hidden?: boolean };
+    };
+  }>('/docs/**/*.{md,mdx}', { eager: true }),
+  sources: import.meta.glob<string>('/docs/**/*.{md,mdx}', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }),
+};
 const base = import.meta.env.BASE_URL;
-const includeAgents = import.meta.env.PUBLIC_DOCS_INCLUDE_AGENTS !== 'false';
 const routes = new Map<string, string>();
 /** Visible Docs pages sorted by configured sidebar order and source path. */
-export const sitePages: SitePage[] = Object.entries(modules)
-  .filter(([file]) => includeAgents || !file.startsWith('/docs/agents/'))
+export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
+  .filter(
+    ([file]) =>
+      import.meta.env.PUBLIC_DOCS_INCLUDE_AGENTS !== 'false' || !file.startsWith('/docs/agents/'),
+  )
   .map(([file, module]) => {
     const relativeFile = file.replace(/^\/docs\//, '');
-    const isRootIndex = ['index.md', 'index.mdx'].includes(relativeFile.toLowerCase());
-    if (!isRootIndex && !relativeFile.includes('/')) {
+    if (
+      !['index.md', 'index.mdx'].includes(relativeFile.toLowerCase()) &&
+      !relativeFile.includes('/')
+    ) {
       throw new Error(`Markdown pages must be grouped in folders directly under docs/: ${file}`);
     }
-    const slug = routeForFile(file);
-    const previous = routes.get(slug);
-    if (previous) throw new Error(`Duplicate Docs route "${slug || '/'}": ${previous} and ${file}`);
+    const slug = file
+      .replace(/^\/?docs\//, '')
+      .replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2(), '')
+      .replace(TerraQualityRegex.REGEX_SKILL_I_REGEX(), '')
+      .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX_2(), '')
+      .replace(G_CLASS_2(), '');
+    if (routes.has(slug))
+      throw new Error(`Duplicate Docs route "${slug || '/'}": ${routes.get(slug)} and ${file}`);
     routes.set(slug, file);
-    const markdown = sources[file] ?? '';
+    const markdown = pageInputs.sources[file] ?? '';
     const frontmatter = module.frontmatter ?? {};
     return {
       file,
       slug,
-      title: frontmatter.title ?? titleFromSource(markdown, slug),
+      title:
+        frontmatter.title ??
+        (TerraQualityRegex.REGEX_S_S_S_M_REGEX()
+          .exec(markdown.replace(S_N_S_S_N_S_N_REGEX, ''))?.[1]
+          ?.trim() ||
+          (slug.split('/').at(-1) || 'Overview')
+            .replace(G_REGEX(), ' ')
+            .replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase())),
       ...((frontmatter.sidebar?.label ?? frontmatter.label)
         ? { sidebarLabel: frontmatter.sidebar?.label ?? frontmatter.label }
         : {}),
@@ -114,37 +135,6 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Resolves a page title from its first heading or, when absent, its route slug.
- *
- * @param source Markdown source after import, including optional frontmatter.
- * @param slug Normalized route path used as the title fallback.
- *
- * @return The authored heading or a title-cased final route segment.
- */
-function titleFromSource(source: string, slug: string): string {
-  const body = source.replace(S_N_S_S_N_S_N_REGEX, '');
-  const heading = /^#\s+(.+?)\s*#*\s*$/m.exec(body)?.[1]?.trim();
-  if (heading) return heading;
-  const name = slug.split('/').at(-1) || 'Overview';
-  return name.replace(G_REGEX(), ' ').replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase());
-}
-
-/**
- * Converts a Markdown or MDX file path into its slash-delimited route slug.
- *
- * @param file Vite glob path for the source page.
- *
- * @return The page path without its extension or trailing `index` segment.
- */
-function routeForFile(file: string): string {
-  const relative = file.replace(/^\/?docs\//, '').replace(/\.(?:md|mdx)$/i, '');
-  return relative
-    .replace(/(?:^|\/)SKILL$/i, '')
-    .replace(/(?:^|\/)index$/i, '')
-    .replace(G_CLASS_2(), '');
-}
-
-/**
  * Creates a display label from a route segment by replacing separators and capitalizing words.
  *
  * @param value Route segment to display in navigation.
@@ -153,38 +143,6 @@ function routeForFile(file: string): string {
  */
 function label(value: string): string {
   return value.replace(G_REGEX(), ' ').replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase());
-}
-
-/**
- * Builds the navigation fields associated with a page at its public route.
- *
- * @param page Page whose title, label, description, and hue supply the navigation metadata.
- * @param href Public URL for the page.
- *
- * @return The metadata fields to merge into its navigation node.
- */
-function pageMetadata(page: SitePage, href: string): Partial<MutableNode> {
-  return {
-    id: page.slug || 'index',
-    title: page.sidebarLabel ?? page.title,
-    href,
-    ...(page.description ? { description: page.description } : {}),
-    ...(page.hue !== undefined ? { hue: page.hue } : {}),
-  };
-}
-
-/**
- * Converts the mutable map-based navigation tree into the serializable Docs navigation shape.
- *
- * @param nodes Child nodes indexed by their route segment.
- *
- * @return Navigation nodes with nested children represented as arrays.
- */
-function materialize(nodes: Map<string, MutableNode>): DocsNavNode[] {
-  return [...nodes.values()].map(({ children, ...node }) => ({
-    ...node,
-    ...(children.size ? { children: materialize(children) } : {}),
-  }));
 }
 
 /**
@@ -217,30 +175,26 @@ export function pageForSlug(slug: string): SitePage | undefined {
  * @return The public URL for that page, or the site root when no section has a leaf.
  */
 export function firstAvailableLeafHref(): string | undefined {
-  const rootHref = pageHref('', base);
-  const findLeaf = (nodes: DocsNavNode[]): string | undefined => {
-    for (const node of nodes) {
-      if (node.children?.length) {
-        const child = findLeaf(node.children);
-        if (child) return child;
-      } else if (node.href && node.href !== rootHref) {
-        return node.href;
-      }
+  const pending = [...siteNavigation].reverse();
+  while (pending.length) {
+    const node = pending.pop();
+    if (!node) continue;
+    if (node.children?.length) {
+      pending.push(...[...node.children].reverse());
+    } else if (node.href && node.href !== pageHref('', base)) {
+      return node.href;
     }
-    return undefined;
-  };
-
-  const firstPage = sitePages.find((page) => !page.hidden && page.slug && page.slug !== '404');
-  return findLeaf(siteNavigation) ?? (firstPage ? pageHref(firstPage.slug, base) : undefined);
+  }
+  const page = sitePages.find((i) => !i.hidden && i.slug && i.slug !== '404');
+  return page ? pageHref(page.slug, base) : undefined;
 }
 if (sitePages.length === 0)
   throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');
 for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '' && i.slug !== '404')) {
-  const segments = page.slug.split('/').filter(Boolean);
   let currentNodes = rootNodes;
   let current: MutableNode | undefined;
   let prefix = '';
-  for (const segment of segments) {
+  for (const segment of page.slug.split('/').filter(Boolean)) {
     prefix = prefix ? `${prefix}/${segment}` : segment;
     let node = currentNodes.get(segment);
     if (!node) {
@@ -255,8 +209,30 @@ for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '' && i.slug 
     current = node;
     currentNodes = node.children;
   }
-  if (current) Object.assign(current, pageMetadata(page, pageHref(page.slug, base)));
+  if (current)
+    Object.assign(current, {
+      id: page.slug || 'index',
+      title: page.sidebarLabel ?? page.title,
+      href: pageHref(page.slug, base),
+      ...(page.description ? { description: page.description } : {}),
+      ...(page.hue !== undefined ? { hue: page.hue } : {}),
+    });
 }
 
 /** Navigation tree built from the visible pages after their routes are registered. */
-export const siteNavigation = materialize(rootNodes);
+export const siteNavigation: DocsNavNode[] = [];
+const pending: { source: Map<string, MutableNode>; target: DocsNavNode[] }[] = [
+  { source: rootNodes, target: siteNavigation },
+];
+while (pending.length) {
+  const branch = pending.pop();
+  if (!branch) continue;
+  for (const { children, ...node } of branch.source.values()) {
+    const child: DocsNavNode = { ...node };
+    if (children.size) {
+      child.children = [];
+      pending.push({ source: children, target: child.children });
+    }
+    branch.target.push(child);
+  }
+}

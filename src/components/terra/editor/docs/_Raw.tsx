@@ -14,15 +14,6 @@ import { ErrorBoundary } from '../../ui.js';
 // TYPES
 import type { DocsBlock } from '../types.js';
 
-function isMarkdownThematicBreak(markdown: string): boolean {
-  const source = markdown.replace(/\r\n?/g, '\n').trim();
-  return /^(?:\*(?:[\t ]*\*){2,}|-(?:[\t ]*-){2,}|_(?:[\t ]*_){2,})[\t ]*$/.test(source);
-}
-
-/*//////////////////////////////////////////////////
-HELPERS
-//////////////////////////////////////////////////*/
-
 /**
  * Renders the raw component.
  *
@@ -38,7 +29,9 @@ export function Raw({
   const markdown = block.markdown ?? '';
   return (
     <ErrorBoundary name="Raw">
-      {isMarkdownThematicBreak(markdown) ? (
+      {/^(?:\*(?:[\t ]*\*){2,}|-(?:[\t ]*-){2,}|_(?:[\t ]*_){2,})[\t ]*$/.test(
+        markdown.replace(/\r\n?/g, '\n').trim(),
+      ) ? (
         <hr
           className="my-16 h-px w-full border-0 bg-primary-6 print:hidden"
           data-docs-raw-divider

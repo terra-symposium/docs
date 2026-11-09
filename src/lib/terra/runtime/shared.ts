@@ -1,8 +1,12 @@
 import type { Tree } from './types.js';
 import { getDocsHostAdapter } from '../../host-runtime.js';
+import * as TerraQualityRegex from '../regex.mjs';
+/*//////////////////////////////////////////////////
+REGEX
+//////////////////////////////////////////////////*/
+const SHARED_REGEX = /^\/+/;
+const SHARED_CLASS_2 = /\/+$/;
 
-const stripExt = /\.(?:md|mdx)$/i;
-export const FILES = { index: /^(?:\/|^)index\.(?:md|mdx)$/i, markdown: stripExt } as const;
 export const REORDER = {
   active: 'bg-primary-3 text-primary-12 ring-1 ring-primary-7',
   after:
@@ -29,21 +33,20 @@ export const MIME: Record<string, string> = {
   '.zip': 'application/zip',
 };
 export const TESTIMONIALS_EXPORT = '';
-export const componentExport = (name: string): string => `<${name} />`;
 export function docsRootPath(): string {
   return getDocsHostAdapter()?.rootPath ?? '/docs';
 }
 export function docsPath(path = ''): string {
   const host = getDocsHostAdapter();
   if (host?.routePath) return host.routePath(path);
-  const root = docsRootPath().replace(/\/+$/, '');
-  const c = path.replace(/^\/+/, '');
+  const root = docsRootPath().replace(SHARED_CLASS_2, '');
+  const c = path.replace(SHARED_REGEX, '');
   if (!c) return root || '/';
   if (root && (path === root || path.startsWith(`${root}/`))) return path;
   return `${root}/${c}`;
 }
 export function isDocsPath(path: string): boolean {
-  const root = docsRootPath().replace(/\/+$/, '') || '/';
+  const root = docsRootPath().replace(SHARED_CLASS_2, '') || '/';
   return root === '/' ? path.startsWith('/') : path === root || path.startsWith(`${root}/`);
 }
 export function toPaths(nodes: Tree[]): string[] {
@@ -60,33 +63,22 @@ export function toNodeLabel(title: string): string {
   return title?.replace(/^_+/, '') ?? '';
 }
 export function dirname(path: string): string {
-  const value = path.replace(/\/+$/, '');
+  const value = path.replace(SHARED_CLASS_2, '');
   const index = value.lastIndexOf('/');
   return index < 0 ? '.' : value.slice(0, index) || '/';
 }
 export function bName(path: string, ext?: string): string {
-  let name = path.replace(/\/+$/, '').split('/').pop() || '';
+  let name = path.replace(SHARED_CLASS_2, '').split('/').pop() || '';
   if (ext && name.endsWith(ext)) name = name.slice(0, -ext.length);
   return name;
 }
 export const cTitle = (title?: string): string => (title || '').trim();
-export const fmtNodeTitle = (value: string): string =>
-  value
-    ?.replace(/\.pdf$/i, '')
-    .replace(stripExt, '')
-    .replace(/^_+/, '')
-    .replace(/[-_]+/g, ' ') ?? '';
-export const toPascal = (value: string): string =>
-  value
-    .replace(/(^|[-_\s])([a-z])/g, (_m, _p, c: string) => c.toUpperCase())
-    .replace(/[-_\s]/g, '');
 export function buildRoute(sectionId: string, groupId?: string, leafId?: string): string {
   const hostBuilder = getDocsHostAdapter()?.buildRoute;
   if (hostBuilder) return hostBuilder(sectionId, groupId, leafId);
-  const root = docsRootPath();
   return sectionId && sectionId !== 'index'
     ? docsPath(`${sectionId}${groupId ? `/${groupId}` : ''}${leafId ? `/${leafId}` : ''}`)
-    : root;
+    : docsRootPath();
 }
 export function parseRoute(value: string): {
   sectionId: string;
@@ -98,18 +90,18 @@ export function parseRoute(value: string): {
   const hostResolver = getDocsHostAdapter()?.resolveRoute;
   if (hostResolver) return hostResolver(value);
   try {
-    const root = docsRootPath().replace(/\/+$/, '') || '/';
+    const root = docsRootPath().replace(SHARED_CLASS_2, '') || '/';
     const pathname = new URL(value, 'http://localhost').pathname;
-    const relative =
+    const parts = (
       root === '/'
         ? pathname.replace(/^\//, '')
         : pathname === root
           ? ''
           : pathname.startsWith(`${root}/`)
             ? pathname.slice(root.length + 1)
-            : pathname.replace(/^\/+/, '');
-    const parts = relative
-      .replace(/\/$/, '')
+            : pathname.replace(SHARED_REGEX, '')
+    )
+      .replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '')
       .split('/')
       .filter(Boolean)
       .map((part) =>

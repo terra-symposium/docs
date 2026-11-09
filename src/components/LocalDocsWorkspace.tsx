@@ -12,6 +12,7 @@ import type {
   DocsCustomBlock,
 } from '../lib/host.js';
 import type { JSX, ReactNode } from 'react';
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 
 /** A local page supplied by a repository or static site build. */
 export type DocsLocalPage = {
@@ -54,15 +55,6 @@ function norm(value: string, base = 'http://docs.local'): string {
   }
 }
 
-function routeId(value: string): string {
-  try {
-    const hash = new URL(value, 'http://docs.local').hash.slice(1);
-    return hash ? decodeURIComponent(hash) : '';
-  } catch {
-    return '';
-  }
-}
-
 export function findDocsLocalPage(
   pages: DocsLocalPage[],
   value: unknown,
@@ -70,7 +62,14 @@ export function findDocsLocalPage(
   if (typeof value !== 'string' || !value) return undefined;
   const route = norm(value);
   const pathOnly = route.split('#', 1)[0];
-  const id = routeId(value);
+  const id = (function routeId(value: string): string {
+    try {
+      const hash = new URL(value, 'http://docs.local').hash.slice(1);
+      return hash ? decodeURIComponent(hash) : '';
+    } catch {
+      return '';
+    }
+  })(value);
 
   // Hash-addressed pages must win before a shared pathname such as `/`.
   if (id) {
@@ -98,31 +97,8 @@ function findTreeNode(
   ancestors: DocsHostTreeNode[] = [],
 ): { node: DocsHostTreeNode; ancestors: DocsHostTreeNode[] } | undefined {
   for (const node of nodes) {
-    const branch = [...ancestors, node];
     if (node.origName === id) return { node, ancestors };
-    const found = node.children ? findTreeNode(node.children, id, branch) : undefined;
-    if (found) return found;
-  }
-  return undefined;
-}
-
-function findTreeLeaf(
-  nodes: DocsHostTreeNode[],
-  id: string,
-  ancestors: DocsHostTreeNode[] = [],
-): { node: DocsHostTreeNode; ancestors: DocsHostTreeNode[] } | undefined {
-  for (const node of nodes) {
-    if (node.type === 'leaf' && node.origName === id) return { node, ancestors };
-    const found = node.children ? findTreeLeaf(node.children, id, [...ancestors, node]) : undefined;
-    if (found) return found;
-  }
-  return undefined;
-}
-
-function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
-  for (const node of nodes) {
-    if (node.type === 'leaf') return node;
-    const found = firstLeaf(node.children ?? []);
+    const found = node.children ? findTreeNode(node.children, id, [...ancestors, node]) : undefined;
     if (found) return found;
   }
   return undefined;
@@ -153,132 +129,167 @@ export function DocsLocalWorkspace(props: DocsLocalWorkspaceProps): JSX.Element 
     () => (page ? markdownToDocsValue(page.markdown, blocks) : []),
     [blocks, page],
   );
-  const host = useMemo<DocsHostAdapter>(() => {
-    const aPage = (): DocsLocalPage | undefined =>
-      typeof window === 'undefined'
-        ? page
-        : (findDocsLocalPage(
-            pages,
-            `${window.location.pathname}${window.location.search}${window.location.hash}`,
-          ) ?? page);
-    const resolvePage = (input: unknown): DocsLocalPage | undefined => {
-      if (!input || typeof input !== 'object') return undefined;
-      const value = input as Record<string, unknown>;
-      const direct =
-        findDocsLocalPage(pages, value.id) ??
-        findDocsLocalPage(pages, value.path) ??
-        findDocsLocalPage(pages, value.pathname) ??
-        findDocsLocalPage(pages, value.origName);
-      if (direct) return direct;
-      const requested = [value.path, value.pathname, value.id].find(
-        (candidate) => typeof candidate === 'string' && candidate.length > 0,
-      );
-      if (typeof requested !== 'string') return aPage();
-      const basename = requested.split(/[?#]/, 1)[0]?.split('/').filter(Boolean).at(-1);
-      const a = aPage();
-      if (basename && a?.path.split('/').at(-1) === basename) return a;
-      const matches = pages.filter(
-        (candidate) => candidate.path.split('/').at(-1) === basename || candidate.id === basename,
-      );
-      return matches.length === 1 ? matches[0] : undefined;
-    };
-    const adapter: DocsHostAdapter = {
-      capabilities: {
-        read: true,
-        write: false,
-        reorder: false,
-        attachments: false,
-        export: true,
-        history: false,
-        publish: false,
-      },
-      rootPath,
-      ...(homePath ? { homePath } : {}),
-      hue,
-      siteTitle: title,
-      ...(description ? { siteDescription: description } : {}),
-      assetUrl: () => undefined,
-      resolveRoute(value) {
-        const resolved = findDocsLocalPage(pages, value) ?? pages[0];
-        // Leaf IDs may intentionally match their section IDs (for example a
-        // Standards `skills` section containing the `skills` landing leaf).
-        // Resolve the leaf explicitly so a branch collision cannot redirect
-        // the selected section to the first section in the TOC.
-        const match = resolved ? findTreeLeaf(tree, resolved.id) : undefined;
-        const branches = match?.ancestors.filter((node) => node.type === 'branch') ?? [];
-        return {
-          sectionId: branches[0]?.origName ?? tree[0]?.origName ?? 'index',
-          ...(branches[1] ? { groupId: branches[1].origName } : {}),
-          ...(resolved ? { leafId: resolved.id } : {}),
-          targetId: resolved?.id ?? tree[0]?.origName ?? 'index',
-          pathname: resolved?.pathname ?? norm(value),
-        };
-      },
-      buildRoute(sectionId, groupId, leafId) {
-        const leaf = leafId ? findTreeNode(tree, leafId)?.node : undefined;
-        if (leaf?.url) return leaf.url;
-        const group = groupId ? findTreeNode(tree, groupId)?.node : undefined;
-        const section = findTreeNode(tree, sectionId)?.node;
-        return firstLeaf(group?.children ?? section?.children ?? tree)?.url ?? rootPath;
-      },
-      routePath(path) {
-        return findDocsLocalPage(pages, path)?.pathname ?? rootPath;
-      },
-      async invoke<T = unknown>(
-        op: DocsActionOperation,
-        input?: unknown,
-      ): Promise<DocsActionResult<T>> {
-        const args = (input ?? {}) as Record<string, unknown>;
-        if (op === 'read.doc.list') return { data: tree as T };
-        if (op === 'read.doc.get') {
-          const document = resolvePage(args);
-          return {
-            data: (document
-              ? {
-                  ...document,
-                  source: document.markdown,
-                  content: markdownToDocsValue(document.markdown),
-                }
-              : null) as T,
-          };
-        }
-        if (op === 'read.doc.attachments') {
-          const document = resolvePage(args) ?? aPage();
-          const attachments = (document?.attachments ?? []).map((attachment) => ({
-            ...attachment,
-            title: attachment.name,
-            isMd: false,
-          }));
-          return { data: attachments as T };
-        }
-        if (op === 'read.source.body')
-          return { data: markdownToDocsValue(String(args.source ?? '')) as T };
-        if (op === 'read.util.pathname') return { data: String(args.path ?? pathname) as T };
-        if (op === 'read.util.node') {
-          const document = resolvePage(args);
-          return {
-            data: (document
-              ? { origName: document.id, title: document.title, path: document.path }
-              : null) as T,
-          };
-        }
-        if (op === 'read.tsdocs') return { data: { scopes: [] } as T };
-        if (op === 'read.asset.get') {
-          const assetPath = String(args.path ?? args.id ?? '');
-          const response = await fetch(assetPath);
-          if (!response.ok)
-            return { error: new Error(`Unable to read local attachment (${response.status}).`) };
-          return { data: (await response.arrayBuffer()) as T };
-        }
-        return { data: null as T };
-      },
-    };
-    return adapter;
-  }, [description, homePath, hue, pages, pathname, rootPath, title, tree]);
 
   return (
     <DocsWorkspace
-      host={host}
+      host={useMemo<DocsHostAdapter>(() => {
+        const aPage = (): DocsLocalPage | undefined =>
+          typeof window === 'undefined'
+            ? page
+            : (findDocsLocalPage(
+                pages,
+                `${window.location.pathname}${window.location.search}${window.location.hash}`,
+              ) ?? page);
+        const resolvePage = (input: unknown): DocsLocalPage | undefined => {
+          if (!input || typeof input !== 'object') return undefined;
+          const value = input as Record<string, unknown>;
+          const direct =
+            findDocsLocalPage(pages, value.id) ??
+            findDocsLocalPage(pages, value.path) ??
+            findDocsLocalPage(pages, value.pathname) ??
+            findDocsLocalPage(pages, value.origName);
+          if (direct) return direct;
+          const requested = [value.path, value.pathname, value.id].find(
+            (candidate) => typeof candidate === 'string' && candidate.length > 0,
+          );
+          if (typeof requested !== 'string') return aPage();
+          const basename = requested
+            .split(TerraQualityRegex.REGEX_PATTERN_REGEX_4(), 1)[0]
+            ?.split('/')
+            .filter(Boolean)
+            .at(-1);
+          const a = aPage();
+          if (basename && a?.path.split('/').at(-1) === basename) return a;
+          const matches = pages.filter(
+            (candidate) =>
+              candidate.path.split('/').at(-1) === basename || candidate.id === basename,
+          );
+          return matches.length === 1 ? matches[0] : undefined;
+        };
+        return {
+          capabilities: {
+            read: true,
+            write: false,
+            reorder: false,
+            attachments: false,
+            export: true,
+            history: false,
+            publish: false,
+          },
+          rootPath,
+          ...(homePath ? { homePath } : {}),
+          hue,
+          siteTitle: title,
+          ...(description ? { siteDescription: description } : {}),
+          assetUrl: () => undefined,
+          resolveRoute(value) {
+            const resolved = findDocsLocalPage(pages, value) ?? pages[0];
+            // Leaf IDs may intentionally match their section IDs (for example a
+            // Standards `skills` section containing the `skills` landing leaf).
+            // Resolve the leaf explicitly so a branch collision cannot redirect
+            // the selected section to the first section in the TOC.
+            const branches =
+              (resolved
+                ? (function findTreeLeaf(
+                    nodes: DocsHostTreeNode[],
+                    id: string,
+                    ancestors: DocsHostTreeNode[] = [],
+                  ): { node: DocsHostTreeNode; ancestors: DocsHostTreeNode[] } | undefined {
+                    for (const node of nodes) {
+                      if (node.type === 'leaf' && node.origName === id) return { node, ancestors };
+                      const found = node.children
+                        ? findTreeLeaf(node.children, id, [...ancestors, node])
+                        : undefined;
+                      if (found) return found;
+                    }
+                    return undefined;
+                  })(tree, resolved.id)
+                : undefined
+              )?.ancestors.filter((node) => node.type === 'branch') ?? [];
+            return {
+              sectionId: branches[0]?.origName ?? tree[0]?.origName ?? 'index',
+              ...(branches[1] ? { groupId: branches[1].origName } : {}),
+              ...(resolved ? { leafId: resolved.id } : {}),
+              targetId: resolved?.id ?? tree[0]?.origName ?? 'index',
+              pathname: resolved?.pathname ?? norm(value),
+            };
+          },
+          buildRoute(sectionId, groupId, leafId) {
+            const leaf = leafId ? findTreeNode(tree, leafId)?.node : undefined;
+            if (leaf?.url) return leaf.url;
+            return ((groupChildren, sectionChildren) =>
+              (function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
+                for (const node of nodes) {
+                  if (node.type === 'leaf') return node;
+                  const found = firstLeaf(node.children ?? []);
+                  if (found) return found;
+                }
+                return undefined;
+              })(groupChildren ?? sectionChildren ?? tree)?.url ?? rootPath)(
+              groupId ? findTreeNode(tree, groupId)?.node.children : undefined,
+              findTreeNode(tree, sectionId)?.node.children,
+            );
+          },
+          routePath(path) {
+            return findDocsLocalPage(pages, path)?.pathname ?? rootPath;
+          },
+          async invoke<T = unknown>(
+            op: DocsActionOperation,
+            input?: unknown,
+          ): Promise<DocsActionResult<T>> {
+            const args = (input ?? {}) as Record<string, unknown>;
+            if (op === 'read.doc.list') return { data: tree as T };
+            if (op === 'read.doc.get') {
+              return {
+                data: (function readDocument(): unknown {
+                  const document = resolvePage(args);
+                  return document
+                    ? {
+                        ...document,
+                        source: document.markdown,
+                        content: markdownToDocsValue(document.markdown),
+                      }
+                    : null;
+                })() as T,
+              };
+            }
+            if (op === 'read.doc.attachments') {
+              return {
+                data: ((resolvePage(args) ?? aPage())?.attachments ?? []).map((attachment) => ({
+                  ...attachment,
+                  title: attachment.name,
+                  isMd: false,
+                })) as T,
+              };
+            }
+            if (op === 'read.source.body')
+              return { data: markdownToDocsValue(String(args.source ?? '')) as T };
+            if (op === 'read.util.pathname') return { data: String(args.path ?? pathname) as T };
+            if (op === 'read.util.node') {
+              const document = resolvePage(args);
+              return {
+                data: (document
+                  ? {
+                      origName: document.id,
+                      title: document.title,
+                      path: document.path,
+                    }
+                  : null) as T,
+              };
+            }
+            if (op === 'read.tsdocs') return { data: { scopes: [] } as T };
+            if (op === 'read.asset.get') {
+              const response = await fetch(String(args.path ?? args.id ?? ''));
+              if (!response.ok)
+                return {
+                  error: new Error(`Unable to read local attachment (${response.status}).`),
+                };
+              return { data: (await response.arrayBuffer()) as T };
+            }
+            return { data: null as T };
+          },
+        };
+      }, [description, homePath, hue, pages, pathname, rootPath, title, tree])}
       tree={tree}
       pathname={pathname}
       permission="read"

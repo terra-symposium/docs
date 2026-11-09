@@ -1,17 +1,45 @@
 import type { DocsActionOperation, DocsActionResult } from '../../host.js';
 
-let invoke: <T = unknown>(
-  op: DocsActionOperation,
-  input?: unknown,
-) => Promise<DocsActionResult<T>> = async (op) => ({
-  error: new Error(`Docs host action is not configured: ${op}`),
-});
+export const actionProxy = {
+  invoke: async <T = unknown>(
+    op: DocsActionOperation,
+    _input?: unknown,
+  ): Promise<DocsActionResult<T>> => ({
+    error: new Error(`Docs host action is not configured: ${op}`),
+  }),
+};
 
+const actionPath: unique symbol = Symbol('docsActionPath');
 type ActionProxy = ((...args: unknown[]) => Promise<DocsActionResult<unknown>>) & {
   [key: string]: ActionProxy;
+  [actionPath]: string;
 };
 type ActionCall<T> = (input?: unknown) => Promise<DocsActionResult<T>>;
-type ActionTree = {
+
+/** Internal compatibility bridge for the original UI's nested host-action calls. */
+export const actions = new Proxy(
+  Object.assign(
+    function callable(...args: unknown[]) {
+      return actionProxy.invoke('' as DocsActionOperation, args[0]);
+    },
+    { [actionPath]: '' },
+  ) as ActionProxy,
+  {
+    get(this: ProxyHandler<ActionProxy>, target, key) {
+      if (typeof key !== 'string') return undefined;
+      const path = target[actionPath] ? `${target[actionPath]}.${key}` : key;
+      return new Proxy(
+        Object.assign(
+          function callable(...args: unknown[]) {
+            return actionProxy.invoke(path as DocsActionOperation, args[0]);
+          },
+          { [actionPath]: path },
+        ) as ActionProxy,
+        this,
+      );
+    },
+  },
+) as unknown as {
   read: {
     asset: { get: ActionCall<ArrayBuffer> };
     doc: {
@@ -38,23 +66,3 @@ type ActionTree = {
     };
   };
 };
-
-export function configureDocsActionProxy(
-  handler: <T = unknown>(op: DocsActionOperation, input?: unknown) => Promise<DocsActionResult<T>>,
-): void {
-  invoke = handler;
-}
-
-function action(path: string): ActionProxy {
-  const callable = ((...args: unknown[]) =>
-    invoke(path as DocsActionOperation, args[0])) as ActionProxy;
-  return new Proxy(callable, {
-    get(_target, key) {
-      if (typeof key !== 'string') return undefined;
-      return action(path ? `${path}.${key}` : key);
-    },
-  });
-}
-
-/** Internal compatibility bridge for the original UI's nested host-action calls. */
-export const actions = action('') as unknown as ActionTree;

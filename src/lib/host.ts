@@ -81,14 +81,8 @@ export type DocsHostOperationContracts = {
     input: { type: 'nav'; pathname: string; full?: boolean };
     output: DocsHostTreeNode[];
   };
-  'read.doc.get': {
-    input: { id?: string; pathname?: string };
-    output: DocsHostDocument | null;
-  };
-  'read.doc.attachments': {
-    input: { path: string };
-    output: DocsHostAttachment[];
-  };
+  'read.doc.get': { input: { id?: string; pathname?: string }; output: DocsHostDocument | null };
+  'read.doc.attachments': { input: { path: string }; output: DocsHostAttachment[] };
   'write.doc.save': {
     input: {
       path: string;

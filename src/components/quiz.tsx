@@ -31,7 +31,11 @@ export type DocsQuizConfig = {
   generate?: (input: DocsQuizGenerationInput) => Promise<unknown>;
 };
 
-type DocsQuizContextValue = { config: DocsQuizConfig; title: string; markdown: string };
+type DocsQuizContextValue = {
+  config: DocsQuizConfig;
+  title: string;
+  markdown: string;
+};
 const DocsQuizContext = createContext<DocsQuizContextValue | null>(null);
 
 export function DocsQuizProvider({
@@ -63,55 +67,61 @@ export function parseDocsQuiz(value: unknown): DocsQuizDocument {
     candidate.questions.length > 20
   )
     throw new Error('The quiz endpoint must return a title and between one and twenty questions.');
-  const questions = candidate.questions.map((value): DocsQuizQuestion => {
-    if (!value || typeof value !== 'object')
-      throw new Error('The quiz endpoint returned an invalid question.');
-    const question = value as Record<string, unknown>;
-    if (typeof question.prompt !== 'string' || !question.prompt.trim())
-      throw new Error('Each question needs a prompt.');
-    if (question.type === 'multipleChoice') {
-      if (
-        !Array.isArray(question.opts) ||
-        question.opts.length < 2 ||
-        !question.opts.every((i) => typeof i === 'string' && i.trim()) ||
-        new Set(question.opts).size !== question.opts.length ||
-        typeof question.answer !== 'string' ||
-        !question.opts.includes(question.answer)
-      )
-        throw new Error(
-          'Multiple choice questions need options and a correct answer selected from those options.',
-        );
-      return {
-        type: question.type,
-        prompt: question.prompt,
-        opts: question.opts as string[],
-        answer: question.answer,
-        ...(typeof question.explanation === 'string' ? { explanation: question.explanation } : {}),
-        ...(typeof question.section === 'string' ? { section: question.section } : {}),
-      };
-    }
-    if (question.type === 'keyword') {
-      if (
-        !Array.isArray(question.answers) ||
-        question.answers.length === 0 ||
-        !question.answers.every((i) => typeof i === 'string' && i.trim()) ||
-        (question.keywords !== undefined &&
-          (!Array.isArray(question.keywords) ||
-            !question.keywords.every((i) => typeof i === 'string')))
-      )
-        throw new Error('Keyword questions need at least one accepted answer.');
-      return {
-        type: question.type,
-        prompt: question.prompt,
-        answers: question.answers as string[],
-        ...(Array.isArray(question.keywords) ? { keywords: question.keywords as string[] } : {}),
-        ...(typeof question.explanation === 'string' ? { explanation: question.explanation } : {}),
-        ...(typeof question.section === 'string' ? { section: question.section } : {}),
-      };
-    }
-    throw new Error('The quiz endpoint returned an unsupported question type.');
-  });
-  return { title: candidate.title, questions };
+  return {
+    title: candidate.title,
+    questions: candidate.questions.map((value): DocsQuizQuestion => {
+      if (!value || typeof value !== 'object')
+        throw new Error('The quiz endpoint returned an invalid question.');
+      const question = value as Record<string, unknown>;
+      if (typeof question.prompt !== 'string' || !question.prompt.trim())
+        throw new Error('Each question needs a prompt.');
+      if (question.type === 'multipleChoice') {
+        if (
+          !Array.isArray(question.opts) ||
+          question.opts.length < 2 ||
+          !question.opts.every((i) => typeof i === 'string' && i.trim()) ||
+          new Set(question.opts).size !== question.opts.length ||
+          typeof question.answer !== 'string' ||
+          !question.opts.includes(question.answer)
+        )
+          throw new Error(
+            'Multiple choice questions need options and a correct answer selected from those options.',
+          );
+        return {
+          type: question.type,
+          prompt: question.prompt,
+          opts: question.opts as string[],
+          answer: question.answer,
+          ...(typeof question.explanation === 'string'
+            ? { explanation: question.explanation }
+            : {}),
+          ...(typeof question.section === 'string' ? { section: question.section } : {}),
+        };
+      }
+      if (question.type === 'keyword') {
+        if (
+          !Array.isArray(question.answers) ||
+          question.answers.length === 0 ||
+          !question.answers.every((i) => typeof i === 'string' && i.trim()) ||
+          (question.keywords !== undefined &&
+            (!Array.isArray(question.keywords) ||
+              !question.keywords.every((i) => typeof i === 'string')))
+        )
+          throw new Error('Keyword questions need at least one accepted answer.');
+        return {
+          type: question.type,
+          prompt: question.prompt,
+          answers: question.answers as string[],
+          ...(Array.isArray(question.keywords) ? { keywords: question.keywords as string[] } : {}),
+          ...(typeof question.explanation === 'string'
+            ? { explanation: question.explanation }
+            : {}),
+          ...(typeof question.section === 'string' ? { section: question.section } : {}),
+        };
+      }
+      throw new Error('The quiz endpoint returned an unsupported question type.');
+    }),
+  };
 }
 
 function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean {
@@ -147,10 +157,6 @@ export function DocsQuizGenerator({
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const toggleType = (type: DocsQuizQuestionType) =>
-    setTypes((current) =>
-      current.includes(type) ? current.filter((i) => i !== type) : [...current, type],
-    );
   const updateQuestion = (
     questionIndex: number,
     update: (question: DocsQuizQuestion) => DocsQuizQuestion,
@@ -166,39 +172,7 @@ export function DocsQuizGenerator({
         : current,
     );
   };
-  const startGen = async () => {
-    setErr('');
-    if (!gen) {
-      setErr('Quiz generation is not configured for this Docs host.');
-      return;
-    }
-    if (!types.length) {
-      setErr('Choose at least one question type.');
-      return;
-    }
-    setLoading(true);
-    try {
-      const generated = parseDocsQuiz(await gen({ title, markdown, count, types }));
-      if (generated.questions.length !== count)
-        throw new Error(
-          `The quiz endpoint returned ${generated.questions.length} questions; ${count} were requested.`,
-        );
-      if (generated.questions.some((question) => !types.includes(question.type)))
-        throw new Error('The quiz endpoint returned a question type that was not selected.');
-      setQuiz(generated);
-      setStage('review');
-    } catch (cause) {
-      setErr(cause instanceof Error ? cause.message : 'Quiz generation failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
   const question = quiz?.questions[index];
-  const correct =
-    quiz?.questions.reduce((score, v, i) => {
-      const response = (answers[i] ?? '').trim();
-      return score + Number(isCorrectAnswer(v, response));
-    }, 0) ?? 0;
 
   return (
     <section
@@ -239,7 +213,13 @@ export function DocsQuizGenerator({
                 <input
                   type="checkbox"
                   checked={types.includes(type)}
-                  onChange={() => toggleType(type)}
+                  onChange={() =>
+                    setTypes((current) =>
+                      current.includes(type)
+                        ? current.filter((i) => i !== type)
+                        : [...current, type],
+                    )
+                  }
                 />
                 {type === 'multipleChoice' ? 'Multiple choice' : 'Keyword answer'}
               </label>
@@ -248,7 +228,41 @@ export function DocsQuizGenerator({
           <button
             type="button"
             disabled={loading}
-            onClick={() => void startGen()}
+            onClick={() =>
+              void (async () => {
+                setErr('');
+                if (!gen) {
+                  setErr('Quiz generation is not configured for this Docs host.');
+                  return;
+                }
+                if (!types.length) {
+                  setErr('Choose at least one question type.');
+                  return;
+                }
+                setLoading(true);
+                try {
+                  const generated = parseDocsQuiz(await gen({ title, markdown, count, types }));
+                  if (generated.questions.length !== count)
+                    throw new Error(
+                      `The quiz endpoint returned ${generated.questions.length} questions; ${count} were requested.`,
+                    );
+                  if (generated.questions.some((question) => !types.includes(question.type)))
+                    throw new Error(
+                      'The quiz endpoint returned a question type that was not selected.',
+                    );
+                  setQuiz(generated);
+                  setStage('review');
+                } catch (cause) {
+                  setErr(
+                    cause instanceof Error
+                      ? cause.message
+                      : 'Quiz generation failed. Please try again.',
+                  );
+                } finally {
+                  setLoading(false);
+                }
+              })()
+            }
             className="rounded-md bg-primary-9 px-4 py-2 font-medium text-primary-1 disabled:opacity-60"
           >
             {loading ? 'Generating…' : 'Generate quiz'}
@@ -269,7 +283,10 @@ export function DocsQuizGenerator({
                   className="rounded-md border border-primary-6 bg-background px-3 py-2"
                   value={v.prompt}
                   onChange={(event) =>
-                    updateQuestion(i, (q) => ({ ...q, prompt: event.target.value }))
+                    updateQuestion(i, (q) => ({
+                      ...q,
+                      prompt: event.target.value,
+                    }))
                   }
                 />
               </label>
@@ -340,7 +357,10 @@ export function DocsQuizGenerator({
                   className="rounded-md border border-primary-6 bg-background px-3 py-2"
                   value={v.explanation ?? ''}
                   onChange={(event) =>
-                    updateQuestion(i, (q) => ({ ...q, explanation: event.target.value }))
+                    updateQuestion(i, (q) => ({
+                      ...q,
+                      explanation: event.target.value,
+                    }))
                   }
                 />
               </label>
@@ -504,18 +524,21 @@ export function DocsQuizGenerator({
       {stage === 'results' && quiz && (
         <div className="space-y-4">
           <p className="text-lg font-medium">
-            Score: {correct} / {quiz.questions.length}
+            Score:{' '}
+            {quiz.questions.reduce(
+              (score, v, i) => score + Number(isCorrectAnswer(v, (answers[i] ?? '').trim())),
+              0,
+            )}{' '}
+            / {quiz.questions.length}
           </p>
           {quiz.questions.map((v, i) => {
-            const response = (answers[i] ?? '').trim();
-            const isCorrect = isCorrectAnswer(v, response);
             return (
               <article key={i} className="rounded-lg border border-primary-6 p-4">
                 <h3 className="font-medium">
                   {i + 1}. {v.prompt}
                 </h3>
                 <p className="text-sm">
-                  {isCorrect
+                  {isCorrectAnswer(v, (answers[i] ?? '').trim())
                     ? 'Correct'
                     : `Answer: ${v.type === 'multipleChoice' ? v.answer : v.answers.join(' / ')}`}
                 </p>

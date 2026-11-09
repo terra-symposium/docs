@@ -43,7 +43,7 @@ jobs:
           node-version-file: config/.nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run build && pnpm exec docs build
+      - run: pnpm run docs
 
   check:
     if: github.event_name == 'pull_request'

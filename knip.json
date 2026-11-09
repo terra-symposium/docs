@@ -1,0 +1,32 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "config/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}",
+    "bin/**/*.mjs",
+    "scripts/**/*.{mjs,cjs,js}",
+    "*.config.{mjs,cjs,js,ts}",
+    "config/tailwind*.{mjs,cjs}",
+    "src/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "site/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "demo/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "test/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "tests/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}"
+  ],
+  "project": [
+    "*.config.{mjs,cjs,js,ts}",
+    "bin/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "config/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "scripts/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "src/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "site/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "demo/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "test/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
+    "tests/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}"
+  ],
+  "ignoreDependencies": [
+    "postcss-import",
+    "@xstate/react",
+    "bezier-easing",
+    "use-sync-external-store"
+  ]
+}

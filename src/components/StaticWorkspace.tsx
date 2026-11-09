@@ -20,9 +20,10 @@ import type { DocsQuizConfig } from './quiz.js';
 
 // TYPES
 import type { DocsAttachment, DocsLeaf, DocsSection } from '../lib/workspace-types.js';
-import type { DocsHostAdapter, DocsHostAttachment, DocsHostTreeNode } from '../lib/host.js';
+import type { DocsHostAdapter, DocsHostTreeNode } from '../lib/host.js';
 import type { DocsNavNode } from './navigation.js';
 import type { JSX, ReactNode } from 'react';
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -33,30 +34,8 @@ CONFIG
  *
  * @return A regular expression used to remove leading and trailing slashes.
  */
-const G_REGEX = () => /^\/+|\/+$/g;
-const SHARED_REGEX = /\/$/;
-
-/** Properties used to build a host-independent, read-only Docs workspace. */
-type Props = {
-  title: string;
-  homeHref?: string;
-  description?: string;
-  pageTitle?: string;
-  hue?: number | null;
-  nodes?: DocsNavNode[];
-  sections?: DocsSection[];
-  currentPath: string;
-  rootPath?: string;
-  markdown?: string;
-  content?: unknown;
-  attachments?: DocsAttachment[];
-  updatedAt?: string;
-  renderContent?: ReactNode;
-  children?: ReactNode;
-  staticContent?: boolean;
-  /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
-  quiz?: DocsQuizConfig;
-};
+const G_REGEX = () => TerraQualityRegex.REGEX_G_REGEX_35();
+const SHARED_REGEX = TerraQualityRegex.REGEX_PATTERN_REGEX_3();
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -73,7 +52,7 @@ const slug = (value: string): string =>
   value
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
+    .replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-')
     .replace(/^-|-$/g, '') || 'index';
 /**
  * Normalizes a route for comparison while preserving its fragment identifier.
@@ -112,58 +91,6 @@ const storageKey = (value: string): string => {
  *
  * @return Sections that preserve the source grouping and include only linked pages as leaves.
  */
-function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
-  /**
-   * Converts a linked navigation node to a Docs leaf while ignoring non-link groups.
-   *
-   * @param node Navigation node to map.
-   *
-   * @return Leaf metadata when the node has an `href`, otherwise `null`.
-   */
-  const toLeaf = (node: DocsNavNode): DocsLeaf | null =>
-    node.href
-      ? {
-          ...(node.id ? { id: node.id } : {}),
-          ...(node.path ? { path: node.path } : {}),
-          title: node.title,
-          href: node.href,
-          ...(node.description ? { description: node.description } : {}),
-          ...(node.hue !== undefined ? { hue: node.hue } : {}),
-          ...(node.updatedAt ? { updatedAt: node.updatedAt } : {}),
-          ...(node.attachments ? { attachments: node.attachments } : {}),
-        }
-      : null;
-  return nodes.map((section) => {
-    const children = section.children ?? [];
-    const nestedGroups = children.some((node) => Boolean(node.children?.length));
-    const groups = nestedGroups
-      ? children.map((group) => ({
-          ...(group.id ? { id: group.id } : {}),
-          ...(group.path ? { path: group.path } : {}),
-          ...(group.hue !== undefined ? { hue: group.hue } : {}),
-          title: group.title,
-          leaves: (group.children ?? [])
-            .map(toLeaf)
-            .filter((leaf): leaf is DocsLeaf => leaf !== null),
-        }))
-      : [
-          {
-            title: section.title,
-            leaves: (children.length ? children : [section])
-              .map(toLeaf)
-              .filter((leaf): leaf is DocsLeaf => leaf !== null),
-          },
-        ];
-    return {
-      ...(section.id ? { id: section.id } : {}),
-      ...(section.path ? { path: section.path } : {}),
-      ...(section.hue !== undefined ? { hue: section.hue } : {}),
-      title: section.title,
-      groups,
-    };
-  });
-}
-
 /*//////////////////////////////////////////////////
 COMPONENTS
 //////////////////////////////////////////////////*/
@@ -177,11 +104,10 @@ COMPONENTS
  * @return The content fragment after marking the view surface as ready.
  */
 function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
-  const transition = useTransitionState();
   useEffect(() => {
     $surfaceReady.set('view');
     document.dispatchEvent(new Event('docs:surface-ready'));
-  }, [transition]);
+  }, [useTransitionState()]);
   return <>{children}</>;
 }
 
@@ -210,10 +136,78 @@ export function DocsStaticWorkspace({
   children,
   staticContent = false,
   quiz,
-}: Props): JSX.Element {
-  const workspaceSections: DocsSection[] = sections ?? sectionsFromNavigation(nodes);
+}: {
+  title: string;
+  homeHref?: string;
+  description?: string;
+  pageTitle?: string;
+  hue?: number | null;
+  nodes?: DocsNavNode[];
+  sections?: DocsSection[];
+  currentPath: string;
+  rootPath?: string;
+  markdown?: string;
+  content?: unknown;
+  attachments?: DocsAttachment[];
+  updatedAt?: string;
+  renderContent?: ReactNode;
+  children?: ReactNode;
+  staticContent?: boolean;
+  /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
+  quiz?: DocsQuizConfig;
+}): JSX.Element {
+  const workspaceSections: DocsSection[] =
+    sections ??
+    (function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
+      /**
+       * Converts a linked navigation node to a Docs leaf while ignoring non-link groups.
+       *
+       * @param node Navigation node to map.
+       *
+       * @return Leaf metadata when the node has an `href`, otherwise `null`.
+       */
+      const toLeaf = (node: DocsNavNode): DocsLeaf | null =>
+        node.href
+          ? {
+              ...(node.id ? { id: node.id } : {}),
+              ...(node.path ? { path: node.path } : {}),
+              title: node.title,
+              href: node.href,
+              ...(node.description ? { description: node.description } : {}),
+              ...(node.hue !== undefined ? { hue: node.hue } : {}),
+              ...(node.updatedAt ? { updatedAt: node.updatedAt } : {}),
+              ...(node.attachments ? { attachments: node.attachments } : {}),
+            }
+          : null;
+      return nodes.map((section) => {
+        const children = section.children ?? [];
+        return {
+          ...(section.id ? { id: section.id } : {}),
+          ...(section.path ? { path: section.path } : {}),
+          ...(section.hue !== undefined ? { hue: section.hue } : {}),
+          title: section.title,
+          groups: children.some((node) => Boolean(node.children?.length))
+            ? children.map((group) => ({
+                ...(group.id ? { id: group.id } : {}),
+                ...(group.path ? { path: group.path } : {}),
+                ...(group.hue !== undefined ? { hue: group.hue } : {}),
+                title: group.title,
+                leaves: (group.children ?? [])
+                  .map(toLeaf)
+                  .filter((leaf): leaf is DocsLeaf => leaf !== null),
+              }))
+            : [
+                {
+                  title: section.title,
+                  leaves: (children.length ? children : [section])
+                    .map(toLeaf)
+                    .filter((leaf): leaf is DocsLeaf => leaf !== null),
+                },
+              ],
+        };
+      });
+    })(nodes);
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
-  const currentKey = routeKey(currentPath);
   const allLeaves = workspaceSections.flatMap((section, sectionIndex) =>
     section.groups.flatMap((group, groupIndex) =>
       group.leaves.map((leaf, leafIndex) => ({
@@ -227,11 +221,9 @@ export function DocsStaticWorkspace({
     ),
   );
   const a =
-    allLeaves.find((i) => routeKey(i.leaf.href) === currentKey) ??
+    allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(currentPath)) ??
     allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(rootPath)) ??
     allLeaves[0];
-  const currentAttachments = a?.leaf.attachments ?? attachments;
-  const docPath = a?.leaf.href ?? currentPath;
   const docContent = Array.isArray(content) ? content : markdownToDocsValue(markdown);
   const contentSlot = renderContent ?? children;
   const readyContent =
@@ -249,8 +241,7 @@ export function DocsStaticWorkspace({
       url: section.groups[0]?.leaves[0]?.href ?? rootPath,
       permission: 'read',
       children: section.groups.map((group) => {
-        const groupId = group.id ?? slug(group.title);
-        const groupKey = `${sectionId}/${groupId}`;
+        const groupKey = `${sectionId}/${group.id ?? slug(group.title)}`;
         return {
           type: 'branch',
           origName: group.id ?? groupKey,
@@ -273,157 +264,7 @@ export function DocsStaticWorkspace({
       }),
     };
   });
-  /**
-   * Resolves a host route or storage path to the matching leaf, falling back to the current page.
-   *
-   * @param path Route or content-store path requested by the host.
-   *
-   * @return Matching leaf metadata, the current page for an empty path, or `undefined`.
-   */
-  const leafForPath = (path?: string): DocsLeaf | undefined => {
-    if (!path) return a?.leaf;
-    const requestedRoute = routeKey(path);
-    const requestedStoragePath = storageKey(path);
-    return allLeaves.find(
-      (i) =>
-        routeKey(i.leaf.href) === requestedRoute ||
-        storageKey(i.leaf.path ?? i.leaf.href) === requestedStoragePath,
-    )?.leaf;
-  };
-  const hostAttachments: DocsHostAttachment[] = currentAttachments.map((i, v) => ({
-    id: String(v),
-    name: i.title,
-    path: i.href,
-    ...(i.type ? { type: i.type } : {}),
-    ...(i.size !== undefined ? { size: i.size } : {}),
-  }));
-  const host: DocsHostAdapter = {
-    navigationMode: 'document',
-    capabilities: {
-      read: true,
-      write: false,
-      reorder: false,
-      attachments: false,
-      export: false,
-      history: false,
-      publish: false,
-    },
-    rootPath,
-    homePath: homeHref,
-    siteTitle: title,
-    ...(description ? { siteDescription: description } : {}),
-    /**
-     * Builds a page URL from the section, group, and leaf identifiers supplied by the workspace.
-     *
-     * @param sectionId Section identifier from the route state.
-     * @param groupId Optional group identifier within the section.
-     * @param leafId Optional leaf identifier within the group.
-     *
-     * @return The matching page URL, or `rootPath` when no page matches.
-     */
-    buildRoute(sectionId, groupId, leafId) {
-      const found = allLeaves.find(
-        (i) =>
-          (i.section.id ?? slug(i.section.title)) === sectionId &&
-          (groupId === undefined || (i.group.id ?? slug(i.group.title)) === groupId) &&
-          (leafId === undefined || (i.leaf.id ?? slug(i.leaf.title)) === leafId),
-      );
-      return found?.leaf.href ?? rootPath;
-    },
-    /**
-     * Resolves a page URL into the route identifiers used by the workspace.
-     *
-     * @param value Page URL selected by the host or Docs navigation.
-     *
-     * @return Matching section, group, and leaf identifiers with the canonical pathname.
-     */
-    resolveRoute(value) {
-      const match = allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(value)) ?? a;
-      return {
-        sectionId: match?.section.id ?? slug(match?.section.title ?? 'index'),
-        groupId: match?.group.id ?? slug(match?.group.title ?? 'index'),
-        leafId: match?.leaf.id ?? slug(match?.leaf.title ?? 'index'),
-        targetId: match?.leaf.id ?? slug(match?.leaf.title ?? 'index'),
-        pathname: match?.leaf.href ?? rootPath,
-      };
-    },
-    /**
-     * Makes a relative path root-relative while preserving absolute URLs and paths.
-     *
-     * @param path Route or asset path requested by a Docs action.
-     *
-     * @return The original absolute path or a path prefixed by the host root.
-     */
-    routePath(path) {
-      if (/^(?:https?:)?\/\//i.test(path) || path.startsWith('/')) return path;
-      return `${rootPath.replace(SHARED_REGEX, '')}/${path}`;
-    },
-    /**
-     * Handles the read-only operations exposed by the local Docs host adapter.
-     *
-     * @param op Read operation requested by a Docs workspace feature.
-     * @param input Optional operation-specific path or list request.
-     *
-     * @return Read data for supported operations or an error for unsupported operations.
-     */
-    async invoke<T = unknown>(
-      op: import('../lib/host.js').DocsActionOperation,
-      input?: unknown,
-    ): Promise<{ data?: T; error?: unknown }> {
-      let data: unknown;
-      if (op === 'read.doc.list') {
-        const request = input as { type?: string; path?: string } | undefined;
-        if (request?.type === 'nav') data = tree;
-        else if (request?.type === 'folderEntries') {
-          const folder = (request.path ?? '').replace(G_REGEX(), '');
-          data = allLeaves
-            .filter(
-              (i) =>
-                !folder ||
-                (i.leaf.path ?? i.leaf.href).replace(/^\/+/, '').startsWith(`${folder}/`),
-            )
-            .map((i) => i.leaf.path ?? i.leaf.href);
-        } else data = [];
-      } else if (op === 'read.doc.get') {
-        const request = input as { path?: string } | undefined;
-        const selected = leafForPath(request?.path) ?? a?.leaf;
-        if (
-          selected &&
-          typeof window !== 'undefined' &&
-          routeKey(selected.href) !== routeKey(currentPath)
-        ) {
-          window.location.assign(selected.href);
-        }
-        data = selected
-          ? {
-              path: selected.path ?? selected.href,
-              pathname: selected.href,
-              title: selected.title,
-              description: selected.description,
-              updatedAt: selected.updatedAt ?? updatedAt,
-              source: markdown,
-              content: docContent,
-            }
-          : null;
-      } else if (op === 'read.doc.attachments') {
-        data = hostAttachments;
-      } else if (op === 'read.util.pathname') {
-        data = currentPath;
-      } else if (op === 'read.util.node') {
-        data = {
-          title: a?.leaf.title ?? pageTitle ?? title,
-          origName: slug(a?.leaf.title ?? pageTitle ?? title),
-        };
-      } else if (op === 'read.tsdocs') {
-        data = { scopes: [] };
-      } else if (op === 'read.asset.get') {
-        data = new ArrayBuffer(0);
-      } else {
-        return { error: new Error(`The local Docs provider does not implement ${op}.`) };
-      }
-      return { data: data as T };
-    },
-  };
+
   return (
     <div className="docs-theme-scope" {...(theme ? { style: theme } : {})}>
       <ErrorBoundary
@@ -452,11 +293,155 @@ export function DocsStaticWorkspace({
         )}
       >
         <DocsWorkspace
-          host={host}
+          host={
+            {
+              navigationMode: 'document',
+              capabilities: {
+                read: true,
+                write: false,
+                reorder: false,
+                attachments: false,
+                export: false,
+                history: false,
+                publish: false,
+              },
+              rootPath,
+              homePath: homeHref,
+              siteTitle: title,
+              ...(description ? { siteDescription: description } : {}),
+              /**
+               * Builds a page URL from the section, group, and leaf identifiers supplied by the workspace.
+               *
+               * @param sectionId Section identifier from the route state.
+               * @param groupId Optional group identifier within the section.
+               * @param leafId Optional leaf identifier within the group.
+               *
+               * @return The matching page URL, or `rootPath` when no page matches.
+               */
+              buildRoute(sectionId, groupId, leafId) {
+                return (
+                  allLeaves.find(
+                    (i) =>
+                      (i.section.id ?? slug(i.section.title)) === sectionId &&
+                      (groupId === undefined || (i.group.id ?? slug(i.group.title)) === groupId) &&
+                      (leafId === undefined || (i.leaf.id ?? slug(i.leaf.title)) === leafId),
+                  )?.leaf.href ?? rootPath
+                );
+              },
+              /**
+               * Resolves a page URL into the route identifiers used by the workspace.
+               *
+               * @param value Page URL selected by the host or Docs navigation.
+               *
+               * @return Matching section, group, and leaf identifiers with the canonical pathname.
+               */
+              resolveRoute(value) {
+                const match = allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(value)) ?? a;
+                return {
+                  sectionId: match?.section.id ?? slug(match?.section.title ?? 'index'),
+                  groupId: match?.group.id ?? slug(match?.group.title ?? 'index'),
+                  leafId: match?.leaf.id ?? slug(match?.leaf.title ?? 'index'),
+                  targetId: match?.leaf.id ?? slug(match?.leaf.title ?? 'index'),
+                  pathname: match?.leaf.href ?? rootPath,
+                };
+              },
+              /**
+               * Makes a relative path root-relative while preserving absolute URLs and paths.
+               *
+               * @param path Route or asset path requested by a Docs action.
+               *
+               * @return The original absolute path or a path prefixed by the host root.
+               */
+              routePath(path) {
+                if (/^(?:https?:)?\/\//i.test(path) || path.startsWith('/')) return path;
+                return `${rootPath.replace(SHARED_REGEX, '')}/${path}`;
+              },
+              /**
+               * Handles the read-only operations exposed by the local Docs host adapter.
+               *
+               * @param op Read operation requested by a Docs workspace feature.
+               * @param input Optional operation-specific path or list request.
+               *
+               * @return Read data for supported operations or an error for unsupported operations.
+               */
+              async invoke<T = unknown>(
+                op: import('../lib/host.js').DocsActionOperation,
+                input?: unknown,
+              ): Promise<{ data?: T; error?: unknown }> {
+                let data: unknown;
+                if (op === 'read.doc.list') {
+                  const request = input as { type?: string; path?: string } | undefined;
+                  if (request?.type === 'nav') data = tree;
+                  else if (request?.type === 'folderEntries') {
+                    const folder = (request.path ?? '').replace(G_REGEX(), '');
+                    data = allLeaves
+                      .filter(
+                        (i) =>
+                          !folder ||
+                          (i.leaf.path ?? i.leaf.href).replace(/^\/+/, '').startsWith(`${folder}/`),
+                      )
+                      .map((i) => i.leaf.path ?? i.leaf.href);
+                  } else data = [];
+                } else if (op === 'read.doc.get') {
+                  const selected =
+                    (function leafForPath(path?: string): DocsLeaf | undefined {
+                      if (!path) return a?.leaf;
+                      return allLeaves.find(
+                        (i) =>
+                          routeKey(i.leaf.href) === routeKey(path) ||
+                          storageKey(i.leaf.path ?? i.leaf.href) === storageKey(path),
+                      )?.leaf;
+                    })((input as { path?: string } | undefined)?.path) ?? a?.leaf;
+                  if (
+                    selected &&
+                    typeof window !== 'undefined' &&
+                    routeKey(selected.href) !== routeKey(currentPath)
+                  ) {
+                    window.location.assign(selected.href);
+                  }
+                  data = selected
+                    ? {
+                        path: selected.path ?? selected.href,
+                        pathname: selected.href,
+                        title: selected.title,
+                        description: selected.description,
+                        updatedAt: selected.updatedAt ?? updatedAt,
+                        source: markdown,
+                        content: docContent,
+                      }
+                    : null;
+                } else if (op === 'read.doc.attachments') {
+                  data = (a?.leaf.attachments ?? attachments).map((i, v) => ({
+                    id: String(v),
+                    name: i.title,
+                    path: i.href,
+                    ...(i.type ? { type: i.type } : {}),
+                    ...(i.size !== undefined ? { size: i.size } : {}),
+                  }));
+                } else if (op === 'read.util.pathname') {
+                  data = currentPath;
+                } else if (op === 'read.util.node') {
+                  data = {
+                    title: a?.leaf.title ?? pageTitle ?? title,
+                    origName: slug(a?.leaf.title ?? pageTitle ?? title),
+                  };
+                } else if (op === 'read.tsdocs') {
+                  data = { scopes: [] };
+                } else if (op === 'read.asset.get') {
+                  data = new ArrayBuffer(0);
+                } else {
+                  return {
+                    error: new Error(`The local Docs provider does not implement ${op}.`),
+                  };
+                }
+                return { data: data as T };
+              },
+            } satisfies DocsHostAdapter
+          }
           tree={tree}
           pathname={currentPath}
           permission="read"
-          path={a?.leaf.path ?? docPath}
+          path={a?.leaf.path ?? a?.leaf.href ?? currentPath}
           title={pageTitle ?? a?.leaf.title ?? title}
           {...(a?.leaf.description ? { description: a.leaf.description } : {})}
           {...((a?.leaf.updatedAt ?? updatedAt)

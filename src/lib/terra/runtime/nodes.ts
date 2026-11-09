@@ -16,7 +16,7 @@ import { parse as fromYaml } from 'yaml';
 import * as TerraQualityRegex from '../regex.mjs';
 
 // TYPES
-import type { DocsNodesDraft as Draft, Field, Md } from './types.js';
+import type { Field, Md } from './types.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -36,7 +36,7 @@ export const EMPTY_NODES = `\n\n<Nodes\n  node_data={[\n    { id: 'start', type:
 /**
  * Handles the nodes route.
  */
-export const NODES = {
+const NODES = {
   empty: EMPTY_NODES,
   jsx: EMPTY_NODES,
   fields:
@@ -123,9 +123,74 @@ export const NODES = {
     const n = content
       ?.replace(NODES.rx.import, '')
       ?.replace(NODES.rx.tag, (c) => {
-        const vals: Draft = Object.fromEntries(
-          Object.entries(properties(c)).map(([k, v]) => [k, `${v ?? ''}`]),
-        );
+        const vals: Record<string, boolean | string | undefined> = {};
+        let i = c.indexOf('Nodes') + 5;
+        while (i < c.length) {
+          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
+          if (c.slice(i).startsWith('/>') || c[i] === '>') break;
+          const name = c.slice(i).match(TerraQualityRegex.REGEX_A_ZA_Z_W_U_REGEX())?.[0];
+          if (!name) {
+            i++;
+            continue;
+          }
+          i += name.length;
+          const field = FIELDS.get(name);
+          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
+          if (c[i] !== '=') {
+            if (field?.kind === 'boolean') vals[field.key] = true;
+            continue;
+          }
+          i++;
+          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
+          if (!field) continue;
+          if (c[i] === '{') {
+            i++;
+            let depth = 1;
+            let value = '';
+            let quote: '"' | "'" | '`' | null = null;
+            for (; i < c.length; i++) {
+              const char = c[i];
+              if (!char) break;
+              if (quote) {
+                value += char;
+                if (char === '\\') {
+                  value += c[i + 1] ?? '';
+                  i++;
+                  continue;
+                }
+                if (char === quote) quote = null;
+                continue;
+              }
+              if (char === '"' || char === "'" || char === '`') {
+                quote = char;
+                value += char;
+                continue;
+              }
+              if (char === '{') {
+                depth++;
+                value += char;
+                continue;
+              }
+              if (char === '}') {
+                depth--;
+                if (!depth) break;
+                value += char;
+                continue;
+              }
+              value += char;
+            }
+            vals[field.key] = value.trim();
+            i++;
+            continue;
+          }
+          const marker = c[i];
+          if (marker !== '"' && marker !== "'") continue;
+          i++;
+          const end = c.indexOf(marker, i);
+          if (end === -1) break;
+          vals[field.key] = c.slice(i, end);
+          i = end + 1;
+        }
         const result: Record<string, unknown> = {};
         for (const field of NODES.fields) {
           const content = Object.hasOwn(vals, field.key) ? vals[field.key] : undefined;
@@ -310,38 +375,6 @@ export const decodeNodesPayload = (val: unknown): unknown[] => {
   }
 };
 
-/**
- * Reflows serialized `Nodes` tags into a stable multiline attribute shell.
- *
- * @param source - MDX source that may contain one or more `Nodes` tags.
- *
- * @returns Source with `Nodes` tags rewritten to a multiline layout.
- *
- * @remarks
- * This keeps the code view stable even when the MDX editor would otherwise compact the shell.
- */
-export const fmtNodesSrc = (src: string): string => {
-  trace('format.start', { length: src.length });
-  const n = src.replace(NODES.rx.tag, (t) => {
-    return `<Nodes\n${NODES.fields
-      .flatMap((f) => {
-        const content = properties(t)[f.key];
-        if (validateType(['undefined'], content) || content === null || content === '') return [];
-        if (f.kind === 'boolean') return content === true || content === 'true' ? [f.key] : [];
-        if (f.key === 'nodes' || f.key === 'edges')
-          return [`${f.key}={${encodeNodesPayload(nodesPayload(content))}}`];
-        if (f.kind === 'string')
-          return typeof content === 'string' ? [`${f.key}=${JSON.stringify(content)}`] : [];
-        if (['height', 'nodeSep', 'rankSep'].includes(f.key))
-          return [`${f.key}={${typeof content === 'string' ? content.trim() : String(content)}}`];
-        return [`${f.key}={${JSON.stringify(content)}}`];
-      })
-      .map((a) => `  ${a}`)
-      .join('\n')}\n/>`;
-  });
-  trace('format.complete', { length: n.length });
-  return n;
-};
 const FIELDS = new Map<string, Field>(NODES.fields.map((f) => [f.key, f]));
 
 /*//////////////////////////////////////////////////
@@ -400,87 +433,6 @@ const scalar = (val: string): unknown => {
 };
 
 /**
- * Parses the raw attribute shell on a `Nodes` tag into a field map of editor keys and raw values.
- *
- * @param content - Raw `Nodes` tag source.
- *
- * @returns Parsed field values keyed by editor field name.
- *
- * @remarks This parser reads one inline `Nodes` tag at a time and preserves only recognized fields.
- */
-const properties = (content: string): Draft => {
-  const vals: Draft = {};
-  let i = content.indexOf('Nodes') + 5;
-  while (i < content.length) {
-    while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
-    if (content.slice(i).startsWith('/>') || content[i] === '>') break;
-    const name = content.slice(i).match(TerraQualityRegex.REGEX_A_ZA_Z_W_U_REGEX())?.[0];
-    if (!name) {
-      i++;
-      continue;
-    }
-    i += name.length;
-    const field = FIELDS.get(name);
-    while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
-    if (content[i] !== '=') {
-      if (field?.kind === 'boolean') vals[field.key] = true;
-      continue;
-    }
-    i++;
-    while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
-    if (!field) continue;
-    if (content[i] === '{') {
-      i++;
-      let depth = 1;
-      let v = '';
-      let mQuote: '"' | "'" | '`' | null = null;
-      for (; i < content.length; i++) {
-        const char = content[i];
-        if (!char) break;
-        if (mQuote) {
-          v += char;
-          if (char === '\\') {
-            v += content[i + 1] ?? '';
-            i++;
-            continue;
-          }
-          if (char === mQuote) mQuote = null;
-          continue;
-        }
-        if (char === '"' || char === "'" || char === '`') {
-          mQuote = char;
-          v += char;
-          continue;
-        }
-        if (char === '{') {
-          depth++;
-          v += char;
-          continue;
-        }
-        if (char === '}') {
-          depth--;
-          if (!depth) break;
-          v += char;
-          continue;
-        }
-        v += char;
-      }
-      vals[field.key] = v.trim();
-      i++;
-      continue;
-    }
-    const qmarker = content[i];
-    if (qmarker !== '"' && qmarker !== "'") continue;
-    i++;
-    const end = content.indexOf(qmarker, i);
-    if (end === -1) break;
-    vals[field.key] = content.slice(i, end);
-    i = end + 1;
-  }
-  return vals;
-};
-
-/**
  * Serializes a node payload into the `Nodes` JSX form used in docs.
  *
  * @param vals - Normalized node payload.
@@ -497,9 +449,27 @@ const jsx = (vals: Record<string, unknown>): string => {
       if (f.kind === 'boolean') return content === true ? [f.key] : [];
       if (f.kind === 'string')
         return typeof content === 'string' ? [`${f.key}=${JSON.stringify(content)}`] : [];
-      return [
-        `${f.key}={${f.key === 'nodes' || f.key === 'edges' ? encodeNodesPayload(nodesPayload(content)) : literal(content)}}`,
-      ];
+      if (f.key === 'nodes' || f.key === 'edges') {
+        const decoded = decodeNodesPayload(content);
+        void {
+          rawType: Array.isArray(content) ? 'array' : typeof content,
+          rawLength: Array.isArray(content)
+            ? content.length
+            : typeof content === 'string'
+              ? content.length
+              : 0,
+          decodedLength: decoded.length,
+          decodedHead: decoded.length > 0 ? JSON.stringify(decoded[0]).slice(0, 200) : '',
+          preview:
+            typeof content === 'string'
+              ? content.slice(0, 160)
+              : Array.isArray(content)
+                ? JSON.stringify(content.slice(0, 1)).slice(0, 160)
+                : '',
+        };
+        return [`${f.key}={${encodeNodesPayload(decoded)}}`];
+      }
+      return [`${f.key}={${literal(content)}}`];
     })
     .join(' ')} />`;
 };
@@ -577,32 +547,6 @@ const loose = (body: string): string => {
     i = end;
   }
   return name;
-};
-
-/**
- * Normalizes a raw nodes payload before JSX emission.
- *
- * @param value - Raw attribute payload.
- *
- * @returns Decoded node payload ready for JSX emission.
- *
- * @remarks The payload may already be encoded as a backtick-wrapped string during a previous round-trip.
- */
-const nodesPayload = (val: unknown): unknown[] => {
-  const decoded = decodeNodesPayload(val);
-  void {
-    rawType: Array.isArray(val) ? 'array' : typeof val,
-    rawLength: Array.isArray(val) ? val.length : typeof val === 'string' ? val.length : 0,
-    decodedLength: decoded.length,
-    decodedHead: decoded.length > 0 ? JSON.stringify(decoded[0]).slice(0, 200) : '',
-    preview:
-      typeof val === 'string'
-        ? val.slice(0, 160)
-        : Array.isArray(val)
-          ? JSON.stringify(val.slice(0, 1)).slice(0, 160)
-          : '',
-  };
-  return decoded;
 };
 
 /*//////////////////////////////////////////////////

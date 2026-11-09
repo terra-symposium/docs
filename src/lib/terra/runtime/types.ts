@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 
 type UnknownRecord = Record<string, unknown>;
-type PortableBlock<T extends string = string> = T extends string
+export type PortableBlock<T extends string = string> = T extends string
   ? { _type: T; _key?: string; children?: PortableBlock[]; [key: string]: unknown }
   : never;
 
@@ -119,15 +119,7 @@ export type ToolbarState = {
   setMode: (mode: Mode) => Promise<void>;
   toggleList?: (kind: string) => void;
 };
-export type EditorState = {
-  busy: string | null;
-  dirty: boolean;
-  draft: Draft;
-  loaded: boolean;
-  optimistic: boolean;
-  version: number;
-};
-export type PathProps = { pathname: string };
+
 export type Leaf = {
   type: 'leaf';
   origName: string;
@@ -196,12 +188,6 @@ export type ExportTgt = {
   title: string;
   nodeIds?: string[];
 } | null;
-export type AttchTgt = {
-  path: string;
-  title: string;
-  scope: 'section' | 'group' | 'leaf';
-  node: Tree;
-};
 export type DelTgt = {
   kind: 'section' | 'branch' | 'leaf';
   path: string;
@@ -239,17 +225,10 @@ export type DragState =
   | { active: boolean; path: string; kind: 'leaf' }
   | { fPath: string; kind: 'branch'; pPath: string };
 export type ReorderDropState = { key: string; position: 'after' | 'before' | 'inside' };
-export type TableRow<TCell = DocTableCell> = { _key: string; _type: 'row'; cells: TCell[] };
 export type BlockTgt = HTMLElement & { __blockActions?: UnknownRecord[] };
 export type TsDocsItem = { slug: string; title: string; body: DocBody };
 export type Edge = UnknownRecord;
 export type FlowNode = UnknownRecord;
-export type FlowEdgeData = UnknownRecord & {
-  color?: string;
-  label?: string;
-  srcHandleOverride?: string;
-  tgtHandleOverride?: string;
-};
 export type NodeData = UnknownRecord & {
   attributes?: Array<{ name: string; type?: string; value?: string }>;
   compact?: boolean;
@@ -296,14 +275,6 @@ export type DocsContentPtMarkDef = {
   href?: string;
   [key: string]: unknown;
 };
-export type DocsContentPtSpan = {
-  _key?: string;
-  _type?: string;
-  marks?: string[];
-  text?: string;
-  [key: string]: unknown;
-};
-export type DocsNodesDraft = Record<string, boolean | string | undefined>;
 export type Field = {
   key: string;
   kind: string;
@@ -312,47 +283,20 @@ export type Field = {
   textarea?: boolean;
   tooltip: string;
 };
-export type DocsAttachment = {
-  path?: string;
-  size?: number;
-  title: string;
-  type?: string;
-  url?: string;
-};
+
 export type EditorToolbarAdapter = UnknownRecord;
-export type PortableEditorBlock = PortableBlock;
-export type DocsPermSrc = UnknownRecord;
-export type User = { _id?: string; _type?: string; [key: string]: unknown };
 export type DocsNestedContent = PortableBlock[];
 export type Content = PortableBlock[];
 export type Problem = { _id?: string; title?: string; [key: string]: unknown };
-type ArticleInlineType = 'image' | 'video' | 'table' | 'questions' | 'dialogue' | 'definition';
-export type ArticleContent = Array<
-  PortableBlock<'block'> & { children?: PortableBlock<ArticleInlineType>[] }
->;
+
 export type DocsContent = PortableBlock<keyof typeof DOCS_BLOCK_SCHEMAS>[];
 export type ProblemContent = PortableBlock<(typeof PROBLEM_BLOCK_TYPES)[number]>[];
-export type StructureQuestion = { _id?: string; question?: string };
-export type TraversalGraph = { nodes: FlowNodeLike[]; edges?: ArcGraphEdge[] };
-export type ArcGraph = { nodes: FlowNodeLike[]; edges: ArcGraphEdge[]; [key: string]: unknown };
-export type ArcGraphEdge = { source: string; target: string; [key: string]: unknown };
-export type Arc = { _id?: string; _type?: string; [key: string]: unknown };
-export type Viewpoint = { _id?: string; title?: string; [key: string]: unknown };
-export type FlowMenuContext = { type: 'pane' | '_node' | 'e'; id: string | null };
-export type DocsBlockEditorProps = UnknownRecord;
-export type PortableTextBlockRendererProps<TBlock> = {
-  attributes: UnknownRecord;
-  children: ReactNode;
-  node: TBlock;
-  path: Array<string | number>;
-  readOnly?: boolean;
+
+export type ArcGraph = {
+  nodes: FlowNodeLike[];
+  edges: { source: string; target: string; [key: string]: unknown }[];
+  [key: string]: unknown;
 };
-export type PortableTextBlockEditorProps<TBlock> = Omit<
-  PortableTextBlockRendererProps<TBlock>,
-  'readOnly'
->;
-export type InlineObjectRenderProps = UnknownRecord;
-export type JSX = ReactNode;
 
 export const DOCS_BLOCK_SCHEMAS = {
   accordion: { fields: [{ name: 'items', type: 'array' }] },
@@ -393,6 +337,3 @@ export const PROBLEM_BLOCK_TYPES = [
   'tabs',
   'accordion',
 ] as const;
-export const CONTAINER_TYPES = ['tabs', 'accordion', 'callout'] as const;
-export const ARTICLE_INLINE_SCHEMAS = {};
-export const PROBLEM_BLOCK_SCHEMAS = {};

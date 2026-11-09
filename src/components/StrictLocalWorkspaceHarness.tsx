@@ -6,11 +6,16 @@ import type { JSX } from 'react';
 declare global {
   interface Window {
     __docsLocalWorkspaceFixture?: DocsLocalWorkspaceProps;
-    __docsQuizHarness?: { failure?: string; response?: unknown; toolbar?: boolean };
+    __docsQuizHarness?: {
+      failure?: string;
+      response?: unknown;
+      toolbar?: boolean;
+    };
   }
 }
 
-function HarnessContent(): JSX.Element {
+/** Exercise the local host adapter under the same React StrictMode as consumers. */
+export default function StrictLocalWorkspaceHarness(): JSX.Element {
   const [fixture] = useState(() =>
     typeof window === 'undefined' ? undefined : window.__docsLocalWorkspaceFixture,
   );
@@ -28,18 +33,13 @@ function HarnessContent(): JSX.Element {
         }
       : undefined);
 
-  return fixture ? (
-    <DocsLocalWorkspace {...fixture} {...(quiz ? { quiz } : {})} />
-  ) : (
-    <main>Local Docs workspace fixture not provided.</main>
-  );
-}
-
-/** Exercise the local host adapter under the same React StrictMode as consumers. */
-export default function StrictLocalWorkspaceHarness(): JSX.Element {
   return (
     <StrictMode>
-      <HarnessContent />
+      {fixture ? (
+        <DocsLocalWorkspace {...fixture} {...(quiz ? { quiz } : {})} />
+      ) : (
+        <main>Local Docs workspace fixture not provided.</main>
+      )}
     </StrictMode>
   );
 }

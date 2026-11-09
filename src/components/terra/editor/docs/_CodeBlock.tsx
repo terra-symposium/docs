@@ -418,7 +418,9 @@ export function CodeBlock(
               if (lineSet.size > 1) {
                 u.view.dom.setAttribute(
                   'data-docs-multicursor',
-                  JSON.stringify({ lines: Array.from(lineSet).sort((a, b) => a - b) }),
+                  JSON.stringify({
+                    lines: Array.from(lineSet).sort((a, b) => a - b),
+                  }),
                 );
               } else u.view.dom.removeAttribute('data-docs-multicursor');
               if (!u.docChanged || props.tone !== 'edit' || src || props.readOnly) return;
@@ -447,7 +449,9 @@ export function CodeBlock(
                         to: v.state.selection.main.to,
                         insert: md,
                       },
-                      selection: { anchor: v.state.selection.main.from + md.length },
+                      selection: {
+                        anchor: v.state.selection.main.from + md.length,
+                      },
                       scrollIntoView: true,
                     });
                     return true;
@@ -477,7 +481,9 @@ export function CodeBlock(
                         to: v.state.selection.main.to,
                         insert: transformed,
                       },
-                      selection: { anchor: v.state.selection.main.from + transformed.length },
+                      selection: {
+                        anchor: v.state.selection.main.from + transformed.length,
+                      },
                       scrollIntoView: true,
                     });
                     return true;
@@ -489,7 +495,6 @@ export function CodeBlock(
           ],
         }),
       });
-      const codeInput = editorView.contentDOM;
       const onCodeEnter = (event: KeyboardEvent): void => {
         if (event.key !== 'Enter' || props.tone !== 'edit' || props.readOnly || src) return;
         const aView = view.current;
@@ -505,7 +510,7 @@ export function CodeBlock(
         });
       };
       aEnterHandler = onCodeEnter;
-      codeInput.addEventListener('keydown', onCodeEnter, true);
+      editorView.contentDOM.addEventListener('keydown', onCodeEnter, true);
       view.current = editorView;
       (editorView.dom as HTMLDivElement & { cmView?: { view: EditorView } }).cmView = {
         view: editorView,
@@ -569,7 +574,9 @@ export function CodeBlock(
     const m = window.matchMedia('(prefers-color-scheme: dark)'),
       sync = (): void => {
         if (!view.current) return;
-        view.current.dispatch({ effects: theme.current.reconfigure(isDarkMode() ? dark : light) });
+        view.current.dispatch({
+          effects: theme.current.reconfigure(isDarkMode() ? dark : light),
+        });
       };
     sync();
     m.addEventListener('change', sync);
@@ -580,7 +587,9 @@ export function CodeBlock(
   useEffect(() => {
     const n = codeVal();
     if (!view.current || view.current?.state.doc.toString() === n) return;
-    view.current.dispatch({ changes: { from: 0, to: view.current.state.doc.length, insert: n } });
+    view.current.dispatch({
+      changes: { from: 0, to: view.current.state.doc.length, insert: n },
+    });
     codeRef.current = n;
     if (expAll) expand(view.current);
     view.current.requestMeasure();

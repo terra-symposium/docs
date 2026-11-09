@@ -10,7 +10,8 @@ import {
 import { docsValueToMarkdown, markdownToDocsValue } from '../dist/lib/lib/markdown-model.js';
 import { renderMarkdown } from '../dist/lib/lib/markdown.js';
 import { stringifyDocBody } from '../dist/lib/lib/terra/runtime/content/document-markdown.js';
-import { renderMd, toCodeJsx } from '../dist/lib/lib/terra/runtime/content/markdown.js';
+import { renderMd } from '../dist/lib/lib/terra/runtime/content/markdown.js';
+import { toCodeJsx } from '../dist/lib/lib/terra/runtime/content.js';
 
 function withoutPortableTextKeys(value) {
   if (Array.isArray(value)) return value.map(withoutPortableTextKeys);

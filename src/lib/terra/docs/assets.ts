@@ -1,6 +1,5 @@
 /** Uploads, assembles, and downloads Docs assets. */
 import { actions } from '../runtime/action-proxy.js';
-import { warn } from '../runtime/runtime.js';
 
 const ASSET_CHUNK_SIZE_BYTES = 0.9 * 1024 * 1024;
 
@@ -45,7 +44,7 @@ export async function uploadAssetChunked(
       // native Astro Actions client automatically handles multipart/form-data encoding and routing!
       const { data, error } = await actions.write.asset.upload(formData);
       if (error) {
-        const message =
+        throw new Error(
           error instanceof Error
             ? error.message
             : typeof error === 'object' &&
@@ -53,8 +52,8 @@ export async function uploadAssetChunked(
                 'message' in error &&
                 typeof error.message === 'string'
               ? error.message
-              : 'Action rejected the payload';
-        throw new Error(message);
+              : 'Action rejected the payload',
+        );
       }
       if (c === totalChunks - 1)
         finalAsset = data as {
@@ -73,37 +72,4 @@ export async function uploadAssetChunked(
   }
   if (!finalAsset) throw new Error('Upload failed to return final attachment.');
   return finalAsset;
-}
-
-/**
- * Handles download.
- *
- * @param filename - Filename input supplied to download's operation.
- * @param content - Content input supplied to download's operation.
- * @param type - Type input supplied to download's operation.
- */
-export function download(
-  filename: string,
-  content: string | ArrayBuffer | Blob,
-  type = 'text/plain',
-): void {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    warn('download', 'Bypass requested execution; environment window context is dead.');
-    return;
-  }
-  let dlName = filename;
-  if (
-    type === 'text/markdown' &&
-    !dlName.toLowerCase().endsWith('.md') &&
-    !dlName.toLowerCase().endsWith('.mdx')
-  )
-    dlName += '.mdx';
-  const href = URL.createObjectURL(
-    content instanceof Blob ? content : new Blob([content], { type }),
-  );
-  const link = document.createElement('a');
-  link.href = href;
-  link.download = dlName;
-  link.click();
-  URL.revokeObjectURL(href);
 }

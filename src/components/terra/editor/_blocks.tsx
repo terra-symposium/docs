@@ -80,35 +80,65 @@ export const TabsGroup = ({
           <Card className="!my-0 !rounded-sm bg-transparent">
             {items.length > 0 && (
               <CardHeader className={TABS.head}>
-                <EditorTabsList
-                  tabs={items.map((i, v) => ({
-                    value: `${v}`,
-                    title: i.props.title || `Tab ${v + 1}`,
-                  }))}
-                  value={a}
-                  {...(onAdd ? { onAdd } : {})}
-                  {...(onDelete
-                    ? {
-                        onDelete: (val) => {
-                          const deletedIndex = Number(val);
-                          const aIndex = Number(a);
-                          const nLength = items.length - 1;
-                          onDelete(deletedIndex);
-                          if (deletedIndex < aIndex) setActive(String(aIndex - 1));
-                          else if (deletedIndex === aIndex && nLength > 0) {
-                            setActive(String(Math.min(deletedIndex, nLength - 1)));
-                          }
-                        },
-                      }
-                    : {})}
-                  {...(onRename
-                    ? {
-                        onRename: (val, title) => {
-                          onRename(Number(val), title);
-                        },
-                      }
-                    : {})}
-                />
+                <ErrorBoundary name="EditorTabsList">
+                  <TabsList className="mb-0 inline-flex w-full items-center justify-start gap-0 overflow-x-auto">
+                    {items.map((i, v) => (
+                      <TabsTrigger key={`${v}`} value={`${v}`} asChild>
+                        {/* intermediate level necessary because <button> cannot be a descendant of <button> */}
+                        <div
+                          className={cn(
+                            'group flex min-w-32 items-center gap-1 border-none px-2 py-1 font-bold',
+                            `${v}` === a && 'bg-primary-3',
+                          )}
+                        >
+                          {onRename ? (
+                            <Input
+                              value={i.props.title || `Tab ${v + 1}`}
+                              onChange={(event) => onRename(v, event.target.value)}
+                              onClick={(event) => event.stopPropagation()}
+                              className="h-7 border-0 bg-transparent px-1 text-sm font-bold shadow-none focus-visible:ring-0"
+                              aria-label="Tab title"
+                            />
+                          ) : (
+                            <strong className="px-1 text-sm font-bold">
+                              {i.props.title || `Tab ${v + 1}`}
+                            </strong>
+                          )}
+                          {onDelete && items.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-6 opacity-60 hover:opacity-100"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                const aIndex = Number(a);
+                                const nLength = items.length - 1;
+                                onDelete(v);
+                                if (v < aIndex) setActive(String(aIndex - 1));
+                                else if (v === aIndex && nLength > 0)
+                                  setActive(String(Math.min(v, nLength - 1)));
+                              }}
+                              aria-label={`Delete tab ${i.props.title || `Tab ${v + 1}`}`}
+                            >
+                              <CloseIcon className="size-3" aria-hidden="true" />
+                            </Button>
+                          )}
+                        </div>
+                      </TabsTrigger>
+                    ))}
+                    {onAdd && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={onAdd}
+                        aria-label="Add tab"
+                        className="h-7"
+                      >
+                        <AddIcon className="size-4" aria-hidden="true" />
+                      </Button>
+                    )}
+                  </TabsList>
+                </ErrorBoundary>
               </CardHeader>
             )}
             <CardContent className={TABS.body}>
@@ -229,83 +259,3 @@ export const AccordionItem = ({
 /*//////////////////////////////////////////////////
 COMPONENTS
 //////////////////////////////////////////////////*/
-
-/**
- * Renders the editor tabs list component.
- *
- * @param props - Tab definitions, active value, and optional mutation callbacks.
- *
- * @return The tab list and controls for selecting, renaming, deleting, or adding editor tabs.
- */
-export function EditorTabsList({
-  tabs,
-  value: a,
-  onRename,
-  onDelete,
-  onAdd,
-}: {
-  onAdd?: () => void;
-  onDelete?: (val: string) => void;
-  onRename?: (val: string, title: string) => void;
-  tabs: {
-    fallback?: string;
-    title: string;
-    value: string;
-  }[];
-  value: string;
-}): React.JSX.Element {
-  return (
-    <ErrorBoundary name="EditorTabsList">
-      <TabsList className="mb-0 inline-flex w-full items-center justify-start gap-0 overflow-x-auto">
-        {tabs.map((t) => (
-          <TabsTrigger key={t.value} value={t.value} asChild>
-            {/* intermediate level necessary because <button> cannot be a descendant of <button> */}
-            <div
-              className={cn(
-                'group flex min-w-32 items-center gap-1 border-none px-2 py-1 font-bold',
-                t.value === a && 'bg-primary-3',
-              )}
-            >
-              {onRename ? (
-                <Input
-                  value={t.title || t.fallback || 'Untitled'}
-                  onChange={(e) => {
-                    onRename(t.value, e.target.value);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  className="h-7 border-0 bg-transparent px-1 text-sm font-bold shadow-none focus-visible:ring-0"
-                  aria-label="Tab title"
-                />
-              ) : (
-                <strong className="px-1 text-sm font-bold">
-                  {t.title || t.fallback || 'Untitled'}
-                </strong>
-              )}
-              {onDelete && tabs.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6 opacity-60 hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(t.value);
-                  }}
-                  aria-label={`Delete tab ${t.title || t.fallback || 'Untitled'}`}
-                >
-                  <CloseIcon className="size-3" aria-hidden="true" />
-                </Button>
-              )}
-            </div>
-          </TabsTrigger>
-        ))}
-        {onAdd && (
-          <Button variant="ghost" size="icon" onClick={onAdd} aria-label="Add tab" className="h-7">
-            <AddIcon className="size-4" aria-hidden="true" />
-          </Button>
-        )}
-      </TabsList>
-    </ErrorBoundary>
-  );
-}

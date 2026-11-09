@@ -36,7 +36,6 @@ import { ErrorBoundary } from '../../ui.js';
 import { Progress } from '@terra-symposium/styling/ui';
 
 // DATA
-import { IMG_RESPONSIVE } from '../../ui.js';
 
 // TYPES
 import type {
@@ -45,10 +44,8 @@ import type {
   Draft,
   EditorRefs,
   EditorSel,
-  EditorState,
   EditorSurface,
   Mode,
-  PathProps,
   ToolbarState,
 } from '../../../../lib/terra/runtime/types.js';
 import type { ReactNode } from 'react';
@@ -87,7 +84,9 @@ export function Loader({ className }: { className?: string }): React.JSX.Element
         data-docs-loading-overlay
         role="status"
       >
-        {loadingImg && <img alt="" src={loadingImg} className={cn('size-40', IMG_RESPONSIVE)} />}
+        {loadingImg && (
+          <img alt="" src={loadingImg} className={cn('size-40', 'max-w-full object-contain')} />
+        )}
         <Progress
           className="h-3 w-56"
           value={Math.max(
@@ -303,7 +302,9 @@ export default function Editable({
   pathname,
   title = 'Untitled',
   source: src = '',
-}: PathProps & {
+}: {
+  pathname: string;
+} & {
   children?: React.ReactNode;
   content?: DocBody;
   description?: string;
@@ -336,7 +337,21 @@ export default function Editable({
   const saving = useRef(false);
   const [err, setErr] = useState<string | null>(null);
   // prettier-ignore
-  const [state, setState] = useState<EditorState>({ busy: null, dirty: false, draft: { content, description, path: path || pathname, source: src, title }, loaded: Boolean(content.length || !src), optimistic: false, version: 0, });
+  const [state, setState] = useState<{
+    busy: string | null;
+    dirty: boolean;
+    draft: Draft;
+    loaded: boolean;
+    optimistic: boolean;
+    version: number;
+  }>({
+    busy: null,
+    dirty: false,
+    draft: { content, description, path: path || pathname, source: src, title },
+    loaded: Boolean(content.length || !src),
+    optimistic: false,
+    version: 0,
+  });
   const draftContent = isDocBody(state.draft.content) ? state.draft.content : [];
 
   // INIT
@@ -344,7 +359,14 @@ export default function Editable({
     refs.current.route = { path, pathname };
     setState((p) => ({
       ...p,
-      draft: { ...p.draft, content, description, path: path || pathname, source: src, title },
+      draft: {
+        ...p.draft,
+        content,
+        description,
+        path: path || pathname,
+        source: src,
+        title,
+      },
       dirty: false,
       loaded: Boolean(content.length || !src),
       version: p.version + 1,
@@ -361,7 +383,11 @@ export default function Editable({
           setErr(err?.message || 'Unable to convert source to document blocks.');
           setState((p) => ({ ...p, loaded: true }));
         } else if (isDocBody(d))
-          setState((p) => ({ ...p, draft: { ...p.draft, content: d }, loaded: true }));
+          setState((p) => ({
+            ...p,
+            draft: { ...p.draft, content: d },
+            loaded: true,
+          }));
         else {
           setErr('Converted source did not return valid document blocks.');
           setState((p) => ({ ...p, loaded: true }));
@@ -447,7 +473,9 @@ export default function Editable({
         }
       }
       if (n === 'edit' && !draftContent.length && state.draft.source) {
-        const { data, error: err } = await actions.read.source.body({ source: state.draft.source });
+        const { data, error: err } = await actions.read.source.body({
+          source: state.draft.source,
+        });
         if (err || !data) {
           setErr(err?.message || 'Unable to convert source to document blocks.');
           return;
@@ -518,7 +546,11 @@ export default function Editable({
   const onBodyChange = useCallback((c: DocBody): void => {
     setState((p) => {
       if (JSON.stringify(p.draft.content) === JSON.stringify(c)) return p;
-      return { ...p, dirty: true, draft: { ...p.draft, content: c, source: '' } };
+      return {
+        ...p,
+        dirty: true,
+        draft: { ...p.draft, content: c, source: '' },
+      };
     });
   }, []);
   const attachFiles = useCallback(
@@ -549,7 +581,6 @@ export default function Editable({
             setCode,
             setSrc: setCode,
             source: state.draft.source,
-            state,
             update,
           }),
           [refs, save, setCode, state, update],

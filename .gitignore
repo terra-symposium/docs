@@ -4,11 +4,16 @@ node_modules/
 # Build and generated output
 dist/
 dist/.docs/
+demo-dist/
+lib-dist/
+site-dist/
 .astro/
 
 # Test artifacts
 coverage/
 tests/results/
+test-results/
+config/test-results/
 
 # Local environment
 .env

@@ -71,7 +71,11 @@ function CalloutEditor({
           className="mb-3 border-0 bg-transparent px-0 text-lg font-bold shadow-none"
           value={block.title ?? block.kind ?? 'Note'}
           onChange={(e) =>
-            editor.send({ type: 'block.set', at: path, props: { title: e.currentTarget.value } })
+            editor.send({
+              type: 'block.set',
+              at: path,
+              props: { title: e.currentTarget.value },
+            })
           }
         />
         <ContentEditor

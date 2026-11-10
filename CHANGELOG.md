@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.10
+
+### Patch Changes
+
+- Update the starter template to use the current Docs package release.
+
 ## 0.4.9
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.8
+
+### Patch Changes
+
+- Include the shared regex module required by the published Docs CLI.
+
 ## 0.4.7
 
 ### Patch Changes

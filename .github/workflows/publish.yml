@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
   id-token: write
 
 jobs:
@@ -28,11 +29,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run quality
       - run: pnpm run build
-      - uses: changesets/action@v1
+      - uses: changesets/action@v2
         with:
-          version: pnpm exec changeset version
-          publish: pnpm run build && pnpm exec changeset publish
-          commit: 'chore: release Docs'
-          title: 'chore: release Docs'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          version-script: pnpm exec changeset version
+          publish-script: pnpm exec changeset publish
+          commit-message: 'chore: release Docs'
+          pr-title: 'chore: release Docs'
+          pr-base-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}

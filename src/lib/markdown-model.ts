@@ -118,7 +118,7 @@ export function markdownToDocsValue(markdown: string, options: DocsBlockOptions 
           Array.isArray(block.items)
         ) {
           previous.items.push(...block.items);
-          previous.markdown = undefined;
+          delete previous.markdown;
         } else {
           result.push(block);
         }

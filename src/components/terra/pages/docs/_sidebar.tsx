@@ -1782,7 +1782,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   );
   const disabled = loading || transitioning;
   const [atts, setAtts] = useState<Record<string, Sister[]>>({});
-  const [attachmentDialogLoading, setLoading] = useState(false);
+  const [attachmentDialogLoading, setAttachmentDialogLoading] = useState(false);
   const [a, setActive] = useState<{
     title: string;
     fullTitle: string;
@@ -1987,7 +1987,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   }, [manageAttTgt]);
   const fetchAtts = useCallback(async () => {
     if (!manageAttTgt) return;
-    setLoading(true);
+    setAttachmentDialogLoading(true);
     const { data, error: err } = await actions.read.doc.attachments({
       paths: [
         ...new Set(
@@ -1997,7 +1997,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     });
     if (!err && data) setAtts(data as Record<string, Sister[]>);
     else setAtts({});
-    setLoading(false);
+    setAttachmentDialogLoading(false);
   }, [manageAttTgt, a, nodeGroups]);
   useEffect(() => {
     void fetchAtts();
@@ -2179,10 +2179,10 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
       },
       'Failed to attach',
       () => {
-        setLoading(true);
+        setAttachmentDialogLoading(true);
       },
       () => {
-        setLoading(false);
+        setAttachmentDialogLoading(false);
       },
     );
   };
@@ -3427,10 +3427,10 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                             },
                             'Upload failed',
                             () => {
-                              setLoading(true);
+                              setAttachmentDialogLoading(true);
                             },
                             () => {
-                              setLoading(false);
+                              setAttachmentDialogLoading(false);
                             },
                           );
                         })();

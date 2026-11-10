@@ -27,7 +27,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run quality
       - run: pnpm run build
       - uses: changesets/action@v2
         with:

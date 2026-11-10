@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../ui.js';
 import { Input } from '@terra-symposium/styling/ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@terra-symposium/styling/ui';
+import { MarkdownAccordion, MarkdownTabs } from '../../MarkdownComponents.js';
 
 // TYPES
 import type { ReactElement, ReactNode } from 'react';
@@ -76,46 +77,12 @@ export const TabsGroup = ({
   if (!onAdd && !onDelete && !onRename) {
     return (
       <ErrorBoundary name="TabsGroup">
-        <div className={cn('rounded-sm', FOCUS_RING.block)}>
-          <Tabs value={a} onValueChange={setActive}>
-            <Card className="!my-0 !rounded-sm bg-transparent">
-              {items.length > 0 && (
-                <CardHeader className={TABS.head}>
-                  <ErrorBoundary name="EditorTabsList">
-                    <TabsList className="mb-0 inline-flex w-full items-center justify-start gap-0 overflow-x-auto">
-                      {items.map((item, index) => (
-                        <TabsTrigger
-                          key={index}
-                          value={String(index)}
-                          className={cn(
-                            'group flex min-w-32 items-center gap-1 border-none px-2 py-1 font-bold',
-                            String(index) === a && 'bg-primary-3',
-                          )}
-                        >
-                          <strong className="px-1 text-sm font-bold">
-                            {item.props.title || `Tab ${index + 1}`}
-                          </strong>
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </ErrorBoundary>
-                </CardHeader>
-              )}
-              <CardContent className={TABS.body}>
-                {items.map((item, index) => (
-                  <TabsContent
-                    forceMount
-                    key={index}
-                    value={String(index)}
-                    className="!m-0 data-[state=inactive]:hidden editor-block-copy"
-                  >
-                    {item.props.children}
-                  </TabsContent>
-                ))}
-              </CardContent>
-            </Card>
-          </Tabs>
-        </div>
+        <MarkdownTabs
+          items={items.map((i, v) => ({
+            title: i.props.title || `Tab ${v + 1}`,
+            content: i.props.children,
+          }))}
+        />
       </ErrorBoundary>
     );
   }
@@ -222,19 +189,37 @@ export const TabsItem = ({
  *
  * @param children - Content rendered inside the block preview.
  */
-export const AccordionGroup = ({ children }: { children: ReactNode }): React.JSX.Element => (
-  <ErrorBoundary name="AccordionGroup">
-    <div className={cn('rounded-sm', FOCUS_RING.block)}>
-      <Card className="!my-0 w-full overflow-visible !rounded-sm bg-transparent">
-        <CardHeader className="p-0">
-          <Accordion type="single" collapsible variant="sm" className="w-full">
-            {children}
-          </Accordion>
-        </CardHeader>
-      </Card>
-    </div>
-  </ErrorBoundary>
-);
+export const AccordionGroup = ({ children }: { children: ReactNode }): React.JSX.Element => {
+  const items = React.Children.toArray(children).filter(isValidElement) as ReactElement<{
+      title?: string;
+      children?: ReactNode;
+      onDelete?: () => void;
+      onRename?: (title: string) => void;
+    }>[],
+    editable = items.some((i) => i.props.onDelete || i.props.onRename);
+  if (!editable)
+    return (
+      <MarkdownAccordion
+        items={items.map((i) => ({
+          title: i.props.title ?? '',
+          content: i.props.children,
+        }))}
+      />
+    );
+  return (
+    <ErrorBoundary name="AccordionGroup">
+      <div className={cn('rounded-sm', FOCUS_RING.block)}>
+        <Card className="!my-0 w-full overflow-visible !rounded-sm bg-transparent">
+          <CardHeader className="p-0">
+            <Accordion type="single" collapsible variant="sm" className="w-full">
+              {children}
+            </Accordion>
+          </CardHeader>
+        </Card>
+      </div>
+    </ErrorBoundary>
+  );
+};
 /**
  * Renders the accordion item component.
  *

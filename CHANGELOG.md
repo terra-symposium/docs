@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.5
+
+### Patch Changes
+
+- Render Markdown tabs and accordions through the shared Styling components in every Docs view.
+
 ## 0.4.0
 
 ### Minor Changes

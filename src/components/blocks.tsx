@@ -1,36 +1,15 @@
 import katex from 'katex';
-import { renderMarkdown } from '../lib/markdown.js';
 import type { JSX, ReactNode } from 'react';
 import { DocsQuizBlock } from './quiz.js';
 import * as TerraQualityRegex from '../lib/terra/regex.mjs';
+import { MarkdownAccordion, MarkdownTabs } from './MarkdownComponents.js';
+import { MarkdownContent } from './MarkdownContent.js';
+import { DOCS_BLOCK_TYPES } from '../lib/block-types.js';
+import type { DocsBlockType, RichBlock } from '../lib/block-types.js';
 
 /** The portable Docs members. A host can disable any member without changing stored data. */
-export const DOCS_BLOCK_TYPES = [
-  'accordion',
-  'tabs',
-  'table',
-  'callout',
-  'code',
-  'docImage',
-  'embed',
-  'math',
-  'nodes',
-  'quiz',
-  'raw',
-  'tsDocs',
-] as const;
-export type DocsBlockType = (typeof DOCS_BLOCK_TYPES)[number];
-export type DocsBlockOptions = Partial<Record<DocsBlockType | 'inlineMath', boolean>>;
-export type RichBlock = {
-  _type: string;
-  _key?: string;
-  markdown?: string;
-  [key: string]: unknown;
-};
-
-export function enabledDocsBlocks(options: DocsBlockOptions = {}): DocsBlockType[] {
-  return DOCS_BLOCK_TYPES.filter((type) => options[type] !== false);
-}
+export { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../lib/block-types.js';
+export type { DocsBlockOptions, DocsBlockType, RichBlock } from '../lib/block-types.js';
 
 export const DOCS_BLOCK_FIELDS: Record<
   DocsBlockType,
@@ -207,11 +186,7 @@ function NestedContent({ value }: { value: unknown }): JSX.Element {
       </>
     );
   if (!value || typeof value !== 'object')
-    return typeof value === 'string' ? (
-      <div dangerouslySetInnerHTML={{ __html: renderMarkdown(value) }} />
-    ) : (
-      <>{text(value)}</>
-    );
+    return typeof value === 'string' ? <MarkdownContent markdown={value} /> : <>{text(value)}</>;
 
   const member = value as RichBlock;
   if (member._type === 'block') return <PortableTextBlockView block={member} />;
@@ -219,8 +194,7 @@ function NestedContent({ value }: { value: unknown }): JSX.Element {
     return <DocsRichBlock block={member} />;
   if (Array.isArray(member.content) && member.content.length)
     return <NestedContent value={member.content} />;
-  if (typeof member.markdown === 'string')
-    return <div dangerouslySetInnerHTML={{ __html: renderMarkdown(member.markdown) }} />;
+  if (typeof member.markdown === 'string') return <MarkdownContent markdown={member.markdown} />;
   return <>{text(member)}</>;
 }
 
@@ -232,29 +206,21 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
       return <PortableTextBlockView block={block} />;
     case 'accordion':
       return (
-        <div className="docs-accordions">
-          {items.map((v, i) => (
-            <details key={i}>
-              <summary>{text(v.title)}</summary>
-              <div>
-                <NestedContent value={v} />
-              </div>
-            </details>
-          ))}
-        </div>
+        <MarkdownAccordion
+          items={items.map((i) => ({
+            title: text(i.title),
+            content: <NestedContent value={i} />,
+          }))}
+        />
       );
     case 'tabs':
       return (
-        <div className="docs-tabs" role="tablist">
-          {items.map((v, i) => (
-            <details key={i} open={i === 0}>
-              <summary>{text(v.title)}</summary>
-              <div>
-                <NestedContent value={v} />
-              </div>
-            </details>
-          ))}
-        </div>
+        <MarkdownTabs
+          items={items.map((i) => ({
+            title: text(i.title),
+            content: <NestedContent value={i} />,
+          }))}
+        />
       );
     case 'table':
       return (
@@ -415,14 +381,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
         );
       })(block);
     case 'raw':
-      return (
-        <div
-          className="docs-raw"
-          dangerouslySetInnerHTML={{
-            __html: renderMarkdown(text(block.markdown)),
-          }}
-        />
-      );
+      return <pre>{text(block.markdown)}</pre>;
     case 'tsDocs':
       return (
         <section className="docs-tsdocs">

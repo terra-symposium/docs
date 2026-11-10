@@ -57,10 +57,15 @@ test(
   { tag: '@viewport:xl' },
   async ({ page }) => {
     await openQuizWorkspace(page, { toolbar: true });
-    await expect(page.getByRole('button', { name: 'Generate quiz' })).toBeVisible();
+    await expect(
+      page.locator('.docs-toolbar-scroll').getByRole('button', { name: 'Generate quiz' }),
+    ).toBeVisible();
     await expect(page.getByRole('region', { name: 'Quiz generator' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Generate quiz' }).first().click();
+    await page
+      .locator('.docs-toolbar-scroll')
+      .getByRole('button', { name: 'Generate quiz' })
+      .click();
     const dialog = page.getByRole('dialog', { name: 'Generate a quiz' });
     await dialog.getByLabel('Number of questions').fill('2');
     await dialog.getByLabel('Keyword answer').check();
@@ -107,7 +112,9 @@ test(
     await openQuizWorkspace(page, {
       response: { title: 'One question', questions: [response.questions[0]] },
     });
-    await expect(page.getByRole('button', { name: 'Generate quiz' })).toHaveCount(0);
+    await expect(
+      page.locator('.docs-toolbar-scroll').getByRole('button', { name: 'Generate quiz' }),
+    ).toHaveCount(0);
     await expect(page.getByRole('region', { name: 'Quiz generator' })).toBeVisible();
 
     // An opt-in block remains useful even with the global toolbar disabled.

@@ -1,9 +1,8 @@
 import { marked } from 'marked';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import type { DocsValue } from '../components/Docs.js';
-import type { RichBlock } from '../components/blocks.js';
-import { enabledDocsBlocks } from '../components/blocks.js';
-import type { DocsBlockOptions } from '../components/blocks.js';
+import { enabledDocsBlocks } from './block-types.js';
+import type { DocsBlockOptions, RichBlock } from './block-types.js';
 import * as TerraQualityRegex from './terra/regex.mjs';
 /*//////////////////////////////////////////////////
 REGEX
@@ -981,27 +980,69 @@ function parseMarkdown(
         },
       ),
   );
-  let calloutSource = fencedAccordions.restore(
-    fencedAccordions.source.replace(
-      TerraQualityRegex.REGEX_S_N_S_N_S_S_1_S_GM_REGEX(),
-      (source, delimiter: string, title: string, body: string) => {
-        const type = delimiter === '===' ? 'accordion' : 'tabs';
-        if (!enabled(options, type)) return rawPlaceholder(blocks, source);
-        const markdown = fencedAccordions.restore(body);
-        return richPlaceholder(blocks, {
-          _type: type,
-          items: [
-            {
-              _type: 'item',
-              title,
-              ...(DOCSBLOCK_D_PLACEHOLDER_REGEX.test(markdown) ? {} : { markdown }),
-              content: parseMarkdown(markdown, options, blocks),
-            },
-          ],
-        });
-      },
-    ),
-  );
+  let calloutSource = fencedAccordions.restore(fencedAccordions.source);
+  type MarkdownGroup = {
+    delimiter: '===' | '|||';
+    title: string;
+    start: number;
+    bodyStart: number;
+    closeStart: number;
+    end: number;
+  };
+  const groupStack: Omit<MarkdownGroup, 'closeStart' | 'end'>[] = [];
+  const groupRanges: MarkdownGroup[] = [];
+  const groupFences = codeFenceRanges(calloutSource);
+  let groupFenceIndex = 0;
+  let groupOffset = 0;
+  while (groupOffset < calloutSource.length) {
+    const newline = calloutSource.indexOf('\n', groupOffset);
+    const lineEnd = newline === -1 ? calloutSource.length : newline + 1;
+    const line = calloutSource.slice(groupOffset, lineEnd).replace(R_N_REGEX, '');
+    while (groupFenceIndex < groupFences.length && groupOffset >= groupFences[groupFenceIndex]!.end)
+      groupFenceIndex += 1;
+    const fence = groupFences[groupFenceIndex];
+    if (fence && groupOffset >= fence.start && groupOffset < fence.end) {
+      groupOffset = lineEnd;
+      continue;
+    }
+    const open = line.match(/^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*$/);
+    if (open) {
+      groupStack.push({
+        delimiter: open[1] as MarkdownGroup['delimiter'],
+        title: open[2]!.trim(),
+        start: groupOffset,
+        bodyStart: lineEnd,
+      });
+    } else if (
+      groupStack.at(-1)?.delimiter === line.trim() &&
+      /^(?:===|\|\|\|)$/.test(line.trim())
+    ) {
+      const group = groupStack.pop();
+      if (group && !groupStack.length)
+        groupRanges.push({ ...group, closeStart: groupOffset, end: lineEnd });
+    }
+    groupOffset = lineEnd;
+  }
+  for (const range of groupRanges.reverse()) {
+    const markdown = calloutSource.slice(range.bodyStart, range.closeStart).trimEnd();
+    const type = range.delimiter === '===' ? 'accordion' : 'tabs';
+    calloutSource =
+      calloutSource.slice(0, range.start) +
+      (enabled(options, type)
+        ? richPlaceholder(blocks, {
+            _type: type,
+            items: [
+              {
+                _type: 'item',
+                title: range.title,
+                markdown,
+                content: parseMarkdown(markdown, options, blocks),
+              },
+            ],
+          })
+        : rawPlaceholder(blocks, calloutSource.slice(range.start, range.end))) +
+      calloutSource.slice(range.end);
+  }
   type OpenCallout = {
     start: number;
     bodyStart: number;
@@ -1452,7 +1493,21 @@ function parseMarkdown(
     }
     result.push({ _type: 'raw', _key: key(), markdown: token.raw });
   }
-  return result as DocsValue;
+  const grouped: RichBlock[] = [];
+  for (const block of result) {
+    const previous = grouped.at(-1);
+    if (
+      (block._type === 'accordion' || block._type === 'tabs') &&
+      previous?._type === block._type &&
+      Array.isArray(previous.items) &&
+      Array.isArray(block.items)
+    ) {
+      previous.items = [...previous.items, ...block.items];
+      if (typeof block.markdown === 'string')
+        previous.markdown = [previous.markdown, block.markdown].filter(Boolean).join('\n\n');
+    } else grouped.push(block);
+  }
+  return grouped as DocsValue;
 }
 
 function onlyOwnFields(value: Record<string, unknown>, fields: string[]): boolean {

@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.7
+
+### Patch Changes
+
+- Match the case-sensitive npm trusted publisher identity to GitHub's canonical repository name.
+
 ## 0.4.6
 
 ### Patch Changes

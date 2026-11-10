@@ -3,7 +3,7 @@ name: Release Docs
 on:
   push:
     branches:
-      - main
+      - development
 
 permissions:
   contents: write
@@ -35,5 +35,5 @@ jobs:
           publish-script: pnpm exec changeset publish
           commit-message: 'chore: release Docs'
           pr-title: 'chore: release Docs'
-          pr-base-branch: main
+          pr-base-branch: development
           github-token: ${{ secrets.GITHUB_TOKEN }}

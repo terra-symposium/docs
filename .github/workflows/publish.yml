@@ -25,4 +25,4 @@ jobs:
           cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
-      - run: npm publish --access public
+      - run: npm --version && npm publish --access public --loglevel verbose

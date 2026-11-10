@@ -32,7 +32,7 @@ jobs:
         with:
           version: pnpm exec changeset version
           publish: pnpm run build && pnpm exec changeset publish
-          commit: chore: release Docs
-          title: chore: release Docs
+          commit: "chore: release Docs"
+          title: "chore: release Docs"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

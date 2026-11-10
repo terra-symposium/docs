@@ -2,6 +2,21 @@ import { colors } from '@terra-symposium/styling';
 import type { DocsAttachment } from '../lib/workspace-types.js';
 import type { CSSProperties, JSX } from 'react';
 
+const pathKey = (value: string): string => {
+  try {
+    const url = new URL(value, 'http://docs.local');
+    return url.pathname.replace(/\/+$/, '') || '/';
+  } catch {
+    return (value.split('#', 1)[0] ?? '').replace(/\/+$/, '') || '/';
+  }
+};
+
+const isActivePath = (href: string, currentPath: string): boolean => {
+  const target = pathKey(href);
+  const current = pathKey(currentPath);
+  return current === target || current.startsWith(`${target}/`);
+};
+
 export type DocsNavNode = {
   id?: string;
   path?: string;
@@ -30,7 +45,10 @@ export function DocsNavigation({
       {items.map((node, i) => (
         <li key={`${node.href ?? node.title}-${i}`}>
           {node.href ? (
-            <a href={node.href} aria-current={node.href === currentPath ? 'page' : undefined}>
+            <a
+              href={node.href}
+              aria-current={isActivePath(node.href, currentPath) ? 'page' : undefined}
+            >
               {node.title}
             </a>
           ) : (

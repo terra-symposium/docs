@@ -288,7 +288,10 @@ function titleFromName(value = '') {
       .replace(MD_MDX_I_REGEX, '')
       .split('/')
       .at(-1) ?? '';
-  return name.replace(/[-_]+/g, ' ').replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
+  return name
+    .replace(/^\d+[-_]+/, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\p{L}/gu, (letter) => letter.toUpperCase());
 }
 
 /**

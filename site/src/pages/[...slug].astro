@@ -15,6 +15,7 @@ export function getStaticPaths() {
 
 const { slug = '' } = Astro.props;
 const page = pageForSlug(slug);
+const Content = page?.file.endsWith('.mdx') ? (page.content as any) : undefined;
 const currentPath = pageHref(slug, base);
 ---
 
@@ -38,7 +39,9 @@ const currentPath = pageHref(slug, base);
 				rootPath={pageHref('', base)}
 				markdown={page.markdown}
 				searchBase={base}
-			/>
+			>
+				{Content ? <main class="docs-page-content"><Content /></main> : null}
+			</DocsSiteLayout>
 		</body>
 	</html>
 ) : null}

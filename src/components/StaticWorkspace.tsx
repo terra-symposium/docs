@@ -42,6 +42,7 @@ type Props = {
   homeHref?: string;
   description?: string;
   pageTitle?: string;
+  pageDescription?: string;
   hue?: number | null;
   nodes?: DocsNavNode[];
   sections?: DocsSection[];
@@ -90,6 +91,13 @@ const routeKey = (value: string): string => {
     return value;
   }
 };
+
+/** Returns whether a Docs leaf owns the requested route, including nested subpages. */
+const routeOwnsPath = (leafRoute: string, requestedRoute: string): boolean => {
+  const leaf = routeKey(leafRoute).split('#', 1)[0] ?? '';
+  const requested = routeKey(requestedRoute).split('#', 1)[0] ?? '';
+  return requested === leaf || requested.startsWith(`${leaf.replace(SHARED_REGEX, '')}/`);
+};
 /**
  * Converts a route or URL into the key used by the local Docs content store.
  *
@@ -135,23 +143,20 @@ function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
       : null;
   return nodes.map((section) => {
     const children = section.children ?? [];
-    const nestedGroups = children.some((node) => Boolean(node.children?.length));
-    const groups = nestedGroups
+    const groups = children.length
       ? children.map((group) => ({
           ...(group.id ? { id: group.id } : {}),
           ...(group.path ? { path: group.path } : {}),
           ...(group.hue !== undefined ? { hue: group.hue } : {}),
           title: group.title,
-          leaves: (group.children ?? [])
+          leaves: (group.children?.length ? group.children : [group])
             .map(toLeaf)
             .filter((leaf): leaf is DocsLeaf => leaf !== null),
         }))
       : [
           {
             title: section.title,
-            leaves: (children.length ? children : [section])
-              .map(toLeaf)
-              .filter((leaf): leaf is DocsLeaf => leaf !== null),
+            leaves: [section].map(toLeaf).filter((leaf): leaf is DocsLeaf => leaf !== null),
           },
         ];
     return {
@@ -197,6 +202,7 @@ export function DocsStaticWorkspace({
   homeHref = '/',
   description,
   pageTitle,
+  pageDescription,
   hue,
   nodes = [],
   sections,
@@ -228,10 +234,16 @@ export function DocsStaticWorkspace({
   );
   const a =
     allLeaves.find((i) => routeKey(i.leaf.href) === currentKey) ??
+    allLeaves
+      .filter((i) => routeOwnsPath(i.leaf.href, currentPath))
+      .sort(
+        (left, right) => routeKey(right.leaf.href).length - routeKey(left.leaf.href).length,
+      )[0] ??
     allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(rootPath)) ??
     allLeaves[0];
   const currentAttachments = a?.leaf.attachments ?? attachments;
   const docPath = a?.leaf.href ?? currentPath;
+  const effectivePageDescription = pageDescription ?? a?.leaf.description;
   const docContent = Array.isArray(content) ? content : markdownToDocsValue(markdown);
   const contentSlot = renderContent ?? children;
   const readyContent =
@@ -284,11 +296,18 @@ export function DocsStaticWorkspace({
     if (!path) return a?.leaf;
     const requestedRoute = routeKey(path);
     const requestedStoragePath = storageKey(path);
-    return allLeaves.find(
-      (i) =>
-        routeKey(i.leaf.href) === requestedRoute ||
-        storageKey(i.leaf.path ?? i.leaf.href) === requestedStoragePath,
-    )?.leaf;
+    return (
+      allLeaves.find(
+        (i) =>
+          routeKey(i.leaf.href) === requestedRoute ||
+          storageKey(i.leaf.path ?? i.leaf.href) === requestedStoragePath,
+      )?.leaf ??
+      allLeaves
+        .filter((i) => routeOwnsPath(i.leaf.href, path))
+        .sort(
+          (left, right) => routeKey(right.leaf.href).length - routeKey(left.leaf.href).length,
+        )[0]?.leaf
+    );
   };
   const hostAttachments: DocsHostAttachment[] = currentAttachments.map((i, v) => ({
     id: String(v),
@@ -338,7 +357,14 @@ export function DocsStaticWorkspace({
      * @return Matching section, group, and leaf identifiers with the canonical pathname.
      */
     resolveRoute(value) {
-      const match = allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(value)) ?? a;
+      const match =
+        allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(value)) ??
+        allLeaves
+          .filter((i) => routeOwnsPath(i.leaf.href, value))
+          .sort(
+            (left, right) => routeKey(right.leaf.href).length - routeKey(left.leaf.href).length,
+          )[0] ??
+        a;
       return {
         sectionId: match?.section.id ?? slug(match?.section.title ?? 'index'),
         groupId: match?.group.id ?? slug(match?.group.title ?? 'index'),
@@ -390,16 +416,16 @@ export function DocsStaticWorkspace({
         if (
           selected &&
           typeof window !== 'undefined' &&
-          routeKey(selected.href) !== routeKey(currentPath)
+          !routeOwnsPath(selected.href, currentPath)
         ) {
           window.location.assign(selected.href);
         }
         data = selected
           ? {
               path: selected.path ?? selected.href,
-              pathname: selected.href,
-              title: selected.title,
-              description: selected.description,
+              pathname: routeOwnsPath(selected.href, currentPath) ? currentPath : selected.href,
+              title: pageTitle ?? selected.title,
+              description: pageDescription ?? selected.description,
               updatedAt: selected.updatedAt ?? updatedAt,
               source: markdown,
               content: docContent,
@@ -411,8 +437,8 @@ export function DocsStaticWorkspace({
         data = currentPath;
       } else if (op === 'read.util.node') {
         data = {
-          title: a?.leaf.title ?? pageTitle ?? title,
-          origName: slug(a?.leaf.title ?? pageTitle ?? title),
+          title: pageTitle ?? a?.leaf.title ?? title,
+          origName: slug(pageTitle ?? a?.leaf.title ?? title),
         };
       } else if (op === 'read.tsdocs') {
         data = { scopes: [] };
@@ -458,7 +484,7 @@ export function DocsStaticWorkspace({
           permission="read"
           path={a?.leaf.path ?? docPath}
           title={pageTitle ?? a?.leaf.title ?? title}
-          {...(a?.leaf.description ? { description: a.leaf.description } : {})}
+          {...(effectivePageDescription ? { description: effectivePageDescription } : {})}
           {...((a?.leaf.updatedAt ?? updatedAt)
             ? { updatedAt: a?.leaf.updatedAt ?? updatedAt }
             : {})}

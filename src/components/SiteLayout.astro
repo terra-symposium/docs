@@ -10,6 +10,7 @@ type Props = {
 	homeHref?: string;
 	description?: string;
 	pageTitle?: string;
+	pageDescription?: string;
 	hue?: number | null;
 	nodes?: DocsNavNode[];
 	sections?: DocsSection[];
@@ -22,7 +23,7 @@ type Props = {
 	searchBase?: string;
 };
 
-const { title, homeHref = '/', description, pageTitle, hue = 145, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
+const { title, homeHref = '/', description, pageTitle, pageDescription, hue = 145, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
 const staticContent = Astro.slots.has('default');
 ---
 
@@ -33,6 +34,7 @@ const staticContent = Astro.slots.has('default');
 		homeHref={homeHref}
 		description={description}
 		pageTitle={pageTitle}
+		pageDescription={pageDescription}
 		hue={hue}
 		nodes={nodes}
 		sections={sections}

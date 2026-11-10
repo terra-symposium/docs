@@ -24,6 +24,8 @@ CONFIG
  * @return A global regular expression for replacing route word separators.
  */
 const G_REGEX = () => /[-_]+/g;
+/** Matches a numeric ordering prefix at the start of a route segment. */
+const ORDER_PREFIX_REGEX = () => /^(\d+)[-_]+/;
 /**
  * Matches the first Unicode letter after a word boundary for title capitalization.
  *
@@ -126,7 +128,7 @@ function titleFromSource(source: string, slug: string): string {
   const heading = /^#\s+(.+?)\s*#*\s*$/m.exec(body)?.[1]?.trim();
   if (heading) return heading;
   const name = slug.split('/').at(-1) || 'Overview';
-  return name.replace(G_REGEX(), ' ').replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase());
+  return label(name);
 }
 
 /**
@@ -152,7 +154,24 @@ function routeForFile(file: string): string {
  * @return Human-readable navigation text.
  */
 function label(value: string): string {
-  return value.replace(G_REGEX(), ' ').replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase());
+  return value
+    .replace(ORDER_PREFIX_REGEX(), '')
+    .replace(G_REGEX(), ' ')
+    .replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase());
+}
+
+/**
+ * Removes a route's numeric ordering prefix from its displayed page title.
+ *
+ * @param title Authored or generated page title.
+ * @param routeSegment Final route segment associated with the page.
+ *
+ * @return The title without the route's ordering prefix when present.
+ */
+function pageNavigationTitle(title: string, routeSegment: string): string {
+  const prefix = ORDER_PREFIX_REGEX().exec(routeSegment)?.[1];
+  if (!prefix) return title;
+  return title.replace(new RegExp(`^\\s*${prefix}[-_\\s]+`), '').trim();
 }
 
 /**
@@ -164,9 +183,11 @@ function label(value: string): string {
  * @return The metadata fields to merge into its navigation node.
  */
 function pageMetadata(page: SitePage, href: string): Partial<MutableNode> {
+  const title = page.sidebarLabel ?? page.title;
+  const routeSegment = page.slug.split('/').at(-1) ?? '';
   return {
     id: page.slug || 'index',
-    title: page.sidebarLabel ?? page.title,
+    title: pageNavigationTitle(title, routeSegment),
     href,
     ...(page.description ? { description: page.description } : {}),
     ...(page.hue !== undefined ? { hue: page.hue } : {}),

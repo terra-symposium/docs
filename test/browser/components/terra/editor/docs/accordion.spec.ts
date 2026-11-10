@@ -6,7 +6,7 @@ const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
   annotation: {
     type: 'viewport-reason',
-    description: 'Rich-block interactions use the standard desktop editor layout.',
+    description: 'The accordion interaction is checked in the desktop editor layout.',
   },
 } as const;
 
@@ -41,51 +41,35 @@ const accordionFixture = [
 ] satisfies Content;
 
 test(
-  'accordion.spec: Expand sections and emit structure edits',
+  'legacy accordion records migrate to Markdown in the editor',
   XL_VIEWPORT_TEST,
   async ({ page }) => {
     await openEditor(page, accordionFixture);
-    const accordion = page.locator('[data-block="accordion"]');
-    await accordion.getByRole('button', { name: 'Toggle First section' }).click();
-    await expect(accordion.getByText('Nested accordion explanation')).toBeVisible();
 
-    await accordion.getByRole('button', { name: 'Add section' }).click();
-    await accordion.getByRole('textbox', { name: 'Accordion title' }).last().fill('Second section');
-    await expect
-      .poll(
-        async () =>
-          JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]')[0]?.items,
-        { intervals: [25, 75, 150], timeout: 1500 },
-      )
-      .toEqual([
-        expect.objectContaining({ title: 'First section' }),
-        expect.objectContaining({ title: 'Second section' }),
-      ]);
-    await accordion.getByRole('button', { name: 'Delete accordion section' }).last().click();
-    await expect
-      .poll(
-        async () =>
-          JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]')[0]?.items
-            ?.length,
-        { intervals: [25, 75, 150], timeout: 1500 },
-      )
-      .toBe(1);
+    await expect(page.locator('[data-block="accordion"]')).toHaveCount(0);
+    const raw = page.locator('[data-docs-editor-block="Raw Markdown"]');
+    await expect(raw).toBeVisible();
+    await expect(raw).toContainText('===[First section]');
+    await expect(raw).toContainText('Nested accordion explanation');
   },
 );
 
-test('accordion.spec: Emit nested content edits', XL_VIEWPORT_TEST, async ({ page }) => {
-  await openEditor(page, accordionFixture);
-  const accordion = page.locator('[data-block="accordion"]');
-  await accordion.getByRole('button', { name: 'Toggle First section' }).click();
-  const nested = accordion.getByRole('textbox', { name: 'Document editor' });
-  await nested.click();
-  await page.keyboard.press('End');
-  await page.keyboard.type(' updated');
-  await expect
-    .poll(
-      async () =>
-        JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]')[0]?.items?.[0]
-          ?.content?.[0]?.children?.[0]?.text,
-    )
-    .toBe('Nested accordion explanation updated');
-});
+test(
+  'legacy accordion Markdown renders and toggles with the shared Styling control',
+  XL_VIEWPORT_TEST,
+  async ({ page }) => {
+    await openEditor(page, accordionFixture, { readOnly: true });
+
+    const trigger = page.getByRole('button', { name: 'First section' });
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await trigger.click();
+    await expect(
+      page
+        .getByRole('region', { name: 'First section' })
+        .getByText('Nested accordion explanation', { exact: true }),
+    ).toBeVisible();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  },
+);

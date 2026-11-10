@@ -66,33 +66,6 @@ export function captureLinearOffset(
 }
 
 /**
- * Finds the DOM caret range at a character offset in the editor's text flow.
- *
- * @param root - Editor element whose text nodes should be traversed.
- * @param i - Character offset from the start of the editor.
- *
- * @return A collapsed range at the requested offset, or `null` for an invalid or out-of-range offset.
- */
-export function resolveLinearOffset(root: HTMLElement, i?: number): Range | null {
-  if (typeof i !== 'number' || i < 0) return null;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let cur = walker.nextNode();
-  let remaining = i;
-  while (cur) {
-    const len = cur.textContent?.length ?? 0;
-    if (remaining <= len) {
-      const range = document.createRange();
-      range.setStart(cur, Math.min(remaining, len));
-      range.collapse(true);
-      return range;
-    }
-    remaining -= len;
-    cur = walker.nextNode();
-  }
-  return null;
-}
-
-/**
  * Handles paste md.
  *
  * @param insert - Insert input supplied to paste md's operation.
@@ -117,11 +90,13 @@ export function pasteMd(
 
 export function codeViewOf(): EditorView | null {
   if (typeof document === 'undefined') return null;
-  const a =
-    document.activeElement instanceof Element
-      ? document.activeElement.closest<HTMLElement>('.docs-code-block .cm-editor')
-      : null;
-  return (a as (HTMLElement & { cmView?: { view?: EditorView } }) | null)?.cmView?.view ?? null;
+  return (
+    (
+      (document.activeElement instanceof Element
+        ? document.activeElement.closest<HTMLElement>('.docs-code-block .cm-editor')
+        : null) as (HTMLElement & { cmView?: { view?: EditorView } }) | null
+    )?.cmView?.view ?? null
+  );
 }
 
 /**
@@ -145,7 +120,8 @@ export function htmlToMd(html: string): string {
     if (curr.node.nodeType === Node.TEXT_NODE) {
       let text = curr.node.textContent || '';
       // Preserve embedded leaf structure tokens as separate Markdown blocks.
-      if (text.includes('|||')) text = text.replace(/\|\|\|/g, '\n\n|||\n\n');
+      if (text.includes('|||'))
+        text = text.replace(TerraQualityRegex.REGEX_G_REGEX_33(), '\n\n|||\n\n');
       rendered.set(curr.node, text);
       continue;
     }

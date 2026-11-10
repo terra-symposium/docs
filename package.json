@@ -1,10 +1,10 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.4.3",
+  "version": "0.4.11",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Terra-Symposium/docs.git"
+    "url": "https://github.com/terra-symposium/docs"
   },
   "type": "module",
   "packageManager": "pnpm@10.30.3",
@@ -20,7 +20,8 @@
     "src/components/quiz-demo-fixture.ts",
     "src/components/SiteLayout.astro",
     "src/components/NotFound.astro",
-    "src/components/NotFound.tsx"
+    "src/components/NotFound.tsx",
+    "src/lib/terra/regex.mjs"
   ],
   "exports": {
     "./authoring/blocks.md": "./docs/authoring/blocks/index.md",
@@ -52,11 +53,12 @@
   "scripts": {
     "dev": "DOCS_DEV_PORT=2020 terra-quality-dev -- vite --config config/vite.config.ts --host 127.0.0.1 --open",
     "quality": "node scripts/quality.mjs",
-    "docs": "pnpm run build && node bin/docs.mjs docs",
+    "docs": "pnpm run build && node bin/docs.mjs build",
     "build": "rm -rf dist/lib && tsc -p config/tsconfig.json && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
     "test:browser": "playwright test --config config/playwright.config.ts",
     "check": "prettier --config config/.prettierrc.json --ignore-path config/.prettierignore --check . && eslint --config config/eslint.config.js . && tsc --noEmit -p config/tsconfig.json && tsc -p config/tsconfig.demo.json",
-    "test": "pnpm run build && node --test test/*.test.mjs",
+    "test:unit": "pnpm run build && node --test test/*.test.mjs",
+    "test": "pnpm run test:unit && pnpm run test:browser",
     "prepare": "husky config/husky"
   },
   "devDependencies": {
@@ -68,7 +70,6 @@
     "@types/node": "^24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@types/sanitize-html": "^2.16.2",
     "@vitejs/plugin-react": "6.1.2",
     "eslint": "10.13.0",
     "globals": "^16.5.0",
@@ -114,7 +115,6 @@
     "pdf-lib": "^1.17.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "sanitize-html": "^2.18.1",
     "sonner": "^1.4.41",
     "use-sync-external-store": "1.7.0",
     "yaml": "^2.7.0"

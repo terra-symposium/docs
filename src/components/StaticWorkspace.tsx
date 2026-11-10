@@ -23,6 +23,7 @@ import type { DocsAttachment, DocsLeaf, DocsSection } from '../lib/workspace-typ
 import type { DocsHostAdapter, DocsHostAttachment, DocsHostTreeNode } from '../lib/host.js';
 import type { DocsNavNode } from './navigation.js';
 import type { JSX, ReactNode } from 'react';
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -33,8 +34,8 @@ CONFIG
  *
  * @return A regular expression used to remove leading and trailing slashes.
  */
-const G_REGEX = () => /^\/+|\/+$/g;
-const SHARED_REGEX = /\/$/;
+const G_REGEX = () => TerraQualityRegex.REGEX_G_REGEX_35();
+const SHARED_REGEX = TerraQualityRegex.REGEX_PATTERN_REGEX_3();
 
 /** Properties used to build a host-independent, read-only Docs workspace. */
 type Props = {
@@ -74,7 +75,7 @@ const slug = (value: string): string =>
   value
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
+    .replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-')
     .replace(/^-|-$/g, '') || 'index';
 /**
  * Normalizes a route for comparison while preserving its fragment identifier.

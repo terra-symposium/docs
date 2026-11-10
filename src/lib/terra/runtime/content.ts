@@ -12,6 +12,7 @@ IMPORTS
 import { createTrace } from './runtime.js';
 import { encodeNodesPayload } from './nodes.js';
 import { isEndpointVal } from './shared.js';
+import { stringifyCodeValue } from './content/markdown.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../regex.mjs';
@@ -25,7 +26,6 @@ import type {
   DocBody,
   DocTableCell,
   DocsContentPtMarkDef as PtMarkDef,
-  DocsContentPtSpan as PtSpan,
 } from './types.js';
 
 /*//////////////////////////////////////////////////
@@ -62,7 +62,15 @@ HELPERS
  *
  * @returns True when the value is a Portable Text span node.
  */
-const ptText = (val: unknown): val is PtSpan => isRec(val) && val._type === 'span';
+const ptText = (
+  val: unknown,
+): val is {
+  _key?: string;
+  _type?: string;
+  marks?: string[];
+  text?: string;
+  [key: string]: unknown;
+} => isRec(val) && val._type === 'span';
 
 /** Narrows persisted mark definitions before the Markdown serializer reads link fields. */
 const ptMarkDefs = (val: unknown): PtMarkDef[] =>
@@ -176,10 +184,101 @@ const BLOCKS = [
  * @param source - Source text containing the Docs blocks to parse.
  */
 export const docsEditorMountIds = (src: string): string[] => {
+  const code = new Map<string, string>();
+  const lns = normBlockMarkers(src)
+    .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), (match) => {
+      const key = `TERRA_CODE_${code.size}`;
+      code.set(key, match);
+      return key;
+    })
+    .replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), (match) => {
+      let result = '';
+      for (let i = 0; i < match.length; i++)
+        result +=
+          match[i] && ['{', '}', '<', '>'].includes(match[i]) && (i === 0 || match[i - 1] !== '\\')
+            ? '\\' + match[i]
+            : (match[i] ?? '');
+      return result;
+    })
+    .replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
+    .split(TerraQualityRegex.REGEX_R_N_REGEX());
+  const blocks: string[] = [];
+  let inCode = false;
+  const groups = new Set<string>();
+  const items = new Set<string>();
+  for (let i = 0; i < lns.length; i++) {
+    const line = lns[i];
+    const trimmedStart = line.trimStart();
+    const trimmed = trimmedStart.trimEnd();
+    if (trimmedStart.startsWith('```')) {
+      inCode = !inCode;
+      blocks.push(trimmedStart);
+      continue;
+    }
+    if (inCode) {
+      blocks.push(line);
+      continue;
+    }
+    const block = BLOCKS.find((entry) => trimmed.startsWith(entry.syntax));
+    if (block) {
+      const marker = trimmed.match(
+        new RegExp(
+          `^${block.syntax.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}(?:\\s*\\[(.*?)\\])?$`,
+        ),
+      );
+      if (trimmed === block.syntax) {
+        if (items.has(block.item)) {
+          blocks.push('', `</${block.item}>`);
+          items.delete(block.item);
+        }
+        let sameGroup = false;
+        for (let j = i + 1; j < lns.length; j++) {
+          const nLine = lns[j]?.trim();
+          if (!nLine) continue;
+          if (nLine.startsWith(block.syntax) && nLine !== block.syntax) sameGroup = true;
+          break;
+        }
+        if (!sameGroup && groups.has(block.label)) {
+          blocks.push(`</${block.root}>`, '');
+          groups.delete(block.label);
+        }
+      } else if (marker) {
+        if (items.has(block.item)) {
+          blocks.push('', `</${block.item}>`);
+          items.delete(block.item);
+        }
+        if (!groups.has(block.label)) {
+          blocks.push('', `<${block.root}>`);
+          groups.add(block.label);
+        }
+        blocks.push(`<${block.item} title=${quote(marker[1] || 'Section')}>`, '');
+        items.add(block.item);
+      } else blocks.push(trimmedStart);
+      continue;
+    }
+    blocks.push(line);
+  }
+  for (const label of groups) {
+    const block = BLOCKS.find((entry) => entry.label === label);
+    if (block) {
+      if (items.has(block.item)) {
+        blocks.push('', `</${block.item}>`);
+        items.delete(block.item);
+      }
+      blocks.push(`</${block.root}>`, '');
+    }
+  }
+  const norm = blocks.join('\n');
   return [
     'root',
     ...Array.from(
-      toBlockJsx(src)
+      (code.size
+        ? norm.replace(
+            TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(),
+            (key) => code.get(key) || key,
+          )
+        : norm
+      )
         .replace(/```[\s\S]*?```/g, '')
         .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), '')
         .replace(
@@ -203,111 +302,9 @@ export const docsEditorMountIds = (src: string): string[] => {
  */
 const normBlockMarkers = (md: string): string =>
   md
-    .replace(/([^\n])[ \t]+(?=\|\|\|(?:[ \t]*(?:\|\|\||$)))/g, '$1\n\n')
-    .replace(/(\|\|\|[ \t]*\[[^\]\n]*\])[ \t]+(?=\S)/g, '$1\n\n')
-    .replace(/(^|\n)[ \t]*\|\|\|[ \t]+(?=\|\|\|[ \t]*\[)/gm, '$1|||\n\n');
-
-/**
- * Rewrites the supported docs block markers into their JSX wrapper forms.
- *
- * @param md - Markdown or MDX source to normalize.
- *
- * @return Source where supported block markers have been rewritten to their JSX wrappers.
- *
- * @remarks
- * Only the supported block syntaxes are rewritten; everything else is preserved.
- */
-export function toBlockJsx(md: string): string {
-  if (!md) return '';
-  const code = new Map<string, string>();
-  const lns = normBlockMarkers(md)
-    .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), (m) => {
-      const key = `TERRA_CODE_${code.size}`;
-      code.set(key, m);
-      return key;
-    })
-    .replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), (m) => {
-      let res = '';
-      for (let i = 0; i < m.length; i++)
-        res +=
-          m[i] && ['{', '}', '<', '>'].includes(m[i]) && (i === 0 || m[i - 1] !== '\\')
-            ? '\\' + m[i]
-            : (m[i] ?? '');
-      return res;
-    })
-    .replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
-    .split(TerraQualityRegex.REGEX_R_N_REGEX());
-  const res: string[] = [];
-  let icode = false;
-  const grp = new Set<string>();
-  const itm = new Set<string>();
-  for (let i = 0; i < lns.length; i++) {
-    const line = lns[i];
-    const t = line.trimStart();
-    const tClean = t.trimEnd();
-    if (t.startsWith('```')) {
-      icode = !icode;
-      res.push(t);
-      continue;
-    }
-    if (icode) {
-      res.push(line);
-      continue;
-    }
-    const _m = BLOCKS.find((b) => tClean.startsWith(b.syntax));
-    if (_m) {
-      const rM = tClean.match(
-        new RegExp(
-          `^${_m.syntax.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}(?:\\s*\\[(.*?)\\])?$`,
-        ),
-      );
-      if (tClean === _m.syntax) {
-        if (itm.has(_m.item)) {
-          res.push('', `</${_m.item}>`);
-          itm.delete(_m.item);
-        }
-        let nIsSameGroup = false;
-        for (let j = i + 1; j < lns.length; j++) {
-          const nLine = lns[j]?.trim();
-          if (!nLine) continue;
-          if (nLine.startsWith(_m.syntax) && nLine !== _m.syntax) nIsSameGroup = true;
-          break;
-        }
-        if (!nIsSameGroup && grp.has(_m.label)) {
-          res.push(`</${_m.root}>`, '');
-          grp.delete(_m.label);
-        }
-      } else if (rM) {
-        if (itm.has(_m.item)) {
-          res.push('', `</${_m.item}>`);
-          itm.delete(_m.item);
-        }
-        if (!grp.has(_m.label)) {
-          res.push('', `<${_m.root}>`);
-          grp.add(_m.label);
-        }
-        res.push(`<${_m.item} title=${quote(rM?.[1] || 'Section')}>`, '');
-        itm.add(_m.item);
-      } else res.push(t);
-      continue;
-    }
-    res.push(line);
-  }
-  for (const label of grp) {
-    const b = BLOCKS.find((x) => x.label === label);
-    if (b) {
-      if (itm.has(b.item)) {
-        res.push('', `</${b.item}>`);
-        itm.delete(b.item);
-      }
-      res.push(`</${b.root}>`, '');
-    }
-  }
-  const n = res.join('\n');
-  return code.size
-    ? n.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), (k) => code.get(k) || k)
-    : n;
-}
+    .replace(TerraQualityRegex.REGEX_N_T_T_G_REGEX(), '$1\n\n')
+    .replace(TerraQualityRegex.REGEX_T_N_T_S_G_REGEX(), '$1\n\n')
+    .replace(TerraQualityRegex.REGEX_N_T_T_T_GM_REGEX(), '$1|||\n\n');
 
 /**
  * Restores the custom docs JSX wrappers back to the markdown block syntax they came from.
@@ -323,28 +320,29 @@ export function fromBlockJsx(jsx: string): string {
   if (!jsx) return '';
   const code = new Map<string, string>();
   let _rs = toCodeJsx(jsx)
-    .replace(/<Code\b[\s\S]*?<\/Code>/g, (m) => {
+    .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX_3(), (m) => {
       const key = `TERRA_CODE_${code.size}`;
       code.set(key, m);
       return key;
     })
-    .replace(/^\\?=\\?=\\?=/gm, '===')
-    .replace(/^\\?\|\\?\|\\?\|/gm, '|||')
-    .replace(/^\\?:\\?:\\?:/gm, ':::')
+    .replace(TerraQualityRegex.REGEX_GM_REGEX_3(), '===')
+    .replace(TerraQualityRegex.REGEX_GM_REGEX_2(), '|||')
+    .replace(TerraQualityRegex.REGEX_GM_REGEX(), ':::')
     .replace(
-      /^(===|\|\|\||\^\^\^|:::)[ \t]*\\?\[(.*?)\\?\]/gm,
-      (_m, p, c) => `${p}[${c.replace(/\\\]/g, ']').replace(/\\\[/g, '[')}]`,
+      TerraQualityRegex.REGEX_T_GM_REGEX(),
+      (_m, p, c) =>
+        `${p}[${c.replace(TerraQualityRegex.REGEX_G_REGEX_28(), ']').replace(TerraQualityRegex.REGEX_G_REGEX_27(), '[')}]`,
     );
   _rs = _rs
     .replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
     .replace(
-      /<DocsMath\b([\s\S]*?)code=(?:\{\s*("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)\s*\}|(["'])([\s\S]*?)\3)([\s\S]*?)\/>/gi,
+      TerraQualityRegex.REGEX_DOCSMATH_B_S_S_CODE_S_S_S_S_S_S_S_S_S_S_3_S_S_GI_REGEX(),
       (_m, p, e, _quote, s, v) => {
         // prettier-ignore
         const parsed = e
 					? e.startsWith('`')
 						? e.slice(1, -1).replace(TerraQualityRegex.REGEX_G_REGEX_15(), '`').replace(TerraQualityRegex.REGEX_G_REGEX_14(), '$').replace(TerraQualityRegex.REGEX_G_REGEX_13(), '\\')
-						: e.startsWith('"') ? JSON.parse(e.replace(TerraQualityRegex.REGEX_N_G_REGEX_3(), '\\n')) : e.slice(1, -1).replace(/\\([`'"])/g, '$1')
+						: e.startsWith('"') ? JSON.parse(e.replace(TerraQualityRegex.REGEX_N_G_REGEX_3(), '\\n')) : e.slice(1, -1).replace(TerraQualityRegex.REGEX_G_REGEX_26(), '$1')
 					: s;
         return TerraQualityRegex.REGEX_BINLINE_B_I_REGEX().test(p) ||
           TerraQualityRegex.REGEX_BINLINE_B_I_REGEX().test(v)
@@ -353,10 +351,17 @@ export function fromBlockJsx(jsx: string): string {
       },
     )
     .replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), (_m) =>
-      _m.replace(/\\\{/g, '{').replace(/\\\}/g, '}').replace(/\\</g, '<').replace(/\\>/g, '>'),
+      _m
+        .replace(TerraQualityRegex.REGEX_G_REGEX_29(), '{')
+        .replace(TerraQualityRegex.REGEX_G_REGEX_30(), '}')
+        .replace(TerraQualityRegex.REGEX_G_REGEX_31(), '<')
+        .replace(TerraQualityRegex.REGEX_G_REGEX_32(), '>'),
     );
   _rs = _rs
-    .replace(/(<\/?(?:AccordionGroup|TabsGroup|AccordionItem|TabsItem)\b[^>]*>)/g, '\n$1\n')
+    .replace(
+      TerraQualityRegex.REGEX_ACCORDIONGROUP_TABSGROUP_ACCORDIONITEM_TABSITEM_B_G_REGEX(),
+      '\n$1\n',
+    )
     .replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
   if (code.size)
     _rs = _rs.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), (k) => code.get(k) || k);
@@ -369,7 +374,7 @@ export function fromBlockJsx(jsx: string): string {
     const t = raw.trimStart();
     if (t.startsWith('```')) {
       icode = !icode;
-      if (icode) pad = raw.match(/^[ \t]*/)?.[0] || '';
+      if (icode) pad = raw.match(TerraQualityRegex.REGEX_T_REGEX())?.[0] || '';
       out.push(t);
       continue;
     }
@@ -403,11 +408,11 @@ export function fromBlockJsx(jsx: string): string {
       out.push('');
       continue;
     }
-    if (/^(===|\|\|\||\^\^\^|:::)/.test(t)) {
+    if (TerraQualityRegex.REGEX_PATTERN_REGEX_5().test(t)) {
       out.push(t);
       continue;
     }
-    out.push(raw.replace(/^[ \t]{1,8}/, ''));
+    out.push(raw.replace(TerraQualityRegex.REGEX_T_1_8_REGEX(), ''));
   }
   return (
     /* prettier-ignore */ out.join('\n').replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n').trim() + '\n'
@@ -427,40 +432,6 @@ CODE SYNTAX
  */
 const codeAttrs = (lang?: string): string =>
   lang?.trim() ? ` language=${JSON.stringify(lang.trim())}` : '';
-
-/**
- * Converts any code payload into a printable string before it is written into docs markup.
- *
- * @param val - Any code-like value to stringify.
- *
- * @return Printable code string used by the markdown and MDX serializers.
- *
- * @remarks
- * Prefers compact primitives and pretty-prints structured values.
- */
-export function stringifyCodeValue(val: unknown): string {
-  if (typeof val === 'string') {
-    let n = val;
-    for (let i = 0; i < 16; i++) {
-      const match = n.match(/^\s*\{`([\s\S]*)`}\s*$/);
-      if (!match) break;
-      const unwrapped = match[1]
-        .replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1')
-        .replace(TerraQualityRegex.REGEX_N_G_REGEX_2(), '\n');
-      if (unwrapped === n) break;
-      n = unwrapped;
-    }
-    return n.replace(/\\r\\n|\\n|\\r/g, (m) => (m === '\\r' ? '\r' : '\n'));
-  }
-  if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'bigint')
-    return String(val);
-  if (val == null) return '';
-  try {
-    return JSON.stringify(val, null, 2);
-  } catch {
-    return String(val);
-  }
-}
 
 /**
  * Serializes fenced code into the canonical `<Code>` JSX used by docs content.
@@ -530,27 +501,11 @@ export function toCodeJsx(src: string): string {
   res = protectMarkupBlocks(res, 'Code', blocks);
   if (res.includes('<pre><code'))
     res = res.replace(
-      /<pre><code(?:\s+class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/gi,
+      TerraQualityRegex.REGEX_PRE_CODE_S_CLASS_LANGUAGE_S_S_CODE_PRE_GI_REGEX(),
       (_, l: string, v: string) => codeJsx(l || '', v),
     );
-  if (/<(?:td|th)\b[^>]*>\s*<code\b/i.test(res))
-    res = res.replace(
-      /<(t[dh])(\b[^>]*)>\s*<code(?:\s+class="language-([^"]+)")?>([\s\S]*?)<\/code>\s*<\/\1>/gi,
-      (_, t: string, a: string, l: string, v: string) =>
-        `<${t}${a}>${codeJsx(
-          l || '',
-          v
-            .replace(/&#10;/g, '\n')
-            .replace(/&#13;/g, '\r')
-            .replace(TerraQualityRegex.REGEX_QUOT_G_REGEX(), '"')
-            .replace(/&#39;/g, "'")
-            .replace(TerraQualityRegex.REGEX_AMP_G_REGEX(), '&')
-            .replace(TerraQualityRegex.REGEX_LT_G_REGEX(), '<')
-            .replace(TerraQualityRegex.REGEX_GT_G_REGEX(), '>'),
-        )}</${t}>`,
-    );
   res = res.replace(
-    /<Code\b([\s\S]*?)\s+code=(?:"([\s\S]*?)"|\{`((?:\\.|[^`])*?)`\})\s*\/>/g,
+    TerraQualityRegex.REGEX_CODE_B_S_S_S_CODE_S_S_S_G_REGEX(),
     (_match, p, q, e) => {
       return `<Code${p} source=${quote(e !== undefined ? e.replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1') : q)} />`;
     },
@@ -625,7 +580,7 @@ export const mdTableToHtml = (
   if (
     !width ||
     rows.some((r) => r.length !== width) ||
-    !rows[1]?.every((val) => /^:?-{3,}:?$/u.test(val.trim()))
+    !rows[1]?.every((val) => TerraQualityRegex.REGEX_3_U_REGEX().test(val.trim()))
   )
     return null;
 
@@ -648,18 +603,19 @@ CONTENT SERIALIZATION
 const renderMd = (val: string): string => {
   const text = val.trim();
   if (!text) return '';
-  const code = text.match(/^```([^\n`]*)\n([\s\S]*?)\n```$/);
+  const code = text.match(TerraQualityRegex.REGEX_N_N_S_S_N_REGEX());
   if (code)
     return `<pre><code${code[1]?.trim() ? ` class="language-${escHtml(code[1].trim())}"` : ''}>${escHtml(code[2] || '')}</code></pre>`;
   const codes: string[] = [];
-  const lines = text.split(/\n{2,}/);
-  let html = escHtml(text)
-    .replace(/`([^`]+)`/g, (_, c: string) => {
+  const lines = text.split(TerraQualityRegex.REGEX_N_2_REGEX());
+  let html = escHtml(
+    text.replace(TerraQualityRegex.REGEX_G_REGEX_34(), (_, c: string) => {
       codes.push(`<code>${escHtml(c)}</code>`);
       return `__CODE_${codes.length - 1}__`;
-    })
+    }),
+  )
     .replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
+      TerraQualityRegex.REGEX_G_REGEX_25(),
       (_, l: string, h: string) => `<a href="${escHtml(h)}">${l}</a>`,
     )
     .replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
@@ -676,24 +632,14 @@ const renderMd = (val: string): string => {
 };
 
 /**
- * Handles strip nested anchors.
- *
- * @param val - Table cell markup to sanitize before it is embedded in a Docs table.
- */
-export const stripNestedAnchors = (val: string): string =>
-  val
-    .replace(/<a([^>]*)>\s*<a[^>]*>([\s\S]*?)<\/a>\s*<\/a>/gi, '<a$1>$2</a>')
-    .replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\(\2\)/g, '[$1]($2)');
-
-/**
  * Handles sanitize table html.
  *
  * @param val - Table markup whose inline styles should be removed.
  */
 export const sanitizeTableHtml = (val: string): string =>
   val
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
-    .replace(/\sstyle\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    .replace(TerraQualityRegex.REGEX_STYLE_B_S_S_STYLE_S_GI_REGEX(), '')
+    .replace(TerraQualityRegex.REGEX_SSTYLE_S_S_S_GI_REGEX(), '');
 
 /**
  * Formats raw table HTML with consistent indentation so docs tables round-trip cleanly.
@@ -706,26 +652,27 @@ const fmtRawTable = (val: string): string => {
   if (!TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
   let depth = 0;
   return val
-    .replace(/\s*\n\s*/g, ' ')
-    .replace(/(<(?:td|th)\b[^>]*>)\s+(?=<(?:p|ul|ol|table|pre|div)\b)/gi, '$1')
-    .replace(/(<\/(?:th|td)>)\s*(?=<(?:th|td)\b)/gi, '$1\n')
-    .replace(/(<\/(?:p|ul|ol|pre|div)>)\s*(?=<\/td>)/gi, '$1')
-    .replace(/(<\/li>)\s*(?=<li\b)/gi, '$1\n')
-    .replace(/(<\/?(?:table|thead|tbody|tfoot|tr|ul|ol)\b[^>]*>)/gi, '\n$1\n')
+    .replace(TerraQualityRegex.REGEX_S_N_S_G_REGEX(), ' ')
+    .replace(TerraQualityRegex.REGEX_TD_TH_B_S_P_UL_OL_TABLE_PRE_DIV_B_GI_REGEX(), '$1')
+    .replace(TerraQualityRegex.REGEX_TH_TD_S_TH_TD_B_GI_REGEX(), '$1\n')
+    .replace(TerraQualityRegex.REGEX_P_UL_OL_PRE_DIV_S_TD_GI_REGEX(), '$1')
+    .replace(TerraQualityRegex.REGEX_LI_S_LI_B_GI_REGEX(), '$1\n')
+    .replace(TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_UL_OL_B_GI_REGEX(), '\n$1\n')
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean)
     .map((l) => {
-      if (/^<\/(?:table|thead|tbody|tfoot|tr|th|td|ul|ol)\b[^>]*>$/iu.test(l))
+      if (TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_UL_OL_B_IU_REGEX_2().test(l))
         depth = Math.max(0, depth - 1);
-      if (/^<(?:table|thead|tbody|tfoot|tr|th|td|ul|ol)\b[^>]*>$/iu.test(l)) depth++;
+      if (TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_UL_OL_B_IU_REGEX().test(l))
+        depth++;
       return `${'\t'.repeat(depth)}${l}`;
     })
     .join('\n');
 };
 
 /** Identifies complete canonical HTML table markup. */
-export const TABLE_TAG = /<\/?(?:table|thead|tbody|tfoot|tr|th|td)\b/i;
+export const TABLE_TAG = TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_B_I_REGEX();
 
 /**
  * Handles atomic table html.
@@ -782,10 +729,7 @@ export const normDocsSpacing = (src: string): string => {
   let n = protectMarkupBlocks(
     protectMarkupBlocks(
       normBlockMarkers(
-        toCodeJsx(src).replace(
-          /(<Code\b[^>]*>\s*\{`(?:\\.|[^`])*`\})(?!\s*<\/Code>)/g,
-          '$1\n</Code>',
-        ),
+        toCodeJsx(src).replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX_2(), '$1\n</Code>'),
       ),
       'Code',
       blocks,
@@ -795,19 +739,16 @@ export const normDocsSpacing = (src: string): string => {
   );
   for (let i = 0; i < 4; i++) {
     n = n
-      .replace(/([^\n])\s+(?=(?:#{1,6}\s+|===|\|\|\||:::(?![A-Za-z])))/g, '$1\n\n')
-      .replace(/([^\n])\s+(?=:::[A-Za-z])/g, '$1\n\n')
-      .replace(
-        /^(?:===|\|\|\||:::[A-Za-z][\w-]*)(?:\[[^\]]*\])?\s+(?=\S)/gm,
-        (m) => `${m.trimEnd()}\n\n`,
-      )
-      .replace(/([^\n])\s+(?=(?:[*-]|\d+\.)\s)/g, '$1\n')
-      .replace(/([^\n])\n(?=<table\b)/g, '$1\n\n')
-      .replace(/([^\n])\n(?=<Code\b)/g, '$1\n\n')
-      .replace(/([^\n])\n(?=:::(?!:))/g, '$1\n\n')
-      .replace(/^(:::[A-Za-z][\w-]*(?:\[[^\]]*\])?)\s+(.+)$/gm, '$1\n\n$2')
-      .replace(/^:::\s+(.+)$/gm, ':::\n\n$1')
-      .replace(/([^\n])\s+(?=:::(?![A-Za-z]))/g, '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_N_S_1_6_S_A_ZA_Z_G_REGEX(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_N_S_A_ZA_Z_G_REGEX_2(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_A_ZA_Z_W_S_S_GM_REGEX(), (m) => `${m.trimEnd()}\n\n`)
+      .replace(TerraQualityRegex.REGEX_N_S_D_S_G_REGEX(), '$1\n')
+      .replace(TerraQualityRegex.REGEX_N_N_TABLE_B_G_REGEX(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_N_N_CODE_B_G_REGEX(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_N_N_G_REGEX(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_A_ZA_Z_W_S_GM_REGEX(), '$1\n\n$2')
+      .replace(TerraQualityRegex.REGEX_S_GM_REGEX(), ':::\n\n$1')
+      .replace(TerraQualityRegex.REGEX_N_S_A_ZA_Z_G_REGEX(), '$1\n\n')
       .replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
     if (n === n) break;
   }
@@ -832,17 +773,17 @@ export const normDocsSpacing = (src: string): string => {
     .lines.join('\n')
     .split('\n')
     .flatMap((l) => {
-      const heading = l.match(/^(#{1,6}\s+)(.+)$/);
+      const heading = l.match(TerraQualityRegex.REGEX_1_6_S_REGEX());
       if (!heading) return [l];
       const words = heading[2].trim().split(TerraQualityRegex.REGEX_S_REGEX_2()).filter(Boolean);
       if (words.length < 2) return [l];
       let cap = 0;
       for (const word of words) {
-        if (/^[A-Z0-9]/.test(word)) cap++;
+        if (TerraQualityRegex.REGEX_A_Z0_9_REGEX().test(word)) cap++;
         else break;
       }
       if (cap < 2) return [l];
-      if (!words.slice(cap).some((w) => /[a-z]/.test(w))) return [l];
+      if (!words.slice(cap).some((w) => TerraQualityRegex.REGEX_A_Z_REGEX().test(w))) return [l];
       return [
         `${heading[1]}${words.slice(0, Math.max(1, cap - 1)).join(' ')}`,
         '',
@@ -853,12 +794,12 @@ export const normDocsSpacing = (src: string): string => {
     .replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
   return blocks
     .reduceRight((o, b, i) => o.replace(new RegExp(`TERRA_PROTECTED_${i}__`, 'g'), b), n)
-    .replace(/(<\/Code>)[ \t]*(\d+)(?=\s|$)/g, '$1')
-    .replace(/(<\/Code>)\n+\s*(\d+)\s*(?=\n|$)/g, '$1')
+    .replace(TerraQualityRegex.REGEX_CODE_T_D_S_G_REGEX(), '$1')
+    .replace(TerraQualityRegex.REGEX_CODE_N_S_D_S_N_G_REGEX(), '$1')
     .replace(
-      /^(#{1,6})[ \t]*\n[ \t]*(?:\n[ \t]*)?(\d+\.\s+\S[^\n]*)/gm,
+      TerraQualityRegex.REGEX_1_6_T_N_T_N_T_D_S_S_N_GM_REGEX(),
       (m, h: string, i: string, o: number, v: string) =>
-        /^\n\s*\d+\.\s/.test(v.slice(o + m.length)) ? m : `${h} ${i}`,
+        TerraQualityRegex.REGEX_N_S_D_S_REGEX().test(v.slice(o + m.length)) ? m : `${h} ${i}`,
     )
     .trim();
 };
@@ -884,7 +825,12 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
       .map((cell) => {
         let html: string;
         if (cell.html?.trim())
-          html = sanitizeTableHtml(stripNestedAnchors(cell.html.trim()))
+          html = sanitizeTableHtml(
+            cell.html
+              .trim()
+              .replace(TerraQualityRegex.REGEX_A_S_A_S_S_A_S_A_GI_REGEX(), '<a$1>$2</a>')
+              .replace(TerraQualityRegex.REGEX_2_G_REGEX(), '[$1]($2)'),
+          )
             .replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
             .replace(TerraQualityRegex.REGEX_N_G_REGEX(), '$1<em>$2</em>$3');
         else {
@@ -911,15 +857,18 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
             }
           }
         }
-        if (html.includes('\n') || /<(?:p|ul|ol|table|pre|div)\b/i.test(html)) {
+        if (
+          html.includes('\n') ||
+          TerraQualityRegex.REGEX_P_UL_OL_TABLE_PRE_DIV_B_I_REGEX().test(html)
+        ) {
           let depth = 0;
           return `\t\t<${tag}>\n${html
             .split(TerraQualityRegex.REGEX_R_N_REGEX())
             .map((l) => l.trim())
             .filter(Boolean)
             .map((l) => {
-              if (/^<\//u.test(l)) depth = Math.max(0, depth - 1);
-              if (/^<(?:ul|ol|table)\b[^>]*>$/u.test(l)) depth++;
+              if (TerraQualityRegex.REGEX_U_REGEX().test(l)) depth = Math.max(0, depth - 1);
+              if (TerraQualityRegex.REGEX_UL_OL_TABLE_B_U_REGEX().test(l)) depth++;
               return `${'\t'.repeat(depth + 3)}${l}`;
             })
             .join('\n')}\n\t\t</${tag}>\n`;
@@ -1085,9 +1034,9 @@ const blockMd = (b: DocBlock, number = 1): string => {
  */
 const escDocsTableTemplates = (md: string): string =>
   md.replace(
-    /<DocsTable\b[\s\S]*?html=\{`([\s\S]*?)`\}\s*\/>/g,
+    TerraQualityRegex.REGEX_DOCSTABLE_B_S_S_HTML_S_S_S_G_REGEX(),
     (_match, h: string) =>
-      `<DocsTable html={\`${h.replace(/(?<!\\)`/g, '\\`').replace(/(?<!\\)\$\{/g, '\\${')}\`} />`,
+      `<DocsTable html={\`${h.replace(TerraQualityRegex.REGEX_G_REGEX_21(), '\\`').replace(TerraQualityRegex.REGEX_G_REGEX_19(), '\\${')}\`} />`,
   );
 
 /**
@@ -1102,10 +1051,45 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
     (n, t, i) => n.replace(`TERRA_EDITOR_TABLE_${i}`, t),
     escDocsTableTemplates(
       Array.isArray(body) && body.length > 0
-        ? stringifyEditorContentBody(body)
+        ? (() => {
+            trace('serialize.editor.start', { blocks: body.length });
+            void {
+              length: body.length,
+              firstTypes: body
+                .slice(0, 6)
+                .map((block) =>
+                  isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
+                ),
+            };
+            let md = '';
+            let number = 1;
+            for (let i = 0; i < body.length; i++) {
+              const block = body[i];
+              const listNumber =
+                listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
+              const text = editorBlockMd(block, listNumber).trim();
+              void {
+                index: i,
+                type: isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
+                textLength: text.length,
+                textHead: text.slice(0, 120),
+              };
+              if (!text) continue;
+              number = listNumber;
+              if (md) {
+                const prevList = listKind(body[i - 1]);
+                const currList = listKind(block);
+                md += prevList && currList && prevList === currList ? '\n' : '\n\n';
+              }
+              md += text;
+            }
+            const source = escDocsTableTemplates(normDocsSpacing(md));
+            trace('serialize.editor.complete', { length: source.length });
+            return source;
+          })()
         : fromBlockJsx(markdown || '').trim(),
     )
-      .replace(/<DocsTable\s+html=\{`(?:\\.|[^`])*`\}\s*\/>/g, (m) => {
+      .replace(TerraQualityRegex.REGEX_DOCSTABLE_S_HTML_S_G_REGEX(), (m) => {
         tables.push(m);
         return `TERRA_EDITOR_TABLE_${tables.length - 1}`;
       })
@@ -1176,9 +1160,13 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
     case 'accordion':
     case 'tabs': {
       if (mode === 'problem') return problemBlockMd({ ...b });
-      const root = b._type === 'tabs' ? 'TabsGroup' : 'AccordionGroup';
-      const item = b._type === 'tabs' ? 'TabsItem' : 'AccordionItem';
-      return `<${root}>\n\n${(Array.isArray(b.items) ? b.items : []).map((e) => `<${item} title=${quote(e.title || 'Section')}>\n\n${editorNestedMd(e.content, e.markdown || '')}\n\n</${item}>`).join('\n\n')}\n\n</${root}>`;
+      const syntax = b._type === 'tabs' ? '|||' : '===';
+      return (Array.isArray(b.items) ? b.items : [])
+        .map((item) => {
+          const content = editorNestedMd(item.content, item.markdown || '').trim();
+          return `${syntax}[${item.title || 'Section'}]\n\n${content ? `${content}\n\n` : ''}${syntax}`;
+        })
+        .join('\n\n');
     }
     case 'callout': {
       const content = editorNestedMd(b.content, b.markdown || '');
@@ -1260,52 +1248,6 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
   }
   const src = toCodeJsx(md).trim();
   trace('serialize.main.complete', { length: src.length });
-  return src;
-};
-
-/**
- * Stringifies the Editor Content Body for the docs.
- *
- * @param body - Structured docs content to serialize.
- *
- * @returns MDX source that MDXEditor can reopen without delimiter-rewrite drift.
- *
- * @remarks
- * Accordions, tabs, and tables are emitted as explicit JSX so nested HTML never relies on regex block rewriting.
- */
-export const stringifyEditorContentBody = (body: DocBody | null | undefined): string => {
-  trace('serialize.editor.start', { blocks: Array.isArray(body) ? body.length : 0 });
-  if (!Array.isArray(body) || body.length === 0) return '';
-  void {
-    length: body.length,
-    firstTypes: body
-      .slice(0, 6)
-      .map((b) => (isRec(b) && typeof b._type === 'string' ? b._type : typeof b)),
-  };
-  let md = '';
-  let number = 1;
-  for (let i = 0; i < body.length; i++) {
-    const block = body[i];
-    const listNumber =
-      listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
-    const text = editorBlockMd(block, listNumber).trim();
-    void {
-      index: i,
-      type: isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
-      textLength: text.length,
-      textHead: text.slice(0, 120),
-    };
-    if (!text) continue;
-    number = listNumber;
-    if (md) {
-      const prevList = listKind(body[i - 1]);
-      const currList = listKind(block);
-      md += prevList && currList && prevList === currList ? '\n' : '\n\n';
-    }
-    md += text;
-  }
-  const src = escDocsTableTemplates(normDocsSpacing(md));
-  trace('serialize.editor.complete', { length: src.length });
   return src;
 };
 

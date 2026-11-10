@@ -13,55 +13,6 @@ import { ErrorBoundary } from '../../ui.js';
 // TYPES
 import type { DocsBlock } from '../types.js';
 
-/*//////////////////////////////////////////////////
-HELPERS
-//////////////////////////////////////////////////*/
-
-/** Converts common YouTube watch links into iframe-compatible player URLs. */
-export function normalizeDocsEmbedUrl(source: string): string {
-  try {
-    const url = new URL(source);
-    const host = url.hostname.toLowerCase().replace(/^www\./, '');
-    const youtubeHost =
-      host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com';
-    let videoId: string | undefined;
-
-    if (youtubeHost) {
-      const [, route, routeId] = url.pathname.match(/^\/(embed|shorts|live)\/([^/]+)/) ?? [];
-      if (route) videoId = routeId;
-      else if (url.pathname === '/watch') videoId = url.searchParams.get('v') ?? undefined;
-    } else if (host === 'youtu.be') {
-      videoId = url.pathname.split('/').filter(Boolean)[0];
-    }
-
-    if (!videoId || !/^[\w-]+$/.test(videoId)) return source;
-
-    const playerHost =
-      host === 'youtube-nocookie.com' ? 'www.youtube-nocookie.com' : 'www.youtube.com';
-    const embed = new URL(`https://${playerHost}/embed/${videoId}`);
-    for (const parameter of ['list', 'index', 'playsinline', 'rel']) {
-      const value = url.searchParams.get(parameter);
-      if (value) embed.searchParams.set(parameter, value);
-    }
-
-    const explicitStart = url.searchParams.get('start');
-    const time = explicitStart ?? url.searchParams.get('t');
-    const seconds = time ? youtubeTimeToSeconds(time) : undefined;
-    if (seconds !== undefined) embed.searchParams.set('start', String(seconds));
-    return embed.toString();
-  } catch {
-    return source;
-  }
-}
-
-function youtubeTimeToSeconds(value: string): number | undefined {
-  if (/^\d+$/.test(value)) return Number(value);
-  const match = value.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
-  if (!match || !match[0]) return undefined;
-  const seconds = Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0);
-  return seconds > 0 ? seconds : undefined;
-}
-
 /**
  * Renders the embed component.
  *
@@ -75,13 +26,56 @@ export function Embed({
   block: /** Sanity Portable Text embed URL and presentation data. */ DocsBlock<'embed'>;
 }): JSX.Element | null {
   if (!block.src) return null;
+  let embedSource = block.src;
+  try {
+    const url = new URL(block.src);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    let videoId: string | undefined;
+
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+      const [, route, routeId] = url.pathname.match(/^\/(embed|shorts|live)\/([^/]+)/) ?? [];
+      if (route) videoId = routeId;
+      else if (url.pathname === '/watch') videoId = url.searchParams.get('v') ?? undefined;
+    } else if (host === 'youtu.be') {
+      videoId = url.pathname.split('/').filter(Boolean)[0];
+    }
+
+    if (videoId && /^[\w-]+$/.test(videoId)) {
+      const embed = new URL(
+        `https://${host === 'youtube-nocookie.com' ? 'www.youtube-nocookie.com' : 'www.youtube.com'}/embed/${videoId}`,
+      );
+      for (const parameter of ['list', 'index', 'playsinline', 'rel']) {
+        const value = url.searchParams.get(parameter);
+        if (value) embed.searchParams.set(parameter, value);
+      }
+
+      const time = url.searchParams.get('start') ?? url.searchParams.get('t');
+      let seconds: number | undefined;
+      if (time && /^\d+$/.test(time)) seconds = Number(time);
+      else if (time) {
+        const match = time.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
+        if (match?.[0]) {
+          const duration =
+            Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0);
+          if (duration > 0) seconds = duration;
+        }
+      }
+      if (seconds !== undefined) embed.searchParams.set('start', String(seconds));
+      embedSource = embed.toString();
+    }
+  } catch {
+    // Keep the source URL when it cannot be parsed.
+  }
   return (
     <ErrorBoundary name="Embed">
       <iframe
         className="my-6 w-full border-0"
-        src={normalizeDocsEmbedUrl(block.src)}
+        src={embedSource}
         title={block.title ?? block.src}
-        style={{ height: block.height ?? '500px', width: block.width ?? '100%' }}
+        style={{
+          height: block.height ?? '500px',
+          width: block.width ?? '100%',
+        }}
       />
     </ErrorBoundary>
   );

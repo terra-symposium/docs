@@ -10,17 +10,15 @@ import {
   CardHeading,
 } from '@terra-symposium/styling/ui';
 
-export type DocsNotFoundProps = {
-  appName?: string;
-  homeHref?: string;
-  description?: string;
-};
-
 export function DocsNotFound({
   appName = 'Docs',
   homeHref = '/',
   description = 'The page may have moved, or the link may be out of date.',
-}: DocsNotFoundProps): JSX.Element {
+}: {
+  appName?: string;
+  homeHref?: string;
+  description?: string;
+}): JSX.Element {
   return (
     <div className="docs-theme-scope">
       <main className="docs-workspace flex min-h-screen items-center justify-center bg-background px-5 py-12 text-primary-12">

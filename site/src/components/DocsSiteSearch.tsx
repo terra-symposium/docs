@@ -16,39 +16,19 @@ import {
   CommandItem,
   CommandList,
 } from '@terra-symposium/styling/ui';
+import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
 //////////////////////////////////////////////////*/
 
-const S_REGEX = /\s+/;
+const S_REGEX = TerraQualityRegex.REGEX_S_REGEX_2();
 type SearchDocument = {
   title: string;
   description: string;
   href: string;
   text: string;
 };
-type Props = { base?: string };
-
-/*//////////////////////////////////////////////////
-HELPERS
-//////////////////////////////////////////////////*/
-
-/**
- * Builds a short search snippet around the first matching query term.
- *
- * @param text Document text to show in the result.
- * @param query Term used to locate the most relevant excerpt position.
- *
- * @return A clipped excerpt with ellipses where surrounding text was omitted.
- */
-function excerpt(text: string, query: string): string {
-  const norm = text.replace(/\s+/g, ' ').trim();
-  const offset = norm.toLowerCase().indexOf(query.toLowerCase());
-  const start = Math.max(0, offset - 72);
-  const end = Math.min(norm.length, start + 190);
-  return `${start > 0 ? '…' : ''}${norm.slice(start, end)}${end < norm.length ? '…' : ''}`;
-}
 
 /*//////////////////////////////////////////////////
 COMPONENTS
@@ -61,7 +41,7 @@ COMPONENTS
  *
  * @return Search controls, loading and error states, and links to matching pages.
  */
-export function DocsSiteSearch({ base = '/' }: Props) {
+export function DocsSiteSearch({ base = '/' }: { base?: string }) {
   const [query, setQuery] = useState('');
   const [documents, setDocuments] = useState<SearchDocument[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -128,17 +108,38 @@ export function DocsSiteSearch({ base = '/' }: Props) {
     return documents
       .map((document) => {
         const title = document.title.toLowerCase();
-        const text = `${document.description} ${document.text}`.toLowerCase();
-        const matches = terms.filter((term) => title.includes(term) || text.includes(term));
-        const score = matches.length * 10 + terms.filter((term) => title.includes(term)).length * 5;
-        return { document, score };
+        return {
+          document,
+          score:
+            terms.filter(
+              (term) =>
+                title.includes(term) ||
+                `${document.description} ${document.text}`.toLowerCase().includes(term),
+            ).length *
+              10 +
+            terms.filter((term) => title.includes(term)).length * 5,
+        };
       })
       .filter((result) => result.score > 0)
       .sort(
         (left, right) =>
           right.score - left.score || left.document.title.localeCompare(right.document.title),
       )
-      .slice(0, 10);
+      .slice(0, 10)
+      .map(({ document, score }) => {
+        const normText = document.text.replace(TerraQualityRegex.REGEX_S_G_REGEX(), ' ').trim();
+        const start = Math.max(
+          0,
+          normText.toLowerCase().indexOf((query.trim().split(S_REGEX)[0] ?? query).toLowerCase()) -
+            72,
+        );
+        const end = Math.min(normText.length, start + 190);
+        return {
+          document,
+          score,
+          excerpt: `${start > 0 ? '…' : ''}${normText.slice(start, end)}${end < normText.length ? '…' : ''}`,
+        };
+      });
   }, [documents, query]);
   return (
     <CommandDialog
@@ -160,7 +161,7 @@ export function DocsSiteSearch({ base = '/' }: Props) {
         ) : null}
         {results.length > 0 ? (
           <CommandGroup>
-            {results.map(({ document }) => (
+            {results.map(({ document, excerpt }) => (
               <CommandItem
                 key={document.href}
                 value={`${document.title} ${document.description} ${document.text}`}
@@ -175,9 +176,7 @@ export function DocsSiteSearch({ base = '/' }: Props) {
                   {document.description ? (
                     <span className="text-sm text-primary-11">{document.description}</span>
                   ) : null}
-                  <small className="line-clamp-2 text-xs text-primary-10">
-                    {excerpt(document.text, query.trim().split(S_REGEX)[0] ?? query)}
-                  </small>
+                  <small className="line-clamp-2 text-xs text-primary-10">{excerpt}</small>
                 </span>
               </CommandItem>
             ))}

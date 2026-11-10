@@ -7,7 +7,7 @@ export const parseDocsRoute = (pathname: string): ReturnType<typeof parseRoute> 
   parseRoute(pathname || docsRootPath());
 
 export const sanitizeName = (name: string): string =>
-  name.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+  name.replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX(), '-').toLowerCase();
 /**
  * Handles is index file.
  *

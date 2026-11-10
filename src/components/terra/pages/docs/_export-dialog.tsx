@@ -68,8 +68,21 @@ export function ExportDialog({
   const [opts, setOpts] = useState<ExportOptions>({
     flatten: false,
     format: 'raw',
-    filters: { pages: true, pdfs: true, images: true, youtube: true, tsdocs: true, other: true },
-    merges: { pages: false, pdfs: false, images: false, youtube: false, tsdocs: false },
+    filters: {
+      pages: true,
+      pdfs: true,
+      images: true,
+      youtube: true,
+      tsdocs: true,
+      other: true,
+    },
+    merges: {
+      pages: false,
+      pdfs: false,
+      images: false,
+      youtube: false,
+      tsdocs: false,
+    },
   });
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -116,7 +129,10 @@ export function ExportDialog({
                       checked={opts.filters[i.key]}
                       disabled={disabled || busy}
                       onCheckedChange={(c) => {
-                        setOpts((p) => ({ ...p, filters: { ...p.filters, [i.key]: !!c } }));
+                        setOpts((p) => ({
+                          ...p,
+                          filters: { ...p.filters, [i.key]: !!c },
+                        }));
                       }}
                     />
                     <Label htmlFor={`filter-${i.key}`}>{i.label}</Label>
@@ -138,7 +154,10 @@ export function ExportDialog({
                         checked={opts.merges[i.key] && opts.filters[i.key]}
                         disabled={disabled || busy || !opts.filters[i.key]}
                         onCheckedChange={(c) => {
-                          setOpts((p) => ({ ...p, merges: { ...p.merges, [i.key]: !!c } }));
+                          setOpts((p) => ({
+                            ...p,
+                            merges: { ...p.merges, [i.key]: !!c },
+                          }));
                         }}
                       />
                       <Label

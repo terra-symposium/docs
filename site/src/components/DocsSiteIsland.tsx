@@ -17,16 +17,17 @@ import type { ComponentProps } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const { lazy, Suspense } = React;
-const DocsStaticWorkspace = lazy(() =>
-  import('../../../dist/lib/components/StaticWorkspace.js').then(({ DocsStaticWorkspace }) => ({
-    default: DocsStaticWorkspace,
-  })),
-);
-const DocsSiteSearch = lazy(() =>
-  import('./DocsSiteSearch.js').then(({ DocsSiteSearch }) => ({ default: DocsSiteSearch })),
-);
-type Props = ComponentProps<typeof DocsStaticWorkspace> & { searchBase?: string };
+const { Suspense } = React;
+const DOCS_SITE_COMPONENTS = {
+  Workspace: React.lazy(() =>
+    import('../../../dist/lib/components/StaticWorkspace.js').then(({ DocsStaticWorkspace }) => ({
+      default: DocsStaticWorkspace,
+    })),
+  ),
+  Search: React.lazy(() =>
+    import('./DocsSiteSearch.js').then(({ DocsSiteSearch }) => ({ default: DocsSiteSearch })),
+  ),
+};
 
 /*//////////////////////////////////////////////////
 COMPONENTS
@@ -39,7 +40,12 @@ COMPONENTS
  *
  * @return The lazy Docs workspace and search dialog inside a recoverable error boundary.
  */
-export function DocsSiteIsland({ searchBase = '/', ...workspaceProps }: Props) {
+export function DocsSiteIsland({
+  searchBase = '/',
+  ...workspaceProps
+}: ComponentProps<typeof DOCS_SITE_COMPONENTS.Workspace> & {
+  searchBase?: string;
+}) {
   return (
     <ErrorBoundary
       name="Docs site"
@@ -68,8 +74,8 @@ export function DocsSiteIsland({ searchBase = '/', ...workspaceProps }: Props) {
           </p>
         }
       >
-        <DocsStaticWorkspace {...workspaceProps} />
-        <DocsSiteSearch base={searchBase} />
+        <DOCS_SITE_COMPONENTS.Workspace {...workspaceProps} />
+        <DOCS_SITE_COMPONENTS.Search base={searchBase} />
       </Suspense>
     </ErrorBoundary>
   );

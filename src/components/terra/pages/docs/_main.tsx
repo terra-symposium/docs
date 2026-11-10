@@ -11,6 +11,10 @@ IMPORTS
 
 // API
 import {
+  $cursor,
+  $cursorGhost,
+  $cursorPosition,
+  $cursorTrack,
   $editReadyPath,
   $editorMounts,
   $leafTitle,
@@ -24,11 +28,20 @@ import {
   useTransitionState,
 } from '../../../../lib/terra/docs/state.js';
 import { keepDeepPath } from '../../../../lib/terra/docs/tree.js';
-import { document } from '../../../../lib/terra/docs/editor-dom.js';
+import {
+  captureLinearOffset,
+  captureNodePath,
+  codeViewOf,
+  document,
+  getCollapsedRange,
+  htmlToMd,
+  pasteMd,
+} from '../../../../lib/terra/docs/editor-dom.js';
 import { isDocBody } from '../../../../lib/terra/runtime/types.js';
-import { cn, setDocumentTitle } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, notify, setDocumentTitle } from '../../../../lib/terra/runtime/runtime.js';
 import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
-import { dirname } from '../../../../lib/terra/runtime/shared.js';
+import { dirname, IMAGE_TYPES, MIME } from '../../../../lib/terra/runtime/shared.js';
+import { mdTableToHtml } from '../../../../lib/terra/runtime/content/markdown.js';
 import {
   lazy,
   useCallback,
@@ -44,17 +57,19 @@ import { toast } from 'sonner';
 import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import { docsRootPath } from '../../../../lib/terra/runtime/shared.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
+import { toHeadingId } from '../../editor/docs/heading.js';
+import { toImgAlt, toImgMd } from './_blocks.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import EditProvider, { Loader, TransitionShell } from './_editable.js';
 import Nav from './_sidebar.js';
-import { Toc } from './_toc.js';
 import { Suspense } from 'react';
 import { AlertError } from '@terra-symposium/styling/ui';
 import { Attachments } from './_attachments.js';
 import { Badge } from '@terra-symposium/styling/ui';
 import { Button } from '@terra-symposium/styling/ui';
+import { ButtonLink } from '@terra-symposium/styling/ui';
 import {
   Dialog,
   DialogContent,
@@ -64,8 +79,6 @@ import {
   DialogTitle,
 } from '@terra-symposium/styling/ui';
 import { DocsToolbarActions, Toolbar } from './_toolbar.js';
-import { useBlockNav } from './use-block-nav.js';
-import { useMediaPaste } from './use-media-paste.js';
 import { EditStateCtx, EditorSurfaceCtx, TransitionCtx } from '../../../../lib/terra/docs/state.js';
 import { ErrorBoundary } from '../../ui.js';
 import { Input } from '@terra-symposium/styling/ui';
@@ -81,11 +94,46 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@terra-symposium/
 import { Separator } from '@terra-symposium/styling/ui';
 import { Textarea } from '@terra-symposium/styling/ui';
 import { Toaster } from 'sonner';
+/*//////////////////////////////////////////////////
+REGEX
+//////////////////////////////////////////////////*/
+const SHARED_REGEX = /\/+$/;
+
 const ContentEditor = lazy(() =>
   import('../../editor/ContentEditor.js').then((module) => ({
     default: module.ContentEditor,
   })),
 );
+
+const docsShellOf = (): HTMLElement | null =>
+  Array.from(document.querySelectorAll<HTMLElement>('[data-docs-shell]')).find((element) => {
+    const style = window.getComputedStyle(element);
+    return (
+      element.dataset.docsMode ===
+        (new URL(window.location.href).searchParams.get('mode') || 'view') &&
+      style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      element.dataset.loading !== 'true' &&
+      element.querySelector('[data-docs-transition-content]')?.getAttribute('aria-hidden') !==
+        'true' &&
+      element.getClientRects().length > 0
+    );
+  }) ?? null;
+
+const navigateHeading = (id: string, text: string): void => {
+  const shell = docsShellOf();
+  Array.from(
+    (shell?.dataset.docsMode === 'view'
+      ? shell.querySelector<HTMLElement>('[data-docs-view-root], [data-docs-body-content]')
+      : shell?.dataset.docsMode === 'edit'
+        ? shell.querySelector<HTMLElement>('[data-docs-body-editor], [data-docs-body-content]')
+        : null
+    )?.querySelectorAll<HTMLElement>('h2') ?? [],
+  )
+    .find((element) => element.id === id || element.textContent?.trim() === text)
+    ?.scrollIntoView({ behavior: 'auto', block: 'start' });
+  window.history.pushState(null, '', `#${id}`);
+};
 
 // TYPES
 import type { DocBody, DocVer } from '../../../../lib/terra/runtime/types.js';
@@ -93,11 +141,10 @@ import type {
   DocsPermissionLevel as Permission,
   Draft,
   EditorRefs,
-  EditorSurface,
   Mode,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
-import type { User } from '../../../../lib/terra/runtime/types.js';
+
 import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
 import type { DocsHostAttachment } from '../../../../lib/host.js';
 import type { DocsBlockOptions } from '../../../blocks.js';
@@ -130,7 +177,6 @@ function View({
   blocks?: DocsBlockOptions;
   resetKey?: string;
 }): JSX.Element {
-  const transition = useTransitionState();
   useEffect(() => {
     return ((timer: number) => () => {
       window.clearTimeout(timer);
@@ -141,7 +187,7 @@ function View({
         document.dispatchEvent(new Event('docs:surface-ready'));
       }),
     );
-  }, [resetKey, transition]);
+  }, [resetKey, useTransitionState()]);
   return (
     <Suspense fallback={<div aria-hidden="true" data-docs-view-loading />}>
       <ContentEditor
@@ -152,15 +198,6 @@ function View({
       />
     </Suspense>
   );
-}
-
-/**
- * Reads the editor surface context when a Docs editor provider is present.
- *
- * @return The active editor surface, or `null` when this component is outside an editor provider.
- */
-function useEditorSurfaceOptional(): EditorSurface | null {
-  return useContext(EditorSurfaceCtx);
 }
 
 /**
@@ -182,8 +219,11 @@ const EditorSurfaces = {
     editable?: boolean;
   }): JSX.Element {
     // INIT
-    const surface = useEditorSurfaceOptional();
-    const editorRefs = { toolbar: useAtom($toolbar), empty: useRef<EditorRefs>({} as EditorRefs) };
+    const surface = useContext(EditorSurfaceCtx);
+    const editorRefs = {
+      toolbar: useAtom($toolbar),
+      empty: useRef<EditorRefs>({} as EditorRefs),
+    };
     const [init, setInit] = useState(false);
     const [docsAttachments, setDocsAttachments] = useState<DocsHostAttachment[]>([]);
     const transition = useContext(TransitionCtx);
@@ -269,15 +309,1860 @@ const EditorSurfaces = {
       );
     }, [init, surface?.path]);
 
-    // bind keyboard shortcuts and rich media ingestion at the root
-    // these must execute unconditionally to satisfy React hooks rules
-    useBlockNav(surface ? surface.refs : editorRefs.empty);
-    useMediaPaste(
-      surface ? surface.refs : editorRefs.empty,
-      surface?.insert ?? (() => undefined),
-      surface?.uploadImage ?? (async () => ''),
-      surface?.attachFiles ?? (async () => undefined),
-    );
+    // Bind editor navigation and media handlers unconditionally before validation.
+    const editorRefsForRoot = surface ? surface.refs : editorRefs.empty;
+    const mediaInsert = surface?.insert ?? (() => undefined);
+    const mediaUploadFile = surface?.uploadImage ?? (async () => '');
+    const mediaAttachFiles = surface?.attachFiles ?? (async () => undefined);
+    // REFS
+    const bCursor = useRef<{
+      dec: HTMLElement;
+      gId: string | null;
+      label: string;
+      side: 'left' | 'right';
+      wrapper: HTMLElement;
+    } | null>(null);
+    const vCursor = useRef(0);
+    const vPending = useRef<{
+      beforeAnchor: Node | null;
+      beforeBlock: Element | null;
+      before: Range | null;
+      beforeRect: { bottom: number; top: number } | null;
+      dec: HTMLElement | null;
+      dir: 'left' | 'right';
+    } | null>(null);
+    const restoreCursor = useRef(0);
+
+    // EFFECTS
+    useEffect(() => {
+      const EDITABLE = [
+        'input',
+        'textarea',
+        'select',
+        '[contenteditable="true"]',
+        '[contenteditable="plaintext-only"]',
+        '.cm-editor',
+        'td',
+        'th',
+      ].join(', ');
+      const INTERACTIVE = [
+        'button',
+        'a[href]',
+        '[role="button"]',
+        '[role="tab"]',
+        '[tabindex]:not([tabindex="-1"])',
+        '[data-tool-cell]',
+      ].join(', ');
+      /**
+       * Returns the root.
+       *
+       * @returns root.
+       */
+      const root = (): HTMLElement | null => editorRefsForRoot.current?.body ?? null;
+      /**
+       * Checks whether the value is editable.
+       *
+       * @returns editable.
+       */
+      const editable = (): HTMLElement | null =>
+        root()?.querySelector<HTMLElement>('[contenteditable="true"]') ?? null;
+
+      /**
+       * Gets active editable.
+       *
+       * @returns resolved value.
+       */
+      const getActiveEditable = (): HTMLElement | null => {
+        if (bCursor.current)
+          return (
+            bCursor.current.dec.parentElement?.closest<HTMLElement>(
+              '[contenteditable="true"], [contenteditable="plaintext-only"]',
+            ) ?? editable()
+          );
+        const sel = window.getSelection();
+        if (sel?.anchorNode) {
+          const ce = (
+            sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode.parentElement
+          )?.closest<HTMLElement>('[contenteditable="true"], [contenteditable="plaintext-only"]');
+          if (ce) return ce;
+        }
+        return editable();
+      };
+
+      /**
+       * Checks whether local text.
+       *
+       * @param node - Value passed to the helper.
+       *
+       * @returns True when the helper predicate succeeds.
+       */
+      const isLocalText = (node: Node | null): boolean => {
+        const ce = getActiveEditable();
+        if (!node || !ce) return false;
+        const el = node instanceof Element ? node : node.parentElement;
+        if (!el) return false;
+        const childDec = el.closest<HTMLElement>('[data-lexical-decorator="true"]');
+        return !childDec || !ce.contains(childDec);
+      };
+
+      /**
+       * Sets block cursor active.
+       *
+       * @param active - Value passed to the helper.
+       */
+      const setBlockCursorActive = (a: boolean): void => {
+        if (!editorRefsForRoot.current?.body) return;
+        if (a) editorRefsForRoot.current.body.dataset.docsBlockCursorActive = 'true';
+        else delete editorRefsForRoot.current.body.dataset.docsBlockCursorActive;
+      };
+
+      /**
+       * Restores the restore Saved Selection.
+       *
+       * @param _reason - Value passed to the helper.
+       */
+      const restoreSavedSelection = (_reason: string): void => {
+        const saved =
+          editorRefsForRoot.current.selection ??
+          $cursorPosition.get() ??
+          $cursor.get() ??
+          $cursorGhost.get();
+        if (!saved) return;
+        const view = codeViewOf();
+        if (view && view.dom.offsetParent !== null && saved.code) {
+          $cursorTrack.set({
+            anchor: saved.code.from,
+            collapsed: saved.code.from === saved.code.to,
+            focus: saved.code.to,
+            range: [saved.code.from, saved.code.to],
+            visible: true,
+          });
+          $cursorPosition.set({
+            code: { from: saved.code.from, to: saved.code.to },
+            dom: null,
+            visible: true,
+          });
+          $cursor.set({
+            code: { from: saved.code.from, to: saved.code.to },
+            dom: null,
+            visible: true,
+          });
+          $cursorGhost.set({
+            code: { from: saved.code.from, to: saved.code.to },
+            dom: null,
+            visible: true,
+          });
+          editorRefsForRoot.current.selection = {
+            ...saved,
+            code: { from: saved.code.from, to: saved.code.to },
+            dom: null,
+            visible: true,
+          };
+          view.dispatch({
+            selection: { anchor: saved.code.from, head: saved.code.to },
+            scrollIntoView: false,
+          });
+          return;
+        }
+        const body = editorRefsForRoot.current.body;
+        if (!body) return;
+        const sel = window.getSelection();
+        if (!sel) return;
+        /**
+         * Returns the pick path.
+         *
+         * @param path - Path to process.
+         * @param offset - Value passed to the helper.
+         *
+         * @returns pick Path.
+         */
+        const pickPath = (path?: number[], offset?: number): Range | null => {
+          if (!path?.length) return null;
+          let node: Node | null = body;
+          for (const idx of path) {
+            if (!node?.childNodes[idx]) {
+              node = null;
+              break;
+            }
+            node = node.childNodes[idx] ?? null;
+          }
+          if (!(node instanceof Text)) return null;
+          const range = document.createRange();
+          range.setStart(node, Math.min(offset ?? 0, node.textContent?.length ?? 0));
+          range.collapse(true);
+          return range;
+        };
+        /**
+         * Returns the pick text.
+         *
+         * @param text - Text content to process.
+         * @param offset - Value passed to the helper.
+         *
+         * @returns pick Text.
+         */
+        const pickText = (text?: string, offset?: number): Range | null => {
+          if (!text) return null;
+          const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) =>
+              node.textContent?.includes(text) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
+          });
+          let node = walker.nextNode();
+          while (node) {
+            if (node instanceof Text) {
+              const i = node.textContent?.indexOf(text) ?? -1;
+              if (i !== -1) {
+                const range = document.createRange();
+                range.setStart(node, Math.min(i + (offset ?? 0), node.textContent?.length ?? 0));
+                range.collapse(true);
+                return range;
+              }
+            }
+            node = walker.nextNode();
+          }
+          return null;
+        };
+        const n =
+          pickPath(saved.anchorPath ?? undefined, saved.anchorOffset) ??
+          pickText(saved.anchorText, saved.anchorOffset) ??
+          pickPath(saved.focusPath ?? undefined, saved.focusOffset) ??
+          pickText(saved.focusText, saved.focusOffset) ??
+          (saved.dom && body.contains(saved.dom.commonAncestorContainer)
+            ? saved.dom.cloneRange()
+            : null);
+        if (!n) return;
+        sel.removeAllRanges();
+        sel.addRange(n.cloneRange());
+        const rect = n.getBoundingClientRect();
+        const box =
+          rect.width || rect.height
+            ? {
+                height: Math.max(16, rect.height || 0),
+                left: rect.left,
+                top: rect.top,
+                width: Math.max(2, rect.width || 0),
+              }
+            : saved.box;
+        const anchorLinear =
+          typeof saved.anchorLinear === 'number'
+            ? saved.anchorLinear
+            : captureLinearOffset(body, n.startContainer, n.startOffset);
+        const focusLinear =
+          typeof saved.focusLinear === 'number' ? saved.focusLinear : anchorLinear;
+        $cursorTrack.set({
+          anchor: anchorLinear ?? 0,
+          box,
+          collapsed: n.collapsed,
+          focus: focusLinear ?? anchorLinear ?? 0,
+          range: [anchorLinear ?? 0, focusLinear ?? anchorLinear ?? 0],
+          visible: true,
+        });
+        $cursorPosition.set({
+          anchorOffset: saved.anchorOffset,
+          anchorPath: saved.anchorPath,
+          anchorText: saved.anchorText,
+          anchorLinear,
+          box,
+          collapsed: n.collapsed,
+          code: null,
+          dom: n.cloneRange(),
+          focusOffset: saved.focusOffset,
+          focusPath: saved.focusPath,
+          focusText: saved.focusText,
+          focusLinear,
+          text: saved.text,
+          visible: true,
+        });
+        $cursor.set({
+          anchorOffset: saved.anchorOffset,
+          anchorPath: saved.anchorPath,
+          anchorText: saved.anchorText,
+          anchorLinear,
+          box,
+          collapsed: n.collapsed,
+          code: null,
+          dom: n.cloneRange(),
+          focusOffset: saved.focusOffset,
+          focusPath: saved.focusPath,
+          focusText: saved.focusText,
+          focusLinear,
+          text: saved.text,
+          visible: true,
+        });
+        $cursorGhost.set({
+          anchorOffset: saved.anchorOffset,
+          anchorPath: saved.anchorPath,
+          anchorText: saved.anchorText,
+          anchorLinear,
+          box,
+          collapsed: n.collapsed,
+          code: null,
+          dom: n.cloneRange(),
+          focusOffset: saved.focusOffset,
+          focusPath: saved.focusPath,
+          focusText: saved.focusText,
+          focusLinear,
+          text: saved.text,
+          visible: true,
+        });
+        editorRefsForRoot.current.selection = {
+          ...saved,
+          anchorLinear,
+          box,
+          collapsed: n.collapsed,
+          code: null,
+          dom: n.cloneRange(),
+          focusLinear,
+          visible: true,
+        };
+        setBlockCursorActive(Boolean(bCursor.current));
+      };
+
+      /**
+       * Checks whether toolbar target.
+       *
+       * @param target - Value passed to the helper.
+       *
+       * @returns True when the helper predicate succeeds.
+       */
+      const isToolbarTgt = (tgt: HTMLElement | null): boolean =>
+        !!tgt?.closest(
+          '[data-docs-main-toolbar], [data-docs-toolbar-frame], [data-toolbar="true"], [role="toolbar"], [role="dialog"], [role="menu"], [role="menuitem"], [data-radix-popper-content-wrapper]',
+        );
+
+      /**
+       * Snapshot selection.
+       *
+       */
+      const snapshotSelection = (): void => {
+        const sel = window.getSelection();
+        const view = codeViewOf();
+        if (view && view.dom.offsetParent !== null) {
+          editorRefsForRoot.current.selection = {
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          };
+          $cursorTrack.set({
+            anchor: view.state.selection.main.from,
+            collapsed: view.state.selection.main.empty,
+            focus: view.state.selection.main.to,
+            range: [view.state.selection.main.from, view.state.selection.main.to],
+            visible: true,
+          });
+          $cursorPosition.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+          $cursor.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+          $cursorGhost.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+          return;
+        }
+        if (sel?.rangeCount && sel.anchorNode) {
+          const ce = (
+            sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode.parentElement
+          )?.closest<HTMLElement>('[contenteditable="true"], [contenteditable="plaintext-only"]');
+          if (ce && editorRefsForRoot.current.body?.contains(ce)) {
+            const dom = sel.getRangeAt(0).cloneRange();
+            const rect = dom.getBoundingClientRect();
+            const anchorPath = captureNodePath(editorRefsForRoot.current.body, sel.anchorNode);
+            const focusPath = captureNodePath(editorRefsForRoot.current.body, sel.focusNode);
+            const anchorLinear = captureLinearOffset(
+              editorRefsForRoot.current.body,
+              sel.anchorNode,
+              sel.anchorOffset,
+            );
+            const focusLinear = captureLinearOffset(
+              editorRefsForRoot.current.body,
+              sel.focusNode,
+              sel.focusOffset,
+            );
+            $cursorTrack.set({
+              anchor: anchorLinear ?? 0,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              focus: focusLinear ?? anchorLinear ?? 0,
+              range: [anchorLinear ?? 0, focusLinear ?? anchorLinear ?? 0],
+              visible: true,
+            });
+            editorRefsForRoot.current.selection = {
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              anchorLinear,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              focusLinear,
+              text: sel.toString(),
+              visible: true,
+            };
+            $cursorPosition.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              anchorLinear,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              focusLinear,
+              text: sel.toString(),
+              visible: true,
+            });
+            $cursor.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              anchorLinear,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              focusLinear,
+              text: sel.toString(),
+              visible: true,
+            });
+            $cursorGhost.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              anchorLinear,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              focusLinear,
+              text: sel.toString(),
+              visible: true,
+            });
+          }
+        }
+      };
+
+      /**
+       * Returns the clear.
+       *
+       */
+      const clear = (): void => {
+        window.cancelAnimationFrame(vCursor.current);
+        vPending.current = null;
+        if (bCursor.current) {
+          bCursor.current.wrapper.removeAttribute('data-docs-block-cursor');
+          setBlockCursorActive(false);
+          bCursor.current = null;
+        }
+      };
+
+      /**
+       * Returns the restore.
+       *
+       * @returns True when the helper predicate succeeds.
+       */
+      const restore = (): boolean => {
+        const { current: cur } = bCursor;
+        const body = root();
+        if (!cur || !body) return false;
+        const matches = Array.from(
+          body.querySelectorAll<HTMLElement>('[data-docs-editor-block]'),
+        ).filter((w) => w.getAttribute('data-docs-editor-block') === cur.label);
+        const nWrapper =
+          matches.find((w) => {
+            if (!cur.gId) return false;
+            return (
+              (w.matches('[data-docs-focus-group-id]')
+                ? w
+                : w.querySelector<HTMLElement>('[data-docs-focus-group-id]')
+              )?.getAttribute('data-docs-focus-group-id') === cur.gId
+            );
+          }) ?? matches[0];
+        if (!nWrapper) return false;
+        const n = nWrapper.closest<HTMLElement>('[data-lexical-decorator="true"]') ?? nWrapper;
+        nWrapper.dataset.docsBlockCursor = 'true';
+        setBlockCursorActive(true);
+        bCursor.current = { ...cur, dec: n, wrapper: nWrapper };
+        // natively select the node so Lexical restores its internal state
+        const selection = { body: getActiveEditable(), range: window.getSelection() };
+        if (selection.body && selection.range) {
+          const range = document.createRange();
+          range.selectNode(n);
+          selection.range.removeAllRanges();
+          selection.range.addRange(range);
+        }
+        const ghost = document.createRange();
+        ghost.selectNode(n);
+        $cursor.set({ code: null, dom: ghost, visible: true });
+        return true;
+      };
+
+      /**
+       * G dec.
+       *
+       * @param dec - Value passed to the helper.
+       *
+       * @returns g Dec.
+       */
+      const gDec = (dec: HTMLElement): HTMLElement => {
+        const body = root();
+        const marker = dec.matches('[data-docs-focus-group-id]')
+          ? dec
+          : dec.querySelector<HTMLElement>('[data-docs-focus-group-id]');
+        const gId = marker?.getAttribute('data-docs-focus-group-id');
+        if (!body || !gId || marker?.getAttribute('data-docs-focus-group') !== 'member') return dec;
+        const gRoot = body.querySelector<HTMLElement>(
+          `[data-docs-focus-group="root"][data-docs-focus-group-id="${gId}"]`,
+        );
+        return gRoot?.closest<HTMLElement>('[data-lexical-decorator="true"]') ?? gRoot ?? dec;
+      };
+
+      /**
+       * G decs.
+       *
+       * @param _vertical - Value passed to the helper.
+       *
+       * @returns g Decs.
+       */
+      const gDecs = (_vertical = false): HTMLElement[] => {
+        const ce = getActiveEditable();
+        if (!ce) return [];
+        const seen = new Set<HTMLElement>();
+        return [
+          ...Array.from(ce.querySelectorAll<HTMLElement>('[data-lexical-decorator="true"]')),
+          ...Array.from(ce.querySelectorAll<HTMLElement>('[data-docs-editor-block]')).filter(
+            (b) => !b.closest('[data-lexical-decorator="true"]'),
+          ),
+        ]
+          .filter((e) => {
+            if (
+              e.parentElement?.closest<HTMLElement>(
+                '[contenteditable="true"], [contenteditable="plaintext-only"]',
+              ) !== ce
+            )
+              return false;
+            return true;
+          })
+          .map(gDec)
+          .filter((d) => {
+            if (seen.has(d)) return false;
+            seen.add(d);
+            return true;
+          })
+          .sort((a, b) => {
+            const pos = a.compareDocumentPosition(b);
+            if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+            if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+            return 0;
+          });
+      };
+
+      /**
+       * Returns the focus target.
+       *
+       * @param tgt - Value passed to the helper.
+       * @param side - Value passed to the helper.
+       *
+       * @returns True when the helper predicate succeeds.
+       */
+      const focusTgt = (tgt: HTMLElement, side: 'left' | 'right'): boolean => {
+        tgt.focus({ preventScroll: true });
+        if (!tgt.matches('[contenteditable="true"], [contenteditable="plaintext-only"]'))
+          return document.activeElement === tgt;
+        const sel = window.getSelection();
+        if (!sel) return false;
+        const walker = document.createTreeWalker(tgt, NodeFilter.SHOW_TEXT, {
+          acceptNode: (n) =>
+            n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim()
+              ? NodeFilter.FILTER_ACCEPT
+              : NodeFilter.FILTER_SKIP,
+        });
+        const texts: Text[] = [];
+        let node = walker.nextNode();
+        while (node) {
+          if (node instanceof Text) texts.push(node);
+          node = walker.nextNode();
+        }
+        const range = document.createRange();
+        const text = side === 'right' ? texts[0] : texts[texts.length - 1];
+        if (text) range.setStart(text, side === 'right' ? 0 : (text.textContent?.length ?? 0));
+        else range.selectNodeContents(tgt);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return true;
+      };
+
+      /**
+       * Returns the focusables.
+       *
+       * @param wrapper - Value passed to the helper.
+       * @param pref - Value passed to the helper.
+       *
+       * @returns focusables.
+       */
+      const focusables = (wrapper: HTMLElement, pref = false): HTMLElement[] => {
+        const seen = new Set<HTMLElement>();
+        const gId = wrapper.getAttribute('data-docs-focus-group-id');
+        return Array.from(
+          wrapper.querySelectorAll<HTMLElement>(
+            pref ? '[data-docs-focus-entry]' : [EDITABLE, INTERACTIVE].join(', '),
+          ),
+        ).filter((n) => {
+          if (seen.has(n) || !n.isConnected) return false;
+          seen.add(n);
+          if (pref) {
+            const owner = n.closest<HTMLElement>('[data-docs-editor-block]');
+            if (
+              owner &&
+              owner !== wrapper &&
+              (!gId || owner.getAttribute('data-docs-focus-group-id') !== gId)
+            )
+              return false;
+          }
+          if ('disabled' in n && (n as HTMLButtonElement | HTMLInputElement).disabled) return false;
+          if (n.getAttribute('aria-hidden') === 'true' || n.closest('[aria-hidden="true"]'))
+            return false;
+          return !!n.getClientRects().length;
+        });
+      };
+
+      /**
+       * Nearest adjacent.
+       *
+       * @param dir - Directory entry to read.
+       * @param vertical - Value passed to the helper.
+       *
+       * @returns nearest Adjacent.
+       */
+      const nearestAdjacent = (dir: 'left' | 'right', vertical = false): HTMLElement | null => {
+        const range = getCollapsedRange();
+        if (!range) return null;
+        const decs = gDecs(vertical);
+        if (dir === 'right') {
+          return (
+            decs.find((d) => {
+              const edge = document.createRange();
+              edge.setStartBefore(d);
+              edge.collapse(true);
+              return range.compareBoundaryPoints(Range.START_TO_START, edge) <= 0;
+            }) ?? null
+          );
+        }
+        for (let i = decs.length - 1; i >= 0; i--) {
+          const d = decs[i]!;
+          const edge = document.createRange();
+          edge.setStartAfter(d);
+          edge.collapse(true);
+          if (range.compareBoundaryPoints(Range.START_TO_START, edge) >= 0) return d;
+        }
+        return null;
+      };
+
+      /**
+       * Caret rect.
+       *
+       * @param dir - Directory entry to read.
+       *
+       * @returns caret Rect.
+       */
+      const caretRect = (dir: 'left' | 'right'): { bottom: number; top: number } | null => {
+        const range = getCollapsedRange();
+        if (!range) return null;
+        const rects = Array.from(range.getClientRects());
+        const rect =
+          (dir === 'right' ? rects[rects.length - 1] : rects[0]) || range.getBoundingClientRect();
+        return rect.width || rect.height ? { bottom: rect.bottom, top: rect.top } : null;
+      };
+
+      /**
+       * Passed dec.
+       *
+       * @param dec - Value passed to the helper.
+       * @param dir - Directory entry to read.
+       * @param beforeAnchor - Value passed to the helper.
+       * @param beforeBlock - Value passed to the helper.
+       * @param before - Value passed to the helper.
+       * @param aRect - Value passed to the helper.
+       *
+       * @returns True when the helper predicate succeeds.
+       */
+      const passedDec = (
+        dec: HTMLElement,
+        dir: 'left' | 'right',
+        beforeAnchor: Node | null,
+        beforeBlock: Element | null,
+        before: Range | null,
+        aRect: { bottom: number; top: number } | null,
+      ): boolean => {
+        const select = window.getSelection();
+        if (!select?.rangeCount || !select.isCollapsed || !before || !aRect) return false;
+        const block =
+          (select.anchorNode instanceof Element
+            ? select.anchorNode
+            : select.anchorNode?.parentElement
+          )?.closest('p, li, blockquote, h2, h3, h4, h5, h6, td, th') ?? null;
+        if (select.anchorNode === beforeAnchor && block === beforeBlock) return false;
+        // Ignore if we've escaped local boundary limits during native modification
+        if (block && !isLocalText(block)) return false;
+        const range = select.getRangeAt(0);
+        const edge = document.createRange();
+        const box = dec.getBoundingClientRect();
+        const bRect = caretRect(dir);
+        if (!bRect) return false;
+        if (dir === 'right') edge.setStartAfter(dec);
+        else edge.setStartBefore(dec);
+        edge.collapse(true);
+        const leeway = 10;
+        // prettier-ignore
+        return dir === 'right'
+            ? before.compareBoundaryPoints(Range.START_TO_START, edge) < 0 && range.compareBoundaryPoints(Range.START_TO_START, edge) >= 0 && aRect.bottom < box.top + leeway && bRect.bottom >= box.top - leeway
+            : before.compareBoundaryPoints(Range.START_TO_START, edge) > 0 && range.compareBoundaryPoints(Range.START_TO_START, edge) <= 0 && aRect.top > box.bottom - leeway && bRect.top <= box.bottom + leeway;
+      };
+
+      /**
+       * Selected dec.
+       *
+       * @param _vertical - Value passed to the helper.
+       *
+       * @returns selected Dec.
+       */
+      const selectedDec = (_vertical = false): HTMLElement | null => {
+        const ce = getActiveEditable();
+        if (!ce) return null;
+        const range = getCollapsedRange();
+        if (!range || !ce.contains(range.startContainer)) return null;
+        const dec = (
+          range.startContainer instanceof Element
+            ? range.startContainer
+            : range.startContainer.parentElement
+        )?.closest<HTMLElement>('[data-lexical-decorator="true"]');
+        if (!dec || !ce.contains(dec) || dec === ce.closest('[data-lexical-decorator="true"]'))
+          return null;
+        return gDec(dec);
+      };
+
+      /**
+       * Returns the focus block.
+       *
+       * @param dec - Value passed to the helper.
+       * @param dir - Directory entry to read.
+       */
+      const focusBlock = (dec: HTMLElement, dir: 'left' | 'right'): void => {
+        const cells = Array.from(dec.querySelectorAll<HTMLElement>('th, td')).filter(
+          (c) => c.isContentEditable && c.getClientRects().length,
+        );
+        if (cells.length) {
+          clear();
+          focusTgt(
+            dir === 'right' ? cells[0] : cells[cells.length - 1],
+            dir === 'right' ? 'right' : 'left',
+          );
+          return;
+        }
+        focus(dec, dir === 'right' ? 'left' : 'right');
+      };
+
+      /**
+       * Returns the focus.
+       *
+       * @param dec - Value passed to the helper.
+       * @param side - Value passed to the helper.
+       */
+      const focus = (dec: HTMLElement, side: 'left' | 'right'): void => {
+        const tgt = gDec(dec);
+        const wrapper = tgt.querySelector<HTMLElement>('[data-docs-editor-block]') ?? tgt;
+        const cursorMetadata = {
+          marker: wrapper.matches('[data-docs-focus-group-id]')
+            ? wrapper
+            : wrapper.querySelector<HTMLElement>('[data-docs-focus-group-id]'),
+          label: wrapper.getAttribute('data-docs-editor-block') ?? 'Block',
+        };
+        clear();
+        const body = getActiveEditable();
+        const sel = window.getSelection();
+        if (body && sel) {
+          body.focus({ preventScroll: true });
+          const range = document.createRange();
+          if (side === 'left') range.setStartBefore(tgt);
+          else range.setStartAfter(tgt);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        wrapper.dataset.docsBlockCursor = 'true';
+        setBlockCursorActive(true);
+        bCursor.current = {
+          dec: tgt,
+          gId: cursorMetadata.marker?.getAttribute('data-docs-focus-group-id') ?? null,
+          label: cursorMetadata.label,
+          side,
+          wrapper,
+        };
+        document.dispatchEvent(
+          new CustomEvent('docs:block-selected', { detail: { block: wrapper } }),
+        );
+      };
+
+      /**
+       * On key down.
+       *
+       * @param e - Value passed to the helper.
+       */
+      const eHandlers = {
+        onKeyDown(e: KeyboardEvent): void {
+          try {
+            if (e.defaultPrevented || e.altKey) return;
+            const tgt = e.target instanceof HTMLElement ? e.target : null;
+            const closestEditable = tgt?.closest<HTMLElement>('[contenteditable="true"]') ?? null;
+            const key = e.key;
+            const entry = tgt?.closest<HTMLElement>('[data-docs-focus-entry]') ?? null;
+            if (
+              (key === 'Enter' || key === ' ') &&
+              entry?.matches('button, [role="button"], [role="tab"]')
+            ) {
+              e.preventDefault();
+              e.stopPropagation();
+              if (entry.getAttribute('aria-expanded') !== 'true') entry.click();
+              setTimeout(() => {
+                const container =
+                  entry.getAttribute('role') === 'tab'
+                    ? entry.closest<HTMLElement>('[data-docs-focus-group="root"]')
+                    : entry.closest<HTMLElement>('[data-docs-focus-group="member"]');
+                if (container) {
+                  const editors = Array.from(
+                    container.querySelectorAll<HTMLElement>(
+                      '[contenteditable="true"], [contenteditable="plaintext-only"]',
+                    ),
+                  ).filter((e) => {
+                    return window.getComputedStyle(e).display !== 'none' && e.offsetParent !== null;
+                  });
+                  if (editors.length > 0 && editors[0]) {
+                    editors[0].focus({ preventScroll: true });
+                    const sel = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(editors[0]);
+                    range.collapse(true);
+                    sel?.removeAllRanges();
+                    sel?.addRange(range);
+                  }
+                }
+              }, 100);
+              return;
+            }
+            if (bCursor.current && (key === 'Tab' || key === 'Enter')) {
+              e.preventDefault();
+              e.stopPropagation();
+              const cur = bCursor.current;
+              if (!cur) return;
+              const tgt =
+                (e.shiftKey
+                  ? focusables(cur.wrapper, true).at(-1)
+                  : focusables(cur.wrapper, true)[0]) ??
+                (e.shiftKey ? focusables(cur.wrapper).at(-1) : focusables(cur.wrapper)[0]);
+              if (!tgt) {
+                const ce = cur.wrapper.querySelector<HTMLElement>(
+                  '[contenteditable="true"], [contenteditable="plaintext-only"]',
+                );
+                if (ce) {
+                  clear();
+                  ce.focus({ preventScroll: true });
+                }
+                return;
+              }
+              clear();
+              focusTgt(tgt, e.shiftKey ? 'left' : 'right');
+              return;
+            }
+            // If bCursor is active, we let standard copy/cut/paste combos fall completely
+            // through to Lexical to handle natively without intercepting!
+            if (
+              bCursor.current &&
+              (e.metaKey || e.ctrlKey) &&
+              ['c', 'x', 'v'].includes(key.toLowerCase())
+            ) {
+              if (key.toLowerCase() === 'x')
+                requestAnimationFrame(() => {
+                  clear();
+                });
+              return;
+            }
+            const dir =
+              key === 'ArrowLeft' || key === 'ArrowUp' || key === 'Backspace'
+                ? 'left'
+                : key === 'ArrowRight' || key === 'ArrowDown' || key === 'Delete'
+                  ? 'right'
+                  : null;
+            if (!dir) return;
+            const isVertical = key === 'ArrowUp' || key === 'ArrowDown';
+            if (
+              !bCursor.current &&
+              (tgt?.closest(
+                [
+                  'input',
+                  'textarea',
+                  'select',
+                  '[contenteditable="plaintext-only"]',
+                  '.cm-editor',
+                  'td',
+                  'th',
+                  INTERACTIVE,
+                ].join(', '),
+              ) ||
+                (closestEditable && closestEditable !== getActiveEditable()))
+            )
+              return;
+            if (bCursor.current) {
+              // Lexical will securely handle node deletion for Backspace/Delete, just visually clean up.
+              if (key === 'Backspace' || key === 'Delete') {
+                clear();
+                return;
+              }
+              e.preventDefault();
+              e.stopPropagation();
+              const cur = bCursor.current;
+              if (!cur) return;
+              const dir = key === 'ArrowLeft' || key === 'ArrowUp' ? 'left' : 'right';
+              const isVertical = key === 'ArrowUp' || key === 'ArrowDown';
+              const decs = gDecs(isVertical);
+              const i = decs.indexOf(cur.dec);
+              const adjacent = i === -1 ? null : (decs[i + (dir === 'right' ? 1 : -1)] ?? null);
+              if (
+                isVertical &&
+                adjacent &&
+                !(() => {
+                  const body = getActiveEditable();
+                  if (!body) return false;
+                  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+                    acceptNode: (n) =>
+                      n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim()
+                        ? NodeFilter.FILTER_ACCEPT
+                        : NodeFilter.FILTER_SKIP,
+                  });
+                  const first =
+                    cur.dec.compareDocumentPosition(adjacent) & Node.DOCUMENT_POSITION_FOLLOWING
+                      ? cur.dec
+                      : adjacent;
+                  let text = walker.nextNode();
+                  while (text) {
+                    if (text instanceof Text && isLocalText(text))
+                      if (
+                        first.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING &&
+                        (first === cur.dec ? adjacent : cur.dec).compareDocumentPosition(text) &
+                          Node.DOCUMENT_POSITION_PRECEDING
+                      )
+                        return true;
+                    text = walker.nextNode();
+                  }
+                  return false;
+                })()
+              ) {
+                focusBlock(adjacent, dir);
+                return;
+              }
+              const body = getActiveEditable();
+              const selection = window.getSelection();
+              if (body && selection) {
+                const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+                  acceptNode: (n) =>
+                    n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim()
+                      ? NodeFilter.FILTER_ACCEPT
+                      : NodeFilter.FILTER_SKIP,
+                });
+                let candidate: Text | null = null;
+                let node = walker.nextNode();
+                while (node) {
+                  if (node instanceof Text && isLocalText(node)) {
+                    const relation = cur.dec.compareDocumentPosition(node);
+                    if (dir === 'right' && relation & Node.DOCUMENT_POSITION_FOLLOWING) {
+                      candidate = node;
+                      break;
+                    }
+                    if (dir === 'left' && relation & Node.DOCUMENT_POSITION_PRECEDING)
+                      candidate = node;
+                  }
+                  node = walker.nextNode();
+                }
+                body.focus({ preventScroll: true });
+                const range = document.createRange();
+                if (candidate)
+                  range.setStart(
+                    candidate,
+                    dir === 'right' ? 0 : (candidate.textContent?.length ?? 0),
+                  );
+                else if (dir === 'left') range.setStartBefore(cur.dec);
+                else range.setStartAfter(cur.dec);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+              clear();
+              return;
+            }
+            if (
+              key !== 'ArrowLeft' &&
+              key !== 'ArrowRight' &&
+              key !== 'ArrowUp' &&
+              key !== 'ArrowDown'
+            )
+              return;
+            const dec = (() => {
+              const range = getCollapsedRange();
+              if (!range) return null;
+              const decs = gDecs(isVertical);
+              let exact: HTMLElement | undefined;
+              if (dir === 'right') {
+                exact = decs.find((d) => {
+                  const edge = document.createRange();
+                  edge.setStartBefore(d);
+                  edge.collapse(true);
+                  return (
+                    range.compareBoundaryPoints(Range.START_TO_START, edge) === 0 &&
+                    range.compareBoundaryPoints(Range.END_TO_END, edge) === 0
+                  );
+                });
+              } else {
+                for (let i = decs.length - 1; i >= 0; i--) {
+                  const d = decs[i]!;
+                  const edge = document.createRange();
+                  edge.setStartAfter(d);
+                  edge.collapse(true);
+                  if (
+                    range.compareBoundaryPoints(Range.START_TO_START, edge) === 0 &&
+                    range.compareBoundaryPoints(Range.END_TO_END, edge) === 0
+                  ) {
+                    exact = d;
+                    break;
+                  }
+                }
+              }
+              if (exact) return gDec(exact);
+              const block =
+                (range.startContainer instanceof Element
+                  ? range.startContainer
+                  : range.startContainer.parentElement
+                )?.closest('p, li, blockquote, h2, h3, h4, h5, h6, td, th') ?? null;
+              if (!block || !isLocalText(block)) return null;
+              const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
+                acceptNode: (n) =>
+                  n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim()
+                    ? NodeFilter.FILTER_ACCEPT
+                    : NodeFilter.FILTER_SKIP,
+              });
+              const textNodes: Text[] = [];
+              let text = walker.nextNode();
+              while (text) {
+                if (text instanceof Text) textNodes.push(text);
+                text = walker.nextNode();
+              }
+              const tgt = dir === 'right' ? textNodes[textNodes.length - 1] : textNodes[0];
+              if (!tgt) return null;
+              const textRange = document.createRange();
+              textRange.setStart(tgt, dir === 'right' ? (tgt.textContent?.length ?? 0) : 0);
+              textRange.collapse(true);
+              if (
+                range.compareBoundaryPoints(Range.START_TO_START, textRange) === 0 &&
+                range.compareBoundaryPoints(Range.END_TO_END, textRange) === 0
+              ) {
+                if (dir === 'right') {
+                  return (
+                    decs.find(
+                      (d) => !!(d.compareDocumentPosition(tgt) & Node.DOCUMENT_POSITION_PRECEDING),
+                    ) ?? null
+                  );
+                }
+                for (let i = decs.length - 1; i >= 0; i--) {
+                  const d = decs[i]!;
+                  if (d.compareDocumentPosition(tgt) & Node.DOCUMENT_POSITION_FOLLOWING) return d;
+                }
+              }
+              return null;
+            })();
+            if (isVertical) {
+              if (dec) {
+                e.preventDefault();
+                e.stopPropagation();
+                focusBlock(dec, dir);
+                return;
+              }
+              if (
+                !nearestAdjacent(dir, isVertical) ||
+                !(window.getSelection() as Selection & { modify?: unknown })?.modify
+              )
+                return;
+              e.preventDefault();
+              e.stopPropagation();
+              const adjacent = nearestAdjacent(dir, true);
+              if (!adjacent) return;
+              const selection = window.getSelection();
+              const anchor = selection?.anchorNode ?? null;
+              vPending.current = {
+                beforeAnchor: anchor,
+                beforeBlock:
+                  (anchor instanceof Element ? anchor : anchor?.parentElement)?.closest(
+                    'p, li, blockquote, h2, h3, h4, h5, h6, td, th',
+                  ) ?? null,
+                before:
+                  selection?.rangeCount && selection.isCollapsed
+                    ? selection.getRangeAt(0).cloneRange()
+                    : null,
+                beforeRect: caretRect(dir),
+                dec: adjacent,
+                dir,
+              };
+              window.cancelAnimationFrame(vCursor.current);
+              vCursor.current = window.requestAnimationFrame(() => {
+                (function settle(attempt = 0): void {
+                  vCursor.current = 0;
+                  const pending = vPending.current;
+                  if (!pending?.dec || bCursor.current) return void (vPending.current = null);
+                  const selected = selectedDec(true);
+                  if (selected) {
+                    vPending.current = null;
+                    focusBlock(selected, pending.dir);
+                    return;
+                  }
+                  const currSelection = window.getSelection();
+                  if (currSelection?.anchorNode && pending.dec.contains(currSelection.anchorNode)) {
+                    vPending.current = null;
+                    focusBlock(pending.dec, pending.dir);
+                    return;
+                  }
+                  if (
+                    pending.dec &&
+                    passedDec(
+                      pending.dec,
+                      pending.dir,
+                      pending.beforeAnchor,
+                      pending.beforeBlock,
+                      pending.before,
+                      pending.beforeRect,
+                    )
+                  ) {
+                    vPending.current = null;
+                    focusBlock(pending.dec, pending.dir);
+                    return;
+                  }
+                  if (attempt >= 5) return void (vPending.current = null);
+                  vCursor.current = window.requestAnimationFrame(() => settle(attempt + 1));
+                })(0);
+              });
+              const verticalSelection = window.getSelection() as Selection & {
+                modify?: (alter: 'move', dir: 'backward' | 'forward', granularity: 'line') => void;
+              };
+              if (
+                !verticalSelection?.rangeCount ||
+                !verticalSelection.isCollapsed ||
+                !verticalSelection.modify
+              )
+                return;
+              verticalSelection.modify('move', dir === 'right' ? 'forward' : 'backward', 'line');
+              const pending = vPending.current;
+              if (!pending?.dec) return;
+              const selected = selectedDec(true);
+              if (selected) {
+                vPending.current = null;
+                focusBlock(selected, dir);
+                return;
+              }
+              if (
+                pending.dec &&
+                passedDec(
+                  pending.dec,
+                  pending.dir,
+                  pending.beforeAnchor,
+                  pending.beforeBlock,
+                  pending.before,
+                  pending.beforeRect,
+                )
+              ) {
+                vPending.current = null;
+                focusBlock(pending.dec, dir);
+              }
+              return;
+            }
+            if (!dec) return;
+            e.preventDefault();
+            e.stopPropagation();
+            focus(dec, dir === 'right' ? 'left' : 'right');
+          } catch (err: unknown) {
+            console.error('[docs:edit] Key down event failed', err);
+          }
+        },
+
+        /**
+         * On selection change.
+         *
+         */
+        onSelectionChange(): void {
+          try {
+            snapshotSelection();
+            const sel = window.getSelection();
+            const p = vPending.current;
+            if (!bCursor.current && p?.dec) {
+              const dec = selectedDec(true);
+              if (dec) {
+                vPending.current = null;
+                window.cancelAnimationFrame(vCursor.current);
+                focusBlock(dec, p.dir);
+                return;
+              }
+              if (sel?.anchorNode && p.dec.contains(sel.anchorNode)) {
+                vPending.current = null;
+                window.cancelAnimationFrame(vCursor.current);
+                focusBlock(p.dec, p.dir);
+                return;
+              }
+              if (passedDec(p.dec, p.dir, p.beforeAnchor, p.beforeBlock, p.before, p.beforeRect)) {
+                vPending.current = null;
+                window.cancelAnimationFrame(vCursor.current);
+                focusBlock(p.dec, p.dir);
+                return;
+              }
+            }
+            const { current: cur } = bCursor;
+            if (!cur) return;
+            if (!cur.dec.isConnected || !cur.wrapper.isConnected) {
+              if (restore()) return;
+              window.cancelAnimationFrame(restoreCursor.current);
+              restoreCursor.current = window.requestAnimationFrame(() => {
+                (function retryRestore(attempt = 0): void {
+                  if (restore()) return;
+                  if (attempt >= 12) {
+                    clear();
+                    return;
+                  }
+                  restoreCursor.current = window.requestAnimationFrame(() =>
+                    retryRestore(attempt + 1),
+                  );
+                })(0);
+              });
+              return;
+            }
+            if (isToolbarTgt(document.activeElement as HTMLElement | null)) {
+              restoreSavedSelection('selectionchange-toolbar');
+              return;
+            }
+            if (!sel?.rangeCount) return;
+            if (!sel.isCollapsed) {
+              const range = sel.getRangeAt(0);
+              if (
+                range.startContainer === range.endContainer &&
+                range.endOffset - range.startOffset === 1
+              ) {
+                const selNode = range.startContainer.childNodes[range.startOffset];
+                if (
+                  selNode &&
+                  (selNode === cur.dec ||
+                    cur.dec.contains(selNode) ||
+                    cur.wrapper.contains(selNode))
+                )
+                  return;
+              }
+              if (
+                cur.dec.contains(range.startContainer) ||
+                cur.wrapper.contains(range.startContainer)
+              )
+                return;
+              clear();
+              return;
+            }
+            if (
+              !sel.anchorNode ||
+              (!root()?.contains(sel.anchorNode) && sel.anchorNode !== document.body)
+            )
+              clear();
+          } catch (err: unknown) {
+            console.error('[docs:edit] Selection change event failed', err);
+          }
+        },
+
+        /**
+         * On pointer down.
+         *
+         * @param e - Value passed to the helper.
+         */
+        onPointerDown(e: PointerEvent): void {
+          try {
+            const tgt = e.target instanceof HTMLElement ? e.target : null;
+            if (tgt?.closest('[role="combobox"], [data-docs-navigation]')) return;
+            snapshotSelection();
+            if (isToolbarTgt(tgt)) {
+              restoreSavedSelection('pointerdown-toolbar');
+              return;
+            }
+            const block =
+              tgt
+                ?.closest<HTMLElement>('[data-block-gutter="true"]')
+                ?.parentElement?.querySelector<HTMLElement>(
+                  '[data-docs-editor-block], [data-editor-block], .docs-editor-block',
+                ) ?? tgt?.closest<HTMLElement>('[data-docs-editor-block], [data-editor-block]');
+            const dec =
+              block?.closest<HTMLElement>('[data-lexical-decorator="true"]') ??
+              tgt?.closest<HTMLElement>('[data-lexical-decorator="true"]') ??
+              block;
+            if (!dec || !editorRefsForRoot.current?.body?.contains(dec)) {
+              clear();
+              return;
+            }
+            const eTgt = tgt?.closest<HTMLElement>(EDITABLE);
+            const iTgt = tgt?.closest<HTMLElement>(INTERACTIVE);
+            const wrap = dec.matches('[data-docs-editor-block]')
+              ? dec
+              : (dec.querySelector<HTMLElement>('[data-docs-editor-block]') ?? dec);
+            const wrapState = {
+              box: wrap.getBoundingClientRect(),
+              sameBlock:
+                bCursor.current?.wrapper === wrap ||
+                (bCursor.current?.label === wrap.getAttribute('data-docs-editor-block') &&
+                  bCursor.current?.gId ===
+                    (wrap.matches('[data-docs-focus-group-id]')
+                      ? wrap
+                      : wrap.querySelector<HTMLElement>('[data-docs-focus-group-id]')
+                    )?.getAttribute('data-docs-focus-group-id')),
+            };
+            if ((eTgt && dec.contains(eTgt)) || (iTgt && dec.contains(iTgt))) {
+              if (bCursor.current) clear();
+              return;
+            }
+            const gId =
+              tgt
+                ?.closest<HTMLElement>('[data-docs-focus-group-id]')
+                ?.getAttribute('data-docs-focus-group-id') ?? null;
+            if (gId && bCursor.current?.gId !== gId) {
+              const gRoot = root()?.querySelector<HTMLElement>(
+                `[data-docs-focus-group="root"][data-docs-focus-group-id="${gId}"]`,
+              );
+              const gDec = gRoot?.closest<HTMLElement>('[data-lexical-decorator="true"]') ?? dec;
+              const gBox = (gRoot ?? gDec).getBoundingClientRect();
+              e.preventDefault();
+              e.stopPropagation();
+              focus(gDec, e.clientX - gBox.left > gBox.width / 2 ? 'right' : 'left');
+              return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            if (wrapState.sameBlock) return;
+            focus(dec, e.clientX - wrapState.box.left > wrapState.box.width / 2 ? 'right' : 'left');
+          } catch (err: unknown) {
+            console.error('[docs:edit] Pointer down event failed', err);
+          }
+        },
+        /**
+         * Selects a decorator block from its surrounding interactive ring.
+         *
+         * @param e Ring selection event emitted by the visual block wrapper.
+         *
+         * @returns Completion after the decorator becomes the active block selection.
+         */
+        onBlockSelect(e: Event): void {
+          const decorator = (e as CustomEvent<{ decorator?: unknown }>).detail?.decorator;
+          if (
+            !(decorator instanceof HTMLElement) ||
+            !editorRefsForRoot.current.body?.contains(decorator)
+          )
+            return;
+          focus(decorator, decorator.getBoundingClientRect().width > 0 ? 'left' : 'right');
+          const block = decorator.querySelector<HTMLElement>(
+            '[data-docs-editor-block], .docs-math-wrapper, [data-math-code], [data-docs-view-root="true"]',
+          );
+          if (block)
+            document.dispatchEvent(new CustomEvent('docs:block-selected', { detail: { block } }));
+        },
+      };
+      document.addEventListener('keydown', eHandlers.onKeyDown as EventListener, true);
+      document.addEventListener('selectionchange', eHandlers.onSelectionChange);
+      document.addEventListener('pointerdown', eHandlers.onPointerDown as EventListener, true);
+      document.addEventListener('docs:block-select', eHandlers.onBlockSelect);
+      return () => {
+        window.cancelAnimationFrame(restoreCursor.current);
+        window.cancelAnimationFrame(vCursor.current);
+        vPending.current = null;
+        clear();
+        document.removeEventListener('keydown', eHandlers.onKeyDown as EventListener, true);
+        document.removeEventListener('selectionchange', eHandlers.onSelectionChange);
+        document.removeEventListener('pointerdown', eHandlers.onPointerDown as EventListener, true);
+        document.removeEventListener('docs:block-select', eHandlers.onBlockSelect);
+      };
+    }, [editorRefsForRoot]);
+    useEffect(() => {
+      if (!document) return;
+
+      // DROP
+      /**
+       * Moves the move Drop Caret for the docs.
+       *
+       * @param e - Value passed to the helper.
+       */
+      const moveDropCaret = (e: DragEvent): void => {
+        try {
+          const root = editorRefsForRoot.current?.body;
+          const transfer = e.dataTransfer;
+          if (!transfer || !root) return;
+          if (
+            !['Files', 'text/html', 'text/plain', 'text/uri-list'].some((t) =>
+              Array.from(transfer.types ?? []).includes(t),
+            )
+          )
+            return;
+          const range =
+            document.caretRangeFromPoint?.(e.clientX, e.clientY) ??
+            (() => {
+              const pos = document.caretPositionFromPoint?.(e.clientX, e.clientY);
+              if (!pos) return null;
+              const n = document.createRange();
+              n.setStart(pos.offsetNode, pos.offset);
+              n.collapse(true);
+              return n;
+            })();
+          if (!range || !root.contains(range.startContainer)) return;
+          const sel = window.getSelection();
+          if (!sel) return;
+          sel.removeAllRanges();
+          sel.addRange(range);
+          e.preventDefault();
+        } catch (err: unknown) {
+          console.error('[docs:edit] Drop event failed', err);
+        }
+      };
+      /**
+       * Handles on drop.
+       *
+       * @param e - Editor event carrying the changed Docs content.
+       */
+      const onDrop = (e: DragEvent): void => {
+        try {
+          const dropped = Array.from(e.dataTransfer?.files ?? []);
+          if (!dropped.length || !editorRefsForRoot.current.body) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const files = dropped.filter((f) => {
+            const ext = f.name.match(TerraQualityRegex.REGEX_PATTERN_REGEX())?.[0].toLowerCase();
+            return Boolean(
+              (f.type && f.type in MIME) ||
+              (ext && Object.values(MIME).includes(ext as (typeof MIME)[keyof typeof MIME])),
+            );
+          });
+          if (!files.length) {
+            notify({
+              error: new Error('Dropped files are not permitted attachments.'),
+              fallback: 'Only permitted file types can be attached.',
+            });
+            return;
+          }
+          void mediaAttachFiles(files).catch((e: unknown) => {
+            notify({
+              error: e instanceof Error ? e : new Error(String(e)),
+              fallback: 'Failed to add dropped attachments.',
+            });
+          });
+        } catch (err: unknown) {
+          console.error('[docs:edit] Attachment drop failed', err);
+        }
+      };
+
+      // PASTE
+      /**
+       * Handles clipboard.
+       *
+       * @param data - Source data to transform.
+       * @param e - Value passed to the helper.
+       */
+      const handleClipboard = (
+        data: DataTransfer,
+        e: Pick<Event, 'preventDefault' | 'stopImmediatePropagation' | 'stopPropagation'>,
+      ): void => {
+        const view = codeViewOf();
+        const sel = window.getSelection();
+        const savedSel =
+          editorRefsForRoot.current.selection ??
+          $cursorPosition.get() ??
+          $cursor.get() ??
+          $cursorGhost.get();
+        if (!editorRefsForRoot.current.selection && view && view.dom.offsetParent !== null) {
+          editorRefsForRoot.current.selection = {
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          };
+          $cursorPosition.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+          $cursor.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+        } else if (!editorRefsForRoot.current.selection && sel?.rangeCount && sel.anchorNode) {
+          const ce = (
+            sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode.parentElement
+          )?.closest<HTMLElement>('[contenteditable="true"], [contenteditable="plaintext-only"]');
+          if (ce && editorRefsForRoot.current.body?.contains(ce)) {
+            const dom = sel.getRangeAt(0).cloneRange();
+            const rect = dom.getBoundingClientRect();
+            const anchorPath = captureNodePath(editorRefsForRoot.current.body, sel.anchorNode);
+            const focusPath = captureNodePath(editorRefsForRoot.current.body, sel.focusNode);
+            editorRefsForRoot.current.selection = {
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              text: sel.toString(),
+              visible: true,
+            };
+            $cursorPosition.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              text: sel.toString(),
+              visible: true,
+            });
+            $cursor.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              text: sel.toString(),
+              visible: true,
+            });
+          }
+        }
+        const html = data.getData('text/html');
+        let plain = data.getData('text/plain');
+        const types = Array.from(data.types ?? []);
+        const richClipboard =
+          /<(?:AccordionGroup|AccordionItem|Code|Testimonials|TabsGroup|TabsItem|Leaf|DocsTable|TsDocs|Nodes)\b|<table\b|===|\|\|\||:::/i.test(
+            `${html || ''}\n${plain || ''}`,
+          );
+        // CRITICAL BYPASS: Let Lexical handle pasting its own native blocks.
+        if (
+          (types.includes('application/x-lexical-editor') ||
+            (html && html.includes('data-lexical-decorator'))) &&
+          !richClipboard
+        )
+          return;
+        if (richClipboard) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+        }
+        // Intercept and sanitize triple character blocks inside raw clipboard copies
+        if (plain && plain.includes('|||'))
+          plain = plain
+            .replace(/([^\n])[ \t]*\|\|\|/g, '$1\n\n|||')
+            .replace(/\|\|\|[ \t]*([^\n])/g, '|||\n\n$1');
+        if (richClipboard && plain) {
+          pasteMd(
+            mediaInsert,
+            ((md: string): string => {
+              if (!md) return '';
+              return [
+                ...new Set([
+                  ...customComponents.map((component) => component.name),
+                  'AccordionGroup',
+                  'AccordionItem',
+                  'Aside',
+                  'Code',
+                  'DocsMath',
+                  'DocsTable',
+                  'Embed',
+                  'Leaf',
+                  'Nodes',
+                  'TabsGroup',
+                  'TabsItem',
+                  'TsDocs',
+                ]),
+              ]
+                .sort((left, right) => right.length - left.length)
+                .reduce(
+                  (v, name) =>
+                    v.replace(
+                      new RegExp(
+                        `(<\\/?\\s*)${name.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}(?=\\b)`,
+                        'gi',
+                      ),
+                      (_, prefix: string) => `${prefix}${name}`,
+                    ),
+                  md,
+                );
+            })(plain),
+            savedSel,
+          );
+          if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+            editorRefsForRoot.current.norm.force = true;
+            editorRefsForRoot.current.norm.replay = true;
+          }
+          return;
+        }
+        if (html && !types.includes('vscode-editor-data')) {
+          const md = htmlToMd(html);
+          if (md && md !== plain) {
+            pasteMd(mediaInsert, md, savedSel);
+            if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+              editorRefsForRoot.current.norm.force = true;
+              editorRefsForRoot.current.norm.replay = true;
+            }
+            return;
+          }
+        }
+        if (plain) {
+          let transformed = plain;
+          let changed = false;
+          if (/^[ \t]*\\`\\`\\`/gm.test(transformed)) {
+            transformed = transformed.replace(/^([ \t]*)\\`\\`\\`/gm, '$1```');
+            changed = true;
+          }
+          if (transformed.includes('&grave;')) {
+            transformed = transformed.replaceAll('&grave;', '&amp;grave;');
+            changed = true;
+          }
+          const table = mdTableToHtml(transformed);
+          if (table) {
+            transformed = table;
+            changed = true;
+          }
+          if (changed) {
+            pasteMd(mediaInsert, transformed, savedSel);
+            if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+              editorRefsForRoot.current.norm.force = true;
+              editorRefsForRoot.current.norm.replay = true;
+            }
+            return;
+          }
+        }
+        const file = Array.from(data.files ?? []).find(
+          (f) => f.type.startsWith('image/') || f.type === 'application/pdf',
+        );
+        if (file && file.size > 0) {
+          const isPdf = file.type === 'application/pdf';
+          const optimistic = URL.createObjectURL(file);
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          const lbl = toImgAlt(file.name || (isPdf ? 'document' : 'image'));
+          pasteMd(
+            mediaInsert,
+            isPdf ? `\n<Embed src="${optimistic}" title="${lbl}" />\n` : toImgMd(optimistic, lbl),
+            savedSel,
+          );
+          void mediaUploadFile(file).catch((e: unknown) => {
+            notify({
+              error: e instanceof Error ? e : new Error(String(e)),
+              fallback: `Failed to upload pasted ${isPdf ? 'PDF' : 'image'}. Local changes were kept.`,
+            });
+          });
+          if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+            editorRefsForRoot.current.norm.force = true;
+            editorRefsForRoot.current.norm.replay = true;
+          }
+          return;
+        }
+        const remote = (() => {
+          const isRemote = (val: string): boolean => {
+            const trimmed = val.trim();
+            if (!trimmed) return false;
+            if (trimmed.startsWith('/api/media?')) return true;
+            if (TerraQualityRegex.REGEX_HTTPS_I_REGEX().test(trimmed)) {
+              try {
+                const imgUrl = new URL(trimmed);
+                if (
+                  imgUrl.pathname === '/api/media' ||
+                  /\.(?:avif|gif|jpe?g|png|svg|webp)(?:$|[?#])/i.test(
+                    imgUrl.pathname + imgUrl.search,
+                  )
+                )
+                  return true;
+              } catch {
+                return false;
+              }
+            }
+            try {
+              return (
+                /^https?:$/i.test(new URL(trimmed).protocol) &&
+                new RegExp(
+                  `\\.(${Object.values(IMAGE_TYPES)
+                    .map((extension) => extension.substring(1))
+                    .join('|')})(?:$|[?#])`,
+                  'i',
+                ).test(trimmed)
+              );
+            } catch {
+              return false;
+            }
+          };
+          const html = data.getData('text/html').trim();
+          if (html) {
+            const match = html.match(/<img\b[^>]*\bsrc=(['"])(.*?)\1/i)?.[2]?.trim();
+            if (match && isRemote(match)) return match;
+          }
+          for (const type of ['text/uri-list', 'text/plain']) {
+            const val = data.getData(type).trim();
+            if (val && isRemote(val)) return val;
+          }
+          return null;
+        })();
+        if (!remote) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        pasteMd(
+          mediaInsert,
+          toImgMd(remote, toImgAlt(remote.split('/').at(-1) ?? 'image')),
+          savedSel,
+        );
+        if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+          editorRefsForRoot.current.norm.force = true;
+          editorRefsForRoot.current.norm.replay = true;
+        }
+      };
+      /**
+       * On paste.
+       *
+       * @param e - Value passed to the helper.
+       */
+      const onPaste = (e: ClipboardEvent): void => {
+        try {
+          if (e.clipboardData) handleClipboard(e.clipboardData, e);
+        } catch (err: unknown) {
+          console.error('[docs:edit] Paste event failed', err);
+        }
+      };
+      /**
+       * On before input.
+       *
+       * @param e - Value passed to the helper.
+       */
+      const onBeforeInput = (e: InputEvent): void => {
+        try {
+          if (e.inputType !== 'insertFromPaste' && e.inputType !== 'insertReplacementText') return;
+          if (!e.dataTransfer) return;
+          handleClipboard(e.dataTransfer, e);
+        } catch (err: unknown) {
+          console.error('[docs:edit] Beforeinput paste event failed', err);
+        }
+      };
+      document.addEventListener('dragover', moveDropCaret, true);
+      document.addEventListener('drop', onDrop, true);
+      document.addEventListener('paste', onPaste, true);
+      document.addEventListener('beforeinput', onBeforeInput, true);
+      return () => {
+        document.removeEventListener('dragover', moveDropCaret, true);
+        document.removeEventListener('drop', onDrop, true);
+        document.removeEventListener('paste', onPaste, true);
+        document.removeEventListener('beforeinput', onBeforeInput, true);
+      };
+    }, [mediaAttachFiles, mediaInsert, editorRefsForRoot, mediaUploadFile]);
 
     // VALIDATION
     if (!surface)
@@ -389,7 +2274,10 @@ const EditorSurfaces = {
   }): JSX.Element {
     // STATES
     const edit = useContext(EditStateCtx);
-    const draft: Pick<Draft, 'description' | 'title'> = edit?.draft ?? { description, title };
+    const draft: Pick<Draft, 'description' | 'title'> = edit?.draft ?? {
+      description,
+      title,
+    };
     const contributors = initContributors ?? [];
     const titleRef = useRef<HTMLInputElement>(null);
     const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -416,12 +2304,11 @@ const EditorSurfaces = {
         if (!text || !Number.isFinite(baseSize) || available <= 0) return;
 
         context.font = `${styles.fontStyle} ${styles.fontWeight} ${baseSize}px ${styles.fontFamily}`;
-        const letterSpacing = Number.parseFloat(styles.letterSpacing) || 0;
         const textWidth =
-          context.measureText(text).width + Math.max(text.length - 1, 0) * letterSpacing;
+          context.measureText(text).width +
+          Math.max(text.length - 1, 0) * (Number.parseFloat(styles.letterSpacing) || 0);
         if (textWidth > available) {
-          const fittedSize = Math.max(12, (baseSize * (available - 1)) / textWidth);
-          input.style.fontSize = `${fittedSize}px`;
+          input.style.fontSize = `${Math.max(12, (baseSize * (available - 1)) / textWidth)}px`;
         }
       };
 
@@ -459,9 +2346,10 @@ const EditorSurfaces = {
         // Measure that CSS height without the previous inline measurement, then
         // grow only when the wrapped description needs more room.
         textarea.style.removeProperty('height');
-        const baseHeight = textarea.getBoundingClientRect().height;
-        textarea.style.height = 'auto';
-        textarea.style.height = `${Math.max(baseHeight, textarea.scrollHeight)}px`;
+        textarea.style.height = `${Math.max(
+          textarea.getBoundingClientRect().height,
+          ((textarea.style.height = 'auto'), textarea.scrollHeight),
+        )}px`;
       };
 
       resize();
@@ -562,7 +2450,7 @@ const EditorSurfaces = {
  *
  * @return The Docs scaffold with its navigation tree, content surface, and page controls.
  */
-export default function Scaffold({
+export default (function Scaffold({
   tree,
   pathname: initPathname,
   permission,
@@ -587,7 +2475,11 @@ export default function Scaffold({
   tree: TreeType[];
   pathname: string;
   permission: Permission;
-  userData: User | null;
+  userData: {
+    _id?: string;
+    _type?: string;
+    [key: string]: unknown;
+  } | null;
   description?: string;
   full?: boolean;
   standalone?: boolean;
@@ -606,10 +2498,10 @@ export default function Scaffold({
   blocks?: DocsBlockOptions;
 }): JSX.Element {
   // STATES
-  const navigationState = { open: useAtom($sidebar) };
   // Match the original Docs shell: only render the Portable Text editor after hydration.
   // Its external store is not SSR-safe, and rendering it in the initial HTML causes React #419.
   const [hydrated, setHydrated] = useState<boolean>(standalone || staticContent);
+  const shellState = { hydrated, sidebarOpen: useAtom($sidebar) };
   const toolbar = useAtom($toolbar);
   const stored = useAtom($mode);
   const writable = permission === 'write';
@@ -674,29 +2566,36 @@ export default function Scaffold({
 
   // prettier-ignore
   const [currDoc, setCurrDoc] = useState({ pathname: initPathname, path: initPath, title: initTitle, description: initDesc, contributors, updatedAt: initUpdatedAt, source: initSrc || (typeof initContent === 'string' ? initContent : ''), content: toPortableBody(initContent), compiledMDX: initMdx, versions: [] as DocVer[] });
+  const [tocState, setTocState] = useState<{
+    active: string | null;
+    headings: { id: string; text: string }[];
+    path: string;
+  }>({ active: null, headings: [], path: initPathname });
 
   // The shared Docs index route opens the first readable leaf in the first section
   // that contains one, so each Docs host gets a useful landing page without
   // needing a separately authored index document.
   useEffect(() => {
     if (standalone || staticContent) return;
-    const currentPath = (initPathname || '').replace(/\/+$/, '') || '/';
-    const rootPath = docsRootPath().replace(/\/+$/, '') || '/';
-    if (currentPath !== rootPath) return;
-
-    const firstLeaf = (nodes: TreeType[]): Extract<TreeType, { type: 'leaf' }> | null => {
-      for (const node of nodes) {
-        if (node.type === 'leaf' && node.url) return node;
-        if (node.type === 'branch' && node.children?.length) {
-          const leaf = firstLeaf(node.children);
-          if (leaf) return leaf;
-        }
-      }
-      return null;
-    };
+    if (
+      ((initPathname || '').replace(SHARED_REGEX, '') || '/') !==
+      (docsRootPath().replace(SHARED_REGEX, '') || '/')
+    )
+      return;
     for (const section of tree) {
       if (section.type !== 'branch') continue;
-      const leaf = firstLeaf(section.children ?? []);
+      const leaf = (function firstLeaf(
+        nodes: TreeType[],
+      ): Extract<TreeType, { type: 'leaf' }> | null {
+        for (const node of nodes) {
+          if (node.type === 'leaf' && node.url) return node;
+          if (node.type === 'branch' && node.children?.length) {
+            const leaf = firstLeaf(node.children);
+            if (leaf) return leaf;
+          }
+        }
+        return null;
+      })(section.children ?? []);
       if (leaf?.url && leaf.url !== initPathname) {
         window.location.replace(leaf.url);
         return;
@@ -762,8 +2661,11 @@ export default function Scaffold({
         typeof (e as CustomEvent<{ isActive?: boolean; title?: string }>).detail.title !== 'string'
       )
         return;
-      const title = (e as CustomEvent<{ isActive?: boolean; title?: string }>).detail.title!;
-      setCurrDoc((p) => ({ ...p, title }));
+      setCurrDoc(
+        ((title: string) => (p: typeof currDoc) => ({ ...p, title }))(
+          (e as CustomEvent<{ isActive?: boolean; title?: string }>).detail.title!,
+        ),
+      );
     };
     document.addEventListener('docs:rename', rename);
     return () => {
@@ -823,15 +2725,14 @@ export default function Scaffold({
           previous.pathname || '',
           rawPathname ? rawPathname.split('?')[0] || '' : previous.pathname || '',
         );
-        const contributors = Array.isArray(detail.contributors)
-          ? detail.contributors.filter((value): value is string => typeof value === 'string')
-          : pathname === previous.pathname && Array.isArray(previous.contributors)
-            ? previous.contributors
-            : [];
         return {
           ...previous,
           ...detail,
-          contributors,
+          contributors: Array.isArray(detail.contributors)
+            ? detail.contributors.filter((value): value is string => typeof value === 'string')
+            : pathname === previous.pathname && Array.isArray(previous.contributors)
+              ? previous.contributors
+              : [],
           source:
             Object.prototype.hasOwnProperty.call(detail, 'source') &&
             typeof detail.source === 'string'
@@ -894,7 +2795,9 @@ export default function Scaffold({
       url.searchParams.delete('404');
       window.history.replaceState(null, '', url.toString());
       document.dispatchEvent(
-        new CustomEvent('docs:navigate', { detail: { url: cFallback, pathname: cFallback } }),
+        new CustomEvent('docs:navigate', {
+          detail: { url: cFallback, pathname: cFallback },
+        }),
       );
     };
     document.addEventListener('docs:error:redirect', handleErrRedirect);
@@ -980,7 +2883,189 @@ export default function Scaffold({
     transition: useTransitionState(),
   };
   const isLoading =
-    !hydrated || (!staticContent && (loadingState.isSaving || loadingState.transition !== 'idle'));
+    !shellState.hydrated ||
+    (!staticContent && (loadingState.isSaving || loadingState.transition !== 'idle'));
+  const tocEnabled = !standalone && hydrated && (staticContent || !loadingState.isSaving);
+  const tocHeadings = tocState.path === currDoc.pathname ? tocState.headings : [];
+  useEffect(() => {
+    const setTocStateIfChanged = (
+      update: typeof tocState | ((previous: typeof tocState) => typeof tocState),
+    ): void => {
+      setTocState((previous) => {
+        const next = typeof update === 'function' ? update(previous) : update;
+        const sameHeadings =
+          previous.headings.length === next.headings.length &&
+          previous.headings.every(
+            (heading, index) =>
+              heading.id === next.headings[index]?.id &&
+              heading.text === next.headings[index]?.text,
+          );
+        return previous.active === next.active && previous.path === next.path && sameHeadings
+          ? previous
+          : next;
+      });
+    };
+    if (!tocEnabled) {
+      setTocStateIfChanged({ active: null, headings: [], path: currDoc.pathname });
+      return;
+    }
+    const syncState = {
+      frame: 0,
+      tries: 0,
+      els: [] as HTMLElement[],
+      observedRoot: null as HTMLElement | null,
+      threshold: 0,
+    };
+    const surfaceObserver = new MutationObserver(() => syncLifecycle.sync());
+    const bodyObserver = new MutationObserver(() => {
+      syncLifecycle.sync();
+      if (syncState.observedRoot) bodyObserver.disconnect();
+    });
+    const syncLifecycle = {
+      syncActive: (): void => {
+        if (!syncState.els.length) {
+          setTocStateIfChanged((previous) => ({
+            active: null,
+            headings: previous.path === currDoc.pathname ? previous.headings : [],
+            path: currDoc.pathname,
+          }));
+          return;
+        }
+        syncState.threshold = window.innerWidth >= 768 ? 160 : 112;
+        for (let index = syncState.els.length - 1; index >= 0; index--) {
+          const element = syncState.els[index];
+          if (element && element.getBoundingClientRect().top <= syncState.threshold) {
+            setTocStateIfChanged((previous) => ({
+              active: element.id,
+              headings: previous.path === currDoc.pathname ? previous.headings : [],
+              path: currDoc.pathname,
+            }));
+            return;
+          }
+        }
+        setTocStateIfChanged((previous) => ({
+          active: syncState.els[0]?.id ?? null,
+          headings: previous.path === currDoc.pathname ? previous.headings : [],
+          path: currDoc.pathname,
+        }));
+      },
+      queueActive: (): void => {
+        cancelAnimationFrame(syncState.frame);
+        syncState.frame = requestAnimationFrame(syncLifecycle.syncActive);
+      },
+      sync: (): void => {
+        try {
+          const seen = new Set<string>();
+          let root: HTMLElement | null = null;
+          for (const element of document.querySelectorAll<HTMLElement>(
+            docsShellOf()?.dataset.docsMode === 'view'
+              ? '[data-docs-view-root], [data-docs-body-content]'
+              : '[data-docs-body-editor], [data-docs-body-content]',
+          )) {
+            const style = window.getComputedStyle(element);
+            if (
+              style.display !== 'none' &&
+              style.visibility !== 'hidden' &&
+              element.getClientRects().length > 0
+            ) {
+              root = element;
+              break;
+            }
+          }
+          if (!root) return;
+          if (root !== syncState.observedRoot) {
+            surfaceObserver.disconnect();
+            surfaceObserver.observe(root, {
+              childList: true,
+              characterData: true,
+              subtree: true,
+            });
+            syncState.observedRoot = root;
+          }
+          const lowerTitle = currDoc.title ? currDoc.title.toLowerCase() : null;
+          const validEls: HTMLElement[] = [];
+          const headings: { id: string; text: string }[] = [];
+          for (const element of Array.from(root.querySelectorAll<HTMLElement>('h2') ?? [])) {
+            if (
+              element.closest('[data-placeholder], [data-tabs-placeholder]') ||
+              element.closest('[hidden]')
+            )
+              continue;
+            let text = '';
+            for (const child of Array.from(element.childNodes)) {
+              if (child instanceof Element && child.classList.contains('heading-anchor-icon'))
+                continue;
+              text += child.textContent || '';
+            }
+            text = text.trim();
+            if (lowerTitle && text.toLowerCase() === lowerTitle) continue;
+            const id = element.id || (element.id = toHeadingId(text));
+            if (!id || seen.has(id)) continue;
+            seen.add(id);
+            validEls.push(element);
+            headings.push({ id, text });
+          }
+          syncState.els = validEls;
+          if (!syncState.els.length) {
+            setTocStateIfChanged({ active: null, headings: [], path: currDoc.pathname });
+            return;
+          }
+          setTocStateIfChanged((previous) => ({
+            active: previous.path === currDoc.pathname ? previous.active : null,
+            headings,
+            path: currDoc.pathname,
+          }));
+          syncLifecycle.queueActive();
+        } catch {
+          /* ignore */
+        }
+      },
+      pump: (): void => {
+        syncLifecycle.sync();
+        if (syncState.els.length || syncState.tries++ >= 60) return;
+        syncState.frame = requestAnimationFrame(syncLifecycle.pump);
+      },
+      navigate: (event: MouseEvent): void => {
+        const link =
+          event.target instanceof Element
+            ? event.target.closest<HTMLElement>('[data-docs-toc-heading]')
+            : null;
+        const id = link?.dataset.docsTocId;
+        const text = link?.dataset.docsTocHeading;
+        if (!id || !text) return;
+        event.preventDefault();
+        navigateHeading(id, text);
+      },
+    };
+    syncLifecycle.pump();
+    if (!syncState.observedRoot)
+      bodyObserver.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('click', syncLifecycle.navigate, true);
+    document.addEventListener('docs:surface-ready', syncLifecycle.sync);
+    document.addEventListener('astro:after-swap', syncLifecycle.sync);
+    window.addEventListener('hashchange', syncLifecycle.sync);
+    window.addEventListener('resize', syncLifecycle.queueActive);
+    window.addEventListener('scroll', syncLifecycle.queueActive, { passive: true });
+    return () => {
+      window.removeEventListener('click', syncLifecycle.navigate, true);
+      document.removeEventListener('docs:surface-ready', syncLifecycle.sync);
+      document.removeEventListener('astro:after-swap', syncLifecycle.sync);
+      window.removeEventListener('hashchange', syncLifecycle.sync);
+      window.removeEventListener('resize', syncLifecycle.queueActive);
+      window.removeEventListener('scroll', syncLifecycle.queueActive);
+      bodyObserver.disconnect();
+      surfaceObserver.disconnect();
+      cancelAnimationFrame(syncState.frame);
+    };
+  }, [tocEnabled, currDoc.pathname, currDoc.title]);
+  useEffect(() => {
+    if (!tocEnabled) return;
+    if (tocState.path !== currDoc.pathname) return;
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+    const heading = tocState.headings.find((i) => i.id === id);
+    if (heading) navigateHeading(id, heading.text);
+  }, [tocEnabled, currDoc.pathname, tocState.path, tocState.headings]);
   useEffect(() => {
     setHydrated(true);
     if (!writable && stored === 'edit') $mode.set('view');
@@ -1034,7 +3119,7 @@ export default function Scaffold({
   return (
     <SidebarProvider
       className="docs-workspace font-docs"
-      open={hydrated ? navigationState.open : true}
+      open={shellState.hydrated ? shellState.sidebarOpen : true}
       onOpenChange={(n) => {
         $sidebar.set(n);
       }}
@@ -1087,7 +3172,9 @@ export default function Scaffold({
                     editable={writable && a !== 'view'}
                     title={currDoc.title}
                     full={full}
-                    {...(currDoc.description !== undefined && { description: currDoc.description })}
+                    {...(currDoc.description !== undefined && {
+                      description: currDoc.description,
+                    })}
                     contributors={currDoc.contributors}
                     updatedAt={currDoc.updatedAt}
                   />
@@ -1154,7 +3241,36 @@ export default function Scaffold({
                               </div>
                             </div>
                             <aside className="order-1 max-h-[35vh] min-w-0 overflow-y-auto overscroll-contain rounded-lg border border-primary-6 bg-primary-2/50 p-3 xl:sticky xl:top-24 xl:order-2 xl:max-h-[calc(100svh-9rem)] xl:self-start xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0">
-                              <Toc title={currDoc.title} />
+                              {tocHeadings.length > 0 && (
+                                <nav aria-label="On this page" className="space-y-1">
+                                  <p className="m-0 px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-primary-11">
+                                    On this page
+                                  </p>
+                                  <ol className="m-0 flex list-none flex-col gap-y-0 p-0">
+                                    {tocHeadings.map((heading) => (
+                                      <li key={heading.id} className="h-fit py-0">
+                                        <ButtonLink
+                                          data-docs-toc-id={heading.id}
+                                          data-docs-toc-heading={heading.text}
+                                          href={`#${heading.id}`}
+                                          variant="ghost"
+                                          size="xs"
+                                          aria-label={`Jump to ${heading.text}`}
+                                          className={cn(
+                                            'relative h-fit min-h-0 w-full justify-start gap-0.5 truncate py-0 pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
+                                            tocState.path === currDoc.pathname &&
+                                              tocState.active === heading.id
+                                              ? 'text-primary-12 before:bg-current'
+                                              : 'text-primary-11 before:bg-primary-11 before:opacity-0 hover:before:opacity-100',
+                                          )}
+                                        >
+                                          {heading.text}
+                                        </ButtonLink>
+                                      </li>
+                                    ))}
+                                  </ol>
+                                </nav>
+                              )}
                             </aside>
                           </div>
                         </div>
@@ -1221,4 +3337,4 @@ export default function Scaffold({
       </SidebarInset>
     </SidebarProvider>
   );
-}
+});

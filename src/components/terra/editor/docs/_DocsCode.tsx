@@ -128,7 +128,12 @@ function CodeEditor({
             },
           },
         ]
-      : [{ text: 'Convert to received value', onSelect: () => setEndpointDialog('receive') }];
+      : [
+          {
+            text: 'Convert to received value',
+            onSelect: () => setEndpointDialog('receive'),
+          },
+        ];
     return () => {
       delete block.__blockActions;
     };

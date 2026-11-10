@@ -18,6 +18,7 @@ jobs:
         with:
           node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check
 
@@ -30,6 +31,7 @@ jobs:
         with:
           node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vite build --config config/vite.config.ts
 
@@ -42,8 +44,9 @@ jobs:
         with:
           node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run build && pnpm exec docs build
+      - run: pnpm run docs
 
   check:
     if: github.event_name == 'pull_request'
@@ -57,8 +60,11 @@ jobs:
         with:
           node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run build
+      - run: pnpm exec astro build --config config/astro.config.mjs
       - uses: Terra-Symposium/standards/packages/testing@3d782b9dfc4cc5b421ccbe395d65aacec9d8956d
         with:
           manifest: config/terra-tests.json

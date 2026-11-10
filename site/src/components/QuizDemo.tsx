@@ -1,46 +1,7 @@
 import { DocsSiteIsland } from './DocsSiteIsland.js';
-import type { DocsSection } from '../../../dist/lib/lib/workspace-types.js';
-import type { DocsQuizConfig, DocsQuizGenerationInput } from '../../../dist/lib/components/quiz.js';
 import { quizDemoLeaf, quizDemoResponse } from '../../../src/components/quiz-demo-fixture.js';
 
 const markdown = quizDemoLeaf.markdown;
-const visibleLeafText = markdown.split('\n\n', 1)[0] ?? markdown;
-
-const sections: DocsSection[] = [
-  {
-    id: 'course',
-    title: 'Course',
-    groups: [
-      {
-        id: 'lessons',
-        title: 'Lessons',
-        leaves: [
-          {
-            id: quizDemoLeaf.id,
-            title: quizDemoLeaf.title,
-            href: '/quiz-demo/',
-            description: 'The routing leaf shared with the quiz browser tests.',
-          },
-        ],
-      },
-    ],
-  },
-];
-
-function genDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
-  return Promise.resolve({
-    title: `${quizDemoResponse.title} · sample`,
-    questions: Array.from({ length: input.count }, (_, i) => {
-      const type = input.types[i % input.types.length];
-      const question =
-        quizDemoResponse.questions.find((candidate) => candidate.type === type) ??
-        quizDemoResponse.questions[0];
-      return { ...question };
-    }),
-  });
-}
-
-const quiz: DocsQuizConfig = { toolbar: true, generate: genDemoQuiz };
 
 /** A package-safe interactive demo for the host-configurable leaf quiz flow. */
 export function QuizDemo() {
@@ -49,13 +10,43 @@ export function QuizDemo() {
       title="Docs quiz demo"
       description="The published Docs workspace with sample leaf quiz generation."
       hue={145}
-      sections={sections}
+      sections={[
+        {
+          id: 'course',
+          title: 'Course',
+          groups: [
+            {
+              id: 'lessons',
+              title: 'Lessons',
+              leaves: [
+                {
+                  id: quizDemoLeaf.id,
+                  title: quizDemoLeaf.title,
+                  href: '/quiz-demo/',
+                  description: 'The routing leaf shared with the quiz browser tests.',
+                },
+              ],
+            },
+          ],
+        },
+      ]}
       currentPath="/quiz-demo/"
       rootPath="/quiz-demo/"
       staticContent
       markdown={markdown}
-      renderContent={<p className="leading-7">{visibleLeafText}</p>}
-      quiz={quiz}
+      renderContent={<p className="leading-7">{markdown.split('\n\n', 1)[0] ?? markdown}</p>}
+      quiz={{
+        toolbar: true,
+        generate: (input) =>
+          Promise.resolve({
+            title: `${quizDemoResponse.title} · sample`,
+            questions: Array.from({ length: input.count }, (_, i) => ({
+              ...(quizDemoResponse.questions.find(
+                (candidate) => candidate.type === input.types[i % input.types.length],
+              ) ?? quizDemoResponse.questions[0]),
+            })),
+          }),
+      }}
       searchBase="/"
     />
   );

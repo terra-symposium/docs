@@ -7,16 +7,19 @@ import type {
   DocsHostTreeNode,
 } from '../lib/host.js';
 import type { DocVer } from '../lib/terra/runtime/types.js';
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
+/*//////////////////////////////////////////////////
+REGEX
+//////////////////////////////////////////////////*/
+const MD_MDX_I_REGEX = /\.(?:md|mdx)$/i;
+const G_REGEX = () => /^\/+|\/+$/g;
 
-export const WORKSPACE_DEMO_STORAGE_KEY = 'docs-workspace-demo-v1';
+const WORKSPACE_DEMO_STORAGE_KEY = 'docs-workspace-demo-v1';
 export const WORKSPACE_DEMO_PATH = '/workspace-demo/';
 
-export type WorkspaceDemoAsset = DocsHostAttachment & {
-  bytes: number[];
-  docId: string;
-};
+type WorkspaceDemoAsset = DocsHostAttachment & { bytes: number[]; docId: string };
 
-export type WorkspaceDemoDocument = {
+type WorkspaceDemoDocument = {
   id: string;
   path: string;
   pathname: string;
@@ -37,128 +40,131 @@ export type WorkspaceDemoState = {
   assets: Record<string, WorkspaceDemoAsset>;
 };
 
-const initialContent: unknown[] = [
-  {
-    _key: 'intro',
-    _type: 'block',
-    style: 'normal',
-    markDefs: [],
-    children: [
-      {
-        _key: 'intro-text',
-        _type: 'span',
-        marks: [],
-        text: 'Salesphere helps sales professionals choose a useful next step in a customer relationship and understand why it matters. This site connects that product intent to the current implementation.',
-      },
-    ],
-  },
-  {
-    _key: 'start-heading',
-    _type: 'block',
-    style: 'h2',
-    markDefs: [],
-    children: [{ _key: 'heading-text', _type: 'span', marks: [], text: 'Start with the product' }],
-  },
-  {
-    _key: 'product-copy',
-    _type: 'block',
-    style: 'normal',
-    markDefs: [
-      { _key: 'purpose', _type: 'link', href: '/product/purpose/' },
-      { _key: 'map', _type: 'link', href: '/product/structure/' },
-    ],
-    children: [
-      { _key: 'read', _type: 'span', marks: [], text: 'Read ' },
-      { _key: 'purpose-text', _type: 'span', marks: ['purpose'], text: 'Salesphere’s purpose' },
-      { _key: 'then', _type: 'span', marks: [], text: ' for the larger aim, then use the ' },
-      { _key: 'map-text', _type: 'span', marks: ['map'], text: 'product map' },
-      {
-        _key: 'rest',
-        _type: 'span',
-        marks: [],
-        text: ' to see how principles, intelligence, work surfaces, reflection, and platform capabilities fit together.',
-      },
-    ],
-  },
-  {
-    _key: 'implementation-heading',
-    _type: 'block',
-    style: 'h2',
-    markDefs: [],
-    children: [
-      { _key: 'implementation-title', _type: 'span', marks: [], text: 'Find the implementation' },
-    ],
-  },
-  {
-    _key: 'runtime',
-    _type: 'block',
-    style: 'normal',
-    markDefs: [],
-    children: [
-      {
-        _key: 'runtime-copy',
-        _type: 'span',
-        marks: [],
-        text: 'Runtime system map follows a request through the Astro app.',
-      },
-    ],
-  },
-];
-
-const initialTree: DocsHostTreeNode[] = [
-  {
-    type: 'branch',
-    origName: 'overview',
-    title: 'Overview',
-    path: 'overview',
-    hue: 145,
-    children: [
-      {
-        type: 'branch',
-        origName: 'start-here',
-        title: 'Start here',
-        path: 'overview/start-here',
-        children: [
-          {
-            type: 'leaf',
-            origName: 'salesphere',
-            title: 'Salesphere',
-            path: 'overview/start-here/salesphere.mdx',
-          },
-          {
-            type: 'leaf',
-            origName: 'runtime-map',
-            title: 'Runtime map',
-            path: 'overview/start-here/runtime-map.mdx',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    type: 'branch',
-    origName: 'configure',
-    title: 'Configure',
-    path: 'configure',
-    hue: 210,
-    children: [
-      {
-        type: 'branch',
-        origName: 'providers',
-        title: 'Storage providers',
-        path: 'configure/providers',
-        children: [
-          {
-            type: 'leaf',
-            origName: 'local-files',
-            title: 'Local files',
-            path: 'configure/providers/local-files.mdx',
-          },
-        ],
-      },
-    ],
-  },
-];
+const initialWorkspaceDemoState: { content: unknown[]; tree: DocsHostTreeNode[] } = {
+  content: [
+    {
+      _key: 'intro',
+      _type: 'block',
+      style: 'normal',
+      markDefs: [],
+      children: [
+        {
+          _key: 'intro-text',
+          _type: 'span',
+          marks: [],
+          text: 'Salesphere helps sales professionals choose a useful next step in a customer relationship and understand why it matters. This site connects that product intent to the current implementation.',
+        },
+      ],
+    },
+    {
+      _key: 'start-heading',
+      _type: 'block',
+      style: 'h2',
+      markDefs: [],
+      children: [
+        { _key: 'heading-text', _type: 'span', marks: [], text: 'Start with the product' },
+      ],
+    },
+    {
+      _key: 'product-copy',
+      _type: 'block',
+      style: 'normal',
+      markDefs: [
+        { _key: 'purpose', _type: 'link', href: '/product/purpose/' },
+        { _key: 'map', _type: 'link', href: '/product/structure/' },
+      ],
+      children: [
+        { _key: 'read', _type: 'span', marks: [], text: 'Read ' },
+        { _key: 'purpose-text', _type: 'span', marks: ['purpose'], text: 'Salesphere’s purpose' },
+        { _key: 'then', _type: 'span', marks: [], text: ' for the larger aim, then use the ' },
+        { _key: 'map-text', _type: 'span', marks: ['map'], text: 'product map' },
+        {
+          _key: 'rest',
+          _type: 'span',
+          marks: [],
+          text: ' to see how principles, intelligence, work surfaces, reflection, and platform capabilities fit together.',
+        },
+      ],
+    },
+    {
+      _key: 'implementation-heading',
+      _type: 'block',
+      style: 'h2',
+      markDefs: [],
+      children: [
+        { _key: 'implementation-title', _type: 'span', marks: [], text: 'Find the implementation' },
+      ],
+    },
+    {
+      _key: 'runtime',
+      _type: 'block',
+      style: 'normal',
+      markDefs: [],
+      children: [
+        {
+          _key: 'runtime-copy',
+          _type: 'span',
+          marks: [],
+          text: 'Runtime system map follows a request through the Astro app.',
+        },
+      ],
+    },
+  ],
+  tree: [
+    {
+      type: 'branch',
+      origName: 'overview',
+      title: 'Overview',
+      path: 'overview',
+      hue: 145,
+      children: [
+        {
+          type: 'branch',
+          origName: 'start-here',
+          title: 'Start here',
+          path: 'overview/start-here',
+          children: [
+            {
+              type: 'leaf',
+              origName: 'salesphere',
+              title: 'Salesphere',
+              path: 'overview/start-here/salesphere.mdx',
+            },
+            {
+              type: 'leaf',
+              origName: 'runtime-map',
+              title: 'Runtime map',
+              path: 'overview/start-here/runtime-map.mdx',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      type: 'branch',
+      origName: 'configure',
+      title: 'Configure',
+      path: 'configure',
+      hue: 210,
+      children: [
+        {
+          type: 'branch',
+          origName: 'providers',
+          title: 'Storage providers',
+          path: 'configure/providers',
+          children: [
+            {
+              type: 'leaf',
+              origName: 'local-files',
+              title: 'Local files',
+              path: 'configure/providers/local-files.mdx',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
 
 function makeDocument(
   id: string,
@@ -188,7 +194,7 @@ export function createWorkspaceDemoSeed(): WorkspaceDemoState {
     'overview/start-here/salesphere.mdx',
     'Salesphere',
     '',
-    initialContent,
+    initialWorkspaceDemoState.content,
   );
   salesphere.attachments.push({
     id: 'overview-brief',
@@ -199,7 +205,7 @@ export function createWorkspaceDemoSeed(): WorkspaceDemoState {
   });
   return {
     schema: 1,
-    tree: initialTree,
+    tree: initialWorkspaceDemoState.tree,
     documents: {
       salesphere,
       'runtime-map': makeDocument(
@@ -261,13 +267,13 @@ export function readWorkspaceDemoState(): WorkspaceDemoState {
   }
 }
 
-export function writeWorkspaceDemoState(state: WorkspaceDemoState): void {
+function writeWorkspaceDemoState(state: WorkspaceDemoState): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(WORKSPACE_DEMO_STORAGE_KEY, JSON.stringify(state));
   window.dispatchEvent(new CustomEvent('docs-fixture-updated'));
 }
 
-export function buildWorkspaceRoute(sectionId?: string, groupId?: string, leafId?: string): string {
+function buildWorkspaceRoute(sectionId?: string, groupId?: string, leafId?: string): string {
   if (!sectionId) return WORKSPACE_DEMO_PATH;
   const query = new URLSearchParams({ section: sectionId });
   if (groupId) query.set('group', groupId);
@@ -281,39 +287,11 @@ function findNode(
   ancestors: DocsHostTreeNode[] = [],
 ): { node: DocsHostTreeNode; ancestors: DocsHostTreeNode[] } | undefined {
   for (const node of nodes) {
-    const foundAncestors = [...ancestors, node];
     if (node.origName === id || node.path === id) return { node, ancestors };
-    const child = node.children ? findNode(node.children, id, foundAncestors) : undefined;
+    const child = node.children ? findNode(node.children, id, [...ancestors, node]) : undefined;
     if (child) return child;
   }
   return undefined;
-}
-
-function withRoutes(
-  nodes: DocsHostTreeNode[],
-  readOnly: boolean,
-  sectionId?: string,
-  groupId?: string,
-): DocsHostTreeNode[] {
-  return nodes.map((node) => {
-    if (node.type === 'branch') {
-      const nSection = sectionId ?? node.origName;
-      const nGroup = sectionId ? node.origName : undefined;
-      return {
-        ...node,
-        permission: readOnly ? 'read' : 'write',
-        url: sectionId
-          ? buildWorkspaceRoute(nSection, node.origName)
-          : buildWorkspaceRoute(nSection),
-        children: withRoutes(node.children ?? [], readOnly, nSection, nGroup),
-      };
-    }
-    return {
-      ...node,
-      permission: readOnly ? 'read' : 'write',
-      url: buildWorkspaceRoute(sectionId, groupId, node.origName),
-    };
-  });
 }
 
 function findDocument(
@@ -321,18 +299,15 @@ function findDocument(
   value: unknown,
 ): WorkspaceDemoDocument | undefined {
   if (typeof value !== 'string' || !value) return undefined;
-  const c = value.split(/[?#]/, 1)[0]?.replace(/^\/+|\/+$/g, '') ?? value;
-  const leafName =
-    c
-      .split('/')
-      .at(-1)
-      ?.replace(/\.(?:md|mdx)$/i, '') ?? c;
+  const c =
+    value.split(TerraQualityRegex.REGEX_PATTERN_REGEX_4(), 1)[0]?.replace(G_REGEX(), '') ?? value;
+  const leafName = c.split('/').at(-1)?.replace(MD_MDX_I_REGEX, '') ?? c;
   return Object.values(state.documents).find(
     (document) =>
       document.id === value ||
       document.path === value ||
       document.pathname === value ||
-      document.path.replace(/\.(?:md|mdx)$/i, '') === c ||
+      document.path.replace(MD_MDX_I_REGEX, '') === c ||
       document.id === leafName ||
       document.path.endsWith(`/${leafName}.mdx`),
   );
@@ -343,7 +318,7 @@ function slug(value: string): string {
     value
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
+      .replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-')
       .replace(/^-+|-+$/g, '') || 'untitled'
   );
 }
@@ -358,45 +333,48 @@ function uniqueId(state: WorkspaceDemoState, proposed: string): string {
   return candidate;
 }
 
-function withCurrentRoutes(state: WorkspaceDemoState, readOnly: boolean): DocsHostTreeNode[] {
-  return withRoutes(state.tree, readOnly);
+function withRoutes(
+  nodes: DocsHostTreeNode[],
+  readOnly: boolean,
+  sectionId?: string,
+  groupId?: string,
+): DocsHostTreeNode[] {
+  return nodes.map((node) => {
+    if (node.type === 'branch') {
+      const nSection = sectionId ?? node.origName;
+      return {
+        ...node,
+        permission: readOnly ? 'read' : 'write',
+        url: sectionId
+          ? buildWorkspaceRoute(nSection, node.origName)
+          : buildWorkspaceRoute(nSection),
+        children: withRoutes(
+          node.children ?? [],
+          readOnly,
+          nSection,
+          sectionId ? node.origName : undefined,
+        ),
+      };
+    }
+    return {
+      ...node,
+      permission: readOnly ? 'read' : 'write',
+      url: buildWorkspaceRoute(sectionId, groupId, node.origName),
+    };
+  });
 }
 
 function sectionForLeaf(
   state: WorkspaceDemoState,
   leafId: string,
 ): { sectionId: string; groupId?: string } {
-  const match = findNode(state.tree, leafId);
-  const branches = (match?.ancestors ?? []).filter((node) => node.type === 'branch');
+  const branches = (findNode(state.tree, leafId)?.ancestors ?? []).filter(
+    (node) => node.type === 'branch',
+  );
   return {
     sectionId: branches[0]?.origName ?? state.tree[0]?.origName ?? 'overview',
     ...(branches[1] ? { groupId: branches[1].origName } : {}),
   };
-}
-
-function addLeafToTree(
-  state: WorkspaceDemoState,
-  parentId: string | undefined,
-  document: WorkspaceDemoDocument,
-): void {
-  const node: DocsHostTreeNode = {
-    type: 'leaf',
-    origName: document.id,
-    title: document.title,
-    description: document.description,
-    path: document.path,
-    permission: 'write',
-  };
-  const parent = parentId ? findNode(state.tree, parentId)?.node : undefined;
-  if (parent?.type === 'branch') {
-    parent.children ??= [];
-    if (!parent.children.some((child) => child.type === 'leaf' && child.origName === document.id))
-      parent.children.push(node);
-  } else {
-    const section = state.tree[0];
-    const group = section?.children?.find((child) => child.type === 'branch');
-    if (group) group.children = [...(group.children ?? []), node];
-  }
 }
 
 function removeNodeById(nodes: DocsHostTreeNode[], id: string): boolean {
@@ -428,48 +406,6 @@ function updateNodeById(
   return false;
 }
 
-function removeDocumentsForNode(state: WorkspaceDemoState, node: DocsHostTreeNode): void {
-  if (node.type === 'leaf') {
-    delete state.documents[node.origName];
-    return;
-  }
-  for (const child of node.children ?? []) removeDocumentsForNode(state, child);
-}
-
-function reorderChildren(state: WorkspaceDemoState, input: Record<string, unknown>): void {
-  const parentId = typeof input.id === 'string' ? input.id : '';
-  const field = input.field === 'leaves' ? 'leaf' : 'branch';
-  const items = Array.isArray(input.items) ? input.items : [];
-  const references = items
-    .map((i) =>
-      i && typeof i === 'object' && '_ref' in i && typeof i._ref === 'string' ? i._ref : '',
-    )
-    .filter(Boolean);
-  const parent = findNode(state.tree, parentId)?.node;
-  if (parent?.type !== 'branch') return;
-  const reorderable = parent.children?.filter((node) => node.type === field) ?? [];
-  const remainder = parent.children?.filter((node) => node.type !== field) ?? [];
-  const ordered = references
-    .map((reference) =>
-      reorderable.find((node) => node.origName === reference || node.path === reference),
-    )
-    .filter((node): node is DocsHostTreeNode => Boolean(node));
-  const orderedIds = new Set(ordered.map((node) => node.origName));
-  parent.children = [
-    ...ordered,
-    ...reorderable.filter((node) => !orderedIds.has(node.origName)),
-    ...remainder,
-  ];
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-}
-
-function response<T>(data: unknown): DocsActionResult<T> {
-  return { data: data as T };
-}
-
 export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
   return {
     capabilities: {
@@ -497,19 +433,17 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         ? findNode(state.tree, requestedSection)
         : undefined;
       const requestedGroupMatch = requestedGroup ? findNode(state.tree, requestedGroup) : undefined;
-      const requestedBranch = requestedGroupMatch?.node ?? requestedSectionMatch?.node;
-      const firstLeaf = (node: DocsHostTreeNode | undefined): WorkspaceDemoDocument | undefined => {
-        if (!node) return undefined;
-        if (node.type === 'leaf') return state.documents[node.origName];
-        for (const child of node.children ?? []) {
-          const found = firstLeaf(child);
-          if (found) return found;
-        }
-        return undefined;
-      };
       const document =
         requestedDocument ??
-        firstLeaf(requestedBranch) ??
+        (function firstLeaf(node: DocsHostTreeNode | undefined): WorkspaceDemoDocument | undefined {
+          if (!node) return undefined;
+          if (node.type === 'leaf') return state.documents[node.origName];
+          for (const child of node.children ?? []) {
+            const found = firstLeaf(child);
+            if (found) return found;
+          }
+          return undefined;
+        })(requestedGroupMatch?.node ?? requestedSectionMatch?.node) ??
         state.documents.salesphere ??
         Object.values(state.documents)[0];
       const position = document ? sectionForLeaf(state, document.id) : { sectionId: 'overview' };
@@ -538,13 +472,10 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
     buildRoute: buildWorkspaceRoute,
     routePath(value) {
       const state = readWorkspaceDemoState();
-      const requested = value.replace(/^\/+|\/+$/g, '');
+      const requested = value.replace(G_REGEX(), '');
       const document =
         findDocument(state, requested) ?? findDocument(state, requested.split('/').at(-1));
-      if (document) {
-        const { sectionId, groupId } = sectionForLeaf(state, document.id);
-        return buildWorkspaceRoute(sectionId, groupId, document.id);
-      }
+      if (document) return routeForWorkspaceDocument(state, document);
       const branch = findNode(state.tree, requested)?.node;
       if (branch?.type === 'branch') {
         const parent =
@@ -568,28 +499,28 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           __docsActionCalls?: Array<{ operation: string; input?: unknown }>;
         };
         browserWindow.__docsActionCalls ??= [];
-        browserWindow.__docsActionCalls.push({ operation: op, input: clone(input) });
+        browserWindow.__docsActionCalls.push({
+          operation: op,
+          input: clone(input),
+        });
       }
 
-      const request = asRecord(input);
+      const request = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
       const state = readWorkspaceDemoState();
       let data: unknown = null;
       let changed = false;
 
       if (op === 'read.doc.list') {
-        data = request.type === 'nav' ? withCurrentRoutes(state, readOnly) : [];
+        data = request.type === 'nav' ? withRoutes(state.tree, readOnly) : [];
       } else if (op === 'read.doc.get') {
         data = clone(findDocument(state, request.path ?? request.id) ?? null);
       } else if (op === 'read.doc.attachments') {
-        const document = findDocument(state, request.path);
-        data = clone(document?.attachments ?? []);
+        data = clone(findDocument(state, request.path)?.attachments ?? []);
       } else if (op === 'read.asset.get') {
-        const asset = state.assets[String(request.path ?? '')];
-        data = new Uint8Array(asset?.bytes ?? []).buffer;
+        data = new Uint8Array(state.assets[String(request.path ?? '')]?.bytes ?? []).buffer;
       } else if (op === 'read.doc.resolvePath') {
         const title = typeof request.title === 'string' ? request.title : 'Untitled';
-        const parent =
-          typeof request.path === 'string' ? request.path.replace(/^\/+|\/+$/g, '') : '';
+        const parent = typeof request.path === 'string' ? request.path.replace(G_REGEX(), '') : '';
         const base = parent ? `${parent}/` : '';
         let path = `${base}${slug(title)}.mdx`;
         let suffix = 2;
@@ -623,15 +554,6 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           path: `${sectionPath}/general`,
           children: [],
         };
-        const section: DocsHostTreeNode = {
-          type: 'branch',
-          origName: sectionId,
-          title,
-          path: sectionPath,
-          hue: 165,
-          firstLeafUrl: buildWorkspaceRoute(sectionId, groupId, leafId),
-          children: [group],
-        };
         const newDocument = makeDocument(
           leafId,
           `${sectionPath}/general/untitled.mdx`,
@@ -640,7 +562,15 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           [],
         );
         newDocument.pathname = buildWorkspaceRoute(sectionId, groupId, leafId);
-        state.tree.push(section);
+        state.tree.push({
+          type: 'branch',
+          origName: sectionId,
+          title,
+          path: sectionPath,
+          hue: 165,
+          firstLeafUrl: buildWorkspaceRoute(sectionId, groupId, leafId),
+          children: [group],
+        });
         state.documents[leafId] = newDocument;
         group.children?.push({
           type: 'leaf',
@@ -682,11 +612,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       } else if (op === 'write.doc.editor' || op === 'write.doc.save') {
         const path = String(request.path ?? 'overview/start-here/untitled.mdx');
         const existing = findDocument(state, path);
-        const rawId =
-          path
-            .split('/')
-            .at(-1)
-            ?.replace(/\.(?:md|mdx)$/i, '') ?? 'untitled';
+        const rawId = path.split('/').at(-1)?.replace(MD_MDX_I_REGEX, '') ?? 'untitled';
         const id = existing?.id ?? uniqueId(state, rawId);
         const source = typeof request.source === 'string' ? request.source : undefined;
         const content = Array.isArray(request.content)
@@ -716,11 +642,35 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           source: source ?? docsValueToMarkdown(content as never),
           updatedAt: new Date().toISOString(),
         };
-        const position = existing ? sectionForLeaf(state, existing.id) : undefined;
-        const newPosition = position ?? { sectionId: 'overview', groupId: 'start-here' };
+        const newPosition = existing
+          ? sectionForLeaf(state, existing.id)
+          : { sectionId: 'overview', groupId: 'start-here' };
         newDocument.pathname = buildWorkspaceRoute(newPosition.sectionId, newPosition.groupId, id);
         state.documents[id] = newDocument;
-        if (!existing) addLeafToTree(state, String(request.parentId ?? 'start-here'), newDocument);
+        if (!existing) {
+          const node: DocsHostTreeNode = {
+            type: 'leaf',
+            origName: newDocument.id,
+            title: newDocument.title,
+            description: newDocument.description,
+            path: newDocument.path,
+            permission: 'write',
+          };
+          const parent = findNode(state.tree, String(request.parentId ?? 'start-here'))?.node;
+          if (parent?.type === 'branch') {
+            parent.children ??= [];
+            if (
+              !parent.children.some(
+                (child) => child.type === 'leaf' && child.origName === newDocument.id,
+              )
+            ) {
+              parent.children.push(node);
+            }
+          } else {
+            const group = state.tree[0]?.children?.find((child) => child.type === 'branch');
+            if (group) group.children = [...(group.children ?? []), node];
+          }
+        }
         updateNodeById(state.tree, existing?.id ?? id, (node) => ({
           ...node,
           origName: id,
@@ -741,11 +691,37 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         updateNodeById(state.tree, id, (node) => ({ ...node, title }));
         changed = true;
       } else if (op === 'write.doc.hue') {
-        const id = String(request.id ?? '');
-        updateNodeById(state.tree, id, (node) => ({ ...node, hue: Number(request.hue) }));
+        updateNodeById(state.tree, String(request.id ?? ''), (node) => ({
+          ...node,
+          hue: Number(request.hue),
+        }));
         changed = true;
       } else if (op === 'write.doc.reorder') {
-        reorderChildren(state, request);
+        const field = request.field === 'leaves' ? 'leaf' : 'branch';
+        const references = (Array.isArray(request.items) ? request.items : [])
+          .map((i) =>
+            i && typeof i === 'object' && '_ref' in i && typeof i._ref === 'string' ? i._ref : '',
+          )
+          .filter(Boolean);
+        const parent = findNode(state.tree, typeof request.id === 'string' ? request.id : '')?.node;
+        if (parent?.type === 'branch') {
+          const reorderable = parent.children?.filter((node) => node.type === field) ?? [];
+          const ordered: DocsHostTreeNode[] = [];
+          for (let index = 0; index < references.length; index += 1) {
+            const reference = references[index];
+            const node = reorderable.find(
+              (candidate) => candidate.origName === reference || candidate.path === reference,
+            );
+            if (node) ordered.push(node);
+          }
+          parent.children = [
+            ...ordered,
+            ...reorderable.filter(
+              (node) => !ordered.some((orderedNode) => orderedNode.origName === node.origName),
+            ),
+            ...(parent.children?.filter((node) => node.type !== field) ?? []),
+          ];
+        }
         changed = true;
       } else if (op === 'write.doc.retargetSources') {
         const target = findDocument(state, request.targetId);
@@ -753,7 +729,9 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           ? request.sourceIds.filter((value): value is string => typeof value === 'string')
           : [];
         if (!target || sourceIds.length === 0) {
-          return { error: new Error('The merge target or source pages could not be found.') };
+          return {
+            error: new Error('The merge target or source pages could not be found.'),
+          };
         }
 
         const attachmentKey = (attachment: DocsHostAttachment): string =>
@@ -792,7 +770,13 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
             if (routeNodeId) found = findNode(state.tree, routeNodeId);
           }
           if (found) {
-            removeDocumentsForNode(state, found.node);
+            (function removeDocumentsForNode(node: DocsHostTreeNode): void {
+              if (node.type === 'leaf') {
+                delete state.documents[node.origName];
+                return;
+              }
+              for (const child of node.children ?? []) removeDocumentsForNode(child);
+            })(found.node);
             removeNodeById(state.tree, found.node.origName);
           }
         }
@@ -804,11 +788,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         const document = findDocument(state, currentPath);
         if (document) {
           const priorId = document.id;
-          const nId =
-            nPath
-              .split('/')
-              .at(-1)
-              ?.replace(/\.(?:md|mdx)$/i, '') ?? priorId;
+          const nId = nPath.split('/').at(-1)?.replace(MD_MDX_I_REGEX, '') ?? priorId;
           delete state.documents[priorId];
           document.id = nId;
           document.path = nPath;
@@ -838,8 +818,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         if (file) {
           const fileName = uploaded instanceof File ? uploaded.name : 'attachment.bin';
           const id = `attachment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-          const sName = fileName.replace(/[^a-zA-Z0-9._-]+/g, '-');
-          const path = `/assets/${id}/${sName}`;
+          const path = `/assets/${id}/${fileName.replace(/[^a-zA-Z0-9._-]+/g, '-')}`;
           const doc = findDocument(state, String(form?.get('path') ?? ''));
           const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
           const asset: WorkspaceDemoAsset = {
@@ -852,15 +831,16 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
             docId: doc?.id ?? 'salesphere',
           };
           state.assets[path] = asset;
-          const attachment: DocsHostAttachment = {
-            id,
-            name: fileName,
-            path,
-            type: asset.type || 'application/octet-stream',
-            size: asset.size ?? bytes.length,
-          };
-          const owner = state.documents[asset.docId];
-          if (owner) owner.attachments.push(attachment);
+          const owner = doc ? state.documents[asset.docId] : state.documents.salesphere;
+          if (owner) {
+            owner.attachments.push({
+              id,
+              name: fileName,
+              path,
+              type: asset.type || 'application/octet-stream',
+              size: asset.size ?? bytes.length,
+            });
+          }
           data = { id, path, name: fileName, compressedSize: bytes.length };
           changed = true;
         }
@@ -873,10 +853,10 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         if (attachment) delete state.assets[attachment.path];
         changed = true;
       } else if (op === 'write.attachment.rename') {
-        const document = findDocument(state, request.docPath);
-        const attachmentId = String(request.attachmentKey ?? '');
         const title = String(request.name ?? request.title ?? 'attachment');
-        const attachment = document?.attachments.find((i) => i.id === attachmentId);
+        const attachment = findDocument(state, request.docPath)?.attachments.find(
+          (i) => i.id === String(request.attachmentKey ?? ''),
+        );
         if (attachment) attachment.name = title;
         const asset = attachment ? state.assets[attachment.path] : undefined;
         if (asset) asset.name = title;
@@ -893,21 +873,25 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       }
 
       if (changed) writeWorkspaceDemoState(state);
-      return response<T>(data);
+      return { data: data as T };
     },
   };
 }
 
-export function routeForWorkspaceDocument(state: WorkspaceDemoState, value: string): string {
-  const document = findDocument(state, value);
+export function routeForWorkspaceDocument(
+  state: WorkspaceDemoState,
+  value: string | WorkspaceDemoDocument,
+  routeBuilder: DocsHostAdapter['buildRoute'] = buildWorkspaceRoute,
+): string {
+  const document = typeof value === 'string' ? findDocument(state, value) : value;
   if (!document) return WORKSPACE_DEMO_PATH;
   const position = sectionForLeaf(state, document.id);
-  return buildWorkspaceRoute(position.sectionId, position.groupId, document.id);
+  return (routeBuilder ?? buildWorkspaceRoute)(position.sectionId, position.groupId, document.id);
 }
 
 export function routedWorkspaceTree(
   state: WorkspaceDemoState,
   readOnly: boolean,
 ): DocsHostTreeNode[] {
-  return withCurrentRoutes(state, readOnly);
+  return withRoutes(state.tree, readOnly);
 }

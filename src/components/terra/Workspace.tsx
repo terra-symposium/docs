@@ -1,7 +1,7 @@
 import { applyHue } from '@terra-symposium/styling';
 import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
-import { docsHueTheme, resolveDocsTreeHue } from '../../lib/docs-theme.js';
+import { docsHueTheme } from '../../lib/docs-theme.js';
 import Scaffold from './pages/docs/_main.js';
 import { configureDocsHost } from '../../lib/host-runtime.js';
 import type { DocsWorkspaceProps } from '../../lib/host.js';
@@ -19,10 +19,11 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
     const updatePath = (event?: Event) => {
       const detail = (event as CustomEvent<{ pathname?: unknown; url?: unknown }> | undefined)
         ?.detail;
-      const route = [detail?.pathname, detail?.url].find(
-        (value): value is string => typeof value === 'string' && value.length > 0,
+      setActivePath(
+        [detail?.pathname, detail?.url].find(
+          (value): value is string => typeof value === 'string' && value.length > 0,
+        ) ?? window.location.href,
       );
-      setActivePath(route ?? window.location.href);
     };
 
     document.addEventListener('docs:navigate', updatePath);
@@ -43,7 +44,30 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
   } catch {
     aRoute = undefined;
   }
-  const hue = resolveDocsTreeHue(props.tree, aRoute, props.host.hue);
+  let hue = props.host.hue;
+  for (const target of [aRoute?.leafId, aRoute?.groupId, aRoute?.sectionId, aRoute?.targetId]) {
+    if (!target) continue;
+    const pending = props.tree
+      .slice()
+      .reverse()
+      .map((node) => ({ node, ancestors: [] as typeof props.tree }));
+    let foundTarget = false;
+    while (pending.length > 0) {
+      const current = pending.pop();
+      if (!current) continue;
+      if (current.node.origName === target || current.node.path === target) {
+        for (const node of [...current.ancestors, current.node]) {
+          if (typeof node.hue === 'number') hue = node.hue;
+        }
+        foundTarget = true;
+        break;
+      }
+      for (const child of [...(current.node.children ?? [])].reverse()) {
+        pending.push({ node: child, ancestors: [...current.ancestors, current.node] });
+      }
+    }
+    if (foundTarget) break;
+  }
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
 
   // Terra originally applied Styling's hue palette to the page root. Keep the
@@ -53,13 +77,15 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
     if (hue === undefined || typeof document === 'undefined') return;
     const root = document.documentElement;
     const body = document.body;
-    const originalRootBackground = {
-      value: root.style.getPropertyValue('background-color'),
-      priority: root.style.getPropertyPriority('background-color'),
-    };
-    const originalBodyBackground = {
-      value: body.style.getPropertyValue('background-color'),
-      priority: body.style.getPropertyPriority('background-color'),
+    const originalBackgrounds = {
+      root: {
+        value: root.style.getPropertyValue('background-color'),
+        priority: root.style.getPropertyPriority('background-color'),
+      },
+      body: {
+        value: body.style.getPropertyValue('background-color'),
+        priority: body.style.getPropertyPriority('background-color'),
+      },
     };
     const appliedBackground = 'rgb(var(--primary-1))';
     const applyPageHue = () => {
@@ -79,14 +105,13 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
           element.style.setProperty('background-color', original.value, original.priority);
         else element.style.removeProperty('background-color');
       };
-      restore(root, originalRootBackground);
-      restore(body, originalBodyBackground);
+      restore(root, originalBackgrounds.root);
+      restore(body, originalBackgrounds.body);
     };
   }, [hue]);
 
   useEffect(() => {
-    const wrapper = portalThemeRoot.current;
-    const workspace = wrapper?.querySelector<HTMLElement>('.docs-workspace');
+    const workspace = portalThemeRoot.current?.querySelector<HTMLElement>('.docs-workspace');
     if (!workspace || typeof document === 'undefined') return;
 
     // Radix keeps the original Docs portal behavior and mounts menus/dialogs
@@ -94,25 +119,13 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
     // the same hue as the inline workspace, as they did when the site applied
     // the hue palette to the document root before extraction.
     const target = document.body;
-    const themeTokens = [
-      '--hue',
-      '--background',
-      '--foreground',
-      '--ring',
-      ...(['primary', 'gray', 'secondary'] as const).flatMap((family) =>
-        Array.from({ length: 12 }, (_, i) => {
-          const step = i + 1;
-          return [`--${family}-${step}`, `--${family}Light${step}`, `--${family}Dark${step}`];
-        }).flat(),
-      ),
-    ];
     const originalValues = new Map<string, { value: string; priority: string }>();
     const appliedValues = new Map<string, string>();
     const originalThemeClasses = {
       dark: target.classList.contains('dark'),
       light: target.classList.contains('light'),
+      docsScope: target.classList.contains('docs-theme-scope'),
     };
-    const originalDocsScopeClass = target.classList.contains('docs-theme-scope');
     const originalBodyFont = {
       value: target.style.getPropertyValue('font-family'),
       priority: target.style.getPropertyPriority('font-family'),
@@ -133,7 +146,18 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
         target.style.fontFamily = docsFont;
       }
       appliedBodyFont = docsFont;
-      for (const token of themeTokens) {
+      for (const token of [
+        '--hue',
+        '--background',
+        '--foreground',
+        '--ring',
+        ...(['primary', 'gray', 'secondary'] as const).flatMap((family) =>
+          Array.from({ length: 12 }, (_, i) => {
+            const step = i + 1;
+            return [`--${family}-${step}`, `--${family}Light${step}`, `--${family}Dark${step}`];
+          }).flat(),
+        ),
+      ]) {
         const value = computed.getPropertyValue(token).trim();
         if (!value) continue;
         if (!originalValues.has(token)) {
@@ -165,7 +189,10 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
       element && element !== target;
       element = element.parentElement
     ) {
-      observer.observe(element, { attributes: true, attributeFilter: ['class', 'style'] });
+      observer.observe(element, {
+        attributes: true,
+        attributeFilter: ['class', 'style'],
+      });
     }
     const darkPreference = window.matchMedia('(prefers-color-scheme: dark)');
     darkPreference.addEventListener('change', syncPortalTheme);
@@ -197,7 +224,7 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
           target.classList.toggle('light', originalThemeClasses.light);
         }
       }
-      if (!originalDocsScopeClass) target.classList.remove('docs-theme-scope');
+      if (!originalThemeClasses.docsScope) target.classList.remove('docs-theme-scope');
     };
   }, []);
 

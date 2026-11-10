@@ -107,16 +107,11 @@ const latestContent = (content: unknown): string => {
  * @param sis - Attachment records to normalize for the Docs editor.
  */
 const textAsset = (sis: Sister): boolean => {
-  const ext = /\.(?:csv|json|log|md|mdx|text|txt|xml|ya?ml)(?:[?#].*)?$/i;
   return [sis.name, sis.title, sis.path].some(
-    (candidate) => typeof candidate === 'string' && ext.test(candidate.trim()),
+    (candidate) =>
+      typeof candidate === 'string' &&
+      /\.(?:csv|json|log|md|mdx|text|txt|xml|ya?ml)(?:[?#].*)?$/i.test(candidate.trim()),
   );
-};
-
-const attachmentUrl = (attachmentPath: string, documentPath: string): string => {
-  if (!/^(?:\.\.?(?:\/|$))/.test(attachmentPath)) return attachmentPath;
-  const basePath = documentPath.startsWith('/') ? documentPath : `/${documentPath}`;
-  return new URL(attachmentPath, new URL(basePath, window.location.origin)).toString();
 };
 
 /*//////////////////////////////////////////////////
@@ -159,10 +154,15 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   } | null>(null);
   const [transferTgt, setTransferTgt] = useState<string>('');
   const [transferring, setTransferring] = useState(false);
-  const [mergePdfState, setMergePdfState] = useState<{ pdfs: File[]; others: File[] } | null>(null);
-  const [ctxAttachment, setCtxAttachment] = useState<{ item: Sister; x: number; y: number } | null>(
-    null,
-  );
+  const [mergePdfState, setMergePdfState] = useState<{
+    pdfs: File[];
+    others: File[];
+  } | null>(null);
+  const [ctxAttachment, setCtxAttachment] = useState<{
+    item: Sister;
+    x: number;
+    y: number;
+  } | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement | null>(null);
   const sistersMap = useMemo(() => {
     const map = new Map<string, Sister>();
@@ -285,7 +285,14 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       return;
     }
     try {
-      const res = await fetch(attachmentUrl(sis.path, dPath));
+      const res = await fetch(
+        /^(?:\.\.?(?:\/|$))/.test(sis.path)
+          ? new URL(
+              sis.path,
+              new URL(dPath.startsWith('/') ? dPath : `/${dPath}`, window.location.origin),
+            ).toString()
+          : sis.path,
+      );
       if (!res.ok) throw new Error(`Attachment preview failed (${res.status}).`);
       setViewDlg({ ...sis, content: await res.text() });
     } catch (err) {
@@ -481,8 +488,21 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                 id,
                 path: assetPath,
                 name,
-              } = data as { title: string; id: string; path: string; name: string };
-              item = { id, path: assetPath, name, isMd: false, title, type: aType, sourceUrl: u };
+              } = data as {
+                title: string;
+                id: string;
+                path: string;
+                name: string;
+              };
+              item = {
+                id,
+                path: assetPath,
+                name,
+                isMd: false,
+                title,
+                type: aType,
+                sourceUrl: u,
+              };
             }
             setSisters((p) => p.map((s) => (s.id === tmpId ? item : s)));
           } catch (_err) {
@@ -562,7 +582,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         p.map((s) => (s.path === path ? { ...s, path: nPath, name: nFilename } : s)),
       );
       if (isMd) {
-        const { error: err } = await actions.write.doc.commit({ cur: path, next: nPath });
+        const { error: err } = await actions.write.doc.commit({
+          cur: path,
+          next: nPath,
+        });
         if (err) throw err;
       } else if (id)
         await actions.write.attachment.rename({
@@ -599,9 +622,17 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     try {
       await Promise.allSettled(
         items.map(async (i) => {
-          if (i.isMd) await actions.write.doc.rm({ assets: false, path: i.path, type: 'doc' });
+          if (i.isMd)
+            await actions.write.doc.rm({
+              assets: false,
+              path: i.path,
+              type: 'doc',
+            });
           else if (i.id) {
-            await actions.write.attachment.rm({ docPath: docId, attachmentKey: i.id });
+            await actions.write.attachment.rm({
+              docPath: docId,
+              attachmentKey: i.id,
+            });
             if (i.path.startsWith('http')) await actions.write.asset.delete({ url: i.path });
           }
         }),
@@ -808,13 +839,20 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                         }}
                         onContextMenu={(e) => {
                           e.preventDefault();
-                          setCtxAttachment({ item: v, x: e.clientX, y: e.clientY });
+                          setCtxAttachment({
+                            item: v,
+                            x: e.clientX,
+                            y: e.clientY,
+                          });
                         }}
                       >
                         <CardHeader>
                           {__terraQualityCreateElement(
                             /* prettier-ignore */ v.type === 'youtube' ? YouTubeIcon : v.type === 'website' ? LinkIcon : v.type === 'image' ? ImageIcon : v.type === 'tsdocs' ? CatalogIcon : v.type === 'other' ? BoxIcon : DocumentIcon,
-                            { className: 'size-6 text-primary-10', 'aria-hidden': 'true' },
+                            {
+                              className: 'size-6 text-primary-10',
+                              'aria-hidden': 'true',
+                            },
                           )}
                           <CardTitle className="truncate text-base">{v.title || v.name}</CardTitle>
                           <CardDescription className="truncate">
@@ -854,12 +892,22 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                   {
                     icon: <CopyIcon />,
                     label: `Copy ${sel.length} items`,
-                    onSelect: () => setTransferDlg({ open: true, action: 'copy', items: selItems }),
+                    onSelect: () =>
+                      setTransferDlg({
+                        open: true,
+                        action: 'copy',
+                        items: selItems,
+                      }),
                   },
                   {
                     icon: <PopOutIcon />,
                     label: `Move ${sel.length} items`,
-                    onSelect: () => setTransferDlg({ open: true, action: 'cut', items: selItems }),
+                    onSelect: () =>
+                      setTransferDlg({
+                        open: true,
+                        action: 'cut',
+                        items: selItems,
+                      }),
                   },
                   ...(selItems.every(
                     (s) =>
@@ -924,7 +972,12 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                 );
                                 setSisters((p) =>
                                   p.map((s) =>
-                                    s.id === tmpId ? { ...s, name: 'Uploading Merged PDF...' } : s,
+                                    s.id === tmpId
+                                      ? {
+                                          ...s,
+                                          name: 'Uploading Merged PDF...',
+                                        }
+                                      : s,
                                   ),
                                 );
                                 const finalAsset = await uploadAssetChunked(mergedFile, docId, {
@@ -977,7 +1030,9 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                         attachmentKey: i.id,
                                       });
                                       if (i.path.startsWith('http'))
-                                        await actions.write.asset.delete({ url: i.path });
+                                        await actions.write.asset.delete({
+                                          url: i.path,
+                                        });
                                     }
                                   }),
                                 );
@@ -1034,13 +1089,21 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                     icon: <CopyIcon />,
                     label: 'Copy to...',
                     onSelect: () =>
-                      setTransferDlg({ open: true, action: 'copy', items: [ctxAttachment.item] }),
+                      setTransferDlg({
+                        open: true,
+                        action: 'copy',
+                        items: [ctxAttachment.item],
+                      }),
                   },
                   {
                     icon: <PopOutIcon />,
                     label: 'Move to...',
                     onSelect: () =>
-                      setTransferDlg({ open: true, action: 'cut', items: [ctxAttachment.item] }),
+                      setTransferDlg({
+                        open: true,
+                        action: 'cut',
+                        items: [ctxAttachment.item],
+                      }),
                   },
                   ...(ctxAttachment.item.isMd
                     ? [
@@ -1186,7 +1249,13 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                     const tmpId = `temp-${Date.now()}-${i}`;
                     setSisters((p) => [
                       ...p,
-                      { id: tmpId, path: tmpId, name: f.name, isMd: isMdFile, type: 'document' },
+                      {
+                        id: tmpId,
+                        path: tmpId,
+                        name: f.name,
+                        isMd: isMdFile,
+                        type: 'document',
+                      },
                     ]);
                     void processUpload(f, tmpId, isMdFile);
                   });
@@ -1224,7 +1293,13 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                       const tmpId = `temp-${Date.now()}-${i}`;
                       setSisters((p) => [
                         ...p,
-                        { id: tmpId, path: tmpId, name: f.name, isMd: isMdFile, type: 'document' },
+                        {
+                          id: tmpId,
+                          path: tmpId,
+                          name: f.name,
+                          isMd: isMdFile,
+                          type: 'document',
+                        },
                       ]);
                       void processUpload(f, tmpId, isMdFile);
                     });

@@ -1,5 +1,47 @@
 # @terra-symposium/docs
 
+## 0.4.11
+
+### Patch Changes
+
+- Render Markdown tabs and accordions with the shared Styling components and remove the parallel structured authoring path. Preserve legacy structured content by converting it to canonical Markdown.
+
+## 0.4.10
+
+### Patch Changes
+
+- Update the starter template to use the current Docs package release.
+
+## 0.4.9
+
+### Patch Changes
+
+- Render tabs and accordions in published pages and editor previews through the shared Markdown renderer, and export the missing code-block regular expression used by consumers.
+
+## 0.4.8
+
+### Patch Changes
+
+- Include the shared regex module required by the published Docs CLI.
+
+## 0.4.7
+
+### Patch Changes
+
+- Match the case-sensitive npm trusted publisher identity to GitHub's canonical repository name.
+
+## 0.4.6
+
+### Patch Changes
+
+- Correct the repository URL metadata used by npm trusted publishing.
+
+## 0.4.5
+
+### Patch Changes
+
+- Render Markdown tabs and accordions through the shared Styling components in every Docs view.
+
 ## 0.4.0
 
 ### Minor Changes

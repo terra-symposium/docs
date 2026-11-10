@@ -8,7 +8,7 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // TYPES
-import type { PowerSrcGraph, StructureQuestion } from '../runtime/types.js';
+import type { PowerSrcGraph } from '../runtime/types.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -28,7 +28,7 @@ HELPERS
  */
 export function withPowerSrcPositions(
   graph: PowerSrcGraph,
-  questions: StructureQuestion[],
+  questions: { _id?: string; question?: string }[],
 ): PowerSrcGraph {
   const titleById = new Map<string, string>();
   for (const q of questions) {

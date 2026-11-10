@@ -8,6 +8,6 @@ export type FlowMenuContext = { type: 'pane' | '_node' | 'e'; id: string | null 
  * @param ctx - Active context-menu target.
  * @returns Whether the context identifies a node whose lock state should be resolved.
  */
-export function shouldResolveNodeMenuTarget(ctx: FlowMenuContext): boolean {
+function shouldResolveNodeMenuTarget(ctx: FlowMenuContext): boolean {
   return ctx.type === '_node' && ctx.id !== null;
 }

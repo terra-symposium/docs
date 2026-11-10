@@ -27,7 +27,6 @@ export const DOCS_VITE_OPTIMIZE_DEPS = [
   '@terra-symposium/docs > @dagrejs/dagre',
   '@terra-symposium/docs > @portabletext/editor',
   '@terra-symposium/docs > @xyflow/react',
-  '@terra-symposium/docs > sanitize-html',
   'react/compiler-runtime',
   'react-dom/server',
 ] as const;

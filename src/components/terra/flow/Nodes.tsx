@@ -10,6 +10,7 @@ IMPORTS
 // API
 import katex from 'katex';
 import { toPng } from 'html-to-image';
+import Dagre from '@dagrejs/dagre';
 import {
   applyEdgeChanges,
   applyNodeChanges,
@@ -24,7 +25,7 @@ import {
   validateType,
   warn as logWarn,
 } from '../../../lib/terra/runtime/runtime.js';
-import { getCustomPos, getGroupId, getNodeSize, layoutGraph, useEditor } from './_chrome.js';
+import { getGroupId, getNodeSize } from './_chrome.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // COMPONENTS
@@ -48,6 +49,7 @@ import {
   Document as NoteIcon,
   Download as DownloadIcon,
   Edit as EditIcon,
+  FitToScreen as FitToScreenIcon,
   MagicWand as WandIcon,
   Maximize as MaximizeIcon,
   ObjectStorage as GroupIcon,
@@ -59,6 +61,8 @@ import {
   Task as ProcessIcon,
   TrashCan as TrashIcon,
   Undo as UndoIcon,
+  ZoomIn as ZoomInIcon,
+  ZoomOut as ZoomOutIcon,
 } from '@carbon/icons-react';
 import {
   Background,
@@ -82,7 +86,7 @@ import {
   ContextMenuTrigger,
 } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../ui.js';
-import { Handles, SkeletonCard, ZoomControls } from './_chrome.js';
+import { Handles, SkeletonCard } from './_chrome.js';
 
 // TYPES
 import type {
@@ -97,7 +101,6 @@ import type {
 } from '@xyflow/react';
 import type {
   Edge,
-  FlowEdgeData,
   FlowNode,
   GroupNodeData,
   NodeData,
@@ -188,43 +191,6 @@ NODE TYPES
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the container node used to group related flowchart nodes.
- *
- * @param props - Flow node props.
- * @param data - Group node data and resize hooks.
- * @param selected - Boolean flag controlling group node's selected behaviour.
- *
- * @return Resizable group frame, title bar, and group handles.
- */
-export function GroupNode({ data, selected }: NodeProps<XyNode<GroupNodeData>>): React.JSX.Element {
-  return (
-    <ErrorBoundary name="GroupNode">
-      <NodeResizer
-        color="#ef4444"
-        isVisible={selected && data.editable === true}
-        minWidth={160}
-        minHeight={100}
-        onResizeEnd={(_e, p): void => {
-          if (data.id) data.onResizeEnd?.(data.id, p);
-        }}
-      />
-      <div
-        className={cn(
-          'size-full text-primary-11 transition-all',
-          selected && `rounded-lg ${NODE_CLASS.selected}`,
-          data.isDragTarget && 'ring-dashed rounded-lg bg-primary-3/20 ring-2 ring-primary-6',
-        )}
-      >
-        <div className="border-b border-primary-6 pb-2 text-lg font-bold text-primary-12">
-          {data.title}
-        </div>
-        <Handles editable={data.editable === true} {...data.requiredHandles} />
-      </div>
-    </ErrorBoundary>
-  );
-}
-
-/**
  * Creates a higher-order flowchart node renderer with specified styling.
  *
  * @param className - CSS classes applied to the shell container.
@@ -261,60 +227,6 @@ function createNode(
   };
 }
 
-/**
- * Renders a sticky-note style node in the flowchart.
- *
- * @param props - Flow node props.
- * @param id - Unique clipping mask identifier.
- * @param data - Sticky note text and resize hooks.
- * @param selected - Boolean flag controlling note node's selected behaviour.
- *
- * @return Sticky note styled container.
- */
-export function NoteNode({
-  id,
-  data,
-  selected,
-}: NodeProps<XyNode<GroupNodeData>>): React.JSX.Element {
-  return (
-    <ErrorBoundary name="NoteNode">
-      <NodeResizer
-        color="#ef4444"
-        isVisible={selected && data.editable === true}
-        minWidth={128}
-        minHeight={128}
-        onResizeEnd={(_e, p): void => {
-          if (data.id) data.onResizeEnd?.(data.id, p);
-        }}
-      />
-      <div
-        className={cn(
-          "relative size-full min-h-32 min-w-32 before:absolute before:left-[5px] before:top-[30%] before:h-3/4 before:w-[90%] before:bg-black/25 before:shadow-[rgba(0,0,0,0.5)_-2px_2px_15px] before:content-['']",
-          selected && NODE_CLASS.selected,
-        )}
-      >
-        <Handles
-          editable={data.editable === true}
-          sources={data.requiredHandles?.sources ?? []}
-          tgts={data.requiredHandles?.tgts ?? []}
-        />
-        <svg width="0" height="0" className="absolute">
-          <defs>
-            <clipPath id={`sticky-${id}`} clipPathUnits="objectBoundingBox">
-              <path d="M 1 0 Q 1 0.69, 0.97 0.96 0.97 0.96, 0 0.96 Q 0.04 0.69, 0.04 0 0.04 0, 1 0" />
-            </clipPath>
-          </defs>
-        </svg>
-        <div
-          className="relative flex size-full min-h-32 min-w-32 items-center justify-center bg-yellow-300 p-5 pt-3 text-center text-sm font-normal text-yellow-950 shadow-md"
-          style={{ clipPath: `url(#sticky-${id})` }}
-        >
-          {data.title}
-        </div>
-      </div>
-    </ErrorBoundary>
-  );
-}
 export const NODE_TYPES = {
   erd: function ErdNode({ data, selected }: NodeProps<XyNode<NodeData>>): React.JSX.Element {
     const compact = data.compact === true;
@@ -389,8 +301,80 @@ export const NODE_TYPES = {
   terminal: createNode(NODE_STYLES.terminal),
   decision: createNode(NODE_STYLES.decision),
   data: createNode(NODE_STYLES.data, 'block skew-x-12'),
-  note: NoteNode,
-  group: GroupNode,
+  note: function NoteNode({
+    id,
+    data,
+    selected,
+  }: NodeProps<XyNode<GroupNodeData>>): React.JSX.Element {
+    return (
+      <ErrorBoundary name="NoteNode">
+        <NodeResizer
+          color="#ef4444"
+          isVisible={selected && data.editable === true}
+          minWidth={128}
+          minHeight={128}
+          onResizeEnd={(_e, p): void => {
+            if (data.id) data.onResizeEnd?.(data.id, p);
+          }}
+        />
+        <div
+          className={cn(
+            "relative size-full min-h-32 min-w-32 before:absolute before:left-[5px] before:top-[30%] before:h-3/4 before:w-[90%] before:bg-black/25 before:shadow-[rgba(0,0,0,0.5)_-2px_2px_15px] before:content-['']",
+            selected && NODE_CLASS.selected,
+          )}
+        >
+          <Handles
+            editable={data.editable === true}
+            sources={data.requiredHandles?.sources ?? []}
+            tgts={data.requiredHandles?.tgts ?? []}
+          />
+          <svg width="0" height="0" className="absolute">
+            <defs>
+              <clipPath id={`sticky-${id}`} clipPathUnits="objectBoundingBox">
+                <path d="M 1 0 Q 1 0.69, 0.97 0.96 0.97 0.96, 0 0.96 Q 0.04 0.69, 0.04 0 0.04 0, 1 0" />
+              </clipPath>
+            </defs>
+          </svg>
+          <div
+            className="relative flex size-full min-h-32 min-w-32 items-center justify-center bg-yellow-300 p-5 pt-3 text-center text-sm font-normal text-yellow-950 shadow-md"
+            style={{ clipPath: `url(#sticky-${id})` }}
+          >
+            {data.title}
+          </div>
+        </div>
+      </ErrorBoundary>
+    );
+  },
+  group: function GroupNode({
+    data,
+    selected,
+  }: NodeProps<XyNode<GroupNodeData>>): React.JSX.Element {
+    return (
+      <ErrorBoundary name="GroupNode">
+        <NodeResizer
+          color="#ef4444"
+          isVisible={selected && data.editable === true}
+          minWidth={160}
+          minHeight={100}
+          onResizeEnd={(_e, p): void => {
+            if (data.id) data.onResizeEnd?.(data.id, p);
+          }}
+        />
+        <div
+          className={cn(
+            'size-full text-primary-11 transition-all',
+            selected && `rounded-lg ${NODE_CLASS.selected}`,
+            data.isDragTarget && 'ring-dashed rounded-lg bg-primary-3/20 ring-2 ring-primary-6',
+          )}
+        >
+          <div className="border-b border-primary-6 pb-2 text-lg font-bold text-primary-12">
+            {data.title}
+          </div>
+          <Handles editable={data.editable === true} {...data.requiredHandles} />
+        </div>
+      </ErrorBoundary>
+    );
+  },
 };
 
 /*//////////////////////////////////////////////////
@@ -432,7 +416,12 @@ function syncGraph(
     edges: (Array.isArray(r) ? r : [])
       .filter((_e) => nodesById.has(_e.source) && nodesById.has(_e.target))
       .map((e) => {
-        const edgeData: FlowEdgeData = e.data ?? {};
+        const edgeData: Record<string, unknown> & {
+          color?: string;
+          label?: string;
+          srcHandleOverride?: string;
+          tgtHandleOverride?: string;
+        } = e.data ?? {};
         const l = isRec(e) ? (e as Record<string, unknown>) : {};
         const arrowHead = edgeData.arrowHead ?? (l['arrowHead'] as boolean) ?? false;
         const srcOverride = edgeData.srcHandleOverride ?? (l['srcHandleOverride'] as Pos);
@@ -467,9 +456,15 @@ function syncGraph(
         }
         if (!arcControls) {
           if (!handlesByNodeId.has(e.source))
-            handlesByNodeId.set(e.source, { sources: new Set(), tgts: new Set() });
+            handlesByNodeId.set(e.source, {
+              sources: new Set(),
+              tgts: new Set(),
+            });
           if (!handlesByNodeId.has(e.target))
-            handlesByNodeId.set(e.target, { sources: new Set(), tgts: new Set() });
+            handlesByNodeId.set(e.target, {
+              sources: new Set(),
+              tgts: new Set(),
+            });
           handlesByNodeId.get(e.source)!.sources.add(srcHandle as Pos);
           handlesByNodeId.get(e.target)!.tgts.add(tgtHandle as Pos);
         }
@@ -656,6 +651,8 @@ const FLOW_COMPONENTS = {
       setViewport,
       updateNodeData,
       getNodes,
+      zoomIn,
+      zoomOut,
     } = useReactFlow();
     const nodesInit = useNodesInitialized();
     const hasInitialLayout = useRef(false);
@@ -666,7 +663,10 @@ const FLOW_COMPONENTS = {
     const [ready, setReady] = useState(readyWhenEmpty && flow.nodes.length === 0);
     const [isExporting, setIsExporting] = useState(false);
     const notified = useRef(false);
-    const [menuCtx, setMenuCtx] = useState<FlowMenuContext>({ type: 'pane', id: null });
+    const [menuCtx, setMenuCtx] = useState<FlowMenuContext>({
+      type: 'pane',
+      id: null,
+    });
 
     // INIT
     useEffect(() => {
@@ -716,7 +716,10 @@ const FLOW_COMPONENTS = {
      */
     const locked = (n: FlowNode | undefined): boolean => {
       if (!n) {
-        logWarn('AuthNodes', 'menu.n-missing', { menuCtx, nodeCount: flow.nodes.length });
+        logWarn('AuthNodes', 'menu.n-missing', {
+          menuCtx,
+          nodeCount: flow.nodes.length,
+        });
         return true;
       }
       return lockedTypes.includes(n.type as keyof typeof NODE_TYPES);
@@ -724,53 +727,65 @@ const FLOW_COMPONENTS = {
     const isTgtLocked = React.useMemo(() => {
       if (menuCtx.type !== '_node' || menuCtx.id === null) return false;
       if (!tgtNode) {
-        logWarn('AuthNodes', 'menu.n-missing', { menuCtx, nodeCount: flow.nodes.length });
+        logWarn('AuthNodes', 'menu.n-missing', {
+          menuCtx,
+          nodeCount: flow.nodes.length,
+        });
         return true;
       }
       return locked(tgtNode);
     }, [flow.nodes.length, lockedTypes, menuCtx, tgtNode]);
-    const exportDiagram = useCallback(async (): Promise<void> => {
-      const wrapper = reactFlowWrapper.current;
-      if (!wrapper || isExporting || !ready) return;
-      const viewport = getViewport();
-      const handles = wrapper.querySelectorAll<HTMLElement>('.flow-node-handle');
-      const handleVisibility = Array.from(handles, (handle) => handle.style.visibility);
-      setIsExporting(true);
-      try {
-        await fitView({ padding: 0.15, duration: 0 });
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        handles.forEach((handle) => {
-          handle.style.visibility = 'hidden';
-        });
-        const dataUrl = await toPng(wrapper, {
-          cacheBust: true,
-          pixelRatio: 2,
-          backgroundColor: '#fff',
-          style: { backgroundColor: '#fff', color: '#111827' },
-          filter: (node) =>
-            ![
-              'react-flow__controls',
-              'react-flow__background',
-              'react-flow__attribution',
-              'react-flow__handle',
-            ].some((className) => node.classList?.contains(className)),
-        });
-        const link = document.createElement('a');
-        link.download = 'diagram.png';
-        link.href = dataUrl;
-        link.click();
-      } catch (err) {
-        logErr('Nodes', 'export.failed', err);
-      } finally {
-        handles.forEach((handle, i) => {
-          handle.style.visibility = handleVisibility[i] ?? '';
-        });
-        await setViewport(viewport, { duration: 0 }).catch((error) => {
-          logErr('Nodes', 'export.viewport-restore.failed', error);
-        });
-        setIsExporting(false);
-      }
-    }, [fitView, getViewport, isExporting, ready, setViewport]);
+    const exportAction = {
+      disabled: isExporting || !ready,
+      run: useCallback(async (): Promise<void> => {
+        const wrapper = reactFlowWrapper.current;
+        if (!wrapper || isExporting || !ready) return;
+        const restore: {
+          viewport: ReturnType<typeof getViewport>;
+          handleVisibility: string[];
+        } = { viewport: getViewport(), handleVisibility: [] };
+        const handles = wrapper.querySelectorAll<HTMLElement>('.flow-node-handle');
+        restore.handleVisibility = Array.from(handles, (handle) => handle.style.visibility);
+        setIsExporting(true);
+        try {
+          await fitView({ padding: 0.15, duration: 0 });
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          handles.forEach((handle) => {
+            handle.style.visibility = 'hidden';
+          });
+          ((dataUrl: string) => {
+            const link = document.createElement('a');
+            link.download = 'diagram.png';
+            link.href = dataUrl;
+            link.click();
+          })(
+            await toPng(wrapper, {
+              cacheBust: true,
+              pixelRatio: 2,
+              backgroundColor: '#fff',
+              style: { backgroundColor: '#fff', color: '#111827' },
+              filter: (node) =>
+                ![
+                  'react-flow__controls',
+                  'react-flow__background',
+                  'react-flow__attribution',
+                  'react-flow__handle',
+                ].some((className) => node.classList?.contains(className)),
+            }),
+          );
+        } catch (err) {
+          logErr('Nodes', 'export.failed', err);
+        } finally {
+          handles.forEach((handle, i) => {
+            handle.style.visibility = restore.handleVisibility[i] ?? '';
+          });
+          await setViewport(restore.viewport, { duration: 0 }).catch((error) => {
+            logErr('Nodes', 'export.viewport-restore.failed', error);
+          });
+          setIsExporting(false);
+        }
+      }, [fitView, getViewport, isExporting, ready, setViewport]),
+    };
 
     // RENDER
     return (
@@ -824,7 +839,10 @@ const FLOW_COMPONENTS = {
                 setMenuCtx({ type: 'e', id: v.id });
               }}
               onPaneContextMenu={() => {
-                trace('menu.pane', { nodeCount: flow.nodes.length, edgeCount: flow.edges.length });
+                trace('menu.pane', {
+                  nodeCount: flow.nodes.length,
+                  edgeCount: flow.edges.length,
+                });
                 setMenuCtx({ type: 'pane', id: null });
               }}
               onNodeDrag={(_e, _node, draggedNodes) => {
@@ -835,7 +853,9 @@ const FLOW_COMPONENTS = {
                   getIntersectingNodes(primaryNode).find((n) => n.type === 'group')?.id ?? null;
                 if (groupId !== dragTgtGroup.current) {
                   if (dragTgtGroup.current)
-                    updateNodeData(dragTgtGroup.current, { isDragTarget: false });
+                    updateNodeData(dragTgtGroup.current, {
+                      isDragTarget: false,
+                    });
                   if (groupId) updateNodeData(groupId, { isDragTarget: true });
                   dragTgtGroup.current = groupId;
                 }
@@ -927,7 +947,47 @@ const FLOW_COMPONENTS = {
                       </Button>
                     </ButtonGroup>
                   </Controls>
-                  <ZoomControls position="bottom-right" />
+                  <ErrorBoundary name="ZoomControls">
+                    <Controls
+                      position="bottom-right"
+                      showZoom={false}
+                      showFitView={false}
+                      showInteractive={false}
+                    >
+                      <ButtonGroup>
+                        {(
+                          [
+                            {
+                              label: 'Zoom in',
+                              icon: <ZoomInIcon aria-hidden="true" />,
+                              onClick: zoomIn,
+                            },
+                            {
+                              label: 'Zoom out',
+                              icon: <ZoomOutIcon aria-hidden="true" />,
+                              onClick: zoomOut,
+                            },
+                            {
+                              label: 'Fit view',
+                              icon: <FitToScreenIcon aria-hidden="true" />,
+                              onClick: fitView,
+                            },
+                          ] as const
+                        ).map(({ label, icon, onClick }) => (
+                          <Button
+                            key={label}
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={label}
+                            title={label}
+                            onClick={() => void onClick()}
+                          >
+                            {icon}
+                          </Button>
+                        ))}
+                      </ButtonGroup>
+                    </Controls>
+                  </ErrorBoundary>
                 </>
               ) : (
                 showCtrls && (
@@ -960,8 +1020,8 @@ const FLOW_COMPONENTS = {
                       <ControlButton
                         aria-label="Export diagram as PNG"
                         title="Export diagram as PNG"
-                        disabled={isExporting || !ready}
-                        onClick={() => void exportDiagram()}
+                        disabled={exportAction.disabled}
+                        onClick={() => void exportAction.run()}
                       >
                         <DownloadIcon aria-hidden="true" />
                       </ControlButton>
@@ -1046,7 +1106,11 @@ const FLOW_COMPONENTS = {
                         type: 'group',
                         position: { x: gX, y: gY },
                         style: { width: gWidth, height: gHeight },
-                        data: { attributes: [], customPosition: { x: gX, y: gY }, title: 'Group' },
+                        data: {
+                          attributes: [],
+                          customPosition: { x: gX, y: gY },
+                          title: 'Group',
+                        },
                       },
                       selNodes,
                       gX,
@@ -1231,7 +1295,7 @@ COMPONENT
  * @remarks
  * This is the public entrypoint; the rest of the file exists to keep the canvas state manageable.
  */
-export default function Nodes({
+export default (function Nodes({
   nodes: initialNodes = [],
   edges: initialEdges = [],
   className,
@@ -1265,7 +1329,10 @@ export default function Nodes({
     nodes: initialNodes,
     edges: initialEdges,
   });
-  const [flow, setFlow] = useState<{ nodes: FlowNode[]; edges: Edge[] }>({ nodes: [], edges: [] });
+  const [flow, setFlow] = useState<{ nodes: FlowNode[]; edges: Edge[] }>({
+    nodes: [],
+    edges: [],
+  });
   const [isFocused, setIsFocused] = useState(false);
   const [internalHeight, setInternalHeight] = useState(384);
   const graphRef = useRef(graph);
@@ -1287,7 +1354,10 @@ export default function Nodes({
     (
       v:
         | { nodes: FlowNode[]; edges: Edge[] }
-        | ((curr: { nodes: FlowNode[]; edges: Edge[] }) => { nodes: FlowNode[]; edges: Edge[] }),
+        | ((curr: { nodes: FlowNode[]; edges: Edge[] }) => {
+            nodes: FlowNode[];
+            edges: Edge[];
+          }),
       c = true,
     ) => {
       const n = typeof v === 'function' ? v(graphRef.current) : v;
@@ -1297,70 +1367,287 @@ export default function Nodes({
     },
     [],
   );
-  useEditor({
-    adapter: {
-      ...(clipboardKey ? { clipboardKey } : {}),
-      cloneNode: (n, id) => ({
-        ...n,
-        id,
-        data: {
-          ...n.data,
-          ...(typeof (n.data as { graphKey?: unknown }).graphKey === 'string'
-            ? { graphKey: id }
-            : {}),
-        },
-      }),
-      editableNode: (n) => !lockedTypes.includes(n.type as keyof typeof NODE_TYPES),
-      read: flow,
-      write: useCallback(
-        (n: { nodes: FlowNode[]; edges: Edge[] }): void => {
-          flowRef.current = n;
-          setFlow(n);
-          writeGraph((c) => {
-            const currEntities = {
-              nodes: new Map(c.nodes.map((i) => [i.id, i])),
-              edges: new Map(c.edges.map((i) => [i.id, i])),
-            };
-            return {
-              nodes: n.nodes.map((n) => {
-                const {
-                  editable: _,
-                  groupId: __,
-                  id: ___,
-                  isDragTarget: ____,
-                  onResizeEnd: _____,
-                  requiredHandles: ______,
-                  ...data
-                } = n.data;
-                return {
-                  ...currEntities.nodes.get(n.id),
-                  id: n.id,
-                  type: n.type,
-                  position: n.position,
-                  style: n.style,
-                  data,
-                };
-              }),
-              edges: n.edges.map((e) => {
-                return {
-                  ...currEntities.edges.get(e.id),
-                  id: e.id,
-                  source: e.source,
-                  target: e.target,
-                  sourceHandle: e.sourceHandle,
-                  targetHandle: e.targetHandle,
-                  label: e.label,
-                  data: e.data,
-                };
-              }),
-            };
-          });
-        },
-        [writeGraph],
-      ),
+  const editorAdapter = {
+    ...(clipboardKey ? { clipboardKey } : {}),
+    cloneNode: (n: FlowNode, id: string) => ({
+      ...n,
+      id,
+      data: {
+        ...n.data,
+        ...(typeof (n.data as { graphKey?: unknown }).graphKey === 'string'
+          ? { graphKey: id }
+          : {}),
+      },
+    }),
+    editableNode: (n: FlowNode) => !lockedTypes.includes(n.type as keyof typeof NODE_TYPES),
+    read: flow,
+    write: useCallback(
+      (n: { nodes: FlowNode[]; edges: Edge[] }): void => {
+        flowRef.current = n;
+        setFlow(n);
+        writeGraph((c) => {
+          const currEntities = {
+            nodes: new Map(c.nodes.map((i) => [i.id, i])),
+            edges: new Map(c.edges.map((i) => [i.id, i])),
+          };
+          return {
+            nodes: n.nodes.map((n) => {
+              const {
+                editable: _,
+                groupId: __,
+                id: ___,
+                isDragTarget: ____,
+                onResizeEnd: _____,
+                requiredHandles: ______,
+                ...data
+              } = n.data;
+              return {
+                ...currEntities.nodes.get(n.id),
+                id: n.id,
+                type: n.type,
+                position: n.position,
+                style: n.style,
+                data,
+              };
+            }),
+            edges: n.edges.map((e) => {
+              return {
+                ...currEntities.edges.get(e.id),
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                sourceHandle: e.sourceHandle,
+                targetHandle: e.targetHandle,
+                label: e.label,
+                data: e.data,
+              };
+            }),
+          };
+        });
+      },
+      [writeGraph],
+    ),
+  };
+  const [editorEls, setEditorEls] = useState(editorAdapter.read);
+  const editorRef = useRef(editorEls);
+  editorRef.current = editorEls;
+  useEffect((): void => {
+    setEditorEls(editorAdapter.read);
+  }, [editorAdapter.read]);
+  const editorWrite = useCallback(
+    (next: { nodes: FlowNode[]; edges: Edge[] }): void => {
+      editorRef.current = next;
+      setEditorEls(next);
+      editorAdapter.write(next);
     },
-    disabled,
-  });
+    [editorAdapter],
+  );
+  const editorEditable = useCallback(
+    (node: FlowNode): boolean => editorAdapter.editableNode?.(node) ?? true,
+    [editorAdapter],
+  );
+  const editorSelection = useCallback((): {
+    version: 1;
+    nodes: FlowNode[];
+    edges: Edge[];
+  } | null => {
+    const selectedNodes = editorRef.current.nodes.filter(
+      (node) => node.selected && editorEditable(node),
+    );
+    if (!selectedNodes.length) return null;
+    const ids = new Set(selectedNodes.map((node) => node.id));
+    return {
+      version: 1,
+      nodes: selectedNodes,
+      edges: editorRef.current.edges.filter((edge) => ids.has(edge.source) && ids.has(edge.target)),
+    };
+  }, [editorEditable]);
+  const editorCopy = useCallback((): void => {
+    const value = editorSelection();
+    if (!value || !editorAdapter.clipboardKey || typeof window === 'undefined') return;
+    window.localStorage.setItem(editorAdapter.clipboardKey, JSON.stringify(value));
+  }, [editorAdapter.clipboardKey, editorSelection]);
+  const editorDeleteSelection = useCallback((): void => {
+    if (disabled) return;
+    const ids = new Set(
+      editorRef.current.nodes
+        .filter((node) => node.selected && editorEditable(node))
+        .map((node) => node.id),
+    );
+    if (!ids.size) return;
+    editorWrite({
+      nodes: editorRef.current.nodes.filter((node) => !ids.has(node.id)),
+      edges: editorRef.current.edges.filter(
+        (edge) => !ids.has(edge.source) && !ids.has(edge.target),
+      ),
+    });
+  }, [disabled, editorEditable, editorWrite]);
+  const editorCut = useCallback((): void => {
+    if (disabled) return;
+    editorCopy();
+    editorDeleteSelection();
+  }, [editorCopy, editorDeleteSelection, disabled]);
+  const editorPaste = useCallback((): void => {
+    if (disabled || !editorAdapter.clipboardKey || typeof window === 'undefined') return;
+    try {
+      const raw: unknown = JSON.parse(
+        window.localStorage.getItem(editorAdapter.clipboardKey) ?? 'null',
+      );
+      if (
+        !isRec(raw) ||
+        raw.version !== 1 ||
+        !Array.isArray(raw.nodes) ||
+        !Array.isArray(raw.edges)
+      )
+        return;
+      const value = raw as { version: 1; nodes: FlowNode[]; edges: Edge[] };
+      const ids = new Map(value.nodes.map((node) => [node.id, `n-${crypto.randomUUID()}`]));
+      editorWrite({
+        nodes: [
+          ...editorRef.current.nodes.map((node) => ({ ...node, selected: false })),
+          ...value.nodes.map((node) => ({
+            ...(editorAdapter.cloneNode?.(node, ids.get(node.id)!) ?? {
+              ...node,
+              id: ids.get(node.id)!,
+            }),
+            position: { x: node.position.x + 40, y: node.position.y + 40 },
+            selected: true,
+          })),
+        ],
+        edges: [
+          ...editorRef.current.edges,
+          ...value.edges.map((edge) => ({
+            ...edge,
+            id: `e-${crypto.randomUUID()}`,
+            source: ids.get(edge.source)!,
+            target: ids.get(edge.target)!,
+          })),
+        ],
+      });
+    } catch {
+      // Ignore stale or malformed local clipboard payloads.
+    }
+  }, [editorAdapter.clipboardKey, disabled, editorWrite]);
+  const editorDuplicate = useCallback((): void => {
+    if (disabled) return;
+    const value = editorSelection();
+    if (!value) return;
+    const ids = new Map(value.nodes.map((node) => [node.id, `n-${crypto.randomUUID()}`]));
+    editorWrite({
+      nodes: [
+        ...editorRef.current.nodes.map((node) => ({ ...node, selected: false })),
+        ...value.nodes.map((node) => ({
+          ...(editorAdapter.cloneNode?.(node, ids.get(node.id)!) ?? {
+            ...node,
+            id: ids.get(node.id)!,
+          }),
+          position: { x: node.position.x + 40, y: node.position.y + 40 },
+          selected: true,
+        })),
+      ],
+      edges: [
+        ...editorRef.current.edges,
+        ...value.edges.map((edge) => ({
+          ...edge,
+          id: `e-${crypto.randomUUID()}`,
+          source: ids.get(edge.source)!,
+          target: ids.get(edge.target)!,
+        })),
+      ],
+    });
+  }, [editorAdapter, disabled, editorSelection, editorWrite]);
+  useEffect((): (() => void) | void => {
+    if (typeof window === 'undefined') return;
+    const keydown = (event: KeyboardEvent): void => {
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        (event.target as HTMLElement | null)?.isContentEditable
+      )
+        return;
+      if (event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        editorCopy();
+      } else if (event.key.toLowerCase() === 'x') {
+        event.preventDefault();
+        editorCut();
+      } else if (event.key.toLowerCase() === 'v') {
+        event.preventDefault();
+        editorPaste();
+      } else if (event.key.toLowerCase() === 'd') {
+        event.preventDefault();
+        editorDuplicate();
+      }
+    };
+    window.addEventListener('keydown', keydown);
+    return () => {
+      window.removeEventListener('keydown', keydown);
+    };
+  }, [editorCopy, editorCut, editorDuplicate, editorPaste]);
+  useCallback(
+    (connection: Connection): void => {
+      if (
+        disabled ||
+        !connection.source ||
+        !connection.target ||
+        editorAdapter.validConnection?.(connection, editorRef.current) === false
+      )
+        return;
+      const edge =
+        editorAdapter.createEdge?.(connection, editorRef.current) ??
+        ({
+          id: `e-${crypto.randomUUID()}`,
+          source: connection.source,
+          target: connection.target,
+          sourceHandle: connection.sourceHandle,
+          targetHandle: connection.targetHandle,
+        } as Edge);
+      if (edge) editorWrite({ ...editorRef.current, edges: [...editorRef.current.edges, edge] });
+    },
+    [editorAdapter, disabled, editorWrite],
+  );
+  useCallback((): void => {
+    if (!disabled && editorAdapter.layout) editorWrite(editorAdapter.layout(editorRef.current));
+  }, [editorAdapter, disabled, editorWrite]);
+  useCallback(
+    (changes: EdgeChange<Edge>[]): void => {
+      const permittedChanges = disabled
+        ? changes.filter((change) => change.type === 'select')
+        : changes;
+      if (permittedChanges.length)
+        editorWrite({
+          ...editorRef.current,
+          edges: applyEdgeChanges(permittedChanges, editorRef.current.edges),
+        });
+    },
+    [disabled, editorWrite],
+  );
+  useCallback(
+    (changes: NodeChange<FlowNode>[]): void => {
+      const permittedChanges = disabled
+        ? changes.filter((change) => change.type === 'select')
+        : changes;
+      if (permittedChanges.length)
+        editorWrite({
+          ...editorRef.current,
+          nodes: applyNodeChanges(permittedChanges, editorRef.current.nodes),
+        });
+    },
+    [disabled, editorWrite],
+  );
+  useCallback(
+    (selected: FlowNode[]): void => {
+      editorWrite({
+        ...editorRef.current,
+        nodes: editorRef.current.nodes.map((node) => ({
+          ...node,
+          selected: new Set(selected.map((i) => i.id)).has(node.id),
+        })),
+      });
+    },
+    [editorWrite],
+  );
   const handleResizeEnd = useCallback(
     (i: string, p: { x: number; y: number; width: number; height: number }) => {
       writeGraph((c) => ({
@@ -1380,42 +1667,112 @@ export default function Nodes({
     [writeGraph],
   );
 
-  // prettier-ignore
   useEffect(() => {
-		const { positionedNodes, graphHeight } = layoutGraph<FlowNode>(graph.nodes, graph.edges, dir, nodeSep, rankSep, {
-						getSize: node =>
-				getNodeSize(
-					node,
-					{ width: 175, height: 60, groupWidth: 160, groupHeight: 100, erdWidth: 224, erdHeight: 60 },
-					n => {
-						if (n.type !== 'erd') return;
-						const attrs = n.data && validateType(['object'], n.data) && 'attributes' in n.data ? (n.data as { attributes?: unknown[] }).attributes : undefined;
-						return 60 + (Array.isArray(attrs) ? attrs.length : 0) * 20;
-					},
-				),
-			getGroupId,
-			getCustomPosition: getCustomPos,
-						registerNode: (graph, node, size) => {
-				if (node.type === 'group') graph.setNode(node.id, { paddingLeft: 40, paddingRight: 40, paddingTop: 60, paddingBottom: 40 });
-				else graph.setNode(node.id, { width: size.w, height: size.h });
-			},
-						placeNode: (node, dagreNode) => {
-				const persisted = getCustomPos(node);
-				if (node.type === 'group') {
-					const calcW = dagreNode?.width ?? 200;
-					const calcH = dagreNode?.height ?? 150;
-					const w = persisted ? (node.style?.width ?? calcW) : calcW;
-					const h = persisted ? (node.style?.height ?? calcH) : calcH;
-					return { ...node, position: persisted ?? { x: (/* dagre computes absolute center, NodeResizer forces a top-left origin. Translating natively! */ (dagreNode?.x ?? 0) - (Number(w) / 2)), y: ((dagreNode?.y ?? 0) - (Number(h) / 2)) }, style: { ...node.style, width: w, height: h } };
-				}
-				return { ...node, position: persisted ?? { x: dagreNode?.x ?? 0, y: dagreNode?.y ?? 0 } };
-			},
-		});
-		if (graphHeight && height === undefined) setInternalHeight(graphHeight + 40);
-			const { nodes, edges } = syncGraph(positionedNodes, graph.edges, dir, proximityConnect, permitted, arcControls, handleResizeEnd);
-		const nFlow = { edges, nodes, selectedById: new Map(flowRef.current.nodes.filter(n => n.selected).map(n => [n.id, true])) };
-		setFlow({ nodes: nFlow.nodes.map(n => ({ ...n, selected: nFlow.selectedById.get(n.id) ?? false })), edges: nFlow.edges });
-	}, [graph, dir, nodeSep, rankSep, proximityConnect, permitted, arcControls, height, handleResizeEnd]);
+    const layout = new Dagre.graphlib.Graph({ compound: true });
+    layout.setGraph({ rankdir: dir, nodesep: nodeSep, ranksep: rankSep });
+    layout.setDefaultEdgeLabel(() => ({}));
+    graph.nodes.forEach((node) => {
+      const size = getNodeSize(
+        node,
+        { width: 175, height: 60, groupWidth: 160, groupHeight: 100, erdWidth: 224, erdHeight: 60 },
+        (candidate) => {
+          if (candidate.type !== 'erd') return;
+          const attrs =
+            candidate.data &&
+            validateType(['object'], candidate.data) &&
+            'attributes' in candidate.data
+              ? (candidate.data as { attributes?: unknown[] }).attributes
+              : undefined;
+          return 60 + (Array.isArray(attrs) ? attrs.length : 0) * 20;
+        },
+      );
+      if (node.type === 'group')
+        layout.setNode(node.id, {
+          paddingLeft: 40,
+          paddingRight: 40,
+          paddingTop: 60,
+          paddingBottom: 40,
+        });
+      else layout.setNode(node.id, { width: size.w, height: size.h });
+    });
+    graph.nodes.forEach((node) => {
+      const parentId = getGroupId(node);
+      if (parentId && layout.hasNode(parentId)) layout.setParent(node.id, parentId);
+    });
+    const groupNodeIds = new Set(
+      graph.nodes.filter((node) => node.type === 'group').map((node) => node.id),
+    );
+    graph.edges.forEach((edge) => {
+      if (
+        edge.source !== edge.target &&
+        !groupNodeIds.has(edge.source) &&
+        !groupNodeIds.has(edge.target)
+      )
+        layout.setEdge(edge.source, edge.target);
+    });
+    Dagre.layout(layout);
+    const graphHeight = (layout.graph() as { height?: number }).height ?? 0;
+    if (graphHeight && height === undefined) setInternalHeight(graphHeight + 40);
+    const { nodes, edges } = syncGraph(
+      graph.nodes.map((node) => {
+        const persisted =
+          node.data &&
+          isRec(node.data) &&
+          'customPosition' in node.data &&
+          isRec(node.data.customPosition) &&
+          typeof node.data.customPosition.x === 'number' &&
+          Number.isFinite(node.data.customPosition.x) &&
+          typeof node.data.customPosition.y === 'number' &&
+          Number.isFinite(node.data.customPosition.y)
+            ? { x: node.data.customPosition.x, y: node.data.customPosition.y }
+            : undefined;
+        const dagreNode = layout.node(node.id);
+        if (node.type === 'group') {
+          const calcW = dagreNode?.width ?? 200;
+          const calcH = dagreNode?.height ?? 150;
+          const width = persisted ? (node.style?.width ?? calcW) : calcW;
+          const height = persisted ? (node.style?.height ?? calcH) : calcH;
+          return {
+            ...node,
+            position: persisted ?? {
+              x: (dagreNode?.x ?? 0) - Number(width) / 2,
+              y: (dagreNode?.y ?? 0) - Number(height) / 2,
+            },
+            style: { ...node.style, width, height },
+          };
+        }
+        return {
+          ...node,
+          position: persisted ?? { x: dagreNode?.x ?? 0, y: dagreNode?.y ?? 0 },
+        };
+      }),
+      graph.edges,
+      dir,
+      proximityConnect,
+      permitted,
+      arcControls,
+      handleResizeEnd,
+    );
+    setFlow({
+      nodes: nodes.map((node) => ({
+        ...node,
+        selected: flowRef.current.nodes.some(
+          (selectedNode) => selectedNode.id === node.id && selectedNode.selected,
+        ),
+      })),
+      edges,
+    });
+  }, [
+    graph,
+    dir,
+    nodeSep,
+    rankSep,
+    proximityConnect,
+    permitted,
+    arcControls,
+    height,
+    handleResizeEnd,
+  ]);
   useEffect(() => {
     writeGraph({ nodes: initialNodes, edges: initialEdges }, false);
   }, [initialNodes, initialEdges, writeGraph]);
@@ -1447,10 +1804,10 @@ export default function Nodes({
           <FLOW_COMPONENTS.Canvas
             flow={flow}
             nodeTypes={
-              { ...FLOW_COMPONENTS.nodeTypes, ...customNodeTypes } as unknown as Record<
-                string,
-                React.ComponentType<NodeProps<FlowNode>>
-              >
+              {
+                ...FLOW_COMPONENTS.nodeTypes,
+                ...customNodeTypes,
+              } as unknown as Record<string, React.ComponentType<NodeProps<FlowNode>>>
             }
             {...(edgeTypes ? { edgeTypes } : {})}
             nodeLabels={nodeLabels}
@@ -1575,7 +1932,11 @@ export default function Nodes({
                   ...g,
                   edges: g.edges.map((e) =>
                     e.id === r.id
-                      ? { ...e, label: nLabel, labelBgStyle: { fill: 'white', fillOpacity: 0.8 } }
+                      ? {
+                          ...e,
+                          label: nLabel,
+                          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+                        }
                       : e,
                   ),
                 }));
@@ -1608,7 +1969,10 @@ export default function Nodes({
             onAddContent={fns.current.onAddContent}
             onGroupNodes={useCallback(
               (g: FlowNode, v: FlowNode[]) => {
-                const group = { node: g, targetIds: new Set(v.map((s) => s.id)) };
+                const group = {
+                  node: g,
+                  targetIds: new Set(v.map((s) => s.id)),
+                };
                 writeGraph((c) => {
                   const nNodes = c.nodes.map((n) => {
                     if (group.targetIds.has(n.id)) {
@@ -1698,7 +2062,11 @@ export default function Nodes({
                             break;
                         }
                         const nPos = { x: nAbsX, y: nAbsY };
-                        return { ...n, position: nPos, data: { ...n.data, customPosition: nPos } };
+                        return {
+                          ...n,
+                          position: nPos,
+                          data: { ...n.data, customPosition: nPos },
+                        };
                       }
                       return n;
                     }),
@@ -1808,7 +2176,10 @@ export default function Nodes({
             )}
             onDeleteEdge={useCallback(
               (i: string) => {
-                writeGraph((c) => ({ ...c, edges: c.edges.filter((_e) => _e.id !== i) }));
+                writeGraph((c) => ({
+                  ...c,
+                  edges: c.edges.filter((_e) => _e.id !== i),
+                }));
               },
               [writeGraph],
             )}
@@ -1846,4 +2217,4 @@ export default function Nodes({
       </div>
     </ErrorBoundary>
   );
-}
+});

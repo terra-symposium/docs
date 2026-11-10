@@ -1,5 +1,9 @@
 node_modules/
 dist/
+demo-dist/
+lib-dist/
+site-dist/
+test-results/
 .astro/
 pnpm-lock.yaml
 ../tests/results/

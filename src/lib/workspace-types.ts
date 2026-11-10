@@ -10,6 +10,7 @@ export type DocsLeaf = {
   attachments?: DocsAttachment[];
   hue?: number | null;
 };
+
 export type DocsGroup = {
   title: string;
   id?: string;
@@ -17,6 +18,7 @@ export type DocsGroup = {
   hue?: number | null;
   leaves: DocsLeaf[];
 };
+
 export type DocsSection = {
   title: string;
   id?: string;

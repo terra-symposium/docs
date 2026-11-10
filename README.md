@@ -1,37 +1,32 @@
-# Docs
+# Terra Docs
 
-Docs is the shared Terra documentation workspace and Markdown site generator. A repository can use the npm package for an entire Docs site or embed its React editor and viewer in another application.
+Terra Docs is a reusable React document editor and viewer, Markdown site generator, and documentation workspace. Repositories can use the package for a complete Docs site or embed its React components in another application. This repository includes a Vite consumer demo, Astro integration, interface documentation, and unit and browser coverage.
 
-## What it does
+## Getting started
 
-Not applicable.
-
-## Prerequisites
-
-Not applicable.
-
-## Get started
-
-### Run the playground and docs site
-
-Requirements: Node.js 24.12+, pnpm 10.30.3. Run `pnpm install --frozen-lockfile`, then use:
+Requires Node.js 24.12+ and pnpm 10.30.3. From the repository root:
 
 ```sh
-pnpm run dev    # Vite component playground
-pnpm run docs   # Package-owned Astro Docs site reading this repository's docs/ folder
+pnpm install --frozen-lockfile
+pnpm run dev
+pnpm run docs
 ```
 
-The launcher delegates port acquisition to Terra Quality, then starts the dev server with strict port handling. Host apps use this shared launcher; set DOCS_DEV_PORT to override their preferred port.
+`pnpm run dev` starts the Vite component playground. `pnpm run docs` starts the package-owned Astro Docs site using this repository's `docs/` folder. The shared launcher delegates port acquisition to Terra Quality, then starts the dev server with strict port handling. Host apps use this launcher; set `DOCS_DEV_PORT` to override their preferred port.
 
-Build with `pnpm run build`; run package checks with `pnpm run check`. Build the demo directly with `pnpm exec vite build`.
+Build the library with `pnpm run build`, run package checks with `pnpm run check`, and build the demo directly with `pnpm exec vite build`.
 
-The reusable block registry includes accordions, tabs, tables, callouts, code, images, embeds, math, diagrams, raw Markdown, and TypeScript documentation. All are available by default; hosts can disable individual members with the `blocks` prop. Local repository pages stay read-only in the browser.
+### Commands
 
-Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, generate }}` on `DocsLocalWorkspace`, `DocsStaticWorkspace`, or `DocsWorkspace`. The `generate` callback receives the current leaf title and Markdown plus the requested question count and types, and must return `{ title, questions }`. Multiple-choice questions use `{ type: 'multipleChoice', prompt, opts, answer, explanation?, section? }`; keyword questions use `{ type: 'keyword', prompt, answers, keywords?, explanation?, section? }`. Hosts should implement that callback through a server endpoint and keep `OPENAI_API_KEY` in server-side secret storage. The shared Docs package never accepts or stores API keys.
+Run `pnpm test`, `pnpm test:browser`, and `pnpm test:consumer` as applicable. The repository checks its library, consumer demo, Astro integration, and documentation site.
 
-Individual leaves can expose the same flow with the `<Quiz />` Markdown component. The repository-level toolbar option is off by default.
+## Security and Limitations
 
-## Usage
+The package renders user-authored document content and includes HTML sanitization. Integrators must preserve sanitization and workspace boundaries; rendering does not authorize access to private content.
+
+The package never accepts or stores API keys. Hosts that enable quiz generation should implement the `generate` callback through a server endpoint and keep `OPENAI_API_KEY` in server-side secret storage. The quiz toolbar is off by default.
+
+## Structure
 
 ### Create a repository Docs site
 
@@ -48,7 +43,7 @@ pnpm run docs
 pnpm run build
 ```
 
-The package creates the routes, navigation, Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. `.mdx` files can import interactive examples. Optional `title`, `description`, `hue`, and `sidebar` frontmatter are available when needed. Build output defaults to `dist/docs/`.
+The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). Build output defaults to `dist/docs/`.
 
 Move the full agent tree into `docs/agents/`. `SKILL.md` files there route as the index page for their folder, so the complete tree uses normal Docs navigation, search, and asset handling. The Agents section is included by default. Set `docs.includeAgents` to `false` in the repository's `package.json`, or pass `--agents false`, to hide it for one Docs instance.
 
@@ -68,13 +63,7 @@ import type { DocsValue } from '@terra-symposium/docs';
 import '@terra-symposium/docs/style.css';
 ```
 
-To work on the package itself, clone this repository and run its component playground and Docs site. Markdown hosts can use `renderMarkdown`, `markdownToDocsValue`, and `docsValueToMarkdown`; remote hosts implement the [storage provider](docs/development/storage/).
-
-## Configuration and security
-
-Not applicable.
-
-## Development and structure
+Markdown hosts can use `renderMarkdown`, `markdownToDocsValue`, and `docsValueToMarkdown`; remote hosts implement the [storage provider](docs/development/storage/).
 
 ### Embed a Docs workspace
 
@@ -113,28 +102,24 @@ const sections: DocsSection[] = [
 </DocsSiteLayout>;
 ```
 
-`DocsSiteLayout` delegates to the canonical shared workspace and is intended for static React pages. Repository-backed hosts should use `DocsLocalWorkspace`, which loads each leaf and its adjacent attachments from the host-provided tree and remains read-only. Remote hosts should use `DocsWorkspace` with a `DocsHostAdapter`; that adapter supplies the original tree controls and performs create, rename, duplicate, reorder, attachment, export, and delete operations after applying the host's own permission checks.
+`DocsSiteLayout` delegates to the canonical shared workspace and is intended for static React pages. Repository-backed hosts should use `DocsLocalWorkspace`, which loads each leaf and its adjacent attachments from the host-provided tree and remains read-only. Remote hosts should use `DocsWorkspace` with a `DocsHostAdapter`; the adapter supplies the original tree controls and performs create, rename, duplicate, reorder, attachment, export, and delete operations after applying the host's own permission checks.
 
-## Validation
+The reusable block registry includes accordions, tabs, tables, callouts, code, images, embeds, math, diagrams, raw Markdown, and TypeScript documentation. All are available by default; hosts can disable individual members with the `blocks` prop. Local repository pages stay read-only in the browser.
 
-Not applicable.
-
-## Deployment and operations
-
-Not applicable.
-
-## Data, privacy, and limitations
-
-Not applicable.
+Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, generate }}` on `DocsLocalWorkspace`, `DocsStaticWorkspace`, or `DocsWorkspace`. The `generate` callback receives the current leaf title and Markdown plus the requested question count and types, and must return `{ title, questions }`. Multiple-choice questions use `{ type: 'multipleChoice', prompt, opts, answer, explanation?, section? }`; keyword questions use `{ type: 'keyword', prompt, answers, keywords?, explanation?, section? }`. Individual leaves can expose the same flow with the `<Quiz />` Markdown component.
 
 ## References
 
-Not applicable.
+- [Interface guide](docs/interface.md)
+- [Storage provider guide](docs/development/storage/)
+- [Test migration notes](TEST_MIGRATION.md)
+- [Package exports](package.json)
+- [Apache-2.0 license](LICENSE)
 
 ## Contributing
 
-Not applicable.
+Document interface changes and keep consumer examples aligned with package exports. To work on the package itself, clone this repository and run the component playground and Docs site.
 
 ## Credits and license
 
-Not applicable.
+The package declares [Apache-2.0](LICENSE). Review third-party dependency and asset terms separately.

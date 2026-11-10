@@ -13,7 +13,12 @@ export {
   defaultDocsBlock,
   DocsRichBlock,
 } from '../components/blocks.js';
-export type { DocsBlockOptions, DocsBlockType, RichBlock } from '../components/blocks.js';
+export type {
+  DocsBlockOptions,
+  DocsBlockType,
+  DocsEditorBlockType,
+  RichBlock,
+} from '../components/blocks.js';
 export { DocsQuizGenerator } from '../components/quiz.js';
 export { parseDocsQuiz } from '../components/quiz.js';
 export type {
@@ -36,7 +41,6 @@ export { default as DocsInlineMath } from '../components/terra/editor/docs/_math
 export { NodesBlock } from '../components/terra/editor/docs/_Nodes.js';
 export { Raw } from '../components/terra/editor/docs/_Raw.js';
 export { renderTable } from '../components/terra/editor/docs/_Table.js';
-export { renderSections } from '../components/terra/editor/docs/_Tabs.js';
 export { TsDocs } from '../components/terra/editor/docs/_TsDocs.js';
 export { DocsHeading } from '../components/terra/editor/docs/heading.js';
 export { DOCS_BLOCK_ICONS } from '../components/terra/pages/docs/_icons.js';

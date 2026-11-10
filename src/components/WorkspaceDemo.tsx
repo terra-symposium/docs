@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { colors, flattenColors, invert } from '@terra-symposium/styling';
-import { DocsLocalWorkspace, DocsWorkspace } from '@terra-symposium/docs';
+import { DocsLocalWorkspace } from './LocalDocsWorkspace.js';
+import { DocsWorkspace } from './terra/Workspace.js';
 import {
   createWorkspaceDemoHost,
   createWorkspaceDemoSeed,
@@ -13,66 +14,52 @@ import {
 import type { DocsHostTreeNode } from '../lib/host.js';
 import type { DocsQuizConfig, DocsQuizGenerationInput } from './quiz.js';
 import type { CSSProperties, JSX } from 'react';
-
-function withLocalRoute(
-  nodes: DocsHostTreeNode[],
-  routeBase = '/workspace-readonly/',
-): DocsHostTreeNode[] {
-  return nodes.map((node) => ({
-    ...node,
-    ...(node.type === 'leaf' ? { url: routeBase } : {}),
-    ...(node.children ? { children: withLocalRoute(node.children, routeBase) } : {}),
-  }));
-}
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 
 function currentLocation(): string {
   if (typeof window === 'undefined') return WORKSPACE_DEMO_PATH;
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
-function aDocumentId(state: WorkspaceDemoState, location: string): string {
-  try {
-    const requested = new URL(location, 'http://localhost').searchParams.get('leaf');
-    if (requested && state.documents[requested]) return requested;
-  } catch {
-    // The seed leaf is the stable fallback for malformed demo routes.
-  }
-  return state.documents.salesphere ? 'salesphere' : (Object.keys(state.documents)[0] ?? '');
-}
-
-function genDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
-  const excerpt =
-    input.markdown
-      .replace(/^\s*#+\s*/gm, '')
-      .replace(/[*_`>#]/g, ' ')
-      .split(/[.!?\n]+/)
-      .map((part) => part.trim())
-      .find((part) => part.length > 12)
-      ?.slice(0, 150) ?? input.title;
-  const keyword = excerpt.split(/\s+/).find((word) => word.length >= 5) ?? input.title;
-  return Promise.resolve({
-    title: `${input.title} quiz · sample`,
-    questions: Array.from({ length: input.count }, (_, i) => {
-      const type = input.types[i % input.types.length];
-      if (type === 'keyword')
+const demoQuiz: DocsQuizConfig = {
+  toolbar: true,
+  generate: function genDemoQuiz(input: DocsQuizGenerationInput): Promise<unknown> {
+    const excerpt =
+      input.markdown
+        .replace(/^\s*#+\s*/gm, '')
+        .replace(/[*_`>#]/g, ' ')
+        .split(/[.!?\n]+/)
+        .map((part) => part.trim())
+        .find((part) => part.length > 12)
+        ?.slice(0, 150) ?? input.title;
+    const quizText = {
+      excerpt,
+      keyword:
+        excerpt.split(TerraQualityRegex.REGEX_S_REGEX_2()).find((word) => word.length >= 5) ??
+        input.title,
+    };
+    return Promise.resolve({
+      title: `${input.title} quiz · sample`,
+      questions: Array.from({ length: input.count }, (_, i) => {
+        const type = input.types[i % input.types.length];
+        if (type === 'keyword')
+          return {
+            type,
+            prompt: `Name a key term from “${input.title}”.`,
+            answers: [quizText.keyword.replace(/[^\p{L}\p{N}-]/gu, '') || input.title],
+            explanation: 'This sample answer is drawn from the selected leaf.',
+          };
         return {
           type,
-          prompt: `Name a key term from “${input.title}”.`,
-          answers: [keyword.replace(/[^\p{L}\p{N}-]/gu, '') || input.title],
-          explanation: 'This sample answer is drawn from the selected leaf.',
+          prompt: `Which statement appears in “${input.title}”?`,
+          opts: [quizText.excerpt, 'The leaf contains no information about this topic.'],
+          answer: quizText.excerpt,
+          explanation: 'The correct choice comes from the selected leaf text.',
         };
-      return {
-        type,
-        prompt: `Which statement appears in “${input.title}”?`,
-        opts: [excerpt, 'The leaf contains no information about this topic.'],
-        answer: excerpt,
-        explanation: 'The correct choice comes from the selected leaf text.',
-      };
-    }),
-  });
-}
-
-const demoQuiz: DocsQuizConfig = { toolbar: true, generate: genDemoQuiz };
+      }),
+    });
+  },
+};
 
 export default function WorkspaceDemo({
   readOnly = false,
@@ -101,13 +88,13 @@ export default function WorkspaceDemo({
     };
     const syncLocation = (event: Event): void => {
       const detail = (event as CustomEvent<{ pathname?: unknown; url?: unknown }>).detail;
-      const route =
+      setLocation(
         typeof detail?.pathname === 'string'
           ? detail.pathname
           : typeof detail?.url === 'string'
             ? detail.url
-            : currentLocation();
-      setLocation(route);
+            : currentLocation(),
+      );
       setState(readWorkspaceDemoState());
     };
     syncFixture();
@@ -121,8 +108,18 @@ export default function WorkspaceDemo({
     };
   }, [syncParentOnNavigate]);
 
-  const selectedId = aDocumentId(state, location);
-  const selectedDocument = state.documents[selectedId] ?? state.documents.salesphere;
+  const selectedDocument =
+    state.documents[
+      (() => {
+        try {
+          const requested = new URL(location, 'http://localhost').searchParams.get('leaf');
+          if (requested && state.documents[requested]) return requested;
+        } catch {
+          // The seed leaf is the stable fallback for malformed demo routes.
+        }
+        return state.documents.salesphere ? 'salesphere' : (Object.keys(state.documents)[0] ?? '');
+      })()
+    ] ?? state.documents.salesphere;
   const host = useMemo(() => {
     const demoHost = createWorkspaceDemoHost(readOnly);
     if (!siteDescription) delete demoHost.siteDescription;
@@ -137,19 +134,6 @@ export default function WorkspaceDemo({
   // regressions instead of comparing a different secondary/gray palette.
   const [primary, baseGray] = colors(hue);
   const [secondary, gray] = colors(invert(hue));
-  const colorTokens = {
-    ...flattenColors('primary', primary),
-    ...flattenColors('gray', gray ?? baseGray),
-    ...flattenColors('secondary', secondary ?? baseGray),
-  };
-  const theme = {
-    ...Object.fromEntries(primary.light.map((rgb, i) => [`--primary-${i + 1}`, rgb])),
-    ...Object.fromEntries((gray ?? baseGray).light.map((rgb, i) => [`--gray-${i + 1}`, rgb])),
-    ...Object.fromEntries(
-      (secondary ?? baseGray).light.map((rgb, i) => [`--secondary-${i + 1}`, rgb]),
-    ),
-    ...colorTokens,
-  } as CSSProperties;
 
   if (!selectedDocument) return <div className="min-h-svh" />;
 
@@ -165,41 +149,62 @@ export default function WorkspaceDemo({
     attachments: selectedDocument.attachments,
   };
 
-  const workspace = readOnly ? (
-    <DocsLocalWorkspace
-      tree={withLocalRoute(routedWorkspaceTree(state, true), routeBase)}
-      pages={[localPage]}
-      pathname={localPage.pathname}
-      title="Salesphere Docs"
-      description="Product and engineering documentation."
-      rootPath={routeBase}
-      homePath={routeBase}
-      {...(quizEnabled ? { quiz: demoQuiz } : {})}
-    />
-  ) : (
-    <DocsWorkspace
-      tree={routedWorkspaceTree(state, false)}
-      host={host}
-      pathname={
-        location !== WORKSPACE_DEMO_PATH
-          ? location
-          : routeForWorkspaceDocument(state, selectedDocument.id)
-      }
-      permission="write"
-      path={selectedDocument.path}
-      title={selectedDocument.title}
-      description={selectedDocument.description}
-      contributors={selectedDocument.contributors}
-      updatedAt={selectedDocument.updatedAt}
-      content={selectedDocument.content}
-      source={selectedDocument.source}
-      {...(quizEnabled ? { quiz: demoQuiz } : {})}
-    />
-  );
-
   return (
-    <div className="workspace-demo-theme min-h-svh bg-primary-1 text-primary-12" style={theme}>
-      {workspace}
+    <div
+      className="workspace-demo-theme min-h-svh bg-primary-1 text-primary-12"
+      style={
+        {
+          ...Object.fromEntries(primary.light.map((rgb, i) => [`--primary-${i + 1}`, rgb])),
+          ...Object.fromEntries((gray ?? baseGray).light.map((rgb, i) => [`--gray-${i + 1}`, rgb])),
+          ...Object.fromEntries(
+            (secondary ?? baseGray).light.map((rgb, i) => [`--secondary-${i + 1}`, rgb]),
+          ),
+          ...flattenColors('primary', primary),
+          ...flattenColors('gray', gray ?? baseGray),
+          ...flattenColors('secondary', secondary ?? baseGray),
+        } as CSSProperties
+      }
+    >
+      {readOnly ? (
+        <DocsLocalWorkspace
+          tree={(function withLocalRoute(
+            nodes: DocsHostTreeNode[],
+            routeBase = '/workspace-readonly/',
+          ): DocsHostTreeNode[] {
+            return nodes.map((node) => ({
+              ...node,
+              ...(node.type === 'leaf' ? { url: routeBase } : {}),
+              ...(node.children ? { children: withLocalRoute(node.children, routeBase) } : {}),
+            }));
+          })(routedWorkspaceTree(state, true), routeBase)}
+          pages={[localPage]}
+          pathname={localPage.pathname}
+          title="Salesphere Docs"
+          description="Product and engineering documentation."
+          rootPath={routeBase}
+          homePath={routeBase}
+          {...(quizEnabled ? { quiz: demoQuiz } : {})}
+        />
+      ) : (
+        <DocsWorkspace
+          tree={routedWorkspaceTree(state, false)}
+          host={host}
+          pathname={
+            location !== WORKSPACE_DEMO_PATH
+              ? location
+              : routeForWorkspaceDocument(state, selectedDocument.id, host.buildRoute)
+          }
+          permission="write"
+          path={selectedDocument.path}
+          title={selectedDocument.title}
+          description={selectedDocument.description}
+          contributors={selectedDocument.contributors}
+          updatedAt={selectedDocument.updatedAt}
+          content={selectedDocument.content}
+          source={selectedDocument.source}
+          {...(quizEnabled ? { quiz: demoQuiz } : {})}
+        />
+      )}
     </div>
   );
 }

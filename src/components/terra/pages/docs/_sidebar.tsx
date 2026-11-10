@@ -19,7 +19,7 @@ import {
   useAtom,
 } from '../../../../lib/terra/docs/state.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
-import { archiveDocs } from '../../../../lib/terra/docs/archive.js';
+import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import {
   bName,
   buildRoute as buildRoute,
@@ -27,45 +27,58 @@ import {
   dirname,
   docsPath,
   docsRootPath,
+  isDocsPath,
   toNodeLabel,
   toPaths,
 } from '../../../../lib/terra/runtime/shared.js';
-import { cn, createTrace, isDevOrigin, notify } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, createTrace, notify } from '../../../../lib/terra/runtime/runtime.js';
 import { components as repoComponents } from '../../../../lib/terra/custom-components.js';
 import { currLeafSrc } from '../../../../lib/terra/runtime/leaf.js';
 import {
   extractAllNodeIds,
   getSiblings as getSibs,
   getStableKey,
+  isIndexFile,
   parseDocsRoute as route,
   sanitizeName,
 } from '../../../../lib/terra/docs/tree.js';
 import { getHue } from '@terra-symposium/styling';
 import { navigateDocs as navigate } from '../../../../lib/terra/docs/navigation.js';
 import { runMutation } from '../../../../lib/terra/docs/mutations.js';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { toast } from 'sonner';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRenderTripwire } from './use-render-tripwire.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 import Tree, { Menu } from './_tree.js';
-import User, { ErrorBoundary } from '../../ui.js';
+import { ErrorBoundary } from '../../ui.js';
 import {
   Add as AddIcon,
+  ArrowLeft as LeftArrowIcon,
   ArrowUpRight as PopOutIcon,
   Box as BoxIcon,
+  Catalog as CatalogIcon,
   ColorPalette as ColorIcon,
+  Doc as DocumentIcon,
   Download as DownloadIcon,
   Edit as EditIcon,
+  Image as ImageIcon,
   Link as LinkIcon,
+  LogoYoutube as YouTubeIcon,
+  MagicWand as MagicIcon,
   TrashCan as TrashIcon,
   Search as SearchIcon,
+  Upload as UploadIcon,
 } from '@carbon/icons-react';
 import {
   AlertError,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   Button,
+  Card,
   ContextMenu,
   ContextMenuContent,
   ContextMenuTrigger,
@@ -89,18 +102,21 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarRail,
+  Spinner,
   Slider,
+  Textarea,
 } from '@terra-symposium/styling/ui';
+import { Empty } from '../../ui.js';
+import { TsDocsSelect } from './_blocks.js';
+import type { PDFDocument, PDFImage } from 'pdf-lib';
 import { ExportDialog as SharedExportDialog } from './_export-dialog.js';
-import { ManageAttachmentsDialog } from './_manage-attachments-dialog.js';
 
 // DATA
-import { FILES } from '../../../../lib/terra/runtime/shared.js';
 
 // TYPES
 import type {
   ActionRes,
-  AttchTgt,
+  AttchType,
   Branch,
   DelTgt,
   DocsTreeMenuAction as MenuAction,
@@ -109,6 +125,7 @@ import type {
   Md,
   PromptState,
   ReorderDropState,
+  Sister,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
 
@@ -343,7 +360,12 @@ function Nav({
   const [lastSel, setLastSel] = useState<string | null>(null);
 
   // DIALOG STATES
-  const [manageAttTgt, setManageAttTgt] = useState<AttchTgt | null>(null);
+  const [manageAttTgt, setManageAttTgt] = useState<{
+    path: string;
+    title: string;
+    scope: 'section' | 'group' | 'leaf';
+    node: TreeType;
+  } | null>(null);
   const [exportTgt, setExportTgt] = useState<{
     paths: string[];
     rootDir: string;
@@ -351,7 +373,10 @@ function Nav({
     title: string;
     nodeIds?: string[];
   } | null>(null);
-  const [assetTgt, setAssetTgt] = useState<{ path: string; title: string } | null>(null);
+  const [assetTgt, setAssetTgt] = useState<{
+    path: string;
+    title: string;
+  } | null>(null);
   const [assetDialogOpen, setAssetDialogOpen] = useState(false);
   const [assetBusy, setAssetBusy] = useState(false);
   const [assetComponent, setAssetComponent] = useState(
@@ -359,9 +384,11 @@ function Nav({
       repoComponents[0]?.name ??
       '',
   );
-  const [hueDlg, setHueDlg] = useState<{ open: boolean; hue: number; section: TreeType } | null>(
-    null,
-  );
+  const [hueDlg, setHueDlg] = useState<{
+    open: boolean;
+    hue: number;
+    section: TreeType;
+  } | null>(null);
   const [inputDlg, setInputDlg] = useState<{
     open: boolean;
     title: string;
@@ -382,7 +409,7 @@ function Nav({
   } | null>(null);
 
   // INJECT TRIPWIRE TO CATCH STATE THRASHING
-  useRenderTripwire('Nav', {
+  const navTripwireTrackedVars = {
     curMode,
     transitioning,
     creating,
@@ -403,7 +430,36 @@ function Nav({
     hueDlgOpen: hueDlg?.open,
     inputDlgOpen: inputDlg?.open,
     delTargetPresent: !!delTgt,
-  });
+  };
+  const navTripwireNow = performance.now();
+  const navTripwireRenders = useRef(0);
+  const navTripwirePrevVars = useRef(navTripwireTrackedVars);
+  const navTripwireWindowStart = useRef(navTripwireNow);
+  if (navTripwireNow - navTripwireWindowStart.current > 500) {
+    navTripwireWindowStart.current = navTripwireNow;
+    navTripwireRenders.current = 0;
+  }
+  navTripwireRenders.current++;
+  if (navTripwireRenders.current > 50) {
+    const navTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
+    for (const key in navTripwireTrackedVars)
+      if (navTripwireTrackedVars[key] !== navTripwirePrevVars.current[key])
+        navTripwireDiff[key] = {
+          old: navTripwirePrevVars.current[key],
+          new: navTripwireTrackedVars[key],
+        };
+    console.error(`🚨 [TRIPWIRE TRIGGERED] Infinite Loop in Nav 🚨`);
+    console.error(
+      `Detected 50 renders in rapid succession. Average delta: ${(navTripwireNow - navTripwireWindowStart.current).toFixed(2)}ms`,
+    );
+    console.error(
+      'State Differences (What is causing the thrash):',
+      JSON.stringify(navTripwireDiff),
+    );
+    console.trace(`Trace for Nav infinite loop`);
+    throw new Error(`Render Tripwire killed infinite loop in Nav. Check console for state diffs.`);
+  }
+  navTripwirePrevVars.current = navTripwireTrackedVars;
 
   // Keep both the active tree route and section selector aligned with host
   // navigation. Repository adapters can route every page through `/#id`, so
@@ -449,13 +505,13 @@ function Nav({
 
     // prettier-ignore
     if (/**
-		 * SIMULATED SECTION WRAPPER
-		 *
-		 * If a user accesses a group directly (e.g., via granular permission /docs/{groupId}/{leafId}),
-		 * the nav tree will return Groups as the top-level branches instead of Sections.
-		 * The sidebar structurally expects Sections at the top level. We intercept this and wrap
-		 * the Groups in a simulated "Shared Context" Section to render the tree seamlessly.
-	 */ (s.length > 0 && s.every(b => b.children?.every(c => c.type === 'leaf'))) && s[0]?.origName !== urlIds.sectionId) s = [{ type: 'branch', origName: urlIds.sectionId, permission: 'read', simulated: true, title: s[0]?.title || 'Shared Context', url: docsPath(urlIds.sectionId), children: s }];
+     * SIMULATED SECTION WRAPPER
+     *
+     * If a user accesses a group directly (e.g., via granular permission /docs/{groupId}/{leafId}),
+     * the nav tree will return Groups as the top-level branches instead of Sections.
+     * The sidebar structurally expects Sections at the top level. We intercept this and wrap
+     * the Groups in a simulated "Shared Context" Section to render the tree seamlessly.
+   */ (s.length > 0 && s.every(b => b.children?.every(c => c.type === 'leaf'))) && s[0]?.origName !== urlIds.sectionId) s = [{ type: 'branch', origName: urlIds.sectionId, permission: 'read', simulated: true, title: s[0]?.title || 'Shared Context', url: docsPath(urlIds.sectionId), children: s }];
     // prettier-ignore
     if (s.length === 0 && permission === 'write') s.push({ type: 'branch', origName: 'new-section', permission: 'read', simulated: true, url: docsPath('new-section'), children: [{ type: 'leaf', origName: 'index', path: 'index.mdx', url: docsRootPath(), permission: 'read', title: 'Untitled', fileType: 'mdx' }]});
     return s;
@@ -519,60 +575,65 @@ function Nav({
         const cPath = (value: string): string =>
           value
             .replace(/\\/g, '/')
-            .split(/[?#]/, 1)[0]!
+            .split(TerraQualityRegex.REGEX_PATTERN_REGEX_4(), 1)[0]!
             .replace(TerraQualityRegex.REGEX_DRAFTS_REGEX(), '')
             .replace(TerraQualityRegex.REGEX_MD_MDX_PDF_I_REGEX(), '')
-            .replace(/^\/+|\/+$/g, '');
+            .replace(TerraQualityRegex.REGEX_G_REGEX_35(), '');
         const targetPath = cPath(leafTitle.path);
         const targetBasename = targetPath.split('/').at(-1)?.toLowerCase() ?? '';
-        /**
-         * Counts leaves with the target basename before enabling a basename-only title match.
-         *
-         * @param items Navigation nodes whose leaves should be counted.
-         *
-         * @return Number of leaves whose normalized basename matches the target.
-         */
-        const countBasename = (items: TreeType[]): number =>
-          items.reduce((count, i) => {
-            if (i.type === 'leaf') {
-              const basename = cPath(i.path || '')
+        let basenameCount = 0;
+        const basenameCandidates = [...nodes];
+        while (basenameCandidates.length > 0 && basenameCount < 2) {
+          const node = basenameCandidates.pop()!;
+          if (node.type === 'leaf')
+            basenameCount += Number(
+              cPath(node.path || '')
                 .split('/')
                 .at(-1)
-                ?.toLowerCase();
-              return count + Number(basename === targetBasename);
-            }
-            return count + countBasename(i.children ?? []);
-          }, 0);
+                ?.toLowerCase() === targetBasename,
+            );
+          else if (node.children) for (const child of node.children) basenameCandidates.push(child);
+        }
         // Many repository documents are named index.md. A basename fallback
         // would rename every such leaf, so only allow it for a unique filename.
-        const canMatchBasename =
-          targetBasename !== 'index' && targetBasename !== '' && countBasename(nodes) === 1;
-        /**
-         * Returns a copied tree with the matching leaf title replaced.
-         *
-         * @param items Navigation nodes to copy and update recursively.
-         *
-         * @return A new tree whose matching leaf uses the latest title.
-         */
-        const update = (items: TreeType[]): TreeType[] =>
-          items.map((node) => {
-            const nodePath = node.type === 'leaf' ? node.path || '' : '';
+        const updated: TreeType[] = [];
+        const updateFrames: {
+          source: TreeType[];
+          target: TreeType[];
+          index: number;
+        }[] = [{ source: nodes, target: updated, index: 0 }];
+        while (updateFrames.length > 0) {
+          const frame = updateFrames[updateFrames.length - 1]!;
+          if (frame.index >= frame.source.length) {
+            updateFrames.pop();
+            continue;
+          }
+          const node = frame.source[frame.index++]!;
+          if (node.type === 'leaf') {
+            const nodePath = node.path || '';
             const normNodePath = cPath(nodePath);
             if (
-              node.type === 'leaf' &&
-              (nodePath === leafTitle.path ||
-                node.origName === leafTitle.path ||
-                normNodePath === targetPath ||
-                (canMatchBasename &&
-                  normNodePath.split('/').at(-1)?.toLowerCase() === targetBasename))
+              nodePath === leafTitle.path ||
+              node.origName === leafTitle.path ||
+              normNodePath === targetPath ||
+              (targetBasename !== 'index' &&
+                targetBasename !== '' &&
+                basenameCount === 1 &&
+                normNodePath.split('/').at(-1)?.toLowerCase() === targetBasename)
             ) {
-              return { ...node, title: leafTitle.title };
-            }
-            if (node.type === 'branch' && node.children)
-              return { ...node, children: update(node.children) };
-            return node;
-          });
-        return update(nodes);
+              frame.target.push({ ...node, title: leafTitle.title });
+            } else frame.target.push(node);
+            continue;
+          }
+          if (node.type === 'branch' && node.children) {
+            const children: TreeType[] = [];
+            frame.target.push({ ...node, children });
+            updateFrames.push({ source: node.children, target: children, index: 0 });
+            continue;
+          }
+          frame.target.push(node);
+        }
+        return updated;
       });
   }, [leafTitle]);
   useEffect(() => {
@@ -594,15 +655,27 @@ function Nav({
             }) & { isActive?: boolean }
           >(e);
           if (!d?.path || !d.nfilepath) return;
-          createTrace('DOCS:shared', isDevOrigin(globalThis.location?.origin ?? ''))(
-            'rename.start',
-            { next: d.nfilepath, previous: d.path },
-          );
+          createTrace(
+            'DOCS:shared',
+            (() => {
+              const origin = globalThis.location?.origin ?? '';
+              const isDevelopmentOrigin = getDocsHostAdapter()?.isDevelopmentOrigin;
+              if (isDevelopmentOrigin) return isDevelopmentOrigin(String(origin));
+              try {
+                const host = new URL(origin).hostname;
+                return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+              } catch {
+                return false;
+              }
+            })(),
+          )('rename.start', { next: d.nfilepath, previous: d.path });
           setTree((current) => {
             const renamed: TreeType[] = [];
-            const pending: { source: TreeType[]; target: TreeType[]; index: number }[] = [
-              { source: current, target: renamed, index: 0 },
-            ];
+            const pending: {
+              source: TreeType[];
+              target: TreeType[];
+              index: number;
+            }[] = [{ source: current, target: renamed, index: 0 }];
             while (pending.length > 0) {
               const frame = pending[pending.length - 1]!;
               if (frame.index >= frame.source.length) {
@@ -611,22 +684,27 @@ function Nav({
               }
               const node = frame.source[frame.index++]!;
               if (node.type === 'leaf' && node.path === d.path) {
-                const slug = d.nfilepath
-                  .replace(TerraQualityRegex.REGEX_PATTERN_REGEX_6(), '')
-                  .replace(FILES.markdown, '')
-                  .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX(), '');
                 frame.target.push({
                   ...node,
                   path: d.nfilepath,
                   title: d.title ?? node.title,
-                  url: docsPath(slug),
+                  url: docsPath(
+                    d.nfilepath
+                      .replace(TerraQualityRegex.REGEX_PATTERN_REGEX_6(), '')
+                      .replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2(), '')
+                      .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX(), ''),
+                  ),
                 });
                 continue;
               }
               if (node.type === 'branch') {
                 const children: TreeType[] = [];
                 frame.target.push({ ...node, children });
-                pending.push({ source: node.children ?? [], target: children, index: 0 });
+                pending.push({
+                  source: node.children ?? [],
+                  target: children,
+                  index: 0,
+                });
                 continue;
               }
               frame.target.push(node);
@@ -760,10 +838,10 @@ function Nav({
 								if (!firstPath) throw new Error('Not enough valid documents to merge');
 								setTree(v => {
 														/*
-									 * Handles prune.
-																		 *
-																											 * @param items - Sidebar items being pruned from the tree.
-									 */
+                   * Handles prune.
+                                     *
+                                                       * @param items - Sidebar items being pruned from the tree.
+                   */
 									return (/**
 									return ( * return ( * return ( *
 									return ( * return ( * return ( * @param items
@@ -992,7 +1070,10 @@ function prune(items: TreeType[]): TreeType[] {
         async () => {
           const tgtSectId = hueDlg.section.origName;
           // Apply hue mutation to Sanity
-          const { error: err } = await actions.write.doc.hue({ id: tgtSectId, hue: hueDlg.hue });
+          const { error: err } = await actions.write.doc.hue({
+            id: tgtSectId,
+            hue: hueDlg.hue,
+          });
           if (err) throw err;
           // 1. Optimistically update our local tree state so the sidebar dot updates immediately
           setTree((p) => {
@@ -1066,7 +1147,10 @@ function prune(items: TreeType[]): TreeType[] {
           : `${nPrefix.replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '')}${currPath.slice(currPrefix.length)}` ||
             nPrefix;
       try {
-        const { error: err } = await actions.write.doc.rm({ path: s, type: 'folder' });
+        const { error: err } = await actions.write.doc.rm({
+          path: s,
+          type: 'folder',
+        });
         if (err && !err.message?.includes('folder not found')) throw err;
         await refreshTree();
         if (redirect && redirect !== cPathname) navigate({ href: redirect, mode: 'view' });
@@ -1097,7 +1181,11 @@ function prune(items: TreeType[]): TreeType[] {
         );
         if (err && !err.message?.includes('folder not found')) throw err;
         await refreshTree();
-        if (a) navigate({ href: docsPath(dirname(p).replace(/^\.\/?/, '')), mode: 'view' });
+        if (a)
+          navigate({
+            href: docsPath(dirname(p).replace(/^\.\/?/, '')),
+            mode: 'view',
+          });
       } catch (err) {
         setTree(prevTree);
         throw err;
@@ -1251,8 +1339,8 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
 												if (!n.children) n.children = [];
 												if (!n.children.find(c => c.type === 'branch' && 'url' in c && c.url === gUrl))
 													n.children.push({
-													 type: 'branch', origName: tGrpId, permission: 'write', title: name, url: gUrl,
-													 children: [{ type: 'leaf', fileType: 'mdx', origName: tLeafId, path: dPath, permission: 'write', title: 'Untitled', description: '', url, source: '' }],
+                           type: 'branch', origName: tGrpId, permission: 'write', title: name, url: gUrl,
+                           children: [{ type: 'leaf', fileType: 'mdx', origName: tLeafId, path: dPath, permission: 'write', title: 'Untitled', description: '', url, source: '' }],
 												});
 												return true;
 											}
@@ -1301,7 +1389,12 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
       tpath: string;
       tPosition?: 'after' | 'before';
     }): Promise<void> => {
-      console.warn('[docs:mv-leaf]', { path: p, tTarget: tTgt, tpath: v, tPosition: r });
+      console.warn('[docs:mv-leaf]', {
+        path: p,
+        tTarget: tTgt,
+        tpath: v,
+        tPosition: r,
+      });
       const prevTree = JSON.parse(JSON.stringify(tree)) as TreeType[];
       let _nPath = p;
       try {
@@ -1387,7 +1480,10 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
             if (error) {
               setTree(prevTree);
               toast.error(error.message || 'Move failed');
-              notify({ error: new Error(error.message), fallback: 'Failed to move docs page.' });
+              notify({
+                error: new Error(error.message),
+                fallback: 'Failed to move docs page.',
+              });
               return;
             }
           }
@@ -1405,7 +1501,10 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                   : 'groups',
               items: tgtSibs
                 .filter((s) => s.type === 'leaf')
-                .map((s) => ({ _type: 'reference', _ref: s === movedNode ? _nPath : s.origName })),
+                .map((s) => ({
+                  _type: 'reference',
+                  _ref: s === movedNode ? _nPath : s.origName,
+                })),
             });
             if (error) throw error;
           }
@@ -1500,7 +1599,10 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     () =>
       repoComponents
         .filter((c) => c.name !== 'Leaf' && c.name !== 'Visualize')
-        .map((c) => ({ label: c.name.replace(/([a-z])([A-Z])/g, '$1 $2'), name: c.name })),
+        .map((c) => ({
+          label: c.name.replace(/([a-z])([A-Z])/g, '$1 $2'),
+          name: c.name,
+        })),
     [],
   );
   useEffect(() => {
@@ -1634,6 +1736,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     [permission, actionDisabled, triggerRenameSection],
   );
   const getTree = useCallback(() => tree, [tree]);
+  const userLabel = userData?.name ?? userData?.email ?? 'Signed out';
 
   // CONTEXT
   const treeCtx = useMemo(
@@ -1677,6 +1780,507 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     // prettier-ignore
     [creating, transitioning, drag, dState, curMode, mvBranch, mvLeaf, cPathname, refreshTree, permission, openCreate, addGroup, uploadAsLeaf, rmBranch, rmLeaf, hovered, selLeaves, handleSelect, clearSelection, mergeLeaves, getTree],
   );
+  const disabled = loading || transitioning;
+  const [atts, setAtts] = useState<Record<string, Sister[]>>({});
+  const [attachmentDialogLoading, setAttachmentDialogLoading] = useState(false);
+  const [a, setActive] = useState<{
+    title: string;
+    fullTitle: string;
+    id: string;
+    path: string;
+    type: string;
+  } | null>(null);
+  const [addMode, setAddMode] = useState<AttchType | 'select' | 'page' | null>(null);
+  const [url, setUrl] = useState('');
+  const [query, setQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [selAtts, setSelAtts] = useState<{ docPath: string; a: Sister }[]>([]);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const attachmentTripwireTrackedVars = {
+    tgt: manageAttTgt,
+    disabled,
+    tree,
+    atts,
+    loading: attachmentDialogLoading,
+    active: a,
+    addMode,
+    url,
+    query,
+    isCreating,
+    selectedAtts: selAtts,
+  };
+  const attachmentTripwireNow = performance.now();
+  const attachmentTripwireRenders = useRef(0);
+  const attachmentTripwirePrevVars = useRef(attachmentTripwireTrackedVars);
+  const attachmentTripwireWindowStart = useRef(attachmentTripwireNow);
+  if (attachmentTripwireNow - attachmentTripwireWindowStart.current > 500) {
+    attachmentTripwireWindowStart.current = attachmentTripwireNow;
+    attachmentTripwireRenders.current = 0;
+  }
+  attachmentTripwireRenders.current++;
+  if (attachmentTripwireRenders.current > 50) {
+    const attachmentTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
+    for (const key in attachmentTripwireTrackedVars)
+      if (attachmentTripwireTrackedVars[key] !== attachmentTripwirePrevVars.current[key])
+        attachmentTripwireDiff[key] = {
+          old: attachmentTripwirePrevVars.current[key],
+          new: attachmentTripwireTrackedVars[key],
+        };
+    console.error(`🚨 [TRIPWIRE TRIGGERED] Infinite Loop in ManageAttachmentsDialog 🚨`);
+    console.error(
+      `Detected 50 renders in rapid succession. Average delta: ${(attachmentTripwireNow - attachmentTripwireWindowStart.current).toFixed(2)}ms`,
+    );
+    console.error(
+      'State Differences (What is causing the thrash):',
+      JSON.stringify(attachmentTripwireDiff),
+    );
+    console.trace(`Trace for ManageAttachmentsDialog infinite loop`);
+    throw new Error(
+      `Render Tripwire killed infinite loop in ManageAttachmentsDialog. Check console for state diffs.`,
+    );
+  }
+  attachmentTripwirePrevVars.current = attachmentTripwireTrackedVars;
+  const nodeGroups = useMemo(() => {
+    if (!manageAttTgt) return [];
+    const n = manageAttTgt.node;
+    if (manageAttTgt.scope === 'leaf') {
+      const lTitle = cTitle(toNodeLabel(manageAttTgt.title)) || manageAttTgt.title;
+      return [
+        {
+          groupTitle: 'Page',
+          nodes: [
+            {
+              title: lTitle,
+              fullTitle: lTitle,
+              id: (n as LeafNode).origName,
+              path: (n as LeafNode).path || '',
+              type: 'Page' as const,
+              node: n,
+            },
+          ],
+        },
+      ];
+    }
+    if (manageAttTgt.scope === 'group') {
+      const gNodes = [];
+      const gTitle = cTitle(toNodeLabel(manageAttTgt.title));
+      gNodes.push({
+        title: `${gTitle} (Index)`,
+        fullTitle: gTitle,
+        id: (n as Branch).origName,
+        path: 'url' in n && n.url ? n.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '',
+        type: 'Index' as const,
+        node: n,
+      });
+      (n as Branch).children?.forEach((c) => {
+        if (c.type === 'leaf') {
+          const lTitle = cTitle(toNodeLabel(c.title || c.origName));
+          gNodes.push({
+            title: lTitle,
+            fullTitle: `${gTitle} / ${lTitle}`,
+            id: c.origName,
+            path: c.path || '',
+            type: 'Page' as const,
+            node: c,
+          });
+        }
+      });
+      return [{ groupTitle: gTitle, nodes: gNodes }];
+    }
+    if (manageAttTgt.scope === 'section') {
+      const groups: {
+        groupTitle: string;
+        nodes: {
+          title: string;
+          fullTitle: string;
+          id: string;
+          path: string;
+          type: 'Index' | 'Page';
+          node: TreeType;
+        }[];
+      }[] = [];
+      const sectTitle = cTitle(toNodeLabel(manageAttTgt.title));
+      // prettier-ignore
+      groups.push({ groupTitle: 'Section Root', nodes: [{ title: `${sectTitle} (Index)`, fullTitle: sectTitle, id: (n as Branch).origName, path: 'url' in n && n.url ? n.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: n },] });
+      (n as Branch).children?.forEach((c) => {
+        if (c.type === 'branch') {
+          const gTitle = cTitle(toNodeLabel(c.title || c.origName));
+          const gNodes = [];
+          // prettier-ignore
+          gNodes.push({ title: `${gTitle} (Index)`, fullTitle: `${sectTitle} / ${gTitle}`, id: c.origName, path: 'url' in c && c.url ? c.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: c });
+          c.children?.forEach((l) => {
+            if (l.type === 'leaf') {
+              const lTitle = cTitle(toNodeLabel(l.title || l.origName));
+              gNodes.push({
+                title: lTitle,
+                fullTitle: `${sectTitle} / ${gTitle} / ${lTitle}`,
+                id: l.origName,
+                path: l.path || '',
+                type: 'Page' as const,
+                node: l,
+              });
+            }
+          });
+          groups.push({ groupTitle: gTitle, nodes: gNodes });
+        } else if (c.type === 'leaf') {
+          const lTitle = cTitle(toNodeLabel(c.title || c.origName));
+          groups[0].nodes.push({
+            title: lTitle,
+            fullTitle: `${sectTitle} / ${lTitle}`,
+            id: c.origName,
+            path: c.path || '',
+            type: 'Page' as const,
+            node: c,
+          });
+        }
+      });
+      return groups;
+    }
+    return [];
+  }, [manageAttTgt]);
+  const filteredLeaves = useMemo(() => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return [];
+    const lowerQuery = trimmedQuery.toLowerCase();
+    const leaves: { path: string; title: string; breadcrumb: string }[] = [];
+    /*
+     * Handles walk.
+     *
+     * @param nodes - Sidebar nodes being rendered or filtered.
+     * @param pathStr - Path prefix used to resolve each node's route.
+     */
+    (function walk(nodes: TreeType[], pathStr: string) {
+      nodes.forEach((n) => {
+        const currTitle = n.title || n.origName;
+        if (n.type === 'leaf') {
+          if (
+            currTitle.toLowerCase().includes(lowerQuery) ||
+            (n.path ? n.path.toLowerCase() : '').includes(lowerQuery)
+          ) {
+            leaves.push({
+              path: n.path!,
+              title: currTitle,
+              breadcrumb: pathStr,
+            });
+          }
+        } else if (n.type === 'branch' && n.children)
+          walk(n.children, pathStr ? `${pathStr} / ${currTitle}` : currTitle);
+      });
+    })(tree, '');
+    return leaves;
+  }, [query, tree]);
+  useEffect(() => {
+    if (manageAttTgt?.scope === 'leaf') {
+      const lTitle = cTitle(toNodeLabel(manageAttTgt.title)) || manageAttTgt.title;
+      setActive({
+        title: lTitle,
+        fullTitle: lTitle,
+        id: (manageAttTgt.node as LeafNode).origName,
+        path: (manageAttTgt.node as LeafNode).path || '',
+        type: 'Page',
+      });
+    } else setActive(null);
+    setAddMode(null);
+    setUrl('');
+    setQuery('');
+    setSelAtts([]);
+  }, [manageAttTgt]);
+  const fetchAtts = useCallback(async () => {
+    if (!manageAttTgt) return;
+    setAttachmentDialogLoading(true);
+    const { data, error: err } = await actions.read.doc.attachments({
+      paths: [
+        ...new Set(
+          (a ? [a.id] : nodeGroups.flatMap((g) => g.nodes.map((n) => n.id))).filter(Boolean),
+        ),
+      ],
+    });
+    if (!err && data) setAtts(data as Record<string, Sister[]>);
+    else setAtts({});
+    setAttachmentDialogLoading(false);
+  }, [manageAttTgt, a, nodeGroups]);
+  useEffect(() => {
+    void fetchAtts();
+  }, [fetchAtts]);
+
+  // DRAG AND DROP
+  /**
+   * Handles on drop.
+   *
+   * @param e - Pointer event received from the sidebar item.
+   * @param tgtPath - Destination path associated with the selected item.
+   */
+  // SELECTION
+  /**
+   * Handles toggle sel.
+   *
+   * @param e - Pointer event received from the document action.
+   * @param docPath - Document path targeted by the action.
+   * @param a - Action metadata used to perform the document operation.
+   */
+  const toggleSel = (e: React.MouseEvent, docPath: string, a: Sister) => {
+    e.stopPropagation();
+    if (e.metaKey || e.ctrlKey) {
+      setSelAtts((v) => {
+        if (v.find((p) => (p.a.id || p.a.path) === (a.id || a.path)))
+          return v.filter((p) => (p.a.id || p.a.path) !== (a.id || a.path));
+        return [...v, { docPath, a }];
+      });
+    } else {
+      setSelAtts([{ docPath, a }]);
+    }
+  };
+
+  // ACTIONS
+  const handleKeyboardDelete = useCallback(async () => {
+    if (!selAtts.length) return;
+    // 1. Snapshot for rollback
+    const originalSel = [...selAtts];
+    // 2. Optimistic UI updates
+    setAtts((v) => {
+      const n = { ...v };
+      for (const { docPath, a } of originalSel) {
+        n[docPath] = (n[docPath] || []).filter(
+          (
+            (key: string) => (p: Sister) =>
+              (p.id || p.path) !== key
+          )(a.id || a.path),
+        );
+      }
+      return n;
+    });
+    setSelAtts([]);
+    // 3. Background network operation
+    try {
+      for (const { docPath, a } of originalSel) {
+        if (a.isMd)
+          await actions.write.doc.rm({
+            path: a.path,
+            type: 'doc',
+            assets: false,
+          });
+        else if (a.id) {
+          await actions.write.attachment.rm({ docPath, attachmentKey: a.id });
+          if (a.path.startsWith('http')) await actions.write.asset.delete({ url: a.path });
+        }
+      }
+      // Background sync just to ensure external alignment
+      void fetchAtts();
+    } catch (_err) {
+      // 4. Failure rollback
+      setAtts({ ...atts });
+      setSelAtts(originalSel);
+      toast.error(`Failed to delete ${originalSel.length === 1 ? 'attachment' : 'attachments'}`);
+    }
+  }, [atts, selAtts, fetchAtts]);
+
+  // GLOBAL KEYBOARD SHORTCUTS
+  useEffect(() => {
+    if (!manageAttTgt) return;
+    /**
+     * Handles handle key down.
+     *
+     * @param e - Pointer event received from the sidebar control.
+     */
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (attachmentDialogLoading || disabled || selAtts.length === 0) return;
+      const tgt = e.target as HTMLElement;
+      if (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable) return;
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        void handleKeyboardDelete();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [manageAttTgt, attachmentDialogLoading, disabled, selAtts, handleKeyboardDelete]);
+
+  /**
+   * Handles upload.
+   *
+   * @param files - Files available to the sidebar resolver.
+   * @param tgtPath - Target path used to select the matching file.
+   */
+  /**
+   * Handles add remote.
+   *
+   * @param v - Sidebar value being normalized.
+   * @param type - Sidebar node type used to select the renderer.
+   * @param tgtPath - Target path associated with the node.
+   * @param titleOverride - Optional title replacing the node's default title.
+   */
+  const addRemote = async (
+    v: string,
+    type: AttchType | 'page',
+    tgtPath: string,
+    titleOverride?: string,
+  ) => {
+    if (!tgtPath || !v.trim()) return;
+    const urls = v
+      .split(TerraQualityRegex.REGEX_N_S_REGEX())
+      .filter((u) =>
+        type === 'tsdocs'
+          ? u.trim().length > 0
+          : u.startsWith('http') || isDocsPath(u) || u.startsWith('/tsdocs') || type === 'page',
+      );
+    if (!urls.length) return;
+    void runMutation(
+      async () => {
+        await Promise.allSettled(
+          urls.map(async (u) => {
+            let t = type;
+            if (t === 'other')
+              t = u.toLowerCase().split('?')[0].endsWith('.pdf')
+                ? 'document'
+                : TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(
+                      u.toLowerCase().split('?')[0] ?? '',
+                    )
+                  ? 'image'
+                  : t;
+            if (t === 'page') {
+              // directly inject a strict Sanity reference to the existing document
+              // prettier-ignore
+              await actions.write.attachment.docRef({
+								path: tgtPath,
+								refId: u, // u is the pure Sanity path/id
+								title: titleOverride || u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Page',
+							});
+            } else if (t === 'youtube') {
+              await actions.write.attachment.youtube({ path: tgtPath, url: u });
+            } else if (t === 'website') {
+              const { data: w } = await actions.read.external.website({
+                url: u,
+              });
+              if (!w) throw new Error('Website import returned no content.');
+              const dir = dirname(tgtPath);
+              await actions.write.doc.editor({
+                path: `${dir === '.' ? '' : `${dir}/`}${sanitizeName(w.title || 'website')}.mdx`,
+                source: w.text,
+                title: w.title,
+                type: 'website',
+                sourceUrl: u,
+              });
+            } else if (t === 'tsdocs') {
+              // prettier-ignore
+              await actions.write.attachment.link({ path: tgtPath, url: u.startsWith('http') ? u : u.startsWith('/') ? `${window.location.origin}${u}` : `${window.location.origin}${docsPath(`tsdocs/${u}`)}`, type: 'tsdocs', title: u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Reference' });
+            } else
+              await actions.write.attachment.remoteFile({
+                path: tgtPath,
+                url: u,
+                type: t as AttchType,
+              });
+          }),
+        );
+        await fetchAtts();
+        setAddMode(null);
+        setUrl('');
+      },
+      'Failed to attach',
+      () => {
+        setAttachmentDialogLoading(true);
+      },
+      () => {
+        setAttachmentDialogLoading(false);
+      },
+    );
+  };
+
+  /**
+   * Handles attach page.
+   *
+   * @param path - Document path being created or edited.
+   * @param isNew - Whether the path represents a new document.
+   * @param customTitle - Optional title supplied by the editor.
+   */
+  const attachPage = async (path: string, isNew = false, customTitle?: string) => {
+    if (!a) return;
+    let finalPath = path;
+    let finalTitle = customTitle || path;
+    if (isNew) {
+      setIsCreating(true);
+      try {
+        const newId = `temp_l_${Date.now()}`;
+        finalPath = newId;
+        // Anchor document structurally inside the group to bypass verifyWrite 404
+        let parentId = a.id;
+        if (a.type === 'Page') {
+          let groupId: string | undefined;
+          // 1. Primary Fallback: Extract from the current docs route
+          if (typeof window !== 'undefined') {
+            try {
+              const curr = route(window.location.pathname + window.location.search);
+              groupId = curr.groupId || curr.sectionId || undefined;
+            } catch {
+              // Tree lookup below provides the fallback group.
+            }
+          }
+          // 2. Secondary Fallback: Tree Search (for established documents)
+          if (!groupId) {
+            /*
+             * Handles find group.
+             *
+             * @param nodes - Sidebar nodes containing the target leaf.
+             * @param tgtLeafId - Leaf identifier being selected.
+             * @param currGroupId - Current group identifier used for route context.
+             */
+            (function findGroup(
+              nodes: TreeType[],
+              tgtLeafId: string,
+              currGroupId?: string,
+            ): boolean {
+              for (const n of nodes) {
+                if (n.type === 'leaf' && (n.origName === tgtLeafId || n.path === tgtLeafId)) {
+                  groupId = currGroupId;
+                  return true;
+                }
+                if (n.type === 'branch' && n.children)
+                  if (findGroup(n.children, tgtLeafId, n.origName)) return true;
+              }
+              return false;
+            })(tree, a.id);
+          }
+          if (groupId) parentId = groupId;
+        }
+        const writeRes = await actions.write.doc
+          .editor({
+            path: newId,
+            title: query,
+            source: 'This page is empty.',
+            parentId,
+          })
+          .catch((e) => ({ data: null, error: e }));
+        if (writeRes.error) throw writeRes.error;
+        if (
+          writeRes.data &&
+          typeof writeRes.data === 'object' &&
+          'path' in writeRes.data &&
+          typeof writeRes.data.path === 'string'
+        )
+          finalPath = writeRes.data.path;
+        finalTitle = query;
+        await new Promise((r) => setTimeout(r, 1500));
+      } catch (err) {
+        notify({
+          error: err instanceof Error ? err : new Error('Creation failed'),
+          fallback: 'Failed to create leaf.',
+        });
+        setIsCreating(false);
+        return;
+      }
+      setIsCreating(false);
+    }
+    // Pass the exact path without forcing it into a fake `/docs/` URL structure
+    await addRemote(finalPath, 'page', a.id, finalTitle);
+    setAddMode(null);
+    setQuery('');
+  };
+
+  const aPathTitle = useMemo(() => {
+    if (!a) return '';
+    return a.fullTitle || a.title;
+  }, [a]);
 
   // RENDERS
   return (
@@ -1709,23 +2313,1148 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           target={exportTgt}
           setTarget={setExportTgt}
           disabled={loading || transitioning}
-          onExport={(target, options, progress) =>
-            archiveDocs(
-              target.paths,
-              target.rootDir,
-              target.filename,
-              options,
-              progress,
-              target.nodeIds || [],
-            )
-          }
+          onExport={async (target, options, progress) => {
+            const v = target.paths;
+            const r = target.rootDir;
+            const f = target.filename;
+            const o = options;
+            const d = progress;
+            const n = target.nodeIds || [];
+            console.info('[archive] start', {
+              paths: v,
+              rootDir: r,
+              filenameBase: f,
+              opts: o,
+              nodeIds: n,
+            });
+            if (!v?.length && !r) throw new Error('No docs files found to download.');
+            let allPaths: string[] = v && v.length > 0 ? [...v] : [];
+            const isMdFile = TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(r) || !r.includes('.');
+            if (allPaths.length === 0) {
+              if (isMdFile) {
+                if (isIndexFile(r)) {
+                  const dir = dirname(r);
+                  const { data: entries, error: listErr } = await actions.read.doc.list({
+                    type: 'folderEntries',
+                    path: dir === '.' ? '' : dir,
+                  });
+                  if (listErr || !entries)
+                    throw listErr || new Error('Failed to fetch structural archive entries.');
+                  allPaths = (entries as string[]).filter((p) => p === r || dirname(p) === dir);
+                } else allPaths = [r];
+              } else {
+                const { data: entries, error: listErr } = await actions.read.doc.list({
+                  type: 'folderEntries',
+                  path: r === '.' ? '' : r,
+                });
+                if (listErr || !entries)
+                  throw listErr || new Error('Failed to fetch structural archive entries.');
+                allPaths = entries as string[];
+              }
+            }
+            if (isMdFile && !allPaths.includes(r)) allPaths.push(r);
+            const attchPaths: string[] = [];
+            const assetNameMap = new Map<string, string>();
+
+            // Create a combined list of paths explicitly for fetching attachments
+            await Promise.allSettled(
+              [...new Set([...allPaths, ...n])].map(async (p) => {
+                const c = p.split('?')[0] || p;
+                if (TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(c) || !c.includes('.')) {
+                  try {
+                    const { data: atts, error: err } = await actions.read.doc.attachments({
+                      path: p,
+                    });
+                    if (!err && Array.isArray(atts)) {
+                      for (const att of atts) {
+                        if (
+                          att &&
+                          typeof att === 'object' &&
+                          'path' in att &&
+                          typeof att.path === 'string'
+                        ) {
+                          if ('name' in att && typeof att.name === 'string') {
+                            assetNameMap.set(att.path, att.name);
+                            assetNameMap.set(att.path.split('?')[0] || att.path, att.name);
+                          }
+                          if (!allPaths.includes(att.path) && !attchPaths.includes(att.path))
+                            attchPaths.push(att.path);
+                        }
+                      }
+                    } else if (err)
+                      console.warn(`[archive] Error fetching attachments for ${p}:`, err);
+                  } catch (e) {
+                    console.error(`[archive] Exception fetching attachments for ${p}:`, e);
+                  }
+                }
+              }),
+            );
+            if (attchPaths.length > 0) {
+              allPaths.push(...attchPaths);
+              allPaths = [...new Set(allPaths)];
+            }
+            console.info('[archive] discovered paths', {
+              allPaths,
+              attachmentPaths: attchPaths,
+              assetNames: [...assetNameMap.entries()],
+            });
+            const zip = new (await import('jszip')).default();
+            let mergedPdf: PDFDocument | null = null;
+            const wantsPdfMerge =
+              (o.filters.pdfs && o.merges.pdfs) ||
+              (o.filters.images && o.merges.images) ||
+              (o.filters.pages && o.merges.pages && o.format === 'pdf');
+            console.info('[archive] merge plan', {
+              wantsPdfMerge,
+              textMerge: o.filters.pages && o.merges.pages && o.format === 'raw',
+              pdfMerge: o.filters.pdfs && o.merges.pdfs,
+            });
+            if (wantsPdfMerge) {
+              const { PDFDocument } = await import('pdf-lib');
+              mergedPdf = await PDFDocument.create();
+            }
+            const gJson: Record<
+              string,
+              { title: string; source: string; description?: string; [key: string]: unknown }[]
+            > = {};
+            const textJson: { path: string; filename: string; value: string }[] = [];
+            const failures: { filename: string; path: string; reason: string }[] = [];
+
+            // Helper to accurately identify file types, prioritizing Sanity's explicit filename when available
+            /**
+             * Checks whether ext match.
+             *
+             * @param p - Value passed to the helper.
+             * @param regex - Value passed to the helper.
+             */
+            const isExtMatch = (p: string, regex: RegExp) => {
+              if (regex.test(p.split('?')[0] || p)) return true;
+              const filename = assetNameMap.get(p.split('?')[0] || p);
+              if (filename && regex.test(filename)) return true;
+              return false;
+            };
+            const mdPaths: string[] = [];
+            const textPaths: string[] = [];
+            const pdfPaths: string[] = [];
+            const imgPaths: string[] = [];
+            const ytPaths: string[] = [];
+            const refPaths: string[] = [];
+            const otherPaths: string[] = [];
+            for (const p of allPaths) {
+              const c = p.split('?')[0] || p;
+              const isTsDoc = p.includes(`${docsRootPath()}/tsdocs/`);
+              const isHttp = p.startsWith('http');
+              const noDot = !assetNameMap.has(p) && !c.includes('.');
+              if (
+                !isHttp &&
+                !isTsDoc &&
+                (TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(c) || noDot)
+              )
+                mdPaths.push(p);
+              let matched = false;
+              if (
+                !isHttp &&
+                !isTsDoc &&
+                (/\.(md|mdx|txt|json|cpp|c|h|hpp|js|jsx|ts|tsx|astro|yaml|yml|xml|csv|html|css|scss|sh|py|java|rs|go|rb|swift)$/i.test(
+                  assetNameMap.get(c) || c,
+                ) ||
+                  noDot)
+              ) {
+                textPaths.push(p);
+                matched = true;
+              }
+              if (isExtMatch(p, TerraQualityRegex.REGEX_PDF_I_REGEX())) {
+                pdfPaths.push(p);
+                matched = true;
+              }
+              if (isExtMatch(p, TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2())) {
+                imgPaths.push(p);
+                matched = true;
+              }
+              if (
+                p.endsWith('youtube_transcripts.json') ||
+                p.includes('youtube.com/') ||
+                p.includes('youtu.be/')
+              ) {
+                ytPaths.push(p);
+                matched = true;
+              }
+              if (isTsDoc) {
+                refPaths.push(p);
+                matched = true;
+              }
+              if (!matched) otherPaths.push(p);
+            }
+            const tasks: { path: string; type: keyof ExportOptions['filters'] }[] = [];
+            if (o.filters.pages) textPaths.forEach((p) => tasks.push({ path: p, type: 'pages' }));
+            if (o.filters.pdfs) pdfPaths.forEach((p) => tasks.push({ path: p, type: 'pdfs' }));
+            if (o.filters.images) imgPaths.forEach((p) => tasks.push({ path: p, type: 'images' }));
+            if (o.filters.youtube) ytPaths.forEach((p) => tasks.push({ path: p, type: 'youtube' }));
+            if (o.filters.tsdocs) refPaths.forEach((p) => tasks.push({ path: p, type: 'tsdocs' }));
+            if (o.filters.other) otherPaths.forEach((p) => tasks.push({ path: p, type: 'other' }));
+            console.info('[archive] classified tasks', {
+              total: tasks.length,
+              tasks,
+              textPaths,
+              pdfPaths,
+              imgPaths,
+              otherPaths,
+            });
+            if (tasks.length === 0) throw new Error('No files match the selected filters.');
+            let completed = 0;
+            /**
+             * Updates the update Progress for the docs.
+             */
+            const updateProgress = () => {
+              completed++;
+              console.info('[archive] progress', {
+                completed,
+                total: tasks.length,
+                percent: Math.round((completed / tasks.length) * 100),
+              });
+              if (d) d(Math.round((completed / tasks.length) * 100));
+            };
+
+            /**
+             * Resolves the Path.
+             *
+             * @param p - Value passed to the helper.
+             * @param forceExt - Value passed to the helper.
+             */
+            const resolvePath = (p: string, forceExt?: string) => {
+              let rel = p;
+              if (assetNameMap.has(p.split('?')[0] || p))
+                rel = assetNameMap.get(p.split('?')[0] || p)!;
+              else if (rel.startsWith('http://') || rel.startsWith('https://')) {
+                // prettier-ignore
+                try {
+                    const urlObj = new URL(rel);
+                    let baseName = urlObj.pathname.split('/').pop() || 'downloaded-file';
+                    if (urlObj.search) {
+                      const sQuery = urlObj.search.replace(/[^a-zA-Z0-9]/g, '-').replace(TerraQualityRegex.REGEX_G_REGEX_3(), '-').replace(TerraQualityRegex.REGEX_G_REGEX_20(), '');
+                      if (sQuery) baseName = `${baseName}-${sQuery}`;
+                    }
+                    rel = baseName;
+                  } catch {
+                    rel = rel.split('/').pop()?.replace(/[^a-zA-Z0-9.-]/g, '-') || 'downloaded-file';
+                  }
+              } else {
+                if (!isMdFile && p.startsWith(`${r}/`)) rel = p.slice(r.length + 1);
+                else if (isMdFile) rel = p.split('/').pop() || p;
+              }
+              if (o.flatten) {
+                if (/(?:\/|^)index\.[^.]+$/i.test(p) && p.includes('/')) {
+                  const parts = p.split('/');
+                  rel = `${parts[parts.length - 2]}${p.match(TerraQualityRegex.REGEX_PATTERN_REGEX())?.[0] || ''}`;
+                } else rel = p.split('/').pop() || rel;
+              }
+              if (forceExt) {
+                if (rel.match(TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2()))
+                  rel = rel.replace(TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2(), forceExt);
+                else rel = `${rel}${forceExt}`;
+              }
+              return rel || 'untitled-file';
+            };
+
+            /**
+             * Fetches the fetch Asset Data.
+             *
+             * @param p - Value passed to the helper.
+             *
+             * @returns fetch Asset Data.
+             */
+            const fetchAssetData = async (
+              p: string,
+            ): Promise<{ buffer: ArrayBuffer; contentType: string } | null> => {
+              if (TerraQualityRegex.REGEX_HTTPS_I_REGEX().test(p)) {
+                try {
+                  console.info('[archive] fetching remote asset directly', { path: p });
+                  const res = await fetch(p, { signal: AbortSignal.timeout(20_000) });
+                  if (res.ok) {
+                    const buffer = await res.arrayBuffer();
+                    console.info('[archive] remote asset fetched directly', {
+                      path: p,
+                      bytes: buffer.byteLength,
+                    });
+                    return { buffer, contentType: res.headers.get('content-type') || '' };
+                  }
+                  console.warn('[archive] direct remote asset fetch failed; trying server proxy', {
+                    path: p,
+                    status: res.status,
+                  });
+                } catch (err) {
+                  console.warn('[archive] direct remote asset fetch threw; trying server proxy', {
+                    path: p,
+                    err,
+                  });
+                }
+              }
+              const { data, error } = await actions.read.asset.get({ path: p });
+              if (error || !data) {
+                console.error('[archive] Failed to fetch asset through Docs read action', {
+                  path: p,
+                  error,
+                });
+                throw error || new Error('Failed to read asset');
+              }
+              console.info('[archive] asset fetched', { path: p, bytes: data.byteLength });
+              return { buffer: data, contentType: '' };
+            };
+            for (const task of tasks) {
+              const { path: p, type } = task;
+              console.info('[archive] processing task', {
+                path: p,
+                type,
+                filename: assetNameMap.get(p.split('?')[0] || p),
+                merge: o.merges[type as keyof typeof o.merges],
+              });
+              if (type === 'pages' && !mdPaths.includes(p)) {
+                try {
+                  const res = await fetchAssetData(p);
+                  if (res) {
+                    if (o.merges.pages)
+                      textJson.push({
+                        path: p,
+                        filename: resolvePath(p),
+                        value: new TextDecoder().decode(res.buffer),
+                      });
+                    else zip.file(resolvePath(p), res.buffer);
+                    console.info('[archive] text attachment processed', {
+                      path: p,
+                      filename: resolvePath(p),
+                      bytes: res.buffer.byteLength,
+                      merged: o.merges.pages,
+                    });
+                  }
+                } catch (e) {
+                  console.error(`[archive] Error fetching text attachment for ${p}:`, e);
+                  failures.push({
+                    filename: assetNameMap.get(p.split('?')[0] || p) || resolvePath(p),
+                    path: p,
+                    reason: e instanceof Error ? e.message : String(e),
+                  });
+                }
+              } else if (type === 'pages') {
+                if (o.format === 'pdf') {
+                  try {
+                    const { data: routeData } = await actions.read.util.pathname({ path: p });
+                    if (routeData) {
+                      const url = `${window.location.origin}${routeData}`;
+                      const { data, error } = await actions.read.external.pdf({ url });
+                      if (!error && data && data.pdfBase64) {
+                        const byteChars = atob(data.pdfBase64);
+                        const byteNums = new Array(byteChars.length);
+                        for (let i = 0; i < byteChars.length; i++)
+                          byteNums[i] = byteChars.charCodeAt(i);
+                        const byteArray = new Uint8Array(byteNums);
+                        if (o.merges.pages && mergedPdf) {
+                          const { PDFDocument } = await import('pdf-lib');
+                          const pdfDoc = await PDFDocument.load(byteArray);
+                          (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach(
+                            (p) => mergedPdf.addPage(p),
+                          );
+                        } else {
+                          zip.file(resolvePath(p, '.pdf'), byteArray);
+                        }
+                      } else if (error)
+                        console.error(`[archive] PDF Conversion Error for ${url}:`, error);
+                    }
+                  } catch (e) {
+                    console.error(`[archive] Pages -> PDF exception for ${p}:`, e);
+                  }
+                } else {
+                  const { data, error } = await actions.read.doc.get({ path: p });
+                  if (!error && data) {
+                    const doc = data as Md;
+                    const fm = ['---'];
+                    if (doc.title)
+                      fm.push(
+                        `title: "${doc.title.replace(TerraQualityRegex.REGEX_G_REGEX_5(), '\\"')}"`,
+                      );
+                    if (doc.description)
+                      fm.push(
+                        `description: "${doc.description.replace(TerraQualityRegex.REGEX_G_REGEX_5(), '\\"')}"`,
+                      );
+                    fm.push('---');
+                    let localSrc = typeof doc.source === 'string' ? doc.source : '';
+                    localSrc = localSrc.replace(/\]\((http[^)]+)\)/g, (m, l) => {
+                      const basename = l.split('/').pop()?.split('?')[0];
+                      return basename ? `](${basename})` : m;
+                    });
+                    localSrc = localSrc.replace(/src=["'](http[^"']+)["']/g, (m, l) => {
+                      const basename = l.split('/').pop()?.split('?')[0];
+                      return basename ? `src="${basename}"` : m;
+                    });
+                    if (o.merges.pages) {
+                      let relPath = p;
+                      if (!isMdFile && p.startsWith(`${r}/`)) relPath = p.slice(r.length + 1);
+                      else if (isMdFile) relPath = p.split('/').pop() || p;
+                      const dir = relPath.includes('/')
+                        ? relPath.substring(0, relPath.lastIndexOf('/'))
+                        : '.';
+                      const fname = relPath.split('/').pop() || '';
+                      const key =
+                        dir === '.'
+                          ? fname.replace(TerraQualityRegex.REGEX_PATTERN_REGEX(), '')
+                          : dir;
+                      if (!gJson[key]) gJson[key] = [];
+                      let src = typeof doc.source === 'string' ? doc.source : '';
+                      src = src.replace(/\]\((?!http|#)([^)]+)\)/g, (m, l) => {
+                        const basename = l.split('/').pop();
+                        return basename ? `](${basename})` : m;
+                      });
+                      src = src.replace(/src=["'](?!http|#)([^"']+)["']/g, (m, l) => {
+                        const basename = l.split('/').pop();
+                        return basename ? `src="${basename}"` : m;
+                      });
+                      gJson[key].push({
+                        title: fname,
+                        ...(doc.description !== undefined ? { description: doc.description } : {}),
+                        source: src,
+                      });
+                    } else {
+                      zip.file(resolvePath(p, '.mdx'), `${fm.join('\n')}\n\n${localSrc}`);
+                    }
+                  } else if (error)
+                    console.error(`[archive] Error fetching doc content for ${p}:`, error);
+                }
+              } else if (type === 'pdfs') {
+                try {
+                  const res = await fetchAssetData(p);
+                  if (res && res.buffer) {
+                    if (o.merges.pdfs && mergedPdf) {
+                      try {
+                        const { PDFDocument } = await import('pdf-lib');
+                        const pdfDoc = await PDFDocument.load(res.buffer);
+                        const copiedPages = await mergedPdf.copyPages(
+                          pdfDoc,
+                          pdfDoc.getPageIndices(),
+                        );
+                        copiedPages.forEach((p) => mergedPdf.addPage(p));
+                        console.info('[archive] PDF merged', {
+                          path: p,
+                          pages: copiedPages.length,
+                        });
+                      } catch (err) {
+                        console.error('[archive] PDF merge failed; preserving standalone PDF', {
+                          path: p,
+                          err,
+                        });
+                        zip.file(resolvePath(p, '.pdf'), res.buffer);
+                      }
+                    } else {
+                      zip.file(resolvePath(p, '.pdf'), res.buffer);
+                    }
+                  }
+                } catch (e) {
+                  console.error(`[archive] Exception processing PDF ${p}:`, e, {
+                    filename: assetNameMap.get(p.split('?')[0] || p),
+                    merge: o.merges.pdfs,
+                  });
+                  failures.push({
+                    filename: assetNameMap.get(p.split('?')[0] || p) || resolvePath(p),
+                    path: p,
+                    reason: e instanceof Error ? e.message : String(e),
+                  });
+                }
+              } else if (type === 'images') {
+                try {
+                  const res = await fetchAssetData(p);
+                  if (res && res.buffer) {
+                    if (o.merges.images && mergedPdf) {
+                      try {
+                        let img: PDFImage | undefined;
+                        if (p.match(/\.(jpe?g)$/i)) img = await mergedPdf.embedJpg(res.buffer);
+                        else if (p.match(/\.(png)$/i)) img = await mergedPdf.embedPng(res.buffer);
+                        if (img) {
+                          mergedPdf
+                            .addPage([img.width, img.height])
+                            .drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+                        } else {
+                          console.warn(
+                            `[archive] Unsupported image type for PDF merge, zipping standalone: ${p}`,
+                          );
+                          zip.file(resolvePath(p), res.buffer);
+                        }
+                      } catch (e) {
+                        console.error(
+                          `[archive] Failed to embed image ${p} into PDF, zipping instead:`,
+                          e,
+                        );
+                        zip.file(resolvePath(p), res.buffer);
+                      }
+                    } else {
+                      zip.file(resolvePath(p), res.buffer);
+                    }
+                  }
+                } catch (e) {
+                  console.error(`[archive] Exception processing Image ${p}:`, e);
+                  failures.push({
+                    filename: assetNameMap.get(p.split('?')[0] || p) || resolvePath(p),
+                    path: p,
+                    reason: e instanceof Error ? e.message : String(e),
+                  });
+                }
+              } else if (type === 'youtube') {
+                try {
+                  if (p.includes('youtube.com/') || p.includes('youtu.be/')) {
+                    const { data: ytData, error: ytErr } = await actions.read.external.youtube({
+                      url: p,
+                    });
+                    if (!ytErr && ytData) {
+                      const cTitle = ytData.title || 'video';
+                      if (o.merges.youtube) {
+                        if (!gJson['youtube']) gJson['youtube'] = [];
+                        gJson['youtube'].push({
+                          title: cTitle as string,
+                          source: (ytData.transcript as string) || '',
+                        });
+                      } else {
+                        zip.file(
+                          resolvePath(`${sanitizeName(cTitle as string)}.txt`),
+                          (ytData.transcript as string) || '',
+                        );
+                      }
+                    } else if (ytErr)
+                      console.error(`[archive] Error fetching YouTube transcript for ${p}:`, ytErr);
+                  } else {
+                    const res = await fetchAssetData(p);
+                    if (res && res.buffer) {
+                      const videos = JSON.parse(new TextDecoder().decode(res.buffer)) as {
+                        title?: string;
+                        sourceUrl?: string;
+                      }[];
+                      if (Array.isArray(videos)) {
+                        for (const video of videos) {
+                          if (video.sourceUrl) {
+                            const { data: ytData, error: ytErr } =
+                              await actions.read.external.youtube({
+                                url: video.sourceUrl,
+                              });
+                            if (!ytErr && ytData) {
+                              const cTitle = ytData.title || video.title || 'video';
+                              if (o.merges.youtube) {
+                                if (!gJson['youtube']) gJson['youtube'] = [];
+                                gJson['youtube'].push({
+                                  title: cTitle as string,
+                                  source: (ytData.transcript as string) || '',
+                                });
+                              } else {
+                                zip.file(
+                                  resolvePath(`${sanitizeName(cTitle as string)}.txt`),
+                                  (ytData.transcript as string) || '',
+                                );
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                } catch (e) {
+                  console.error(`[archive] Exception processing YouTube resource ${p}:`, e);
+                }
+              } else if (type === 'tsdocs') {
+                try {
+                  const scope = p.match(TerraQualityRegex.REGEX_DOCS_TSDOCS_REGEX())?.[1] ?? p;
+                  const { data: tsData, error: tsErr } = await actions.read.tsdocs({ scope });
+                  if (!tsErr && tsData && tsData.docs) {
+                    const items = tsData.docs as { slug: string; title: string; body: string }[];
+                    if (o.merges.tsdocs) {
+                      gJson['tsdocs'] = [
+                        ...(Array.isArray(gJson['tsdocs']) ? gJson['tsdocs'] : []),
+                        ...items.map((d) => ({ title: d.title, slug: d.slug, source: d.body })),
+                      ];
+                    } else {
+                      // prettier-ignore
+                      zip.file(resolvePath(`${sanitizeName(scope.replace(TerraQualityRegex.REGEX_G_REGEX_10(), '-'))}.json`), JSON.stringify(items.map(d => ({ title: d.title, slug: d.slug, source: d.body })), null, 2));
+                    }
+                  } else if (tsErr)
+                    console.error(`[archive] Error fetching TSDocs for scope ${scope}:`, tsErr);
+                } catch (e) {
+                  console.error(`[archive] Exception processing TSDocs ${p}:`, e);
+                }
+              } else {
+                try {
+                  const res = await fetchAssetData(p);
+                  if (res && res.buffer) {
+                    let tgtPath = resolvePath(p);
+                    if (!TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2().test(tgtPath)) {
+                      let forcedExt = '';
+                      if (res.contentType.includes('application/pdf')) forcedExt = '.pdf';
+                      else if (res.contentType.includes('image/jpeg')) forcedExt = '.jpg';
+                      else if (res.contentType.includes('image/png')) forcedExt = '.png';
+                      else if (res.contentType.includes('image/webp')) forcedExt = '.webp';
+                      else if (res.contentType.includes('application/json')) forcedExt = '.json';
+                      else {
+                        const arr = new Uint8Array(res.buffer.slice(0, 4));
+                        if (
+                          arr[0] === 0x25 &&
+                          arr[1] === 0x50 &&
+                          arr[2] === 0x44 &&
+                          arr[3] === 0x44
+                        )
+                          forcedExt = '.pdf';
+                      }
+                      if (forcedExt) tgtPath = resolvePath(p, forcedExt);
+                      if (forcedExt === '.pdf' && o.merges.pdfs && mergedPdf) {
+                        const { PDFDocument } = await import('pdf-lib');
+                        const pdfDoc = await PDFDocument.load(res.buffer);
+                        (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach((p) =>
+                          mergedPdf.addPage(p),
+                        );
+                        updateProgress();
+                        continue;
+                      }
+                    }
+                    zip.file(tgtPath, res.buffer);
+                  }
+                } catch (e) {
+                  console.error(`[archive] Exception processing Other attachment ${p}:`, e);
+                  failures.push({
+                    filename: assetNameMap.get(p.split('?')[0] || p) || resolvePath(p),
+                    path: p,
+                    reason: e instanceof Error ? e.message : String(e),
+                  });
+                }
+              }
+              updateProgress();
+            }
+
+            // FINALISE MERGES
+            // Write distinct JSON files for merged categories to prevent structural collisions
+            // and isolate domain concerns when consumed by external tools.
+            if (o.merges.tsdocs && gJson['tsdocs']) {
+              zip.file(`${f}-tsdocs.json`, JSON.stringify(gJson['tsdocs'], null, 2));
+              delete gJson['tsdocs'];
+            }
+            if (o.merges.youtube && gJson['youtube']) {
+              zip.file(`${f}-youtube.json`, JSON.stringify(gJson['youtube'], null, 2));
+              delete gJson['youtube'];
+            }
+            if (o.merges.pages && o.format === 'raw' && Object.keys(gJson).length > 0)
+              zip.file(`${f}-mdx.json`, JSON.stringify(gJson, null, 2));
+            if (o.merges.pages && textJson.length > 0)
+              zip.file(`${f}-text.json`, JSON.stringify(textJson, null, 2));
+            console.info('[archive] merged text summary', {
+              count: textJson.length,
+              files: textJson.map((i) => i.filename),
+            });
+            if (failures.length) {
+              console.warn('[archive] export completed with failures', {
+                count: failures.length,
+                failures,
+              });
+              toast.warning(
+                `${failures.length} attachment${failures.length === 1 ? '' : 's'} failed. See the browser console for details.`,
+              );
+            } else toast.success('Export completed.');
+            if (wantsPdfMerge && mergedPdf && mergedPdf.getPageCount() > 0) {
+              try {
+                const mergedPdfBytes = await mergedPdf.save();
+                zip.file(`${f}-merged.pdf`, mergedPdfBytes);
+                console.info('[archive] merged PDF finalized', {
+                  pages: mergedPdf.getPageCount(),
+                  bytes: mergedPdfBytes.length,
+                });
+              } catch (e) {
+                console.error(`[archive] Error generating Master PDF:`, e);
+              }
+            }
+            const href = URL.createObjectURL(await zip.generateAsync({ type: 'blob' }));
+            const link = document.createElement('a');
+            link.href = href;
+            link.download = `${f}.zip`;
+            link.click();
+            URL.revokeObjectURL(href);
+          }}
         />
-        <ManageAttachmentsDialog
-          tgt={manageAttTgt}
-          setTgt={setManageAttTgt}
-          disabled={loading || transitioning}
-          tree={tree}
-        />
+        {manageAttTgt ? (
+          <Dialog
+            open={!!manageAttTgt}
+            onOpenChange={(o) => {
+              if (!o) {
+                setManageAttTgt(null);
+                setActive(null);
+                setAddMode(null);
+                setSelAtts([]);
+              }
+            }}
+          >
+            <DialogContent size="xl">
+              {/* HEADER */}
+              <DialogHeader>
+                {a ? (
+                  <>
+                    <DialogTitle>
+                      {manageAttTgt.scope !== 'leaf' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Back to target list"
+                          onClick={() => {
+                            setActive(null);
+                            setAddMode(null);
+                            setSelAtts([]);
+                          }}
+                        >
+                          <LeftArrowIcon className="size-5 text-primary-11" aria-hidden="true" />
+                        </Button>
+                      )}
+                      <span className="truncate">{a.fullTitle || a.title}</span>
+                      {addMode && (
+                        <span className="shrink-0 font-normal text-primary-11">
+                          / {addMode === 'select' ? 'Add Attachment' : `Add ${addMode}`}
+                        </span>
+                      )}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                      Manage attachments for {a.fullTitle || a.title}
+                    </DialogDescription>
+                  </>
+                ) : (
+                  <>
+                    <DialogTitle>
+                      Manage Attachments — {cTitle(toNodeLabel(manageAttTgt.title))}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Select a target layer or drag and drop attachments to move them between nodes.
+                    </DialogDescription>
+                  </>
+                )}
+              </DialogHeader>
+              {/* BODY*/}
+              <div
+                className="min-h-96 flex-1 overflow-y-auto py-4 outline-none"
+                tabIndex={-1}
+                onClick={() => {
+                  setSelAtts([]);
+                }}
+              >
+                {attachmentDialogLoading || disabled ? (
+                  <div className="flex h-64 items-center justify-center">
+                    <Spinner className="size-8 text-primary-10" />
+                  </div>
+                ) : !a ? (
+                  <div className="flex flex-col gap-6">
+                    {nodeGroups.map((g, i) => (
+                      <div key={g.groupTitle + i} className="space-y-3">
+                        {nodeGroups.length > 1 && (
+                          <h4 className="text-sm font-semibold uppercase tracking-wider text-primary-11">
+                            {g.groupTitle}
+                          </h4>
+                        )}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {g.nodes.map((n) => (
+                            <Card
+                              key={n.id}
+                              className="flex h-full flex-col transition-colors hover:border-primary-8 hover:bg-primary-3/30"
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const sPath = e.dataTransfer.getData('application/source-path');
+                                const id = e.dataTransfer.getData('application/attachment-id');
+                                if (!sPath || !id || sPath === n.id) return;
+                                const srcList = atts[sPath] || [];
+                                const match = srcList.find((a) => a.id === id);
+                                if (!match) return;
+                                setAtts((p) => ({
+                                  ...p,
+                                  [sPath]: srcList.filter((a) => a.id !== id),
+                                  [n.id]: [...(p[n.id] || []), match],
+                                }));
+                                void actions.write.attachment
+                                  .move({
+                                    sourceDocPath: sPath,
+                                    targetDocPath: n.id,
+                                    attachmentKey: id,
+                                  })
+                                  .then(({ error: err }) => {
+                                    if (err) {
+                                      setAtts({ ...atts });
+                                      toast.error('Move failed');
+                                      notify({
+                                        error: new Error(err.message || 'Move failed'),
+                                        fallback:
+                                          'Failed to relocate attachment relational schema node.',
+                                      });
+                                    }
+                                  });
+                              }}
+                            >
+                              <button
+                                type="button"
+                                aria-label={`Open ${n.title}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActive(n);
+                                }}
+                                className="flex w-full items-center justify-between border-b border-primary-6 bg-primary-3/30 p-3 text-left transition-colors hover:bg-primary-4/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
+                              >
+                                <p className="flex items-center text-sm font-medium">
+                                  {n.type === 'Page' ? (
+                                    <DocumentIcon
+                                      className="mr-2 size-4 text-primary-10"
+                                      aria-hidden="true"
+                                    />
+                                  ) : (
+                                    <CatalogIcon
+                                      className="mr-2 size-4 text-primary-10"
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                  {n.title}
+                                </p>
+                              </button>
+                              <div className="flex flex-1 flex-wrap content-start gap-2 p-4">
+                                {(atts[n.id] || []).length === 0 ? (
+                                  <div className="flex h-12 w-full items-center justify-center opacity-50">
+                                    <UploadIcon
+                                      className="size-6 text-primary-8"
+                                      aria-hidden="true"
+                                    />
+                                  </div>
+                                ) : (
+                                  (atts[n.id] || []).map((a) => {
+                                    const isSelected = selAtts.some(
+                                      (s) => (s.a.id || s.a.path) === (a.id || a.path),
+                                    );
+                                    return (
+                                      <button
+                                        key={a.id || a.path}
+                                        type="button"
+                                        aria-pressed={isSelected}
+                                        aria-label={`Select attachment ${a.name}`}
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.dataTransfer.setData('application/source-path', n.id);
+                                          e.dataTransfer.setData(
+                                            'application/attachment-id',
+                                            a.id || '',
+                                          );
+                                          e.dataTransfer.effectAllowed = 'move';
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            toggleSel(e as unknown as React.MouseEvent, n.id, a);
+                                          }
+                                        }}
+                                        onClick={(e) => {
+                                          toggleSel(e, n.id, a);
+                                        }}
+                                        className={cn(
+                                          'flex cursor-grab items-center gap-2 rounded-md border px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8',
+                                          isSelected
+                                            ? 'border-primary-9 bg-primary-5 ring-1 ring-primary-8'
+                                            : 'border-primary-6 bg-primary-3',
+                                        )}
+                                      >
+                                        <DocumentIcon
+                                          className="size-3 shrink-0 text-primary-10"
+                                          aria-hidden="true"
+                                        />
+                                        <span className="max-w-[100px] truncate">{a.name}</span>
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {addMode ? (
+                      <div className="flex flex-col gap-6">
+                        {addMode === 'select' ? (
+                          <>
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                              {[
+                                { Icon: DocumentIcon, text: 'Page', type: 'page' },
+                                {
+                                  Icon: DocumentIcon,
+                                  text: 'Document',
+                                  type: 'document',
+                                },
+                                { Icon: ImageIcon, text: 'Image', type: 'image' },
+                                {
+                                  Icon: YouTubeIcon,
+                                  text: 'YouTube',
+                                  type: 'youtube',
+                                },
+                                { Icon: LinkIcon, text: 'Website', type: 'website' },
+                                { Icon: CatalogIcon, text: 'TsDocs', type: 'tsdocs' },
+                                { Icon: BoxIcon, text: 'Other', type: 'other' },
+                              ].map(({ Icon: i, text: t, type: v }) => (
+                                <button
+                                  key={t}
+                                  type="button"
+                                  aria-label={`Add ${t}`}
+                                  className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-primary-6 bg-transparent p-4 transition-colors hover:border-primary-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAddMode(v as AttchType | 'page');
+                                    setUrl('');
+                                    setQuery('');
+                                  }}
+                                >
+                                  <React.Fragment>
+                                    {React.createElement(i, {
+                                      className: 'size-5 text-primary-11',
+                                      'aria-hidden': 'true',
+                                    })}
+                                  </React.Fragment>
+                                  <span className="mt-2 text-sm font-medium text-primary-11">
+                                    {t}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        ) : addMode === 'page' ? (
+                          <div
+                            className="flex flex-col gap-4"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <Input
+                              autoFocus
+                              placeholder="Search or type to create..."
+                              value={query}
+                              onChange={(e) => {
+                                setQuery(e.target.value);
+                              }}
+                            />
+                            <div className="flex max-h-64 min-h-24 flex-col overflow-y-auto pr-2">
+                              {!query.trim() &&
+                                tree.map((n) => (
+                                  <Button
+                                    key={n.origName}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="mt-0.5 h-auto w-full justify-start py-1.5 pl-6 text-left font-normal text-primary-11 hover:text-primary-12"
+                                    onClick={() =>
+                                      void attachPage(
+                                        n.type === 'leaf' ? n.path || '' : '',
+                                        false,
+                                        n.title || n.origName,
+                                      )
+                                    }
+                                  >
+                                    <span className="truncate">{n.title || n.origName}</span>
+                                  </Button>
+                                ))}
+                              {query.trim() && (
+                                <div className="flex flex-col gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    className="mb-2 h-auto w-full justify-start border border-dashed border-primary-6 py-2 text-left text-primary-10 hover:border-primary-8 hover:text-primary-12"
+                                    onClick={() => void attachPage('', true)}
+                                    disabled={isCreating}
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium">
+                                        {isCreating ? 'Creating...' : `Create "${query}"`}
+                                      </span>
+                                      <span className="text-xs opacity-70">
+                                        Create page and attach
+                                      </span>
+                                    </div>
+                                  </Button>
+                                  {filteredLeaves.length > 0 &&
+                                    filteredLeaves.map((r) => (
+                                      <Button
+                                        key={r.path}
+                                        variant="ghost"
+                                        className="h-auto w-full justify-start py-2 text-left"
+                                        onClick={() => void attachPage(r.path, false, r.title)}
+                                      >
+                                        <div className="flex flex-col">
+                                          <span className="text-sm font-medium">{r.title}</span>
+                                          <span className="text-xs text-primary-11 opacity-70">
+                                            {r.breadcrumb ? `${r.breadcrumb} / ${r.path}` : r.path}
+                                          </span>
+                                        </div>
+                                      </Button>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            className="flex flex-col gap-4"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            {!['youtube', 'website', 'tsdocs'].includes(addMode) && (
+                              <Button
+                                variant="outline"
+                                className="w-full border-dashed py-8"
+                                onClick={() => fileRef.current?.click()}
+                              >
+                                <UploadIcon className="mr-2 size-5" aria-hidden="true" /> Select
+                                Files
+                              </Button>
+                            )}
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase text-primary-11">
+                                Import via URL
+                              </Label>
+                              {addMode === 'tsdocs' ? (
+                                <TsDocsSelect
+                                  variant="inline"
+                                  multiple
+                                  value={url ? url.split('\n').filter(Boolean) : []}
+                                  onChange={(v) => {
+                                    setUrl(Array.isArray(v) ? v.join('\n') : v);
+                                  }}
+                                />
+                              ) : (
+                                <Textarea
+                                  autoFocus
+                                  placeholder="https://..."
+                                  value={url}
+                                  onChange={(e) => {
+                                    setUrl(e.target.value);
+                                  }}
+                                  rows={3}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      void addRemote(url, addMode, a.id);
+                                    }
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex min-h-24 flex-wrap content-start gap-3 rounded-md border border-primary-6 bg-primary-2 p-4">
+                          {(atts[a.id] || []).length === 0 ? (
+                            <Empty variant="compact">No attachments yet.</Empty>
+                          ) : (
+                            (atts[a.id] || []).map((v) => (
+                              <ContextMenu key={v.id || v.path}>
+                                <ContextMenuTrigger
+                                  className={cn(
+                                    'flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-xs shadow-sm outline-none transition-colors',
+                                    selAtts.some((s) => (s.a.id || s.a.path) === (v.id || v.path))
+                                      ? 'border-primary-9 bg-primary-5 ring-1 ring-primary-8'
+                                      : 'border-primary-6 bg-primary-3',
+                                  )}
+                                  onClick={(e) => {
+                                    toggleSel(e, a.id, v);
+                                  }}
+                                >
+                                  <DocumentIcon className="size-3 shrink-0 text-primary-10" />
+                                  <span className="max-w-[200px] truncate font-medium">
+                                    {v.name}
+                                  </span>
+                                </ContextMenuTrigger>
+                                <ContextMenuContent>
+                                  <Menu
+                                    actions={[
+                                      {
+                                        label: 'Copy URL',
+                                        icon: <LinkIcon />,
+                                        onSelect: () => {
+                                          void navigator.clipboard.writeText(
+                                            `${window.location.origin}${docsPath(v.path)}`,
+                                          );
+                                          toast.success('URL copied');
+                                        },
+                                      },
+                                      ...(v.isMd
+                                        ? [
+                                            {
+                                              icon: <MagicIcon />,
+                                              label: 'Synthesize Content',
+                                              onSelect: () => {
+                                                document.dispatchEvent(
+                                                  new CustomEvent('docs:synthesize', {
+                                                    detail: {
+                                                      path: v.path,
+                                                      name: v.name,
+                                                    },
+                                                  }),
+                                                );
+                                              },
+                                            },
+                                          ]
+                                        : []),
+                                    ]}
+                                  />
+                                </ContextMenuContent>
+                              </ContextMenu>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    )}
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      className="hidden"
+                      multiple
+                      onChange={(e) => {
+                        const files = e.currentTarget.files;
+                        const tgtPath = a.id;
+                        void (async () => {
+                          if (!files || files.length === 0 || !tgtPath) return;
+                          void runMutation(
+                            async () => {
+                              const arr = Array.from(files);
+                              for (let i = 0; i < arr.length; i++) {
+                                const f = arr[i];
+                                if (!f) continue;
+                                await uploadAssetChunked(f, tgtPath);
+                              }
+                              await fetchAtts();
+                              setAddMode(null);
+                              if (fileRef.current) fileRef.current.value = '';
+                            },
+                            'Upload failed',
+                            () => {
+                              setAttachmentDialogLoading(true);
+                            },
+                            () => {
+                              setAttachmentDialogLoading(false);
+                            },
+                          );
+                        })();
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              {/* FOOTER */}
+              {/* prettier-ignore */}
+              <DialogFooter className='flex shrink-0 items-center justify-end gap-2 pt-4'>
+					{a && !addMode && <Button onClick={() => { setAddMode('select'); }}><AddIcon className='mr-2 size-4' aria-hidden='true' /> Add Attachment</Button>}
+					{a && addMode === 'select' && <Button variant='ghost' onClick={() => { setAddMode(null); }}>Cancel</Button>}
+					{a && addMode === 'page' && <Button variant='ghost' onClick={() => { setAddMode('select'); setQuery(''); }}>Back</Button>}
+					{a && addMode && addMode !== 'select' && addMode !== 'page' && (
+						<>
+							<Button variant='ghost' onClick={() => { setAddMode('select'); }}>Back</Button>
+							<Button disabled={!url.trim()} onClick={() => void addRemote(url, addMode, a.id)}>Attach</Button>
+						</>
+					)}
+				</DialogFooter>
+            </DialogContent>
+          </Dialog>
+        ) : null}
         {/* prettier-ignore */}
         <Dialog
 					open={assetDialogOpen}
@@ -1825,7 +3554,9 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
               disabled={loading || transitioning}
               className="my-6 w-full [&_[data-slot=slider-range]]:bg-[color:var(--slider-color)] [&_[data-slot=slider-thumb]]:border-[color:var(--slider-color)] [&_[data-slot=slider-thumb]]:bg-[color:var(--slider-color)]"
               style={
-                { '--slider-color': `hsl(${hueDlg?.hue ?? 0} 65% 55%)` } as React.CSSProperties
+                {
+                  '--slider-color': `hsl(${hueDlg?.hue ?? 0} 65% 55%)`,
+                } as React.CSSProperties
               }
             />
             <DialogFooter>
@@ -1993,7 +3724,35 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
         </ContextMenu>
         {/* USER */}
         <SidebarFooter className="!flex-row justify-between">
-          <User user={userData ?? null} className="mr-auto pl-0" />
+          <div
+            className="mr-auto flex min-w-0 items-center gap-2 pl-0 text-sm text-primary-11"
+            title={userLabel}
+          >
+            <Avatar size="sm" aria-label={userLabel}>
+              {userData?.image ? <AvatarImage src={userData.image} alt={userLabel} /> : null}
+              <AvatarFallback>
+                {userData ? (
+                  (userData.name ?? userData.email ?? '?')
+                    .split(/[\s@._-]+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part) => part[0]?.toUpperCase())
+                    .join('') || '?'
+                ) : (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none">
+                    <circle cx="12" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.6" />
+                    <path
+                      d="M5.5 20c.55-3.6 2.9-5.5 6.5-5.5s5.95 1.9 6.5 5.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </AvatarFallback>
+            </Avatar>
+            <span className="min-w-0 truncate">{userLabel}</span>
+          </div>
           <Button
             variant="primary-underline"
             aria-label="Search ⌘K"

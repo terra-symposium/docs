@@ -25,7 +25,7 @@ import {
   sanitizeName,
 } from '../../../../lib/terra/docs/tree.js';
 import { runMutation } from '../../../../lib/terra/docs/mutations.js';
-import { download, uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
 import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import {
@@ -37,7 +37,7 @@ import {
   toNodeLabel,
   toPaths,
 } from '../../../../lib/terra/runtime/shared.js';
-import { cn, notify } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, notify, warn } from '../../../../lib/terra/runtime/runtime.js';
 import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
 import { toast } from 'sonner';
 import { useEffect, useRef, useState } from 'react';
@@ -233,7 +233,6 @@ function Link({
               toast.error('Failed to load document.');
               return;
             }
-            const content = toPortableBody(data.content);
             resetEditorMounts(node.path, ['root']);
             await new Promise<void>((resolve) =>
               requestAnimationFrame(() =>
@@ -252,7 +251,7 @@ function Link({
             window.history.pushState(null, '', url.toString());
             const route = `${url.pathname}${url.search}${url.hash}`;
             // prettier-ignore
-            document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: route, pathname: route, path: node.path, title: data.title || node.title, description: data.description ?? node.description, ...(Array.isArray(node.contributors) ? { contributors: node.contributors } : {}), ...(node.updatedAt ? { updatedAt: node.updatedAt } : {}), source: data.source, content, compiledMDX: '' } }));
+            document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: route, pathname: route, path: node.path, title: data.title || node.title, description: data.description ?? node.description, ...(Array.isArray(node.contributors) ? { contributors: node.contributors } : {}), ...(node.updatedAt ? { updatedAt: node.updatedAt } : {}), source: data.source, content: toPortableBody(data.content), compiledMDX: '' } }));
           }}
         >
           {isDirty && (
@@ -460,7 +459,13 @@ LEAF COMPONENTS
     const disabled = creating || renaming || progress !== null;
     const isIdx = isIndexFile(path);
     const [sis, setSis] = useState<
-      { id?: string; path: string; name: string; title?: string; isMd: boolean }[]
+      {
+        id?: string;
+        path: string;
+        name: string;
+        title?: string;
+        isMd: boolean;
+      }[]
     >([]);
     const [sisLoading, setSisLoading] = useState(false);
     const isSimulated = (node as LeafNode & { simulated?: boolean }).url === docsRootPath();
@@ -571,7 +576,9 @@ LEAF COMPONENTS
               });
               if (resErr || !res) throw resErr || new Error('Failed to resolve path');
               const nPath = res.path;
-              const { data: optRouteRes } = await actions.read.util.pathname({ path: nPath });
+              const { data: optRouteRes } = await actions.read.util.pathname({
+                path: nPath,
+              });
               const optRoute =
                 (optRouteRes as string) || ('url' in node ? node.url : docsRootPath());
               // optimistic UI updates
@@ -583,7 +590,9 @@ LEAF COMPONENTS
                 window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
               }
               if (nPath !== node.path!) {
-                const { data: docData } = await actions.read.doc.get({ path: node.path! });
+                const { data: docData } = await actions.read.doc.get({
+                  path: node.path!,
+                });
                 const { error: err } = await actions.write.doc.commit({
                   cur: node.path!,
                   next: nPath,
@@ -788,7 +797,9 @@ LEAF COMPONENTS
               ctx.setInputDlg(null);
               try {
                 if (s.isMd) {
-                  const { data: docData } = await actions.read.doc.get({ path: s.path });
+                  const { data: docData } = await actions.read.doc.get({
+                    path: s.path,
+                  });
                   const { error } = await actions.write.doc.commit({
                     cur: s.path,
                     next: nPath,
@@ -811,7 +822,11 @@ LEAF COMPONENTS
                     path: nPath,
                   });
                   if (writeErr) throw writeErr;
-                  await actions.write.doc.rm({ path: s.path, type: 'asset', assets: false });
+                  await actions.write.doc.rm({
+                    path: s.path,
+                    type: 'asset',
+                    assets: false,
+                  });
                 }
                 toast.success('Renamed successfully');
               } catch (err) {
@@ -842,7 +857,9 @@ LEAF COMPONENTS
           onSave: (n) =>
             runMutation(async () => {
               const tgt = { path: s.path, stem: sanitizeName(n) };
-              const { data: docData, error: err } = await actions.read.doc.get({ path: tgt.path });
+              const { data: docData, error: err } = await actions.read.doc.get({
+                path: tgt.path,
+              });
               if (err || !docData) throw err || new Error('Failed to read doc.');
               const nPath = `${dirname(tgt.path)}/${tgt.stem}.mdx`;
               const { data, error: wErr } = await actions.write.doc.save({
@@ -864,7 +881,12 @@ LEAF COMPONENTS
               };
               setSis((p) => [
                 ...p,
-                { path: nPath, name: sisterDetails.name, isMd: true, title: sisterDetails.title },
+                {
+                  path: nPath,
+                  name: sisterDetails.name,
+                  isMd: true,
+                  title: sisterDetails.title,
+                },
               ]);
               ctx.setInputDlg(null);
             }, 'Failed to duplicate.'),
@@ -909,7 +931,9 @@ LEAF COMPONENTS
       synthesizeSister: (s: { path: string; name: string }): void => {
         try {
           document.dispatchEvent(
-            new CustomEvent('docs:synthesize', { detail: { path: s.path, name: s.name } }),
+            new CustomEvent('docs:synthesize', {
+              detail: { path: s.path, name: s.name },
+            }),
           );
         } catch (err) {
           console.error('Synthesis failed', err);
@@ -1127,7 +1151,27 @@ LEAF COMPONENTS
 											void actions.read.doc
 												.get({ path: s.path })
 												.then(({ data: d }) => {
-												download(s.name, d && typeof d === 'object' && 'source' in d && typeof d.source === 'string' ? d.source : '', 'text/markdown');
+																if (typeof window === 'undefined' || typeof document === 'undefined') {
+																	warn('download', 'Bypass requested execution; environment window context is dead.');
+																	return;
+																}
+																let dlName = s.name;
+																if (
+																	!dlName.toLowerCase().endsWith('.md') &&
+																	!dlName.toLowerCase().endsWith('.mdx')
+																)
+																	dlName += '.mdx';
+																const href = URL.createObjectURL(
+																	new Blob(
+																		[d && typeof d === 'object' && 'source' in d && typeof d.source === 'string' ? d.source : ''],
+																		{ type: 'text/markdown' },
+																	),
+																);
+																const link = document.createElement('a');
+																link.href = href;
+																link.download = dlName;
+																link.click();
+																URL.revokeObjectURL(href);
 																			})
 																			.catch(() => { notify({ error: new Error('Failed to download file.'), fallback: 'Failed to download file.' }); });
 																	} else {
@@ -1423,71 +1467,6 @@ TREE COMPONENTS
         </ErrorBoundary>
       );
     // branch
-    const branchActions: MenuAction[] = [
-      {
-        disabled,
-        icon: <LinkIcon />,
-        label: 'Copy link',
-        onSelect: () => {
-          void navigator.clipboard.writeText(`${window.location.origin}${nodeUrl}`);
-          toast.success('Link copied');
-        },
-      },
-      {
-        disabled,
-        icon: <AddIcon />,
-        label: 'Add page',
-        onSelect: () => {
-          ctx.openCreate(fPath, node.origName);
-        },
-      },
-      {
-        disabled,
-        icon: <BoxIcon />,
-        label: 'Manage attachments',
-        onSelect: () => {
-          ctx.setManageAttTgt({
-            path: slugPath,
-            title: node.title || slugPath,
-            scope: 'group',
-            node,
-          });
-        },
-      },
-      {
-        disabled,
-        icon: <DownloadIcon />,
-        label: 'Download group',
-        onSelect: () => {
-          ctx.setExportTarget({
-            paths: toPaths(node.children),
-            rootDir: slugPath,
-            filename: sanitizeName(
-              cTitle(toNodeLabel(node.title || node.origName)) || node.origName,
-            ),
-            title: `${cTitle(toNodeLabel(node.title || node.origName))} docs`,
-            nodeIds: extractAllNodeIds([node]),
-          });
-        },
-      },
-      { disabled, icon: <EditIcon />, label: 'Rename group', onSelect: treeActions.renameNode },
-      {
-        separator: true,
-        destructive: true,
-        disabled,
-        icon: <TrashIcon />,
-        label: 'Delete group',
-        onSelect: () => {
-          ctx.setDelTarget({
-            kind: 'branch',
-            path: fPath,
-            bPath,
-            slugPath,
-            title: node.title || slugPath,
-          });
-        },
-      },
-    ];
     const label = (
       <SidebarGroupLabel asChild className="p-0">
         <div
@@ -1535,7 +1514,12 @@ TREE COMPONENTS
             const rect = e.currentTarget.getBoundingClientRect();
             const tPos = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
             if (move.kind === 'leaf')
-              void ctx.mvLeaf({ path: move.path, tPosition: tPos, tTarget: fPath, tpath: bPath });
+              void ctx.mvLeaf({
+                path: move.path,
+                tPosition: tPos,
+                tTarget: fPath,
+                tpath: bPath,
+              });
             else
               void ctx.mvBranch({
                 fPath: move.fPath,
@@ -1578,7 +1562,78 @@ TREE COMPONENTS
             <ContextMenu onOpenChange={setContexting}>
               <ContextMenuTrigger asChild>{label}</ContextMenuTrigger>
               <ContextMenuContent>
-                <Menu actions={branchActions} />
+                <Menu
+                  actions={[
+                    {
+                      disabled,
+                      icon: <LinkIcon />,
+                      label: 'Copy link',
+                      onSelect: () => {
+                        void navigator.clipboard.writeText(`${window.location.origin}${nodeUrl}`);
+                        toast.success('Link copied');
+                      },
+                    },
+                    {
+                      disabled,
+                      icon: <AddIcon />,
+                      label: 'Add page',
+                      onSelect: () => {
+                        ctx.openCreate(fPath, node.origName);
+                      },
+                    },
+                    {
+                      disabled,
+                      icon: <BoxIcon />,
+                      label: 'Manage attachments',
+                      onSelect: () => {
+                        ctx.setManageAttTgt({
+                          path: slugPath,
+                          title: node.title || slugPath,
+                          scope: 'group',
+                          node,
+                        });
+                      },
+                    },
+                    {
+                      disabled,
+                      icon: <DownloadIcon />,
+                      label: 'Download group',
+                      onSelect: () => {
+                        ctx.setExportTarget({
+                          paths: toPaths(node.children),
+                          rootDir: slugPath,
+                          filename: sanitizeName(
+                            cTitle(toNodeLabel(node.title || node.origName)) || node.origName,
+                          ),
+                          title: `${cTitle(toNodeLabel(node.title || node.origName))} docs`,
+                          nodeIds: extractAllNodeIds([node]),
+                        });
+                      },
+                    },
+                    {
+                      disabled,
+                      icon: <EditIcon />,
+                      label: 'Rename group',
+                      onSelect: treeActions.renameNode,
+                    },
+                    {
+                      separator: true,
+                      destructive: true,
+                      disabled,
+                      icon: <TrashIcon />,
+                      label: 'Delete group',
+                      onSelect: () => {
+                        ctx.setDelTarget({
+                          kind: 'branch',
+                          path: fPath,
+                          bPath,
+                          slugPath,
+                          title: node.title || slugPath,
+                        });
+                      },
+                    },
+                  ]}
+                />
               </ContextMenuContent>
             </ContextMenu>
           ) : (

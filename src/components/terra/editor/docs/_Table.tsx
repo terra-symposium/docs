@@ -3,14 +3,13 @@
 
 import { useEditor } from '@portabletext/editor';
 import { Add as AddIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
-import { ContentEditor } from '../ContentEditor.js';
+import { TerraContentEditor } from './_editor.js';
 import { ErrorBoundary } from '../../ui.js';
 import { Button } from '@terra-symposium/styling/ui';
 import { Input } from '@terra-symposium/styling/ui';
 import { isRec } from '../../../../lib/terra/runtime/runtime.js';
 
 import type { DocTableCell } from '../../../../lib/terra/runtime/types.js';
-import type { TableRow } from '../../../../lib/terra/runtime/types.js';
 import type {
   DocsBlock,
   PortableTextBlockEditorProps,
@@ -50,11 +49,11 @@ const cell = (text = ''): TableCell => ({
  * @returns The accessible table view.
  */
 function Table({ block }: { block: TableBlock }): React.JSX.Element {
-  const rows = (block.rows ?? []) as TableRow[];
+  const rows = (block.rows ?? []) as Array<{ _key: string; _type: 'row'; cells: DocTableCell[] }>;
   const count = rows.reduce((m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0), 0);
   const renderCell = (c: DocTableCell | undefined): React.JSX.Element | null =>
     c ? (
-      <ContentEditor
+      <TerraContentEditor
         content={(Array.isArray(c.content) ? c.content : []) as unknown as ContentData}
         docsAttachments={[]}
         memberProfile="docs"
@@ -123,7 +122,11 @@ function TableEditor({
             className="max-w-sm"
             value={block.header ?? ''}
             onChange={(e) =>
-              editor.send({ type: 'block.set', at: path, props: { header: e.currentTarget.value } })
+              editor.send({
+                type: 'block.set',
+                at: path,
+                props: { header: e.currentTarget.value },
+              })
             }
             placeholder="Table heading"
           />
@@ -146,7 +149,14 @@ function TableEditor({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => update(rows.map((r) => ({ ...r, cells: [...(r.cells ?? []), cell()] })))}
+            onClick={() =>
+              update(
+                rows.map((r) => ({
+                  ...r,
+                  cells: [...(r.cells ?? []), cell()],
+                })),
+              )
+            }
           >
             <AddIcon aria-hidden="true" /> Column
           </Button>

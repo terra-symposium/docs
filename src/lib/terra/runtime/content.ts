@@ -1160,9 +1160,13 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
     case 'accordion':
     case 'tabs': {
       if (mode === 'problem') return problemBlockMd({ ...b });
-      const root = b._type === 'tabs' ? 'TabsGroup' : 'AccordionGroup';
-      const item = b._type === 'tabs' ? 'TabsItem' : 'AccordionItem';
-      return `<${root}>\n\n${(Array.isArray(b.items) ? b.items : []).map((e) => `<${item} title=${quote(e.title || 'Section')}>\n\n${editorNestedMd(e.content, e.markdown || '')}\n\n</${item}>`).join('\n\n')}\n\n</${root}>`;
+      const syntax = b._type === 'tabs' ? '|||' : '===';
+      return (Array.isArray(b.items) ? b.items : [])
+        .map((item) => {
+          const content = editorNestedMd(item.content, item.markdown || '').trim();
+          return `${syntax}[${item.title || 'Section'}]\n\n${content ? `${content}\n\n` : ''}${syntax}`;
+        })
+        .join('\n\n');
     }
     case 'callout': {
       const content = editorNestedMd(b.content, b.markdown || '');

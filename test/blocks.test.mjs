@@ -55,19 +55,74 @@ function withoutPortableTextKeys(value) {
   return normalized;
 }
 
-test('all reusable rich blocks are enabled by default and can be opted out individually', () => {
+test('all reusable blocks render, while syntax-only groups stay out of the block editor registry', () => {
   assert.equal(DOCS_BLOCK_TYPES.length, 12);
-  assert.equal(enabledDocsBlocks().length, 12);
+  assert.equal(enabledDocsBlocks().length, 10);
+  assert.equal(enabledDocsBlocks().includes('tabs'), false);
+  assert.equal(enabledDocsBlocks().includes('accordion'), false);
   assert.equal(enabledDocsBlocks({ embed: false }).includes('embed'), false);
   assert.equal(enabledDocsBlocks({ code: false }).includes('math'), true);
 });
 
 test('Markdown keeps existing accordion syntax and unsupported source across conversion', () => {
   const source =
-    '## Heading\n\n=== [Item]\nOriginal **content**\n===\n\n<custom-widget value="1"></custom-widget>\n';
+    '## Heading\n\n===[Item]\nOriginal **content**\n===\n\n<custom-widget value="1"></custom-widget>\n';
   const result = docsValueToMarkdown(markdownToDocsValue(source));
-  assert.match(result, /=== \[Item\]\nOriginal \*\*content\*\*\n===/);
+  assert.match(result, /===\[Item\]\nOriginal \*\*content\*\*\n===/);
   assert.match(result, /<custom-widget value="1"><\/custom-widget>/);
+});
+
+test('legacy structured groups render with the shared Styling controls', () => {
+  const tabs = renderToStaticMarkup(
+    createElement(DocsRichBlock, {
+      block: {
+        _type: 'tabs',
+        items: [
+          {
+            _type: 'item',
+            title: 'Overview',
+            content: [
+              {
+                _type: 'block',
+                style: 'normal',
+                markDefs: [],
+                children: [{ _type: 'span', marks: [], text: 'Shared tab body' }],
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  const accordion = renderToStaticMarkup(
+    createElement(DocsRichBlock, {
+      block: {
+        _type: 'accordion',
+        items: [
+          {
+            _type: 'item',
+            title: 'Details',
+            content: [
+              {
+                _type: 'block',
+                style: 'normal',
+                markDefs: [],
+                children: [{ _type: 'span', marks: [], text: 'Shared accordion body' }],
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+
+  assert.match(tabs, /role="tablist"/);
+  assert.match(tabs, /Overview/);
+  assert.match(tabs, /Shared tab body/);
+  assert.match(accordion, /data-orientation="vertical"/);
+  assert.match(accordion, /Details/);
+  assert.match(accordion, /Shared accordion body/);
+  assert.doesNotMatch(`${tabs}${accordion}`, /docs-tabs|docs-accordion/);
 });
 
 test('structured block containers round-trip without losing source fields', () => {
@@ -574,7 +629,7 @@ test('grouped accordion and tab data keeps its block boundaries on Markdown roun
       ],
     };
     const markdown = docsValueToMarkdown([value]);
-    assert.match(markdown, type === 'accordion' ? /^=== \[First\]/m : /^\|\|\| \[First\]/m);
+    assert.match(markdown, type === 'accordion' ? /^===\[First\]/m : /^\|\|\|\[First\]/m);
     assert.deepEqual(
       markdownToDocsValue(markdown).flatMap(
         (block) => block.items?.map((item) => item.title) ?? [],
@@ -663,7 +718,7 @@ test('grouped blocks keep nested rich content readable instead of serializing or
   };
 
   const markdown = docsValueToMarkdown([value]);
-  assert.match(markdown, /^=== \[Contacts and resources\]/m);
+  assert.match(markdown, /^===\[Contacts and resources\]/m);
   assert.match(markdown, /\*\*subject team\*\*/);
   assert.match(markdown, /:::docs table\[Contacts\]/);
   assert.match(markdown, /ada&#64;example\.test/);
@@ -682,7 +737,7 @@ test('grouped blocks keep nested rich content readable instead of serializing or
 });
 
 test('accordion Markdown with colon-labeled list items bypasses YAML parsing', () => {
-  const source = `=== [Part B: SMEs]
+  const source = `===[Part B: SMEs]
 :::note[Instructions]
 Identify suitable companies and provide:
 
@@ -735,7 +790,7 @@ test('nested standalone math keeps its block boundary in callouts and grouped bl
     const markdown = docsValueToMarkdown([value]);
     assert.match(
       markdown,
-      value._type === 'callout' ? /^:{3,}note\[Formula\]/m : /^=== \[Formula\]/m,
+      value._type === 'callout' ? /^:{3,}note\[Formula\]/m : /^===\[Formula\]/m,
     );
     assert.match(markdown, /<DocsBlock type="math"/);
     assert.deepEqual(

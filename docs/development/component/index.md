@@ -21,7 +21,7 @@ import '@terra-symposium/docs/style.css';
 
 ## Rich blocks
 
-The default registry includes accordions, tabs, tables, callouts, code, images, embeds, math (including inline math), diagrams, raw Markdown, and TypeScript documentation. The editor provides insertion and structured fields for these blocks. Code is document content; there is no raw document-code mode.
+Markdown tabs (`|||[Title]`) and accordions (`===[Title]`) render with the shared Styling controls. The editor inserts these as Markdown; older structured tab and accordion records are converted to Markdown when loaded. The remaining block registry includes tables, callouts, code, images, embeds, math (including inline math), diagrams, raw Markdown, and TypeScript documentation. Code is document content; there is no raw document-code mode.
 
 To disable a member in one instance, set its flag to `false`:
 
@@ -39,8 +39,8 @@ The same options can be passed to `renderMarkdown(markdown, blocks)`. Unknown or
 - A standalone `![alt](./image.png "Title")` paragraph imports as an image block. An image embedded within prose remains in the paragraph source.
 - Fenced code blocks import as code content. Display math uses `$$` delimiters.
 - `:::` is reserved for Astro Starlight asides: `note`, `tip`, `caution`, `danger`, `example`, and `warning`, with an optional `[Title]`, Markdown body, and a closing `:::`.
-- Accordions use `=== [Title]` and tabs use `||| [Title]`; the body between the opening and closing delimiter is Markdown.
-- Node diagrams use `<Nodes direction={"TB"} nodes={[...]} edges={[...]} />`; embedded content uses `<Embed src="..." title="..." />`. Accordions use `=== [Title]` and tabs use `||| [Title]` delimiters.
+- Accordions use `===[Title]` and tabs use `|||[Title]`; the body between the opening and closing delimiter is Markdown.
+- Node diagrams use `<Nodes direction={"TB"} nodes={[...]} edges={[...]} />`; embedded content uses `<Embed src="..." title="..." />`. Accordions use `===[Title]` and tabs use `|||[Title]` delimiters.
 
 Unknown Markdown tokens and disabled block syntax are kept as raw source. Store images and attachments beside the Markdown file and use relative paths.
 

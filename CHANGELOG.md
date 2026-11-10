@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.11
+
+### Patch Changes
+
+- Render Markdown tabs and accordions with the shared Styling components and remove the parallel structured authoring path. Preserve legacy structured content by converting it to canonical Markdown.
+
 ## 0.4.10
 
 ### Patch Changes

@@ -27,7 +27,7 @@ import {
   DOCS_BLOCK_TYPES,
   enabledDocsBlocks,
 } from '../../blocks.js';
-import type { DocsBlockOptions, DocsBlockType } from '../../blocks.js';
+import type { DocsBlockOptions, DocsEditorBlockType, DocsBlockType } from '../../blocks.js';
 import { BlockContext } from './docs/BlockContext.js';
 import { renderCallout } from './docs/_Callout.js';
 import { renderCode } from './docs/_DocsCode.js';
@@ -37,12 +37,13 @@ import { renderMathBlock } from './docs/_Math.js';
 import { NodesBlock } from './docs/_Nodes.js';
 import { Raw } from './docs/_Raw.js';
 import { renderTable } from './docs/_Table.js';
-import { renderSections } from './docs/_Tabs.js';
 import { TsDocs } from './docs/_TsDocs.js';
 import { DocsQuizBlock } from '../../quiz.js';
 import MathInline from './docs/_math_inline.js';
 import { DocsHeading } from './docs/heading.js';
 import type { DocsHostAttachment } from '../../../lib/host.js';
+import { docsValueToMarkdown } from '../../../lib/markdown-model.js';
+import { MarkdownContent } from '../../MarkdownContent.js';
 import { ErrorBoundary } from '../ui.js';
 import * as TerraQualityRegex from '../../../lib/terra/regex.mjs';
 import {
@@ -77,7 +78,7 @@ const INLINE_CODE_MARK = 'terra-inline-code';
 const imgFile = /\.(?:png|jpe?g|gif|webp|svg|avif)$/iu;
 const DOCS_INSERTIONS: readonly {
   label: string;
-  type: DocsBlockType | 'attachment';
+  type: DocsEditorBlockType | 'attachment';
   value: string;
 }[] = [
   { label: 'Math', type: 'math', value: 'docs:math' },
@@ -90,8 +91,6 @@ const DOCS_INSERTIONS: readonly {
   { label: 'Raw', type: 'raw', value: 'docs:raw' },
   { label: 'Table', type: 'table', value: 'docs:table' },
   { label: 'Callout', type: 'callout', value: 'docs:callout' },
-  { label: 'Tabs', type: 'tabs', value: 'docs:tabs' },
-  { label: 'Accordion', type: 'accordion', value: 'docs:accordion' },
 ];
 
 function canEmbedAttachment(attachment: DocsHostAttachment, blocks: DocsBlockOptions): boolean {
@@ -110,7 +109,6 @@ const editorNodeComponents: {
   }) => JSX.Element | null;
 } = {
   renderers: {
-    accordion: renderSections,
     callout: renderCallout,
     code: renderCode,
     docImage: renderImage,
@@ -133,14 +131,17 @@ const editorNodeComponents: {
         {children}
       </div>
     ),
-    raw: ({ attributes: attrs, children, node }) => (
+    raw: ({ attributes: attrs, children, node, readOnly, blocks }) => (
       <div {...attrs} data-docs-editor-block="Raw Markdown">
-        <Raw block={node} />
+        {readOnly ? (
+          <MarkdownContent markdown={node.markdown ?? ''} options={blocks} />
+        ) : (
+          <Raw block={node} />
+        )}
         {children}
       </div>
     ),
     table: renderTable,
-    tabs: renderSections,
     tsDocs: ({ attributes: attrs, children, node }) => (
       <div {...attrs} data-docs-editor-block="TypeScript docs">
         <TsDocs block={node} />
@@ -197,7 +198,7 @@ const editorNodeComponents: {
       action();
       editor.send({ type: 'focus' });
     };
-    const insertBlock = (type: DocsBlockType, override?: Record<string, unknown>): void => {
+    const insertBlock = (type: DocsEditorBlockType, override?: Record<string, unknown>): void => {
       const blockValue: Record<string, unknown> = {
         ...defaultDocsBlock(type),
         _key: crypto.randomUUID(),
@@ -605,6 +606,14 @@ function normNestedContent(value: unknown, options: DocsBlockOptions): unknown {
 /** Translate the stored Terra text-block alias into Portable Text's editor member. */
 function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): EditorValue {
   return value.filter(isMember).map((member) => {
+    if (member._type === 'tabs' || member._type === 'accordion')
+      return {
+        _key: member._key,
+        _type: 'raw',
+        markdown: docsValueToMarkdown([member] as unknown as Parameters<
+          typeof docsValueToMarkdown
+        >[0]),
+      } as unknown as PortableTextBlock;
     if (member._type === 'block' || member._type === 'block') {
       const { c, children, ...rest } = member;
       return {
@@ -668,15 +677,6 @@ function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): Editor
         return {
           ...member,
           content: normNestedContent(member.content, options),
-        } as unknown as PortableTextBlock;
-      if (member._type === 'tabs' || member._type === 'accordion')
-        return {
-          ...member,
-          items: Array.isArray(member.items)
-            ? member.items.map((i: unknown) =>
-                isMember(i) ? { ...i, content: normNestedContent(i.content, options) } : i,
-              )
-            : member.items,
         } as unknown as PortableTextBlock;
       if (member._type === 'table')
         return {
@@ -743,22 +743,6 @@ function toContentValue(value: EditorValue): unknown[] {
         content: Array.isArray(member.content)
           ? toContentValue(member.content as EditorValue)
           : member.content,
-      };
-    if (member._type === 'tabs' || member._type === 'accordion')
-      return {
-        ...member,
-        items: Array.isArray(member.items)
-          ? member.items.map((i: unknown) =>
-              isMember(i)
-                ? {
-                    ...i,
-                    content: Array.isArray(i.content)
-                      ? toContentValue(i.content as EditorValue)
-                      : i.content,
-                  }
-                : i,
-            )
-          : member.items,
       };
     if (member._type === 'table')
       return {
@@ -957,7 +941,12 @@ export function ContentEditor({
               .map((type) =>
                 defineBlockObject({
                   type,
-                  render: (props) => editorNodeComponents.renderers[type]!(props as any) ?? <></>,
+                  render: (props) =>
+                    editorNodeComponents.renderers[type]!({
+                      ...props,
+                      readOnly,
+                      blocks,
+                    } as any) ?? <></>,
                 }),
               ),
             ...(blocks.inlineMath === false

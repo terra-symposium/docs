@@ -9,12 +9,12 @@ export function MarkdownContent({
   options,
 }: {
   markdown: string;
-  options?: DocsBlockOptions;
+  options?: DocsBlockOptions | undefined;
 }): JSX.Element {
   return (
     <>
       {markdownToDocsValue(markdown, options).map((block, i) => (
-        <DocsRichBlock key={block._key ?? i} block={block as RichBlock} />
+        <DocsRichBlock key={block._key ?? i} block={block as RichBlock} options={options} />
       ))}
     </>
   );

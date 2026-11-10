@@ -17,12 +17,19 @@ test('renders Terra accordion and tab syntax without dropping rich content', () 
 });
 
 test('nested and malformed groups preserve canonical Markdown behavior', () => {
-  const nested = renderMarkdown('|||[Outer]\n=== [Inner]\nInner body\n===\n|||');
+  const nested = renderMarkdown('|||[Outer]\n===[Inner]\nInner body\n===\n|||');
   assert.match(nested, /role="tablist"/);
   assert.match(nested, /Inner body/);
   const malformed = renderMarkdown('|||[Unclosed]\nBody');
   assert.match(malformed, /\|\|\|\[Unclosed\]/);
   assert.doesNotMatch(malformed, /role="tablist"/);
+});
+
+test('legacy spaced group delimiters remain readable', () => {
+  const html = renderMarkdown('=== [Older syntax]\nBody\n===');
+  assert.match(html, /data-orientation="vertical"/);
+  assert.match(html, /Older syntax/);
+  assert.match(html, /Body/);
 });
 
 test('adjacent tab items render as one shared tab group', () => {

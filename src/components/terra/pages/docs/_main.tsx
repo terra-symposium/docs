@@ -2888,8 +2888,25 @@ export default (function Scaffold({
   const tocEnabled = !standalone && hydrated && (staticContent || !loadingState.isSaving);
   const tocHeadings = tocState.path === currDoc.pathname ? tocState.headings : [];
   useEffect(() => {
+    const setTocStateIfChanged = (
+      update: typeof tocState | ((previous: typeof tocState) => typeof tocState),
+    ): void => {
+      setTocState((previous) => {
+        const next = typeof update === 'function' ? update(previous) : update;
+        const sameHeadings =
+          previous.headings.length === next.headings.length &&
+          previous.headings.every(
+            (heading, index) =>
+              heading.id === next.headings[index]?.id &&
+              heading.text === next.headings[index]?.text,
+          );
+        return previous.active === next.active && previous.path === next.path && sameHeadings
+          ? previous
+          : next;
+      });
+    };
     if (!tocEnabled) {
-      setTocState({ active: null, headings: [], path: currDoc.pathname });
+      setTocStateIfChanged({ active: null, headings: [], path: currDoc.pathname });
       return;
     }
     const syncState = {
@@ -2907,7 +2924,7 @@ export default (function Scaffold({
     const syncLifecycle = {
       syncActive: (): void => {
         if (!syncState.els.length) {
-          setTocState((previous) => ({
+          setTocStateIfChanged((previous) => ({
             active: null,
             headings: previous.path === currDoc.pathname ? previous.headings : [],
             path: currDoc.pathname,
@@ -2918,7 +2935,7 @@ export default (function Scaffold({
         for (let index = syncState.els.length - 1; index >= 0; index--) {
           const element = syncState.els[index];
           if (element && element.getBoundingClientRect().top <= syncState.threshold) {
-            setTocState((previous) => ({
+            setTocStateIfChanged((previous) => ({
               active: element.id,
               headings: previous.path === currDoc.pathname ? previous.headings : [],
               path: currDoc.pathname,
@@ -2926,7 +2943,7 @@ export default (function Scaffold({
             return;
           }
         }
-        setTocState((previous) => ({
+        setTocStateIfChanged((previous) => ({
           active: syncState.els[0]?.id ?? null,
           headings: previous.path === currDoc.pathname ? previous.headings : [],
           path: currDoc.pathname,
@@ -2990,10 +3007,10 @@ export default (function Scaffold({
           }
           syncState.els = validEls;
           if (!syncState.els.length) {
-            setTocState({ active: null, headings: [], path: currDoc.pathname });
+            setTocStateIfChanged({ active: null, headings: [], path: currDoc.pathname });
             return;
           }
-          setTocState((previous) => ({
+          setTocStateIfChanged((previous) => ({
             active: previous.path === currDoc.pathname ? previous.active : null,
             headings,
             path: currDoc.pathname,

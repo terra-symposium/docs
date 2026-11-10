@@ -1,10 +1,10 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.4.6",
+  "version": "0.4.8",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Terra-Symposium/docs"
+    "url": "https://github.com/terra-symposium/docs"
   },
   "type": "module",
   "packageManager": "pnpm@10.30.3",
@@ -20,7 +20,8 @@
     "src/components/quiz-demo-fixture.ts",
     "src/components/SiteLayout.astro",
     "src/components/NotFound.astro",
-    "src/components/NotFound.tsx"
+    "src/components/NotFound.tsx",
+    "src/lib/terra/regex.mjs"
   ],
   "exports": {
     "./authoring/blocks.md": "./docs/authoring/blocks/index.md",

@@ -25,3 +25,5 @@ config/test-results/
 
 # Vendored dependencies
 vendor/
+
+error.log

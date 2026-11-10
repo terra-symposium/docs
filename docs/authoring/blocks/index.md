@@ -58,6 +58,28 @@ Linux instructions.
 |||
 ```
 
+The rendered example uses the shared Styling tabs and accordion components directly:
+
+|||[npm]
+
+```sh
+pnpm add @terra-symposium/docs
+```
+
+|||
+
+|||[Git]
+
+```sh
+git tag docs-release
+```
+
+|||
+
+===[Why use an accordion?]
+Keep optional background detail available without making it the main reading path.
+===
+
 ## Diagrams and embeds
 
 Use `<Nodes />` for a real sequence, dependency, or branching relationship. Pass valid JSON arrays for `nodes` and `edges`; keep prose and code outside those attributes. Use `<Embed src="..." title="..." />` for an external resource that must appear in the page. The host may register additional custom blocks; document their syntax beside that host.

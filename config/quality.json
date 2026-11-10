@@ -8,6 +8,9 @@
     "minimumCount": 2,
     "sharedModule": "src/lib/terra/regex.mjs"
   },
+  "singleUse": {
+    "skippedDirectories": ["src/components/Docs.tsx", "src/lib/markdown-model.ts"]
+  },
   "frameworkEntryExports": {
     "site/src/components/DocsSiteIsland.tsx": ["DocsSiteIsland"],
     "src/components/Docs.tsx": ["Docs", "DocsMode", "DocsProps", "DocsValue"],

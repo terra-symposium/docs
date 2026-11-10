@@ -132,26 +132,6 @@
   }
 }
 
-.docs-accordion,
-.docs-tab {
-  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
-  border-radius: 0.5rem;
-  margin-block: 0.75rem;
-  padding: 0.5rem 0.75rem;
-}
-
-.docs-accordion > summary,
-.docs-tab > summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.docs-accordion > summary:focus-visible,
-.docs-tab > summary:focus-visible {
-  outline: 2px solid var(--docs-accent, #25634e);
-  outline-offset: 3px;
-}
-
 .docs-rich-editor {
   margin: 12px 0;
   padding: 14px;
@@ -238,23 +218,6 @@
 .docs-diagram figcaption {
   color: var(--docs-muted);
   font-size: 12px;
-}
-.docs-tabs,
-.docs-accordions {
-  display: grid;
-  gap: 8px;
-  margin: 12px 0;
-}
-.docs-tabs details,
-.docs-accordions details {
-  padding: 9px 12px;
-  border: 1px solid var(--docs-border);
-  border-radius: 7px;
-}
-.docs-tabs summary,
-.docs-accordions summary {
-  cursor: pointer;
-  font-weight: 600;
 }
 .docs-table {
   overflow-x: auto;

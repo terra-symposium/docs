@@ -1,6 +1,6 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
@@ -69,7 +69,6 @@
     "@types/node": "^24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@types/sanitize-html": "^2.16.2",
     "@vitejs/plugin-react": "6.1.2",
     "eslint": "10.13.0",
     "globals": "^16.5.0",
@@ -115,7 +114,6 @@
     "pdf-lib": "^1.17.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "sanitize-html": "^2.18.1",
     "sonner": "^1.4.41",
     "use-sync-external-store": "1.7.0",
     "yaml": "^2.7.0"

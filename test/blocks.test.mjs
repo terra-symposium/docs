@@ -377,7 +377,10 @@ test('tables with multiple plain-text paragraphs per cell use readable GFM and r
     withoutPortableTextKeys([table]),
   );
   assert.match(renderMarkdown(markdown), /<table[\s>]/);
-  assert.match(renderMarkdown(markdown), /Product<br \/>Operation: Usability/);
+  assert.match(
+    renderMarkdown(markdown),
+    /Product<\/span><span><br\/><\/span><span>Operation: Usability/,
+  );
 });
 
 test('escaped punctuation inside a table link stays one link annotation', () => {
@@ -672,8 +675,8 @@ test('grouped blocks keep nested rich content readable instead of serializing or
   const restored = markdownToDocsValue(markdown);
   assert.deepEqual(withoutPortableTextKeys(restored), withoutPortableTextKeys([value]));
   const rendered = renderMarkdown(markdown);
-  assert.match(rendered, /class="docs-accordion"/);
-  assert.match(rendered, /<summary>Contacts and resources<\/summary>/);
+  assert.match(rendered, /data-orientation="vertical"/);
+  assert.match(rendered, /Contacts and resources/);
   assert.match(rendered, /week = 1/);
   assert.doesNotMatch(rendered, /_type: (?:item|block|block|span)/);
 });
@@ -707,9 +710,9 @@ Identify suitable companies and provide:
   );
 
   const rendered = renderMarkdown(source);
-  assert.match(rendered, /<summary>Part B: SMEs<\/summary>/);
-  assert.match(rendered, /<strong>Research<\/strong>:/);
-  assert.match(rendered, /<strong>Accomplishments<\/strong>:/);
+  assert.match(rendered, /Part B: SMEs/);
+  assert.match(rendered, /<strong>Research<\/strong><\/span><span>:/);
+  assert.match(rendered, /<strong>Accomplishments<\/strong><\/span><span>:/);
   assert.doesNotMatch(rendered, /_type: (?:item|block|block|span)/);
 });
 

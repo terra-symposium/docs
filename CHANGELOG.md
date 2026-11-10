@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.6
+
+### Patch Changes
+
+- Correct the repository URL metadata used by npm trusted publishing.
+
 ## 0.4.5
 
 ### Patch Changes

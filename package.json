@@ -1,10 +1,10 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Terra-Symposium/docs.git"
+    "url": "https://github.com/Terra-Symposium/docs"
   },
   "type": "module",
   "packageManager": "pnpm@10.30.3",

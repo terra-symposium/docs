@@ -7,8 +7,9 @@ import { Add as AddIcon } from '@carbon/icons-react';
 import { ErrorBoundary } from '../../ui.js';
 import { Button } from '@terra-symposium/styling/ui';
 import { TerraContentEditor } from './_editor.js';
+import { MarkdownContent } from '../../../MarkdownContent.js';
+import { stringifyDocBody } from '../../../../lib/terra/runtime/content/document-markdown.js';
 
-import type { DocBody } from '../../../../lib/terra/runtime/types.js';
 import type { DocsNestedContent } from '../../../../lib/terra/runtime/types.js';
 import type {
   DocsBlock,
@@ -19,86 +20,6 @@ import type { Content as ContentData } from '../../../../lib/terra/runtime/types
 
 /** Union of the docs tabs and accordion block shapes. */
 type SectionsBlock = DocsBlock<'tabs'> | DocsBlock<'accordion'>;
-const key = (val: unknown, fallback: string): string =>
-  typeof val === 'object' && val !== null && typeof (val as { _key?: unknown })._key === 'string'
-    ? (val as { _key: string })._key
-    : fallback;
-
-/** Renders read-only Docs tabs.
- *
- * @param props - Authored tabs block containing labeled sections and their nested content.
- * @returns The tabbed content panel.
- */
-/**
- * Renders the TabsBlock component.
- *
- * @param props - Authored tab block with labeled nested sections to render.
- * @returns The read-only tab group.
- */
-function TabsBlock({ block }: { block: DocsBlock<'tabs'> }): JSX.Element {
-  return (
-    <ErrorBoundary name="TabsBlock">
-      <TabsGroup>
-        {(block.items ?? []).map((i, v) => {
-          const entry = i as { content?: DocBody; title?: unknown };
-          return (
-            <TabsItem
-              key={key(i, `${v}`)}
-              title={typeof entry.title === 'string' ? entry.title : `Tab ${v + 1}`}
-            >
-              <TerraContentEditor
-                content={
-                  (Array.isArray(entry.content) ? entry.content : []) as unknown as ContentData
-                }
-                docsAttachments={[]}
-                memberProfile="docs"
-                nested
-                readOnly
-              />
-            </TabsItem>
-          );
-        })}
-      </TabsGroup>
-    </ErrorBoundary>
-  );
-}
-Object.assign(TabsBlock, { displayName: 'DocsTabsBlock' });
-
-/** Renders read-only Docs accordion sections. */
-/**
- * Renders the AccordionBlock component.
- *
- * @param props - Authored accordion block with labeled expandable sections to render.
- * @returns The read-only accordion group.
- */
-function AccordionBlock({ block }: { block: DocsBlock<'accordion'> }): JSX.Element {
-  return (
-    <ErrorBoundary name="AccordionBlock">
-      <AccordionGroup>
-        {(block.items ?? []).map((i, v) => {
-          const entry = i as { content?: DocBody; title?: unknown };
-          return (
-            <AccordionItem
-              key={key(i, `${v}`)}
-              title={typeof entry.title === 'string' ? entry.title : `Item ${v + 1}`}
-            >
-              <TerraContentEditor
-                content={
-                  (Array.isArray(entry.content) ? entry.content : []) as unknown as ContentData
-                }
-                docsAttachments={[]}
-                memberProfile="docs"
-                nested
-                readOnly
-              />
-            </AccordionItem>
-          );
-        })}
-      </AccordionGroup>
-    </ErrorBoundary>
-  );
-}
-Object.assign(AccordionBlock, { displayName: 'DocsAccordionBlock' });
 /** Shares tab and accordion mutations while preserving their component-local renderers. */
 /**
  * Renders the SectionsEditor component.
@@ -224,7 +145,7 @@ Object.assign(SectionsEditor, { displayName: 'DocsSectionsEditor' });
  * @returns The matching tabbed or expandable section group.
  */
 function Sections({ block }: { block: SectionsBlock }): React.JSX.Element {
-  return block._type === 'tabs' ? <TabsBlock block={block} /> : <AccordionBlock block={block} />;
+  return <MarkdownContent markdown={stringifyDocBody([block as unknown as ContentData[number]])} />;
 }
 Object.assign(Sections, { displayName: 'DocsSections' });
 

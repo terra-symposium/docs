@@ -6,6 +6,8 @@ import { MarkdownAccordion, MarkdownTabs } from './MarkdownComponents.js';
 import { MarkdownContent } from './MarkdownContent.js';
 import { DOCS_BLOCK_TYPES } from '../lib/block-types.js';
 import type { DocsBlockType, RichBlock } from '../lib/block-types.js';
+import { stringifyDocBody } from '../lib/terra/runtime/content/document-markdown.js';
+import type { DocBody } from '../lib/terra/runtime/types.js';
 
 /** The portable Docs members. A host can disable any member without changing stored data. */
 export { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../lib/block-types.js';
@@ -198,6 +200,18 @@ function NestedContent({ value }: { value: unknown }): JSX.Element {
   return <>{text(member)}</>;
 }
 
+function NestedMarkdown({ item }: { item: Record<string, unknown> }): JSX.Element {
+  return (
+    <MarkdownContent
+      markdown={
+        stringifyDocBody(
+          Array.isArray(item.content) ? (item.content as unknown as DocBody) : undefined,
+        ) || (typeof item.markdown === 'string' ? item.markdown : '')
+      }
+    />
+  );
+}
+
 /** Read-only rendering for every reusable Docs member. Unknown data stays in the value. */
 export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
   const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
@@ -209,7 +223,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
         <MarkdownAccordion
           items={items.map((i) => ({
             title: text(i.title),
-            content: <NestedContent value={i} />,
+            content: <NestedMarkdown item={i} />,
           }))}
         />
       );
@@ -218,7 +232,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
         <MarkdownTabs
           items={items.map((i) => ({
             title: text(i.title),
-            content: <NestedContent value={i} />,
+            content: <NestedMarkdown item={i} />,
           }))}
         />
       );

@@ -313,7 +313,7 @@ export const REGEX_G_REGEX_23 = () => /</g;
 const REGEX_BODY_S_S_BODY_I_REGEX = () => /<body[^>]*>([\s\S]*?)<\/body>/i;
 
 // @terra-quality-regex-key "<Code\\b[\\s\\S]*?(?:\\/>|<\\/Code>)/g"
-const REGEX_CODE_B_S_S_CODE_G_REGEX = () => /<Code\b[\s\S]*?(?:\/>|<\/Code>)/g;
+export const REGEX_CODE_B_S_S_CODE_G_REGEX = () => /<Code\b[\s\S]*?(?:\/>|<\/Code>)/g;
 
 // @terra-quality-regex-key "<table\\b[\\s\\S]*?<\\/table>/gi"
 export const REGEX_TABLE_B_S_S_TABLE_GI_REGEX = () => /<table\b[\s\S]*?<\/table>/gi;

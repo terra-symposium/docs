@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.9
+
+### Patch Changes
+
+- Render tabs and accordions in published pages and editor previews through the shared Markdown renderer, and export the missing code-block regular expression used by consumers.
+
 ## 0.4.8
 
 ### Patch Changes

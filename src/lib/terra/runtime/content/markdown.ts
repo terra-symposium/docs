@@ -1,10 +1,31 @@
-/** Converts Markdown, code fences, and table markup used by Docs content. */
+/**
+ * src/lib/terra/runtime/content/markdown.ts
+ * Converts Markdown, code fences, and table markup used by Docs content.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// COMPONENTS
 import * as TerraQualityRegex from '../../regex.mjs';
 
-/** Serializes a string literal for embedded MDX and JSX attributes. */
+/**
+ * Serializes a string literal for embedded MDX and JSX attributes.
+ *
+ * @param value
+ *
+ * @return
+ */
 export const quote = (value: string): string => JSON.stringify(value);
 
-/** Escapes HTML control characters before text is embedded in Docs markup. */
+/**
+ * Escapes HTML control characters before text is embedded in Docs markup.
+ *
+ * @param value
+ *
+ * @return
+ */
 const escHtml = (value: string): string =>
   value
     .replace(TerraQualityRegex.REGEX_G_REGEX_17(), '&amp;')
@@ -20,9 +41,10 @@ CODE SYNTAX
 /**
  * Emits the optional language attribute used by serialized code fences.
  *
+ * @param lang
  * @param language - Code fence language label.
  *
- * @returns `language` attribute when the fence declares one, otherwise an empty string.
+ * @return `language` attribute when the fence declares one, otherwise an empty string.
  */
 const codeAttrs = (lang?: string): string =>
   lang?.trim() ? ` language=${JSON.stringify(lang.trim())}` : '';
@@ -83,6 +105,8 @@ ${val.replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQuality
  *
  * @param lang - Code language label used for the generated code block.
  * @param src - Source code text to wrap in the code block.
+ *
+ * @return
  */
 export const codeSrcJsx = (lang: string | undefined, src: string): string =>
   `\n<Code${codeAttrs(lang)} source=${quote(src)} />\n`;
@@ -94,10 +118,11 @@ TABLE HTML
 /**
  * Removes the outer `|` characters from a pipe-table row while respecting escaped pipes.
  *
- * @param value - Pipe-delimited text to trim.
+ * @param val
  * @param side - Side of the pipe to trim.
+ * @param value - Pipe-delimited text to trim.
  *
- * @returns Row fragment with the requested outer pipe removed.
+ * @return Row fragment with the requested outer pipe removed.
  */
 const trimPipe = (val: string, side: 'start' | 'end'): string => {
   if (side === 'start' && val.startsWith('|')) return val.slice(1);
@@ -115,7 +140,7 @@ const trimPipe = (val: string, side: 'start' | 'end'): string => {
  * @param md - Table markdown to render.
  * @param renderCell - Cell renderer used for each value.
  *
- * @returns HTML table markup when the input is a valid pipe table, otherwise `null`.
+ * @return HTML table markup when the input is a valid pipe table, otherwise `null`.
  *
  * @remarks
  * Callers can supply a custom cell renderer to preserve nested markdown or JSX.
@@ -126,11 +151,11 @@ export const mdTableToHtml = (
 ): string | null => {
   const lines = md.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').trim().split('\n');
   if (lines.length < 2 || lines.some((l) => !l.trim())) return null;
-  const rows = lines.map((line) => {
+  const rows = lines.map((l) => {
     const cells: string[] = [];
     let cell = '';
     let esc = false;
-    for (const ch of trimPipe(trimPipe(line.trim(), 'start'), 'end')) {
+    for (const ch of trimPipe(trimPipe(l.trim(), 'start'), 'end')) {
       if (esc) {
         cell += ch;
         esc = false;
@@ -154,7 +179,7 @@ export const mdTableToHtml = (
   if (
     !width ||
     rows.some((r) => r.length !== width) ||
-    !rows[1]?.every((val) => TerraQualityRegex.REGEX_3_U_REGEX().test(val.trim()))
+    !rows[1]?.every((v) => TerraQualityRegex.REGEX_3_U_REGEX().test(v.trim()))
   )
     return null;
 
@@ -170,9 +195,10 @@ CONTENT SERIALIZATION
 /**
  * Converts plain markdown into HTML for the serializer's fallback path.
  *
+ * @param val
  * @param value - Markdown source to parse.
  *
- * @returns Rendered HTML string used when markdown does not map to richer docs blocks.
+ * @return Rendered HTML string used when markdown does not map to richer docs blocks.
  */
 export const renderMd = (val: string): string => {
   const text = val.trim();
@@ -211,9 +237,10 @@ export const renderMd = (val: string): string => {
 /**
  * Formats raw table HTML with consistent indentation so docs tables round-trip cleanly.
  *
+ * @param val
  * @param value - Table HTML to format.
  *
- * @returns Formatted table HTML string with stable indentation.
+ * @return Formatted table HTML string with stable indentation.
  */
 export const fmtRawTable = (val: string): string => {
   if (!TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
@@ -245,6 +272,8 @@ export const TABLE_TAG = TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_T
  * Handles atomic table html.
  *
  * @param val - Complete table markup captured from a Docs source block.
+ *
+ * @return
  */
 export const atomicTableHtml = (val: string): string => {
   return val

@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/_Raw.tsx
+ * src/components/terra/editor/docs/_Raw.tsx
  */
 
 /*//////////////////////////////////////////////////
@@ -13,11 +12,16 @@ import { ErrorBoundary } from '../../ui.js';
 
 // TYPES
 import type { DocsBlock } from '../types.js';
+import type { JSX } from 'react';
+
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
 
 /**
  * Renders the raw component.
  *
- * @param props - Raw block props containing the authored markup.
+ * @param block Raw Markdown string rendered as a horizontal rule or a source-preserving code block.
  *
  * @return Rendered raw documentation content.
  */

@@ -36,7 +36,8 @@ COMPONENTS
 /**
  * Keeps Docs workspace and search rendering failures inside a visible, recoverable page boundary.
  *
- * @param props Workspace data and the base path used for search-index requests.
+ * @param searchBase Base URL used to fetch the generated search index.
+ * @param workspaceProps Props forwarded to the static documentation workspace.
  *
  * @return The lazy Docs workspace and search dialog inside a recoverable error boundary.
  */
@@ -49,7 +50,7 @@ export function DocsSiteIsland({
   return (
     <ErrorBoundary
       name="Docs site"
-      onError={(error, report) => console.error(`[${report.name}]`, error, report.componentStack)}
+      onError={(e, r) => console.error(`[${r.name}]`, e, r.componentStack)}
       fallback={() => (
         <main
           aria-labelledby="docs-site-error-title"

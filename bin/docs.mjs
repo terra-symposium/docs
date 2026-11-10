@@ -12,6 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { spawn } from 'node:child_process';
 import { watch } from 'node:fs';
+import { createConsumerProject } from '../site/project-config.mjs';
+
+// COMPONENTS
 import * as TerraQualityRegex from '../src/lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
@@ -22,6 +25,7 @@ const MD_MDX_I_REGEX = TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2();
 const requestedMode = process.argv[2];
 const mode = requestedMode === 'docs' ? 'dev' : requestedMode;
 const root = resolve(process.cwd());
+const consumerProject = createConsumerProject(root, process.env.DOCS_PACKAGE_ROOT ?? '.');
 const args = [
   resolve(dirname(createRequire(import.meta.url).resolve('astro/package.json')), 'bin/astro.mjs'),
   mode,
@@ -35,56 +39,18 @@ const args = [
 ];
 const options = new Map();
 const passthrough = [];
-for (let index = 3; index < process.argv.length; index += 1) {
-  const argument = process.argv[index];
-  if (
-    [
-      '--title',
-      '--description',
-      '--site',
-      '--base',
-      '--out',
-      '--port',
-      '--host',
-      '--skills',
-      '--agents',
-    ].includes(argument)
-  ) {
-    const value = process.argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      console.error(`Missing value for ${argument}`);
-      process.exit(2);
-    }
-    options.set(argument, value);
-    index += 1;
-  } else {
-    passthrough.push(argument);
-  }
-}
 const docsRoot = resolve(root, 'docs');
 const publicRoot = resolve(root, 'dist/public');
 const publicAssetsRoot = resolve(publicRoot, '_docs/assets');
-const docsConfig = await readFile(resolve(root, 'package.json'), 'utf8')
-  .then(JSON.parse)
-  .then((manifest) => manifest.docs ?? {})
-  .catch(() => ({}));
+const docsConfig = consumerProject.manifest.docs ?? {};
 const searchIndexPath = resolve(publicRoot, '_docs/search-index.json');
 const excludedDirs = new Set(['node_modules', '.astro', 'dist']);
 const configuredAgents = docsConfig.includeAgents ?? docsConfig.includeSkills ?? true;
-if (typeof configuredAgents !== 'boolean') {
-  throw new Error('package.json docs.includeAgents must be true or false');
-}
-if (options.has('--agents') && options.has('--skills')) {
-  throw new Error('Use only one of --agents or --skills');
-}
 const agentsOption = options.get('--agents') ?? options.get('--skills');
-let includeAgents = configuredAgents;
-if (agentsOption === 'true') includeAgents = true;
-else if (agentsOption === 'false') includeAgents = false;
-else if (agentsOption !== undefined) throw new Error('--skills must be true or false');
 const requestedBase = (options.get('--base') ?? docsConfig.base ?? '/').trim();
-if (!requestedBase.startsWith('/')) throw new Error('--base must begin with /');
 const base = requestedBase.endsWith('/') ? requestedBase : `${requestedBase}/`;
+const port = options.get('--port') ?? docsConfig.port;
+const host = options.get('--host') ?? docsConfig.host;
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -109,25 +75,24 @@ async function buildSearchIndex() {
     if (entry.name.startsWith('.') || (entry.isDirectory() && excludedDirs.has(entry.name)))
       continue;
     const path = join(directory.path, entry.name);
-    if (entry.isDirectory()) {
+    if (entry.isDirectory())
       dirs.push({ path, entries: await readdir(path, { withFileTypes: true }), index: 0 });
-    } else if (['.md', '.mdx'].includes(extname(entry.name).toLowerCase())) {
+    else if (['.md', '.mdx'].includes(extname(entry.name).toLowerCase())) {
       files.push({ path, relativePath: relative(docsRoot, path) });
     }
   }
-  const visibleFiles = files.filter((file) => includeAgents || !isAgentsContent(file.relativePath));
+  const visibleFiles = files.filter((f) => includeAgents || !isAgentsContent(f.relativePath));
   if (visibleFiles.length === 0)
     throw new Error('No Markdown files found in docs/. Add docs/index.md to start a Docs site.');
   const misplaced = visibleFiles.filter(
-    (file) =>
-      !['index.md', 'index.mdx'].includes(file.relativePath.toLowerCase()) &&
-      !file.relativePath.includes('/'),
+    (f) =>
+      !['index.md', 'index.mdx'].includes(f.relativePath.toLowerCase()) &&
+      !f.relativePath.includes('/'),
   );
-  if (misplaced.length) {
+  if (misplaced.length)
     throw new Error(
-      `Markdown pages must be grouped in folders directly under docs/ (keep only docs/index.md at the root): ${misplaced.map((file) => `docs/${file.relativePath}`).join(', ')}`,
+      `Markdown pages must be grouped in folders directly under docs/ (keep only docs/index.md at the root): ${misplaced.map((f) => `docs/${f.relativePath}`).join(', ')}`,
     );
-  }
   const routeFiles = new Map();
   const records = [];
   for (const file of visibleFiles) {
@@ -162,7 +127,7 @@ async function buildSearchIndex() {
           TerraQualityRegex.REGEX_S_S_S_M_REGEX().exec(body)?.[1]?.trim() ??
           (file.relativePath.replace(MD_MDX_I_REGEX, '').split('/').at(-1) ?? '')
             .replace(TerraQualityRegex.REGEX_G_REGEX_8(), ' ')
-            .replace(TerraQualityRegex.REGEX_B_P_L_GU_REGEX(), (letter) => letter.toUpperCase()),
+            .replace(TerraQualityRegex.REGEX_B_P_L_GU_REGEX(), (l) => l.toUpperCase()),
         description: frontmatter.description ?? '',
         href: route ? `${base}${route}/` : base,
         text: body
@@ -214,18 +179,48 @@ function isAgentsContent(relativePath) {
   const norm = relativePath.split(sep).join('/');
   return norm === 'agents' || norm.startsWith('agents/');
 }
-
+for (let index = 3; index < process.argv.length; index += 1) {
+  const argument = process.argv[index];
+  if (
+    [
+      '--title',
+      '--description',
+      '--site',
+      '--base',
+      '--out',
+      '--port',
+      '--host',
+      '--skills',
+      '--agents',
+    ].includes(argument)
+  ) {
+    const value = process.argv[index + 1];
+    if (!value || value.startsWith('--')) {
+      console.error(`Missing value for ${argument}`);
+      process.exit(2);
+    }
+    options.set(argument, value);
+    index += 1;
+  } else {
+    passthrough.push(argument);
+  }
+}
+if (typeof configuredAgents !== 'boolean')
+  throw new Error('package.json docs.includeAgents must be true or false');
+if (options.has('--agents') && options.has('--skills'))
+  throw new Error('Use only one of --agents or --skills');
+let includeAgents = configuredAgents;
+if (agentsOption === 'true') includeAgents = true;
+else if (agentsOption === 'false') includeAgents = false;
+else if (agentsOption !== undefined) throw new Error('--skills must be true or false');
+if (!requestedBase.startsWith('/')) throw new Error('--base must begin with /');
 if (!['dev', 'build', 'preview'].includes(mode)) {
   console.error(
     'Usage: docs <docs|dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory] [--agents true|false]',
   );
   process.exit(2);
 }
-if (mode !== 'preview') {
-  await buildSearchIndex();
-}
-const port = options.get('--port') ?? docsConfig.port;
-const host = options.get('--host') ?? docsConfig.host;
+if (mode !== 'preview') await buildSearchIndex();
 if (port) args.push('--port', String(port));
 if (host) args.push('--host', host);
 args.push(...passthrough);
@@ -243,15 +238,15 @@ const child = spawn(process.execPath, args, {
   },
   stdio: 'inherit',
 });
-child.on('error', (error) => {
+child.on('error', (e) => {
   console.error(
-    `Could not start Astro: ${error.message}. Install @terra-symposium/docs in this repository first.`,
+    `Could not start Astro: ${e.message}. Install @terra-symposium/docs in this repository first.`,
   );
   process.exitCode = 1;
 });
-child.on('exit', (code, signal) => {
-  if (signal) process.kill(process.pid, signal);
-  else process.exitCode = code ?? 1;
+child.on('exit', (c, s) => {
+  if (s) process.kill(process.pid, s);
+  else process.exitCode = c ?? 1;
 });
 if (mode === 'dev') {
   let timer;

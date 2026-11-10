@@ -1,9 +1,32 @@
-import { DocsSiteIsland } from './DocsSiteIsland.js';
+/**
+ * site/src/components/QuizDemo.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { quizDemoLeaf, quizDemoResponse } from '../../../src/components/quiz-demo-fixture.js';
+
+// COMPONENTS
+import { DocsSiteIsland } from './DocsSiteIsland.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const markdown = quizDemoLeaf.markdown;
 
-/** A package-safe interactive demo for the host-configurable leaf quiz flow. */
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * A package-safe interactive demo for the host-configurable leaf quiz flow.
+ *
+ * @return The published Docs workspace showing the deterministic, host-configured quiz demo.
+ */
 export function QuizDemo() {
   return (
     <DocsSiteIsland
@@ -37,12 +60,12 @@ export function QuizDemo() {
       renderContent={<p className="leading-7">{markdown.split('\n\n', 1)[0] ?? markdown}</p>}
       quiz={{
         toolbar: true,
-        generate: (input) =>
+        generate: (v) =>
           Promise.resolve({
             title: `${quizDemoResponse.title} · sample`,
-            questions: Array.from({ length: input.count }, (_, i) => ({
+            questions: Array.from({ length: v.count }, (_, i) => ({
               ...(quizDemoResponse.questions.find(
-                (candidate) => candidate.type === input.types[i % input.types.length],
+                (candidate) => candidate.type === v.types[i % v.types.length],
               ) ?? quizDemoResponse.questions[0]),
             })),
           }),

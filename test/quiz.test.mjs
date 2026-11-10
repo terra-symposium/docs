@@ -1,7 +1,15 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { parseDocsQuiz } from '../dist/lib/components/quiz.js';
+/**
+ * test/quiz.test.mjs
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { parseDocsQuiz } from '../dist/lib/components/quiz.js';
 test('quiz response validation accepts both supported question types', () => {
   const quiz = parseDocsQuiz({
     title: 'Leaf quiz',
@@ -14,7 +22,6 @@ test('quiz response validation accepts both supported question types', () => {
   assert.equal(quiz.questions[0].type, 'multipleChoice');
   assert.equal(quiz.questions[1].type, 'keyword');
 });
-
 test('quiz response validation rejects malformed question data', () => {
   assert.throws(
     () =>

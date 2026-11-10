@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/types.ts
+ * src/components/terra/editor/types.ts
  * Shared Content and Portable Text renderer contracts.
  */
 
@@ -9,11 +8,11 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // DATA
-import { DOCS_BLOCK_SCHEMAS, PROBLEM_BLOCK_TYPES } from '../../../lib/terra/runtime/types.js';
+import { DOCS_BLOCK_SCHEMAS } from '../../../lib/terra/runtime/types.js';
 
 // TYPES
-import type { DocsContent, ProblemContent } from '../../../lib/terra/runtime/types.js';
 import type { BlockObjectRenderProps } from '@portabletext/editor';
+import type { DocsContent } from '../../../lib/terra/runtime/types.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -23,14 +22,6 @@ CONFIG
 export type DocsBlock<
   T extends Extract<keyof typeof DOCS_BLOCK_SCHEMAS, DocsContent[number]['_type']>,
 > = Extract<DocsContent[number], { _type: T }>;
-
-/** Resolves a problem block shape for a supported problem block name. */
-type ProblemBlock<T extends (typeof PROBLEM_BLOCK_TYPES)[number]> = Extract<
-  ProblemContent[number],
-  { _type: T }
->;
-/** Extracts one problem inline shape by its Sanity `_type` discriminator. */
-type ProblemInline<T extends 'definition'> = Extract<ProblemContent[number], { _type: T }>;
 /** Props supplied to a read-only renderer for a typed Portable Text block. */
 export type PortableTextBlockRendererProps<TBlock> = Pick<
   BlockObjectRenderProps,

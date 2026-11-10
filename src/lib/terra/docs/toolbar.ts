@@ -1,4 +1,7 @@
-/** Maps the current DOM selection to the Docs toolbar block kind. */
+/**
+ * src/lib/terra/docs/toolbar.ts
+ * Maps the current DOM selection to the Docs toolbar block kind.
+ */
 
 const VAL_BY_KIND: Record<string, string> = {
   Aside: 'aside',

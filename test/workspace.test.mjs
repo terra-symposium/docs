@@ -1,7 +1,22 @@
+/**
+ * test/workspace.test.mjs
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+// COMPONENTS
 import React from 'react';
 import { DocsSiteLayout } from '../dist/lib/components/SiteLayout.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const sections = [
   {
@@ -16,7 +31,6 @@ const sections = [
     ],
   },
 ];
-
 test('React static adapter forwards host and leaf data to the shared workspace', () => {
   const body = React.createElement('p', null, 'Body text');
   const element = DocsSiteLayout({
@@ -28,7 +42,6 @@ test('React static adapter forwards host and leaf data to the shared workspace',
     currentPath: '/intro',
     children: body,
   });
-
   assert.equal(typeof element.type, 'function');
   assert.equal(element.type.name, 'DocsStaticWorkspace');
   assert.equal(element.props.title, 'Docs');

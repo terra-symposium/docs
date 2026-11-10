@@ -1,6 +1,21 @@
-import { openEditor } from '../../../../support/editor.js';
+/**
+ * test/browser/components/terra/editor/docs/math.spec.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { expect, test } from '@playwright/test';
+import { openEditor } from '../../../../support/editor.js';
+
+// TYPES
 import type { Content } from '../../../../support/editor.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const blockFixture = [
   { _key: 'math-under-test', _type: 'math', code: 'x^2', inline: false },
@@ -18,42 +33,38 @@ const inlineFixture = [
     ],
   },
 ] satisfies Content;
-
-test('math.spec: Render block and emit formula edits', async ({ page }) => {
+test('math.spec: Render block and emit formula edits', async ({ page: p }) => {
   const missingKatexFonts: string[] = [];
-  page.on('response', (response) => {
+  p.on('response', (response) => {
     if (/\/fonts\/KaTeX_[^/]+\.(?:woff2?|ttf)$/u.test(new URL(response.url()).pathname)) {
       if (response.status() >= 400)
         missingKatexFonts.push(`${response.status()} ${response.url()}`);
     }
   });
-  await openEditor(page, blockFixture);
-  const math = page.locator('[data-docs-editor-block="math"]');
+  await openEditor(p, blockFixture);
+  const math = p.locator('[data-docs-editor-block="math"]');
   await expect(math).toHaveAttribute('data-math-code', 'x^2');
   await expect(math.locator('.katex')).toBeVisible();
-  await page.evaluate(() => document.fonts.ready);
-  await expect
-    .poll(() => page.evaluate(() => document.fonts.check('16px "KaTeX_Main"')))
-    .toBe(true);
+  await p.evaluate(() => document.fonts.ready);
+  await expect.poll(() => p.evaluate(() => document.fonts.check('16px "KaTeX_Main"'))).toBe(true);
   expect(missingKatexFonts).toEqual([]);
-  await page.locator('.docs-math-wrapper').evaluate((element) => {
+  await p.locator('.docs-math-wrapper').evaluate((element) => {
     (
       element as HTMLElement & { __blockActions?: Array<{ onSelect?: () => void }> }
     ).__blockActions?.[0]?.onSelect?.();
   });
-  const formula = page.getByPlaceholder("f'(x) = ...");
+  const formula = p.getByPlaceholder("f'(x) = ...");
   await expect(formula).toBeFocused();
   await formula.fill('y^3');
-  await page.getByRole('button', { name: 'Save Formula' }).click();
+  await p.getByRole('button', { name: 'Save Formula' }).click();
   await expect(formula).not.toBeVisible();
   await expect(math).toHaveAttribute('data-math-code', 'y^3');
   await expect
     .poll(
-      async () =>
-        JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]')[0]?.code,
+      async () => JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]')[0]?.code,
     )
     .toBe('y^3');
-  await page.locator('.docs-math-wrapper').evaluate((element) => {
+  await p.locator('.docs-math-wrapper').evaluate((element) => {
     (
       element as HTMLElement & { __blockActions?: Array<{ onSelect?: () => void }> }
     ).__blockActions?.[0]?.onSelect?.();
@@ -61,27 +72,24 @@ test('math.spec: Render block and emit formula edits', async ({ page }) => {
   await expect(formula).toBeFocused();
   await expect(formula).toHaveValue('y^3');
   await formula.fill('z^4');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await p.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(formula).not.toBeVisible();
   await expect(math).toHaveAttribute('data-math-code', 'y^3');
 });
-
-test('math.spec: Render inline within a paragraph', async ({ page }) => {
+test('math.spec: Render inline within a paragraph', async ({ page: p }) => {
   const missingKatexFonts: string[] = [];
-  page.on('response', (response) => {
+  p.on('response', (response) => {
     if (/\/fonts\/KaTeX_[^/]+\.(?:woff2?|ttf)$/u.test(new URL(response.url()).pathname)) {
       if (response.status() >= 400)
         missingKatexFonts.push(`${response.status()} ${response.url()}`);
     }
   });
-  await openEditor(page, inlineFixture);
-  const inline = page.locator('[data-terra-inline="math"]');
+  await openEditor(p, inlineFixture);
+  const inline = p.locator('[data-terra-inline="math"]');
   await expect(inline.locator('.katex')).toBeVisible();
-  await page.evaluate(() => document.fonts.ready);
-  await expect
-    .poll(() => page.evaluate(() => document.fonts.check('16px "KaTeX_Main"')))
-    .toBe(true);
+  await p.evaluate(() => document.fonts.ready);
+  await expect.poll(() => p.evaluate(() => document.fonts.check('16px "KaTeX_Main"'))).toBe(true);
   expect(missingKatexFonts).toEqual([]);
-  await expect(page.locator('[data-content-editor]')).toContainText('Equation');
-  await expect(page.locator('[data-content-editor]')).toContainText('is useful.');
+  await expect(p.locator('[data-content-editor]')).toContainText('Equation');
+  await expect(p.locator('[data-content-editor]')).toContainText('is useful.');
 });

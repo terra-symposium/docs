@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/_Embed.tsx
+ * src/components/terra/editor/docs/_Embed.tsx
  */
 
 /*//////////////////////////////////////////////////
@@ -12,11 +11,16 @@ import { ErrorBoundary } from '../../ui.js';
 
 // TYPES
 import type { DocsBlock } from '../types.js';
+import type { JSX } from 'react';
+
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
 
 /**
  * Renders the embed component.
  *
- * @param props - Embed block data containing the external source and title.
+ * @param block External source URL, title, and optional frame dimensions.
  *
  * @return Embedded content, or null when no source is available.
  */
@@ -31,7 +35,6 @@ export function Embed({
     const url = new URL(block.src);
     const host = url.hostname.toLowerCase().replace(/^www\./, '');
     let videoId: string | undefined;
-
     if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
       const [, route, routeId] = url.pathname.match(/^\/(embed|shorts|live)\/([^/]+)/) ?? [];
       if (route) videoId = routeId;
@@ -39,7 +42,6 @@ export function Embed({
     } else if (host === 'youtu.be') {
       videoId = url.pathname.split('/').filter(Boolean)[0];
     }
-
     if (videoId && /^[\w-]+$/.test(videoId)) {
       const embed = new URL(
         `https://${host === 'youtube-nocookie.com' ? 'www.youtube-nocookie.com' : 'www.youtube.com'}/embed/${videoId}`,
@@ -48,7 +50,6 @@ export function Embed({
         const value = url.searchParams.get(parameter);
         if (value) embed.searchParams.set(parameter, value);
       }
-
       const time = url.searchParams.get('start') ?? url.searchParams.get('t');
       let seconds: number | undefined;
       if (time && /^\d+$/.test(time)) seconds = Number(time);

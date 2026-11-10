@@ -1,6 +1,21 @@
+/**
+ * test/browser/components/terra/editor/docs/tsdocs.spec.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { expect, test } from '@playwright/test';
 import { openEditor } from '../../../../support/editor.js';
+
+// TYPES
 import type { Content } from '../../../../support/editor.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -9,13 +24,18 @@ const XL_VIEWPORT_TEST = {
     description: 'Rich-block interactions use the standard desktop editor layout.',
   },
 } as const;
-
 const emptyScopeFixture = [
   { _key: 'tsdocs-under-test', _type: 'tsDocs', scope: '' },
 ] satisfies Content;
 const scopedFixture = [
   { _key: 'tsdocs-under-test', _type: 'tsDocs', scope: 'lib/local' },
 ] satisfies Content;
+/**
+ * Wraps text in the document shape expected by the tsDocs fixture.
+ *
+ * @param text Content shown alongside generated documentation in the browser scenario.
+ * @returns A one-paragraph Portable Text document.
+ */
 const paragraph = (text: string): Content => [
   {
     _key: `${text}-block`,
@@ -25,15 +45,13 @@ const paragraph = (text: string): Content => [
     children: [{ _key: `${text}-span`, _type: 'span', marks: [], text }],
   },
 ];
-
-test('tsdocs.spec: Hide remote panel without a scope', XL_VIEWPORT_TEST, async ({ page }) => {
-  await openEditor(page, emptyScopeFixture);
-  await expect(page.locator('[data-docs-block-skeleton]')).toHaveCount(0);
-  await expect(page.getByTestId('editor-output')).toContainText('tsDocs');
+test('tsdocs.spec: Hide remote panel without a scope', XL_VIEWPORT_TEST, async ({ page: p }) => {
+  await openEditor(p, emptyScopeFixture);
+  await expect(p.locator('[data-docs-block-skeleton]')).toHaveCount(0);
+  await expect(p.getByTestId('editor-output')).toContainText('tsDocs');
 });
-
-test('tsdocs.spec: Render generated pages for a scope', XL_VIEWPORT_TEST, async ({ page }) => {
-  await openEditor(page, scopedFixture, {
+test('tsdocs.spec: Render generated pages for a scope', XL_VIEWPORT_TEST, async ({ page: p }) => {
+  await openEditor(p, scopedFixture, {
     mockResponses: {
       'read.tsdocs': {
         data: {
@@ -51,7 +69,7 @@ test('tsdocs.spec: Render generated pages for a scope', XL_VIEWPORT_TEST, async 
       },
     },
   });
-  const contents = page.getByRole('navigation', { name: 'TSDocs contents' });
+  const contents = p.getByRole('navigation', { name: 'TSDocs contents' });
   await expect(contents.getByRole('link', { name: 'Alpha helper' })).toHaveAttribute(
     'href',
     '#lib-local-alpha',
@@ -60,17 +78,16 @@ test('tsdocs.spec: Render generated pages for a scope', XL_VIEWPORT_TEST, async 
     'href',
     '#lib-local-beta',
   );
-  await expect(page.locator('#lib-local-alpha')).toContainText('Alpha returns a value.');
-  await expect(page.locator('#lib-local-beta')).toContainText('Beta returns nothing.');
+  await expect(p.locator('#lib-local-alpha')).toContainText('Alpha returns a value.');
+  await expect(p.locator('#lib-local-beta')).toContainText('Beta returns nothing.');
 });
-
 test(
   'tsdocs.spec: Show an error when the scope cannot load',
   XL_VIEWPORT_TEST,
-  async ({ page }) => {
-    await openEditor(page, scopedFixture, {
+  async ({ page: p }) => {
+    await openEditor(p, scopedFixture, {
       mockResponses: { 'read.tsdocs': { data: { docs: null } } },
     });
-    await expect(page.getByText('TsDocs Error')).toBeVisible();
+    await expect(p.getByText('TsDocs Error')).toBeVisible();
   },
 );

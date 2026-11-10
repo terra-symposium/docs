@@ -1,8 +1,16 @@
+/**
+ * test/authoring-roundtrip.test.mjs
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { docsValueToMarkdown, markdownToDocsValue, renderMarkdown } from '../dist/lib/lib/index.js';
 import { replaceCanonicalComponents } from '../dist/lib/lib/markdown-model.js';
-
+import { test } from 'node:test';
 test('all authored aside types retain their type and render', () => {
   for (const kind of ['note', 'tip', 'caution', 'danger', 'example', 'warning']) {
     const source = `:::${kind}[Title]\n\nBody **strong**.\n\n:::`;
@@ -13,7 +21,6 @@ test('all authored aside types retain their type and render', () => {
     assert.match(renderMarkdown(exported), new RegExp(`docs-callout-${kind}`));
   }
 });
-
 test('authored blocks parse and render through the shared package', () => {
   const examples = [
     ['table', '| A | B |\n| --- | --- |\n| 1 | 2 |', '<table'],
@@ -31,7 +38,6 @@ test('authored blocks parse and render through the shared package', () => {
     assert.equal(markdownToDocsValue(docsValueToMarkdown(blocks))[0]?._type, kind, source);
   }
 });
-
 test('canonical component scanning converts supported source without touching code fences', () => {
   const output = replaceCanonicalComponents(
     '<Embed src="https://example.test" title="Example" />\n\n```md\n<Embed src="https://literal.test" />\n```',
@@ -40,7 +46,6 @@ test('canonical component scanning converts supported source without touching co
   assert.match(output, /^EMBED/);
   assert.match(output, /```md\n<Embed src="https:\/\/literal\.test" \/>\n```/);
 });
-
 test('fenced authoring examples stay literal and do not leak parser placeholders', () => {
   const source = [
     '```md',
@@ -60,7 +65,6 @@ test('fenced authoring examples stay literal and do not leak parser placeholders
   assert.match(value[0].value, /\|\|\|\[Linux\]/);
   assert.doesNotMatch(renderMarkdown(source), /DOCSBLOCK|DOCSFENCE/);
 });
-
 test('accordion bodies can contain fenced delimiter examples', () => {
   const source = ['===[Details]', '```md', '===', '```', 'More detail.', '==='].join('\n');
   const value = markdownToDocsValue(source);

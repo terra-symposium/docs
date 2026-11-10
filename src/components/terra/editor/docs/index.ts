@@ -1,5 +1,7 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
-/** Internal Docs renderer contracts. */
+/**
+ * src/components/terra/editor/docs/index.ts
+ * Internal Docs renderer contracts.
+ */
 
 export { default as _DocsMathInline } from './_math_inline.js';
 export { renderCallout as _Callout } from './_Callout.js';

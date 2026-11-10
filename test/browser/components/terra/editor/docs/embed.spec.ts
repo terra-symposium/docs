@@ -1,6 +1,21 @@
-import { openEditor } from '../../../../support/editor.js';
+/**
+ * test/browser/components/terra/editor/docs/embed.spec.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { expect, test } from '@playwright/test';
+import { openEditor } from '../../../../support/editor.js';
+
+// TYPES
 import type { Content } from '../../../../support/editor.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -9,7 +24,6 @@ const XL_VIEWPORT_TEST = {
     description: 'Rich-block interactions use the standard desktop editor layout.',
   },
 } as const;
-
 const embedFixture = [
   {
     _key: 'embed-under-test',
@@ -20,13 +34,12 @@ const embedFixture = [
     height: '180px',
   },
 ] satisfies Content;
-
 test(
   'embed.spec: Render title and size without remote requests',
   XL_VIEWPORT_TEST,
-  async ({ page }) => {
-    await openEditor(page, embedFixture);
-    const frame = page.getByTitle('Local example');
+  async ({ page: p }) => {
+    await openEditor(p, embedFixture);
+    const frame = p.getByTitle('Local example');
     await expect(frame).toHaveAttribute('src', 'about:blank');
     await expect(frame).toHaveCSS('width', '320px');
     await expect(frame).toHaveCSS('height', '180px');

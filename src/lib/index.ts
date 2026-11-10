@@ -1,3 +1,7 @@
+/**
+ * src/lib/index.ts
+ */
+
 export { Docs } from '../components/Docs.js';
 export { DocsSiteLayout } from '../components/SiteLayout.js';
 export { DocsStaticWorkspace } from '../components/StaticWorkspace.js';
@@ -5,6 +9,8 @@ export type { DocsMode, DocsProps, DocsValue } from '../components/Docs.js';
 export { DocsNavigation } from '../components/navigation.js';
 export type { DocsNavNode } from '../components/navigation.js';
 export { renderMarkdown } from './markdown.js';
+export { DocsMarkdown } from '../components/MarkdownContent.js';
+export type { DocsMarkdownProps } from '../components/MarkdownContent.js';
 export { markdownToDocsValue, docsValueToMarkdown } from './markdown-model.js';
 export {
   DOCS_BLOCK_TYPES,
@@ -28,7 +34,10 @@ export type {
   DocsQuizQuestion,
   DocsQuizQuestionType,
 } from '../components/quiz.js';
-export { DocsWorkspace } from '../components/terra/Workspace.js';
+export {
+  DocsWorkspace,
+  DocsWorkspace as TerraDocsWorkspace,
+} from '../components/terra/Workspace.js';
 export { DocsLocalWorkspace } from '../components/LocalDocsWorkspace.js';
 export type { DocsLocalPage, DocsLocalWorkspaceProps } from '../components/LocalDocsWorkspace.js';
 export { ContentEditor as DocsContentEditor } from '../components/terra/editor/ContentEditor.js';
@@ -61,6 +70,7 @@ export type {
   DocsHostTreeNode,
   DocsHostUser,
   DocsWorkspaceProps,
+  DocsWorkspaceProps as TerraDocsWorkspaceProps,
 } from './host.js';
 
 export type { DocsAttachment, DocsLeaf, DocsGroup, DocsSection } from './workspace-types.js';

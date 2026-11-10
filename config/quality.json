@@ -1,15 +1,15 @@
 {
   "$schema": "../node_modules/@terra-symposium/standards-quality/quality.schema.json",
-  "root": "..",
+  "root": ".",
   "tsconfig": "config/tsconfig.json",
-  "sourceRoots": ["src", "site/src", "demo/src", "bin"],
+  "sourceRoots": ["."],
   "extensions": [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"],
+  "tools": {
+    "eslint": "node_modules/.bin/eslint"
+  },
   "regexDedup": {
     "minimumCount": 2,
     "sharedModule": "src/lib/terra/regex.mjs"
-  },
-  "singleUse": {
-    "skippedDirectories": ["src/components/Docs.tsx", "src/lib/markdown-model.ts"]
   },
   "frameworkEntryExports": {
     "site/src/components/DocsSiteIsland.tsx": ["DocsSiteIsland"],
@@ -149,8 +149,20 @@
   },
   "documentation": {
     "required": {
-      "functions": false,
-      "exportedFunctions": false
+      "types": true,
+      "functions": true,
+      "exportedFunctions": true
     }
-  }
+  },
+  "typecheckCommand": {
+    "command": "pnpm",
+    "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.json"]
+  },
+  "qualityCommands": [
+    {
+      "name": "demo-typecheck",
+      "command": "pnpm",
+      "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.demo.json"]
+    }
+  ]
 }

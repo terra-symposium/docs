@@ -10,16 +10,7 @@ IMPORTS
 import { Component } from 'react';
 
 // TYPES
-import type { ErrorInfo, ReactNode } from 'react';
-
-/*//////////////////////////////////////////////////
-CONFIG
-//////////////////////////////////////////////////*/
-
-/*//////////////////////////////////////////////////
-HELPERS
-//////////////////////////////////////////////////*/
-
+import type { ReactNode } from 'react';
 export { Empty } from '@terra-symposium/styling/ui';
 
 /** Contains render errors in a local fallback without replacing the surrounding Docs page. */
@@ -43,15 +34,6 @@ export class ErrorBoundary extends Component<
   static getDerivedStateFromError(err: Error) {
     return { error: err };
   }
-  /**
-   * Receives React's error report after the fallback has been activated.
-   *
-   * @param _error Error caught by the boundary and stored in state.
-   * @param _info React component stack associated with the error.
-   *
-   * @return Nothing; fallback state is managed by `getDerivedStateFromError`.
-   */
-  componentDidCatch(_error: Error, _info: ErrorInfo) {}
   /**
    * Renders the caller's fallback or the error message when a child has failed.
    *

@@ -1,7 +1,16 @@
-/** Serializes remote mutations through a rate and failure circuit breaker. */
+/**
+ * src/lib/terra/docs/mutations.ts
+ * Serializes remote mutations through a rate and failure circuit breaker.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { clearTransition, setTransition } from './state.js';
 import { toast } from 'sonner';
 import { warn } from '../runtime/runtime.js';
-import { clearTransition, setTransition } from './state.js';
 
 /**
  * Client-side circuit breaker for mutation coordination.
@@ -22,6 +31,7 @@ class CircuitBreaker {
   private readonly MAX_REQS_PER_SEC = 20;
   /**
    * Checks check.
+   *
    */
   public check(): void {
     const now = Date.now();
@@ -54,6 +64,7 @@ class CircuitBreaker {
   }
   /**
    * Record success.
+   *
    */
   public recordSuccess(): void {
     if (this.state === 'HALF_OPEN') {
@@ -63,6 +74,7 @@ class CircuitBreaker {
   }
   /**
    * Record failure.
+   *
    */
   public recordFailure(): void {
     this.failures++;
@@ -70,27 +82,23 @@ class CircuitBreaker {
   }
 }
 
-/**
- * Describes the documented declaration.
- *
- * @remarks Caches the shared circuit breaker used for mutation helpers.
- */
+/** Shared circuit breaker for mutation helpers. */
 const breaker = new CircuitBreaker();
 
 /**
- * Executes an async action safely behind a circuit breaker and transition lock.
+ * Runs a mutation while holding the local transition lock and updating the circuit breaker.
  *
- * @param action - Async action executed by the guarded operation.
- * @param fallbackErr - Error value returned when the action cannot complete.
- * @param onStart - Optional callback invoked before the action begins.
- * @param onEnd - Optional callback invoked after the action settles.
+ * @param action - Asynchronous mutation to run.
+ * @param fallbackErr - Message shown when the action rejects with a non-Error value.
+ * @param onStart - Optional callback run after acquiring the transition lock.
+ * @param onEnd - Optional callback run before releasing the transition lock.
  */
 export const runMutation = async (
   action: () => Promise<void>,
   fallbackErr: string,
   onStart?: () => void,
   onEnd?: () => void,
-) => {
+): Promise<void> => {
   breaker.check();
   setTransition('local');
   if (onStart) onStart();

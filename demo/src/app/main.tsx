@@ -6,10 +6,11 @@
 IMPORTS
 //////////////////////////////////////////////////*/
 
+// API
 import '../../../src/styles/style.css';
 import '../styles/style.css';
-import { createRoot } from 'react-dom/client';
 import { createElement, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 
 // COMPONENTS
 import { Docs } from '../../../src/components/Docs.js';

@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_sidebar.tsx
+ * src/components/terra/pages/docs/_sidebar.tsx
  * Docs sidebar entrypoint, state management, and unified dialog orchestrators.
  * Folder boundary: sidebar navigation and its dialogs; the recursive tree structure remains in `_tree.tsx`.
  */
@@ -19,7 +18,6 @@ import {
   useAtom,
 } from '../../../../lib/terra/docs/state.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
-import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import {
   bName,
   buildRoute as buildRoute,
@@ -31,7 +29,7 @@ import {
   toNodeLabel,
   toPaths,
 } from '../../../../lib/terra/runtime/shared.js';
-import { cn, createTrace, notify } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, createTrace, errorMessage, notify } from '../../../../lib/terra/runtime/runtime.js';
 import { components as repoComponents } from '../../../../lib/terra/custom-components.js';
 import { currLeafSrc } from '../../../../lib/terra/runtime/leaf.js';
 import {
@@ -42,18 +40,18 @@ import {
   parseDocsRoute as route,
   sanitizeName,
 } from '../../../../lib/terra/docs/tree.js';
+import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import { getHue } from '@terra-symposium/styling';
 import { navigateDocs as navigate } from '../../../../lib/terra/docs/navigation.js';
 import { runMutation } from '../../../../lib/terra/docs/mutations.js';
-import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { toast } from 'sonner';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 import Tree, { Menu } from './_tree.js';
-import { ErrorBoundary } from '../../ui.js';
 import {
   Add as AddIcon,
   ArrowLeft as LeftArrowIcon,
@@ -68,8 +66,8 @@ import {
   Link as LinkIcon,
   LogoYoutube as YouTubeIcon,
   MagicWand as MagicIcon,
-  TrashCan as TrashIcon,
   Search as SearchIcon,
+  TrashCan as TrashIcon,
   Upload as UploadIcon,
 } from '@carbon/icons-react';
 import {
@@ -102,16 +100,13 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarRail,
-  Spinner,
   Slider,
+  Spinner,
   Textarea,
 } from '@terra-symposium/styling/ui';
-import { Empty } from '../../ui.js';
-import { TsDocsSelect } from './_blocks.js';
-import type { PDFDocument, PDFImage } from 'pdf-lib';
+import { Empty, ErrorBoundary } from '../../ui.js';
 import { ExportDialog as SharedExportDialog } from './_export-dialog.js';
-
-// DATA
+import { TsDocsSelect } from './_blocks.js';
 
 // TYPES
 import type {
@@ -119,6 +114,7 @@ import type {
   AttchType,
   Branch,
   DelTgt,
+  DocsExportOpts as ExportOptions,
   DocsTreeMenuAction as MenuAction,
   DragState,
   Leaf as LeafNode,
@@ -128,6 +124,8 @@ import type {
   Sister,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
+import type { DocsHostUser } from '../../../../lib/host.js';
+import type { PDFDocument, PDFImage } from 'pdf-lib';
 
 // prettier-ignore
 
@@ -153,7 +151,7 @@ const eDetail = <T,>(e: Event): T => (e as CustomEvent<T>).detail;
  */
 const latestContent = (content: Md['content']): string => {
   if (typeof content === 'string') return content;
-  return Array.isArray(content) ? currLeafSrc(content, 'sidebar.latestContent') : '';
+  return Array.isArray(content) ? currLeafSrc(content) : '';
 };
 
 /*//////////////////////////////////////////////////
@@ -166,13 +164,13 @@ const SidebarComponents = {} as {
     state: PromptState;
     setState: (v: PromptState) => void;
     disabled: boolean;
-  }) => JSX.Element | null;
+  }) => React.JSX.Element | null;
   DeleteDialog: (props: {
     tgt: DelTgt;
     setTgt: (v: DelTgt) => void;
     onConfirm: () => void;
     disabled: boolean;
-  }) => JSX.Element | null;
+  }) => React.JSX.Element | null;
 };
 
 /*
@@ -191,7 +189,9 @@ SidebarComponents.PromptDialog =
   /**
    * Prompts for a new sidebar operation and reports the user's choice to the owning component.
    *
-   * @param props Prompt state, state updater, and whether the current operation is disabled.
+   * @param s Prompt payload containing the requested title, value, and callbacks.
+   * @param setS State setter that closes or replaces the active prompt.
+   * @param disabled Whether the host is currently preventing sidebar mutations.
    *
    * @return The prompt dialog while a prompt is active, or `null` when no prompt is open.
    */
@@ -203,7 +203,7 @@ SidebarComponents.PromptDialog =
     state: PromptState;
     setState: (v: PromptState) => void;
     disabled: boolean;
-  }): JSX.Element | null {
+  }): React.JSX.Element | null {
     if (!s) return null;
     return (
       <Dialog
@@ -264,7 +264,10 @@ SidebarComponents.DeleteDialog =
   /**
    * Confirms deletion of the selected page, group, or section before invoking the caller's action.
    *
-   * @param props Selected deletion target, state updater, confirmation callback, and disabled state.
+   * @param tgt Selected page, group, or section awaiting deletion.
+   * @param setTgt State setter that clears the pending deletion target.
+   * @param onConfirm Callback that performs deletion after confirmation.
+   * @param disabled Whether the host is currently preventing sidebar mutations.
    *
    * @return The confirmation dialog while a target is selected, or `null` otherwise.
    */
@@ -278,7 +281,7 @@ SidebarComponents.DeleteDialog =
     setTgt: (v: DelTgt) => void;
     onConfirm: () => void;
     disabled: boolean;
-  }): JSX.Element | null {
+  }): React.JSX.Element | null {
     if (!tgt) return null;
     return (
       <Dialog
@@ -315,8 +318,16 @@ SidebarComponents.DeleteDialog =
 /**
  * Coordinates the Docs sidebar's route selection, navigation tree, dialogs, and user actions.
  *
- * @param props Navigation tree, current path, access permission, optional user, and site labels.
- * @returns The Docs sidebar and its navigation controls for the active host route.
+ * @param items Navigation tree shown in the sidebar.
+ * @param pathname Browser path used to identify the active section and leaf.
+ * @param permission Whether the current Docs host route is read-only or editable.
+ * @param userData Optional account details shown in the sidebar footer.
+ * @param siteTitle Host title shown beside the brand link.
+ * @param siteDescription Supporting text shown below the site title.
+ * @param homePath Destination of the sidebar brand link.
+ * @param sidebarAttrs Remaining root attributes forwarded to the shared sidebar component.
+ *
+ * @return The Docs sidebar and its navigation controls for the active host route.
  */
 function Nav({
   docs: items,
@@ -326,16 +337,16 @@ function Nav({
   siteTitle = 'Terra Symposium',
   siteDescription,
   homePath = '/',
-  ...props
+  ...sidebarAttrs
 }: {
   docs: TreeType[];
   pathname: string;
   permission: import('../../../../lib/terra/runtime/types.js').DocsPermissionLevel;
-  userData?: import('../../../../lib/terra/runtime/types.js').User | null;
+  userData?: DocsHostUser | null;
   siteTitle?: string;
   siteDescription?: string;
   homePath?: string;
-}): JSX.Element {
+}): React.JSX.Element {
   // STATES
   const leafTitle = useAtom($leafTitle);
   const curMode = useAtom($mode);
@@ -389,6 +400,7 @@ function Nav({
     hue: number;
     section: TreeType;
   } | null>(null);
+  const [sectionMenuTarget, setSectionMenuTarget] = useState<TreeType | null>(null);
   const [inputDlg, setInputDlg] = useState<{
     open: boolean;
     title: string;
@@ -442,7 +454,9 @@ function Nav({
   navTripwireRenders.current++;
   if (navTripwireRenders.current > 50) {
     const navTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
-    for (const key in navTripwireTrackedVars)
+    for (const key of Object.keys(navTripwireTrackedVars) as Array<
+      keyof typeof navTripwireTrackedVars
+    >)
       if (navTripwireTrackedVars[key] !== navTripwirePrevVars.current[key])
         navTripwireDiff[key] = {
           old: navTripwirePrevVars.current[key],
@@ -843,6 +857,21 @@ function Nav({
                                                        * @param items - Sidebar items being pruned from the tree.
                    */
 									return (/**
+									return ( * return ( * return ( * return ( * return ( * return ( *
+									return ( * return ( * return ( * return ( * return ( * return ( * @param items
+									return ( * return ( * return ( * return ( * return ( * return ( *
+									return ( * return ( * return ( * return ( * return ( * return ( * @return
+									return ( * return ( * return ( * return ( * return ( * return (
+									return ( * return ( * return ( * return ( * return ( *
+									return ( * return ( * return ( * return ( * return ( * @param items
+									return ( * return ( * return ( * return ( * return ( *
+									return ( * return ( * return ( * return ( * return ( * @return
+									return ( * return ( * return ( * return ( * return (
+									return ( * return ( * return ( * return ( *
+									return ( * return ( * return ( * return ( * @param items
+									return ( * return ( * return ( * return ( *
+									return ( * return ( * return ( * return ( * @return
+									return ( * return ( * return ( * return (
 									return ( * return ( * return ( *
 									return ( * return ( * return ( * @param items
 									return ( * return ( * return ( *
@@ -935,7 +964,7 @@ function prune(items: TreeType[]): TreeType[] {
       setInputDlg({
         open: true,
         title: o?.title || 'Add Section',
-        description: o?.description,
+        ...(o?.description === undefined ? {} : { description: o.description }),
         label: 'Section name',
         value: 'Untitled Section',
         onCancel: () => {},
@@ -972,7 +1001,7 @@ function prune(items: TreeType[]): TreeType[] {
 							window.history.pushState(null, '', tgtUrl.toString());
 							document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: url, pathname: url, path: dPath, title: 'Untitled', description: '', source: '', content: [], compiledMDX: '' } }),);
 							const { data, error } = await actions.write.doc.createSection({ title: name });
-							if (error || !data) throw new Error(error?.message || 'Failed to create section.');
+							if (error || !data) throw new Error(errorMessage(error, 'Failed to create section.'));
 							setTimeout(() => {
 								void refreshTree();
 							}, 2500);
@@ -1106,7 +1135,7 @@ function prune(items: TreeType[]): TreeType[] {
               if (inlineMatch) document.documentElement.style.cssText = inlineMatch[1] || '';
               else window.location.reload();
             }
-          } catch (_e) {
+          } catch {
             window.location.reload();
           }
         },
@@ -1151,7 +1180,7 @@ function prune(items: TreeType[]): TreeType[] {
           path: s,
           type: 'folder',
         });
-        if (err && !err.message?.includes('folder not found')) throw err;
+        if (err && !errorMessage(err, '').includes('folder not found')) throw err;
         await refreshTree();
         if (redirect && redirect !== cPathname) navigate({ href: redirect, mode: 'view' });
       } catch (err) {
@@ -1179,7 +1208,7 @@ function prune(items: TreeType[]): TreeType[] {
         const { error: err } = await actions.write.doc.rm(
           isIdx ? { path: tgtPath, type: tgtType } : { assets: a, path: tgtPath, type: tgtType },
         );
-        if (err && !err.message?.includes('folder not found')) throw err;
+        if (err && !errorMessage(err, '').includes('folder not found')) throw err;
         await refreshTree();
         if (a)
           navigate({
@@ -1229,6 +1258,24 @@ function prune(items: TreeType[]): TreeType[] {
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
 								(/**
+								( * ( * ( * ( * ( * ( *
+								( * ( * ( * ( * ( * ( * @param nodes
+								( * ( * ( * ( * ( * ( * @param tgtId
+								( * ( * ( * ( * ( * ( *
+								( * ( * ( * ( * ( * ( * @return
+								( * ( * ( * ( * ( * (
+								( * ( * ( * ( * ( *
+								( * ( * ( * ( * ( * @param nodes
+								( * ( * ( * ( * ( * @param tgtId
+								( * ( * ( * ( * ( *
+								( * ( * ( * ( * ( * @return
+								( * ( * ( * ( * (
+								( * ( * ( * ( *
+								( * ( * ( * ( * @param nodes
+								( * ( * ( * ( * @param tgtId
+								( * ( * ( * ( *
+								( * ( * ( * ( * @return
+								( * ( * ( * (
 								( * ( * ( *
 								( * ( * ( * @param nodes
 								( * ( * ( * @param tgtId
@@ -1314,6 +1361,24 @@ function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
 								(/**
+								( * ( * ( * ( * ( * ( *
+								( * ( * ( * ( * ( * ( * @param nodes
+								( * ( * ( * ( * ( * ( * @param tgtId
+								( * ( * ( * ( * ( * ( *
+								( * ( * ( * ( * ( * ( * @return
+								( * ( * ( * ( * ( * (
+								( * ( * ( * ( * ( *
+								( * ( * ( * ( * ( * @param nodes
+								( * ( * ( * ( * ( * @param tgtId
+								( * ( * ( * ( * ( *
+								( * ( * ( * ( * ( * @return
+								( * ( * ( * ( * (
+								( * ( * ( * ( *
+								( * ( * ( * ( * @param nodes
+								( * ( * ( * ( * @param tgtId
+								( * ( * ( * ( *
+								( * ( * ( * ( * @return
+								( * ( * ( * (
 								( * ( * ( *
 								( * ( * ( * @param nodes
 								( * ( * ( * @param tgtId
@@ -1380,7 +1445,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   const mvLeaf = useCallback(
     async ({
       path: p,
-      tTarget: tTgt,
+      tTarget: t,
       tpath: v,
       tPosition: r,
     }: {
@@ -1391,7 +1456,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     }): Promise<void> => {
       console.warn('[docs:mv-leaf]', {
         path: p,
-        tTarget: tTgt,
+        tTarget: t,
         tpath: v,
         tPosition: r,
       });
@@ -1443,11 +1508,11 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
         if (sIdx !== -1) movedNode = oldSibs.splice(sIdx, 1)[0];
         const tgtSibs = getSibs(nTree, v);
         let iIdx = tgtSibs.length;
-        if (tTgt) {
+        if (t) {
           const tgtIdx = tgtSibs.findIndex((n) =>
             n.type === 'leaf'
-              ? n.path === tTgt
-              : n.type === 'branch' && [v, n.origName].filter(Boolean).join('/') === tTgt,
+              ? n.path === t
+              : n.type === 'branch' && [v, n.origName].filter(Boolean).join('/') === t,
           );
           if (tgtIdx !== -1) iIdx = (r ?? 'before') === 'before' ? tgtIdx : tgtIdx + 1;
         }
@@ -1479,9 +1544,9 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
             _nPath = (movedDoc as Md | undefined)?.path || nPath;
             if (error) {
               setTree(prevTree);
-              toast.error(error.message || 'Move failed');
+              toast.error(errorMessage(error, 'Move failed'));
               notify({
-                error: new Error(error.message),
+                error: new Error(errorMessage(error, 'Move failed')),
                 fallback: 'Failed to move docs page.',
               });
               return;
@@ -1542,7 +1607,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
       pPath: p,
       tpath: t,
       tPosition: v,
-      tTarget: tTgt,
+      tTarget: r,
     }: {
       fPath: string;
       pPath: string;
@@ -1562,7 +1627,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
         const tgtSibs = getSibs(nTree, t);
         let iIdx = tgtSibs.length;
         const tIdx = tgtSibs.findIndex(
-          (n) => n.type === 'branch' && [t, n.origName].filter(Boolean).join('/') === tTgt,
+          (n) => n.type === 'branch' && [t, n.origName].filter(Boolean).join('/') === r,
         );
         if (tIdx !== -1) iIdx = (v ?? 'before') === 'before' ? tIdx : tIdx + 1;
         if (movedNode) tgtSibs.splice(iIdx, 0, movedNode);
@@ -1820,7 +1885,9 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   attachmentTripwireRenders.current++;
   if (attachmentTripwireRenders.current > 50) {
     const attachmentTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
-    for (const key in attachmentTripwireTrackedVars)
+    for (const key of Object.keys(attachmentTripwireTrackedVars) as Array<
+      keyof typeof attachmentTripwireTrackedVars
+    >)
       if (attachmentTripwireTrackedVars[key] !== attachmentTripwirePrevVars.current[key])
         attachmentTripwireDiff[key] = {
           old: attachmentTripwirePrevVars.current[key],
@@ -1924,7 +1991,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           groups.push({ groupTitle: gTitle, nodes: gNodes });
         } else if (c.type === 'leaf') {
           const lTitle = cTitle(toNodeLabel(c.title || c.origName));
-          groups[0].nodes.push({
+          groups[0]!.nodes.push({
             title: lTitle,
             fullTitle: `${sectTitle} / ${lTitle}`,
             id: c.origName,
@@ -1943,13 +2010,13 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     if (!trimmedQuery) return [];
     const lowerQuery = trimmedQuery.toLowerCase();
     const leaves: { path: string; title: string; breadcrumb: string }[] = [];
-    /*
-     * Handles walk.
-     *
-     * @param nodes - Sidebar nodes being rendered or filtered.
-     * @param pathStr - Path prefix used to resolve each node's route.
+    /**
+     * Collects matching leaf pages while carrying their displayed breadcrumb.
+     * @param nodes Navigation siblings to search in their rendered order.
+     * @param pathStr Breadcrumb prefix accumulated from parent branches.
+     * @returns No value; matches are appended to the enclosing search result.
      */
-    (function walk(nodes: TreeType[], pathStr: string) {
+    const walk = (nodes: TreeType[], pathStr: string): void => {
       nodes.forEach((n) => {
         const currTitle = n.title || n.origName;
         if (n.type === 'leaf') {
@@ -1966,7 +2033,8 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
         } else if (n.type === 'branch' && n.children)
           walk(n.children, pathStr ? `${pathStr} / ${currTitle}` : currTitle);
       });
-    })(tree, '');
+    };
+    walk(tree, '');
     return leaves;
   }, [query, tree]);
   useEffect(() => {
@@ -1988,15 +2056,20 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   const fetchAtts = useCallback(async () => {
     if (!manageAttTgt) return;
     setAttachmentDialogLoading(true);
-    const { data, error: err } = await actions.read.doc.attachments({
-      paths: [
-        ...new Set(
-          (a ? [a.id] : nodeGroups.flatMap((g) => g.nodes.map((n) => n.id))).filter(Boolean),
+    const paths = [
+      ...new Set(
+        (a ? [a.id] : nodeGroups.flatMap((g) => g.nodes.map((n) => n.id))).filter(
+          (path): path is string => typeof path === 'string' && path.length > 0,
         ),
-      ],
-    });
-    if (!err && data) setAtts(data as Record<string, Sister[]>);
-    else setAtts({});
+      ),
+    ];
+    const entries = await Promise.all(
+      paths.map(async (path) => {
+        const { data, error: err } = await actions.read.doc.attachments({ path });
+        return [path, err || !data ? [] : data] as const;
+      }),
+    );
+    setAtts(Object.fromEntries(entries));
     setAttachmentDialogLoading(false);
   }, [manageAttTgt, a, nodeGroups]);
   useEffect(() => {
@@ -2010,6 +2083,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
    * @param e - Pointer event received from the sidebar item.
    * @param tgtPath - Destination path associated with the selected item.
    */
+
   // SELECTION
   /**
    * Handles toggle sel.
@@ -2017,6 +2091,8 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
    * @param e - Pointer event received from the document action.
    * @param docPath - Document path targeted by the action.
    * @param a - Action metadata used to perform the document operation.
+   *
+   * @return
    */
   const toggleSel = (e: React.MouseEvent, docPath: string, a: Sister) => {
     e.stopPropagation();
@@ -2066,7 +2142,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
       }
       // Background sync just to ensure external alignment
       void fetchAtts();
-    } catch (_err) {
+    } catch {
       // 4. Failure rollback
       setAtts({ ...atts });
       setSelAtts(originalSel);
@@ -2132,7 +2208,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           urls.map(async (u) => {
             let t = type;
             if (t === 'other')
-              t = u.toLowerCase().split('?')[0].endsWith('.pdf')
+              t = (u.toLowerCase().split('?')[0] ?? '').endsWith('.pdf')
                 ? 'document'
                 : TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(
                       u.toLowerCase().split('?')[0] ?? '',
@@ -2193,6 +2269,8 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
    * @param path - Document path being created or edited.
    * @param isNew - Whether the path represents a new document.
    * @param customTitle - Optional title supplied by the editor.
+   *
+   * @return
    */
   const attachPage = async (path: string, isNew = false, customTitle?: string) => {
     if (!a) return;
@@ -2218,18 +2296,18 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           }
           // 2. Secondary Fallback: Tree Search (for established documents)
           if (!groupId) {
-            /*
-             * Handles find group.
-             *
-             * @param nodes - Sidebar nodes containing the target leaf.
-             * @param tgtLeafId - Leaf identifier being selected.
-             * @param currGroupId - Current group identifier used for route context.
+            /**
+             * Finds the target leaf and records its nearest containing branch as the group.
+             * @param nodes Navigation nodes in the active sidebar tree.
+             * @param tgtLeafId Leaf ID or path being moved or selected.
+             * @param currGroupId Nearest branch identifier inherited by the recursive call.
+             * @returns `true` after a matching leaf updates `groupId`, otherwise `false`.
              */
-            (function findGroup(
+            const findGroup = (
               nodes: TreeType[],
               tgtLeafId: string,
               currGroupId?: string,
-            ): boolean {
+            ): boolean => {
               for (const n of nodes) {
                 if (n.type === 'leaf' && (n.origName === tgtLeafId || n.path === tgtLeafId)) {
                   groupId = currGroupId;
@@ -2239,7 +2317,8 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                   if (findGroup(n.children, tgtLeafId, n.origName)) return true;
               }
               return false;
-            })(tree, a.id);
+            };
+            findGroup(tree, a.id);
           }
           if (groupId) parentId = groupId;
         }
@@ -2277,11 +2356,6 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     setQuery('');
   };
 
-  const aPathTitle = useMemo(() => {
-    if (!a) return '';
-    return a.fullTitle || a.title;
-  }, [a]);
-
   // RENDERS
   return (
     <ErrorBoundary
@@ -2296,7 +2370,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
       )}
     >
       <Sidebar
-        {...props}
+        {...sidebarAttrs}
         sticky
         className="not-prose bg-primary-2 p-2"
         onClick={() => {
@@ -2313,13 +2387,13 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           target={exportTgt}
           setTarget={setExportTgt}
           disabled={loading || transitioning}
-          onExport={async (target, options, progress) => {
-            const v = target.paths;
-            const r = target.rootDir;
-            const f = target.filename;
-            const o = options;
-            const d = progress;
-            const n = target.nodeIds || [];
+          onExport={async (t, s, a) => {
+            const v = t.paths;
+            const r = t.rootDir;
+            const f = t.filename;
+            const o = s;
+            const d = a;
+            const n = t.nodeIds || [];
             console.info('[archive] start', {
               paths: v,
               rootDir: r,
@@ -2426,6 +2500,8 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
              *
              * @param p - Value passed to the helper.
              * @param regex - Value passed to the helper.
+             *
+             * @return
              */
             const isExtMatch = (p: string, regex: RegExp) => {
               if (regex.test(p.split('?')[0] || p)) return true;
@@ -2504,6 +2580,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
             let completed = 0;
             /**
              * Updates the update Progress for the docs.
+             *
              */
             const updateProgress = () => {
               completed++;
@@ -2520,6 +2597,8 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
              *
              * @param p - Value passed to the helper.
              * @param forceExt - Value passed to the helper.
+             *
+             * @return
              */
             const resolvePath = (p: string, forceExt?: string) => {
               let rel = p;
@@ -2561,7 +2640,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
              *
              * @param p - Value passed to the helper.
              *
-             * @returns fetch Asset Data.
+             * @return fetch Asset Data.
              */
             const fetchAssetData = async (
               p: string,
@@ -3076,7 +3155,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                                       setAtts({ ...atts });
                                       toast.error('Move failed');
                                       notify({
-                                        error: new Error(err.message || 'Move failed'),
+                                        error: new Error(errorMessage(err, 'Move failed')),
                                         fallback:
                                           'Failed to relocate attachment relational schema node.',
                                       });
@@ -3512,7 +3591,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                     path: sectionPath,
                     type: 'folder',
                   });
-                  if (err && !err.message?.includes('folder not found')) {
+                  if (err && !errorMessage(err, '').includes('folder not found')) {
                     setTree(prev);
                     throw err;
                   }
@@ -3544,6 +3623,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
               </DialogDescription>
             </DialogHeader>
             <Slider
+              aria-label="Hue"
               min={0}
               max={360}
               step={1}
@@ -3602,35 +3682,55 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           {(sects.length > 1 || permission === 'write') && (
             <div className="mt-2 flex items-center">
               <div className={cn('block min-w-0 flex-1 rounded-md transition-opacity')}>
-                <Select
-                  disabled={transitioning}
-                  open={sectionOpen}
-                  onOpenChange={setSectionOpen}
-                  value={aViewed ? aViewed.origName : ''}
-                  onValueChange={async (v) => {
-                    if (v === '__add_section__') {
-                      setTimeout(() => {
-                        addSection();
-                      }, 0);
-                      return;
-                    }
-                    if (aViewed?.origName === v) return;
-                    setViewedSecId(v);
-                  }}
-                >
-                  <SelectTrigger
-                    className="w-full"
-                    aria-label="Section"
-                    data-docs-navigation="true"
-                    onPointerDown={(e) => {
-                      if (e.button === 0) setSectionOpen(true);
+                <ContextMenu onOpenChange={(o) => o && setSectionOpen(false)}>
+                  <Select
+                    disabled={transitioning}
+                    open={sectionOpen}
+                    onOpenChange={setSectionOpen}
+                    value={aViewed ? aViewed.origName : ''}
+                    onValueChange={async (v) => {
+                      if (v === '__add_section__') {
+                        setTimeout(() => {
+                          addSection();
+                        }, 0);
+                        return;
+                      }
+                      if (aViewed?.origName === v) return;
+                      setViewedSecId(v);
                     }}
                   >
-                    <SelectValue placeholder="Section" />
-                  </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
-                    {sects.map((s) => {
-                      if (s.simulated) {
+                    <SelectTrigger
+                      className="w-full"
+                      aria-label="Section"
+                      data-docs-navigation="true"
+                      onPointerDown={(e) => {
+                        if (e.button === 0) setSectionOpen(true);
+                      }}
+                    >
+                      <SelectValue placeholder="Section" />
+                    </SelectTrigger>
+                    <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
+                      {sects.map((s) => {
+                        if (s.simulated) {
+                          return (
+                            <SelectItem
+                              key={s.origName}
+                              value={s.origName}
+                              icon={
+                                <span
+                                  aria-hidden="true"
+                                  className="size-3.5 rounded-[3px]"
+                                  style={{
+                                    backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
+                                  }}
+                                />
+                              }
+                              className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                            >
+                              {s.title || 'New Section'}
+                            </SelectItem>
+                          );
+                        }
                         return (
                           <SelectItem
                             key={s.origName}
@@ -3640,45 +3740,45 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                                 aria-hidden="true"
                                 className="size-3.5 rounded-[3px]"
                                 style={{
-                                  backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
+                                  backgroundColor: `hsl(${hueDlg?.open && hueDlg.section.origName === s.origName ? hueDlg.hue : getHue(s.title || s.origName, s.hue)} 65% 55%)`,
                                 }}
                               />
                             }
                             className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
                           >
-                            {s.title || 'New Section'}
+                            <ContextMenuTrigger
+                              className="flex w-full items-center justify-between"
+                              onContextMenuCapture={() => setSectionMenuTarget(s)}
+                            >
+                              <span className="line-clamp-1">
+                                {cTitle(toNodeLabel(s.title || s.origName))}
+                              </span>
+                            </ContextMenuTrigger>
                           </SelectItem>
                         );
-                      }
-                      // prettier-ignore
-                      return (
-												<SelectItem
-											key={s.origName}
-													value={s.origName}
-													icon={<span aria-hidden='true' className='size-3.5 rounded-[3px]' style={{ backgroundColor: `hsl(${hueDlg?.open && hueDlg.section.origName === s.origName ? hueDlg.hue : getHue(s.title || s.origName, s.hue)} 65% 55%)` }} />}
-													className='data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12'
-												>
-													<ContextMenu>
-												<ContextMenuTrigger className='flex w-full items-center justify-between'><span className='line-clamp-1'>{cTitle(toNodeLabel(s.title || s.origName))}</span></ContextMenuTrigger>
-													<ContextMenuContent><Menu actions={SidebarActions.renderSects!(s)} /></ContextMenuContent>
-													</ContextMenu>
-												</SelectItem>
-											);
-                    })}
-                    {permission === 'write' && (
-                      <>
-                        {sects.length > 0 && !sects[0]?.simulated && <Separator className="my-1" />}
-                        <SelectItem
-                          value="__add_section__"
-                          icon={<AddIcon className="size-4" />}
-                          className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
-                        >
-                          <span>Add section</span>
-                        </SelectItem>
-                      </>
+                      })}
+                      {permission === 'write' && (
+                        <>
+                          {sects.length > 0 && !sects[0]?.simulated && (
+                            <Separator className="my-1" />
+                          )}
+                          <SelectItem
+                            value="__add_section__"
+                            icon={<AddIcon className="size-4" />}
+                            className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                          >
+                            <span>Add section</span>
+                          </SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <ContextMenuContent>
+                    {sectionMenuTarget && (
+                      <Menu actions={SidebarActions.renderSects!(sectionMenuTarget)} />
                     )}
-                  </SelectContent>
-                </Select>
+                  </ContextMenuContent>
+                </ContextMenu>
               </div>
             </div>
           )}
@@ -3736,7 +3836,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                     .split(/[\s@._-]+/)
                     .filter(Boolean)
                     .slice(0, 2)
-                    .map((part) => part[0]?.toUpperCase())
+                    .map((p) => p[0]?.toUpperCase())
                     .join('') || '?'
                 ) : (
                   <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none">
@@ -3771,5 +3871,4 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     </ErrorBoundary>
   );
 }
-
 export default Nav;

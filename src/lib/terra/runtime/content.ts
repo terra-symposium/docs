@@ -1,6 +1,5 @@
-// @ts-nocheck -- canonical website serializer, now isolated from host imports.
 /**
- * astro/src/actions/docs/content.ts
+ * src/lib/terra/runtime/content.ts
  * Shared helpers for normalizing and serializing docs content versions, syntax, and tables.
  */
 
@@ -37,7 +36,7 @@ CONFIG
  *
  * @param val - Candidate value to narrow to a non-array record.
  *
- * @returns True when the value is a non-array object with own properties.
+ * @return True when the value is a non-array object with own properties.
  */
 const isRec = (val: unknown): val is Record<string, unknown> =>
   Boolean(val && typeof val === 'object' && !Array.isArray(val));
@@ -60,7 +59,7 @@ HELPERS
  *
  * @param val - Candidate Portable Text node to narrow to a text span.
  *
- * @returns True when the value is a Portable Text span node.
+ * @return True when the value is a Portable Text span node.
  */
 const ptText = (
   val: unknown,
@@ -72,7 +71,13 @@ const ptText = (
   [key: string]: unknown;
 } => isRec(val) && val._type === 'span';
 
-/** Narrows persisted mark definitions before the Markdown serializer reads link fields. */
+/**
+ * Narrows persisted mark definitions before the Markdown serializer reads link fields.
+ *
+ * @param val
+ *
+ * @return
+ */
 const ptMarkDefs = (val: unknown): PtMarkDef[] =>
   Array.isArray(val)
     ? val.filter(
@@ -91,7 +96,7 @@ const ptMarkDefs = (val: unknown): PtMarkDef[] =>
  * @param marks - Marks to apply in render order.
  * @param defs - Portable Text mark definitions.
  *
- * @returns Text wrapped in the mark syntax used by docs Markdown.
+ * @return Text wrapped in the mark syntax used by docs Markdown.
  */
 const renderMarks = (text: string, marks: string[], defs: PtMarkDef[]): string =>
   marks.reduce((a, m) => {
@@ -107,7 +112,7 @@ const renderMarks = (text: string, marks: string[], defs: PtMarkDef[]): string =
  *
  * @param val - Portable Text block or other persisted value whose list marker is inspected.
  *
- * @returns Stored list style, or an empty string when the block is not part of a list.
+ * @return Stored list style, or an empty string when the block is not part of a list.
  */
 const listKind = (val: unknown): string =>
   isRec(val) && typeof val.listItem === 'string' ? val.listItem : '';
@@ -115,18 +120,20 @@ const listKind = (val: unknown): string =>
 /**
  * Serializes a string literal so it can be embedded safely in JSX attributes.
  *
+ * @param val
  * @param value - String literal to quote.
  *
- * @returns A quoted string literal that can survive MDX parsing unchanged.
+ * @return A quoted string literal that can survive MDX parsing unchanged.
  */
 const quote = (val: string): string => JSON.stringify(val);
 
 /**
  * Escapes HTML control characters before text is embedded in serialized docs markup.
  *
+ * @param val
  * @param value - HTML text to escape.
  *
- * @returns Text with HTML metacharacters escaped for serialization.
+ * @return Text with HTML metacharacters escaped for serialization.
  */
 const escHtml = (val: string): string =>
   val
@@ -141,7 +148,7 @@ const escHtml = (val: string): string =>
  *
  * @param val - Nested docs content or leaf payload.
  *
- * @returns Plain text recovered from the input.
+ * @return Plain text recovered from the input.
  */
 const bodyText = (val: unknown): string => {
   if (typeof val === 'string') return val;
@@ -181,23 +188,29 @@ const BLOCKS = [
 /**
  * Handles docs editor mount ids.
  *
+ * @param src
  * @param source - Source text containing the Docs blocks to parse.
+ *
+ * @return
  */
 export const docsEditorMountIds = (src: string): string[] => {
   const code = new Map<string, string>();
   const lns = normBlockMarkers(src)
-    .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), (match) => {
+    .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), (m) => {
       const key = `TERRA_CODE_${code.size}`;
-      code.set(key, match);
+      code.set(key, m);
       return key;
     })
-    .replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), (match) => {
+    .replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), (m) => {
       let result = '';
-      for (let i = 0; i < match.length; i++)
+      for (let i = 0; i < m.length; i++) {
+        const character = m[i];
+        if (character === undefined) continue;
         result +=
-          match[i] && ['{', '}', '<', '>'].includes(match[i]) && (i === 0 || match[i - 1] !== '\\')
-            ? '\\' + match[i]
-            : (match[i] ?? '');
+          ['{', '}', '<', '>'].includes(character) && (i === 0 || m[i - 1] !== '\\')
+            ? `\\${character}`
+            : character;
+      }
       return result;
     })
     .replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
@@ -208,6 +221,7 @@ export const docsEditorMountIds = (src: string): string[] => {
   const items = new Set<string>();
   for (let i = 0; i < lns.length; i++) {
     const line = lns[i];
+    if (line === undefined) continue;
     const trimmedStart = line.trimStart();
     const trimmed = trimmedStart.trimEnd();
     if (trimmedStart.startsWith('```')) {
@@ -219,7 +233,7 @@ export const docsEditorMountIds = (src: string): string[] => {
       blocks.push(line);
       continue;
     }
-    const block = BLOCKS.find((entry) => trimmed.startsWith(entry.syntax));
+    const block = BLOCKS.find((e) => trimmed.startsWith(e.syntax));
     if (block) {
       const marker = trimmed.match(
         new RegExp(
@@ -259,7 +273,7 @@ export const docsEditorMountIds = (src: string): string[] => {
     blocks.push(line);
   }
   for (const label of groups) {
-    const block = BLOCKS.find((entry) => entry.label === label);
+    const block = BLOCKS.find((e) => e.label === label);
     if (block) {
       if (items.has(block.item)) {
         blocks.push('', `</${block.item}>`);
@@ -273,10 +287,7 @@ export const docsEditorMountIds = (src: string): string[] => {
     'root',
     ...Array.from(
       (code.size
-        ? norm.replace(
-            TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(),
-            (key) => code.get(key) || key,
-          )
+        ? norm.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), (k) => code.get(k) || k)
         : norm
       )
         .replace(/```[\s\S]*?```/g, '')
@@ -292,13 +303,12 @@ export const docsEditorMountIds = (src: string): string[] => {
   ];
 };
 
-/** Returns stable mount identifiers for every asynchronous Docs editor renderer. */
 /**
  * Separates compact tabs markers before they reach the line-based block parser.
  *
  * @param md - Markdown or MDX source containing docs block markers.
  *
- * @returns Source with tab labels, bodies, and adjacent delimiters on distinct lines.
+ * @return Source with tab labels, bodies, and adjacent delimiters on distinct lines.
  */
 const normBlockMarkers = (md: string): string =>
   md
@@ -426,9 +436,10 @@ CODE SYNTAX
 /**
  * Emits the optional language attribute used by serialized code fences.
  *
+ * @param lang
  * @param language - Code fence language label.
  *
- * @returns `language` attribute when the fence declares one, otherwise an empty string.
+ * @return `language` attribute when the fence declares one, otherwise an empty string.
  */
 const codeAttrs = (lang?: string): string =>
   lang?.trim() ? ` language=${JSON.stringify(lang.trim())}` : '';
@@ -455,6 +466,8 @@ ${val.replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQuality
  *
  * @param lang - Code language label used for the generated code block.
  * @param src - Source code text to wrap in the code block.
+ *
+ * @return
  */
 export const codeSrcJsx = (lang: string | undefined, src: string): string =>
   `\n<Code${codeAttrs(lang)} source=${quote(src)} />\n`;
@@ -520,10 +533,11 @@ TABLE HTML
 /**
  * Removes the outer `|` characters from a pipe-table row while respecting escaped pipes.
  *
- * @param value - Pipe-delimited text to trim.
+ * @param val
  * @param side - Side of the pipe to trim.
+ * @param value - Pipe-delimited text to trim.
  *
- * @returns Row fragment with the requested outer pipe removed.
+ * @return Row fragment with the requested outer pipe removed.
  */
 const trimPipe = (val: string, side: 'start' | 'end'): string => {
   if (side === 'start' && val.startsWith('|')) return val.slice(1);
@@ -541,7 +555,7 @@ const trimPipe = (val: string, side: 'start' | 'end'): string => {
  * @param md - Table markdown to render.
  * @param renderCell - Cell renderer used for each value.
  *
- * @returns HTML table markup when the input is a valid pipe table, otherwise `null`.
+ * @return HTML table markup when the input is a valid pipe table, otherwise `null`.
  *
  * @remarks
  * Callers can supply a custom cell renderer to preserve nested markdown or JSX.
@@ -552,11 +566,11 @@ export const mdTableToHtml = (
 ): string | null => {
   const lines = md.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').trim().split('\n');
   if (lines.length < 2 || lines.some((l) => !l.trim())) return null;
-  const rows = lines.map((line) => {
+  const rows = lines.map((l) => {
     const cells: string[] = [];
     let cell = '';
     let esc = false;
-    for (const ch of trimPipe(trimPipe(line.trim(), 'start'), 'end')) {
+    for (const ch of trimPipe(trimPipe(l.trim(), 'start'), 'end')) {
       if (esc) {
         cell += ch;
         esc = false;
@@ -576,17 +590,22 @@ export const mdTableToHtml = (
     cells.push(cell.trim());
     return cells;
   });
-  const width = rows[0]?.length || 0;
+  const header = rows[0];
+  const width = header?.length || 0;
   if (
+    !header ||
     !width ||
     rows.some((r) => r.length !== width) ||
-    !rows[1]?.every((val) => TerraQualityRegex.REGEX_3_U_REGEX().test(val.trim()))
+    !rows[1]?.every((v) => TerraQualityRegex.REGEX_3_U_REGEX().test(v.trim()))
   )
     return null;
 
   // prettier-ignore
   const body = rows.slice(2).map(r => `<tr>${r.map(c => `<td>${renderCell(c)}</td>`).join('')}</tr>`).join('');
-  return `<table><thead><tr>${/* prettier-ignore */ rows[0].map(renderCell).map(c => `<th>${c}</th>`).join('')}</tr></thead>${body ? `<tbody>${body}</tbody>` : ''}</table>`;
+  return `<table><thead><tr>${header
+    .map(renderCell)
+    .map((c) => `<th>${c}</th>`)
+    .join('')}</tr></thead>${body ? `<tbody>${body}</tbody>` : ''}</table>`;
 };
 
 /*//////////////////////////////////////////////////
@@ -596,9 +615,10 @@ CONTENT SERIALIZATION
 /**
  * Converts plain markdown into HTML for the serializer's fallback path.
  *
+ * @param val
  * @param value - Markdown source to parse.
  *
- * @returns Rendered HTML string used when markdown does not map to richer docs blocks.
+ * @return Rendered HTML string used when markdown does not map to richer docs blocks.
  */
 const renderMd = (val: string): string => {
   const text = val.trim();
@@ -635,6 +655,8 @@ const renderMd = (val: string): string => {
  * Handles sanitize table html.
  *
  * @param val - Table markup whose inline styles should be removed.
+ *
+ * @return
  */
 export const sanitizeTableHtml = (val: string): string =>
   val
@@ -644,9 +666,10 @@ export const sanitizeTableHtml = (val: string): string =>
 /**
  * Formats raw table HTML with consistent indentation so docs tables round-trip cleanly.
  *
+ * @param val
  * @param value - Table HTML to format.
  *
- * @returns Formatted table HTML string with stable indentation.
+ * @return Formatted table HTML string with stable indentation.
  */
 const fmtRawTable = (val: string): string => {
   if (!TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
@@ -678,6 +701,8 @@ export const TABLE_TAG = TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_T
  * Handles atomic table html.
  *
  * @param val - Complete table markup captured from a Docs source block.
+ *
+ * @return
  */
 const atomicTableHtml = (val: string): string => {
   return sanitizeTableHtml(val).trim();
@@ -695,7 +720,7 @@ const atomicTableHtml = (val: string): string => {
  * @param tag - Literal JSX or HTML tag name to protect.
  * @param blocks - Protected block collection restored after spacing normalization.
  *
- * @returns Source with complete matching blocks substituted by stable placeholders.
+ * @return Source with complete matching blocks substituted by stable placeholders.
  *
  * @remarks
  * Legacy leaves can contain an incomplete opening tag; `indexOf` leaves that text untouched rather than allowing a regex to consume the rest of the document.
@@ -721,7 +746,7 @@ const protectMarkupBlocks = (src: string, tag: string, blocks: string[]): string
  *
  * @param src - Markdown or MDX source to normalize.
  *
- * @returns Source with headings and block delimiters separated onto their own lines.
+ * @return Source with headings and block delimiters separated onto their own lines.
  */
 export const normDocsSpacing = (src: string): string => {
   if (!src) return '';
@@ -775,7 +800,10 @@ export const normDocsSpacing = (src: string): string => {
     .flatMap((l) => {
       const heading = l.match(TerraQualityRegex.REGEX_1_6_S_REGEX());
       if (!heading) return [l];
-      const words = heading[2].trim().split(TerraQualityRegex.REGEX_S_REGEX_2()).filter(Boolean);
+      const words = (heading[2] ?? '')
+        .trim()
+        .split(TerraQualityRegex.REGEX_S_REGEX_2())
+        .filter(Boolean);
       if (words.length < 2) return [l];
       let cap = 0;
       for (const word of words) {
@@ -809,7 +837,7 @@ export const normDocsSpacing = (src: string): string => {
  *
  * @param rows - Table rows to serialize.
  *
- * @returns HTML table markup for the stored Portable Text rows.
+ * @return HTML table markup for the stored Portable Text rows.
  */
 const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
   /**
@@ -818,15 +846,15 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
    * @param row - Table row to render.
    * @param tag - Cell tag to emit for the row.
    *
-   * @returns Table row markup for the rendered header or body row.
+   * @return Table row markup for the rendered header or body row.
    */
   const renderRow = (row: { cells: DocTableCell[] }, tag: 'th' | 'td'): string => {
     return `\t<tr>\n${(Array.isArray(row.cells) ? row.cells : [])
-      .map((cell) => {
+      .map((c) => {
         let html: string;
-        if (cell.html?.trim())
+        if (c.html?.trim())
           html = sanitizeTableHtml(
-            cell.html
+            c.html
               .trim()
               .replace(TerraQualityRegex.REGEX_A_S_A_S_S_A_S_A_GI_REGEX(), '<a$1>$2</a>')
               .replace(TerraQualityRegex.REGEX_2_G_REGEX(), '[$1]($2)'),
@@ -834,7 +862,7 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
             .replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
             .replace(TerraQualityRegex.REGEX_N_G_REGEX(), '$1<em>$2</em>$3');
         else {
-          const body = stringifyDocBody(cell.content).trim();
+          const body = stringifyDocBody(c.content).trim();
           if (TerraQualityRegex.REGEX_CODE_B_S_S_CODE_REGEX().test(body)) html = body;
           else {
             const table = body ? mdTableToHtml(body, renderMd) : null;
@@ -844,14 +872,13 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
                 TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(body) ? body : renderMd(body),
               );
             else {
-              const md = fromBlockJsx(cell.markdown || '').trim();
+              const md = fromBlockJsx(c.markdown || '').trim();
               const fallback = mdTableToHtml(md, renderMd);
               if (fallback) html = sanitizeTableHtml(fallback);
               else if (TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(md))
                 html = sanitizeTableHtml(md);
               else {
-                const text =
-                  bodyText(cell.content) || bodyText(cell.markdown) || bodyText(cell.html);
+                const text = bodyText(c.content) || bodyText(c.markdown) || bodyText(c.html);
                 html = text ? sanitizeTableHtml(renderMd(text)) : '';
               }
             }
@@ -889,7 +916,7 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
  * @param body - Body content to process.
  * @param md - Markdown source to parse.
  *
- * @returns Serialized docs source, falling back to the original markdown when body content is empty.
+ * @return Serialized docs source, falling back to the original markdown when body content is empty.
  */
 const nestedMd = (body: DocBody | null | undefined, md = ''): string => {
   const content = stringifyDocBody(body).trim();
@@ -903,7 +930,7 @@ const nestedMd = (body: DocBody | null | undefined, md = ''): string => {
  * @param block - Block record to normalize.
  * @param number - Ordered list number for nested list items.
  *
- * @returns Serialized block Markdown, or an empty string when the block cannot be rendered safely.
+ * @return Serialized block Markdown, or an empty string when the block cannot be rendered safely.
  */
 const sBlockMd = (block: unknown, number = 1): string => {
   try {
@@ -926,7 +953,7 @@ const sBlockMd = (block: unknown, number = 1): string => {
  * @param b - Portable Text block to serialize.
  * @param number - Ordered list number for nested list items.
  *
- * @returns Markdown string for the supplied block, including nested custom syntax when present.
+ * @return Markdown string for the supplied block, including nested custom syntax when present.
  */
 const blockMd = (b: DocBlock, number = 1): string => {
   if (b._type === 'block') {
@@ -995,7 +1022,7 @@ const blockMd = (b: DocBlock, number = 1): string => {
         })
         .join(' ')} />\n`;
     case 'heading':
-      return `\n${'#'.repeat(b.depth)} ${b.text}\n`;
+      return `\n${'#'.repeat(b.depth ?? 1)} ${b.text}\n`;
     case 'docImage':
       return `\n![${b.alt}](${b.url}${b.title ? ` "${b.title}"` : ''})\n`;
     case 'math':
@@ -1027,10 +1054,10 @@ const blockMd = (b: DocBlock, number = 1): string => {
 /**
  * Prefers editor-formatted body content, then falls back to markdown restored from custom blocks.
  *
- * @param body - Body content to process.
  * @param md - Markdown source to parse.
+ * @param body - Body content to process.
  *
- * @returns Editor Markdown source, using canonical JSX wrappers for nested blocks.
+ * @return Editor Markdown source, using canonical JSX wrappers for nested blocks.
  */
 const escDocsTableTemplates = (md: string): string =>
   md.replace(
@@ -1044,6 +1071,8 @@ const escDocsTableTemplates = (md: string): string =>
  *
  * @param body - Structured body used as the serialization source.
  * @param markdown - Markdown fallback used when structured content is unavailable.
+ *
+ * @return
  */
 const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string => {
   const tables: string[] = [];
@@ -1057,16 +1086,16 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
               length: body.length,
               firstTypes: body
                 .slice(0, 6)
-                .map((block) =>
-                  isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
-                ),
+                .map((b) => (isRec(b) && typeof b._type === 'string' ? b._type : typeof b)),
             };
             let md = '';
             let number = 1;
             for (let i = 0; i < body.length; i++) {
               const block = body[i];
+              if (!block) continue;
+              const previous = body[i - 1];
               const listNumber =
-                listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
+                listKind(block) === 'number' && listKind(previous) === 'number' ? number + 1 : 1;
               const text = editorBlockMd(block, listNumber).trim();
               void {
                 index: i,
@@ -1106,7 +1135,7 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
  *
  * @param b - Problem block record to serialize.
  *
- * @returns `ProblemBlock` JSX wrapper, or fallback Markdown when serialization fails.
+ * @return `ProblemBlock` JSX wrapper, or fallback Markdown when serialization fails.
  */
 const problemBlockMd = (b: Record<string, unknown>): string => {
   try {
@@ -1124,7 +1153,7 @@ const problemBlockMd = (b: Record<string, unknown>): string => {
  * @param number - Ordered list number for nested list items.
  * @param mode - Output mode to switch between docs and problem formatting.
  *
- * @returns Editor Markdown block, with tables and problem blocks kept in editor-safe JSX.
+ * @return Editor Markdown block, with tables and problem blocks kept in editor-safe JSX.
  */
 const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs'): string => {
   if (b._type === 'block') {
@@ -1162,9 +1191,9 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
       if (mode === 'problem') return problemBlockMd({ ...b });
       const syntax = b._type === 'tabs' ? '|||' : '===';
       return (Array.isArray(b.items) ? b.items : [])
-        .map((item) => {
-          const content = editorNestedMd(item.content, item.markdown || '').trim();
-          return `${syntax}[${item.title || 'Section'}]\n\n${content ? `${content}\n\n` : ''}${syntax}`;
+        .map((i) => {
+          const content = editorNestedMd(i.content, i.markdown || '').trim();
+          return `${syntax}[${i.title || 'Section'}]\n\n${content ? `${content}\n\n` : ''}${syntax}`;
         })
         .join('\n\n');
     }
@@ -1210,7 +1239,7 @@ EXPORTS
  *
  * @param body - Structured docs content to serialize.
  *
- * @returns Markdown or MDX source for the provided body, or an empty string for empty input.
+ * @return Markdown or MDX source for the provided body, or an empty string for empty input.
  *
  * @remarks
  * Empty bodies return an empty string so callers can short-circuit easily.
@@ -1255,6 +1284,8 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
  * Handles stringify problem editor content body.
  *
  * @param body - Problem editor body to serialize into Markdown source.
+ *
+ * @return
  */
 export const stringifyProblemEditorContentBody = (body: DocBody | null | undefined): string => {
   if (!Array.isArray(body) || body.length === 0) return '';
@@ -1262,10 +1293,12 @@ export const stringifyProblemEditorContentBody = (body: DocBody | null | undefin
   let number = 1;
   for (let i = 0; i < body.length; i++) {
     const block = body[i];
+    if (!block) continue;
     const list = listKind(block);
+    const previous = body[i - 1];
     const text = editorBlockMd(
       block,
-      list === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1,
+      list === 'number' && listKind(previous) === 'number' ? number + 1 : 1,
       'problem',
     ).trim();
     if (!text) continue;
@@ -1281,7 +1314,7 @@ export const stringifyProblemEditorContentBody = (body: DocBody | null | undefin
  *
  * @param content - Direct `leaf.content` value or a compatibility wrapper around it.
  *
- * @returns Markdown or MDX for the active document body only.
+ * @return Markdown or MDX for the active document body only.
  *
  * @remarks
  * This is the preferred live-doc read path now that leaf content is stored directly.
@@ -1294,19 +1327,14 @@ export const currDocMd = (content: unknown): string => {
       content && typeof content === 'object' && 'content' in (content as Record<string, unknown>),
     ),
   };
-  if (typeof content === 'string') {
+  if (typeof content === 'string')
     return normDocsSpacing(content.trim() === '<Testimonials />' ? TESTIMONIALS_EXPORT : content);
-  }
-  if (Array.isArray(content)) {
-    return normDocsSpacing(stringifyDocBody(content as DocBody));
-  }
-  if (isRec(content) && Array.isArray(content.content)) {
+  if (Array.isArray(content)) return normDocsSpacing(stringifyDocBody(content as DocBody));
+  if (isRec(content) && Array.isArray(content.content))
     return normDocsSpacing(stringifyDocBody(content.content as DocBody));
-  }
-  if (isRec(content) && typeof content.content === 'string') {
+  if (isRec(content) && typeof content.content === 'string')
     return normDocsSpacing(
       content.content.trim() === '<Testimonials />' ? TESTIMONIALS_EXPORT : content.content,
     );
-  }
   return '';
 };

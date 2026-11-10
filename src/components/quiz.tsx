@@ -1,13 +1,31 @@
+/**
+ * src/components/quiz.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { createContext, useContext, useState } from 'react';
+
+// TYPES
 import type { JSX, ReactNode } from 'react';
 
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
+
+/** Question formats understood by the Docs quiz generator and answer checker. */
 export type DocsQuizQuestionType = 'multipleChoice' | 'keyword';
+/** Input sent to a host's quiz-generation service for one source page. */
 export type DocsQuizGenerationInput = {
   title: string;
   markdown: string;
   count: number;
   types: DocsQuizQuestionType[];
 };
+/** Validated question data rendered by the quiz review and play stages. */
 export type DocsQuizQuestion =
   | {
       type: 'multipleChoice';
@@ -25,12 +43,14 @@ export type DocsQuizQuestion =
       explanation?: string;
       section?: string;
     };
+/** Quiz title and validated questions returned by a host generation endpoint. */
 export type DocsQuizDocument = { title: string; questions: DocsQuizQuestion[] };
+/** Host options for displaying the quiz toolbar and generating questions from page Markdown. */
 export type DocsQuizConfig = {
   toolbar?: boolean;
   generate?: (input: DocsQuizGenerationInput) => Promise<unknown>;
 };
-
+/** Current page context shared with the Markdown quiz block. */
 type DocsQuizContextValue = {
   config: DocsQuizConfig;
   title: string;
@@ -38,6 +58,18 @@ type DocsQuizContextValue = {
 };
 const DocsQuizContext = createContext<DocsQuizContextValue | null>(null);
 
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Provides the current page's quiz generator and source to Docs quiz controls below it.
+ * @param children Page content wrapped by the quiz context.
+ * @param config Host-provided toolbar and generation settings.
+ * @param title Current page title used in the generated quiz.
+ * @param markdown Current page Markdown source supplied to the generator.
+ * @returns The provider containing its children.
+ */
 export function DocsQuizProvider({
   children,
   config,
@@ -51,14 +83,23 @@ export function DocsQuizProvider({
   );
 }
 
+/**
+ * Reads the current Docs quiz provider value for a quiz block.
+ * @returns Page context when rendered below a provider, otherwise `null`.
+ */
 export function useDocsQuizContext(): DocsQuizContextValue | null {
   return useContext(DocsQuizContext);
 }
 
-export function parseDocsQuiz(value: unknown): DocsQuizDocument {
-  if (!value || typeof value !== 'object')
-    throw new Error('The quiz endpoint returned invalid quiz data.');
-  const candidate = value as Record<string, unknown>;
+/**
+ * Validates an unknown generation response and narrows it to supported question shapes.
+ * @param v Untrusted value returned by the host's quiz endpoint.
+ * @returns Quiz document with valid prompts, choices or accepted answers, and optional explanations.
+ * @throws Error when the title, question count, prompt, options, answer, or question type is invalid.
+ */
+export function parseDocsQuiz(v: unknown): DocsQuizDocument {
+  if (!v || typeof v !== 'object') throw new Error('The quiz endpoint returned invalid quiz data.');
+  const candidate = v as Record<string, unknown>;
   if (
     typeof candidate.title !== 'string' ||
     !candidate.title.trim() ||
@@ -69,10 +110,10 @@ export function parseDocsQuiz(value: unknown): DocsQuizDocument {
     throw new Error('The quiz endpoint must return a title and between one and twenty questions.');
   return {
     title: candidate.title,
-    questions: candidate.questions.map((value): DocsQuizQuestion => {
-      if (!value || typeof value !== 'object')
+    questions: candidate.questions.map((v): DocsQuizQuestion => {
+      if (!v || typeof v !== 'object')
         throw new Error('The quiz endpoint returned an invalid question.');
-      const question = value as Record<string, unknown>;
+      const question = v as Record<string, unknown>;
       if (typeof question.prompt !== 'string' || !question.prompt.trim())
         throw new Error('Each question needs a prompt.');
       if (question.type === 'multipleChoice') {
@@ -124,20 +165,33 @@ export function parseDocsQuiz(value: unknown): DocsQuizDocument {
   };
 }
 
+/**
+ * Checks a submitted response using exact choice matching or normalized keyword-answer rules.
+ * @param question Validated quiz question.
+ * @param response User-entered answer or selected multiple-choice text.
+ * @returns `true` for the exact correct option or an accepted answer/keyword combination.
+ */
 function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean {
   const norm = response.trim().toLowerCase();
   if (!norm) return false;
   if (question.type === 'multipleChoice') return response.trim() === question.answer;
   return (
-    question.answers.some((answer) => norm === answer.trim().toLowerCase()) ||
+    question.answers.some((a) => norm === a.trim().toLowerCase()) ||
     Boolean(
       question.keywords?.length &&
-      question.keywords.every((keyword) => norm.includes(keyword.trim().toLowerCase())),
+      question.keywords.every((k) => norm.includes(k.trim().toLowerCase())),
     )
   );
 }
 
-/** Shared quiz setup, generation, review, and runner UI for Docs hosts. */
+/**
+ * Shared quiz setup, generation, review, and runner UI for Docs hosts.
+ *
+ * @param title Source page title displayed during setup and as the fallback quiz heading.
+ * @param markdown Markdown sent to the host's quiz-generation callback.
+ * @param gen Optional host callback that generates quiz questions from the selected settings.
+ * @returns Interactive setup, review, question, and results UI held in the page session.
+ */
 export function DocsQuizGenerator({
   title,
   markdown,
@@ -156,24 +210,27 @@ export function DocsQuizGenerator({
   const [index, setIndex] = useState(0);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
-
+  /**
+   * Replaces one draft question while retaining the rest of the generated quiz.
+   * @param questionIndex Position of the question being revised.
+   * @param update Pure transformation applied to the selected question.
+   */
   const updateQuestion = (
     questionIndex: number,
     update: (question: DocsQuizQuestion) => DocsQuizQuestion,
   ) => {
-    setQuiz((current) =>
-      current
+    setQuiz((c) =>
+      c
         ? {
-            ...current,
-            questions: current.questions.map((question, i) =>
+            ...c,
+            questions: c.questions.map((question, i) =>
               i === questionIndex ? update(question) : question,
             ),
           }
-        : current,
+        : c,
     );
   };
   const question = quiz?.questions[index];
-
   return (
     <section
       className="docs-quiz my-6 rounded-xl border border-primary-6 bg-primary-2 p-5"
@@ -201,27 +258,23 @@ export function DocsQuizGenerator({
               min={1}
               max={20}
               value={count}
-              onChange={(event) =>
-                setCount(Math.max(1, Math.min(20, Number(event.target.value) || 1)))
-              }
+              onChange={(e) => setCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
             />
           </label>
           <fieldset className="flex flex-wrap gap-4 text-sm">
             <legend className="mb-2 font-medium">Question types</legend>
-            {(['multipleChoice', 'keyword'] as const).map((type) => (
-              <label key={type} className="flex items-center gap-2">
+            {(['multipleChoice', 'keyword'] as const).map((t) => (
+              <label key={t} className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={types.includes(type)}
+                  checked={types.includes(t)}
                   onChange={() =>
                     setTypes((current) =>
-                      current.includes(type)
-                        ? current.filter((i) => i !== type)
-                        : [...current, type],
+                      current.includes(t) ? current.filter((i) => i !== t) : [...current, t],
                     )
                   }
                 />
-                {type === 'multipleChoice' ? 'Multiple choice' : 'Keyword answer'}
+                {t === 'multipleChoice' ? 'Multiple choice' : 'Keyword answer'}
               </label>
             ))}
           </fieldset>
@@ -407,20 +460,20 @@ export function DocsQuizGenerator({
           <h3 className="text-lg font-medium">{question.prompt}</h3>
           {question.type === 'multipleChoice' ? (
             <fieldset className="space-y-2">
-              {question.opts.map((option, i) => (
+              {question.opts.map((o, i) => (
                 <label
-                  key={`${i}-${option}`}
+                  key={`${i}-${o}`}
                   className="flex items-center gap-2 rounded-md border border-primary-6 p-3"
                 >
                   <input
                     type="radio"
                     name={`quiz-${index}`}
-                    value={option}
-                    checked={answers[index] === option}
+                    value={o}
+                    checked={answers[index] === o}
                     onChange={() =>
                       setAnswers((current) => {
                         const n = [...current];
-                        n[index] = option;
+                        n[index] = o;
                         return n;
                       })
                     }
@@ -432,7 +485,7 @@ export function DocsQuizGenerator({
                       })
                     }
                   />
-                  {option}
+                  {o}
                 </label>
               ))}
             </fieldset>
@@ -442,10 +495,10 @@ export function DocsQuizGenerator({
                 className="w-full rounded-md border border-primary-6 bg-background px-3 py-2"
                 aria-label="Your answer"
                 value={answers[index] ?? ''}
-                onChange={(event) =>
+                onChange={(e) =>
                   setAnswers((current) => {
                     const n = [...current];
-                    n[index] = event.target.value;
+                    n[index] = e.target.value;
                     return n;
                   })
                 }
@@ -526,7 +579,7 @@ export function DocsQuizGenerator({
           <p className="text-lg font-medium">
             Score:{' '}
             {quiz.questions.reduce(
-              (score, v, i) => score + Number(isCorrectAnswer(v, (answers[i] ?? '').trim())),
+              (s, v, i) => s + Number(isCorrectAnswer(v, (answers[i] ?? '').trim())),
               0,
             )}{' '}
             / {quiz.questions.length}
@@ -559,7 +612,11 @@ export function DocsQuizGenerator({
   );
 }
 
-/** Renders the Markdown opt-in directive using the active host configuration. */
+/**
+ * Renders the Markdown opt-in directive using the active host configuration.
+ *
+ * @returns The configured quiz generator, or an explanatory message when no host provider exists.
+ */
 export function DocsQuizBlock(): JSX.Element {
   const context = useDocsQuizContext();
   if (!context) return <p>Quiz generation is available when configured by this Docs host.</p>;

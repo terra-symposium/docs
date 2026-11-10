@@ -1,34 +1,96 @@
+/**
+ * src/lib/markdown-model.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { enabledDocsBlocks } from './block-types.js';
 import { marked } from 'marked';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import type { DocsValue } from '../components/Docs.js';
-import { enabledDocsBlocks } from './block-types.js';
-import type { DocsBlockOptions, RichBlock } from './block-types.js';
+
+// COMPONENTS
 import * as TerraQualityRegex from './terra/regex.mjs';
+
+// TYPES
+import type { DocsBlockOptions, RichBlock } from './block-types.js';
+import type { DocsValue } from '../components/Docs.js';
+
 /*//////////////////////////////////////////////////
 REGEX
 //////////////////////////////////////////////////*/
+
+/**
+ * Provides the matcher used to escape backslashes in generated Markdown or JSX.
+ * @returns A fresh global regular expression for literal backslashes.
+ */
 const G_REGEX = () => /\\/g;
+/**
+ * Provides the matcher for hexadecimal inline-math placeholders produced by this module.
+ * @returns A fresh case-insensitive expression matching `DOCSMATH…END` placeholders.
+ */
 const DOCSMATH_0_9A_F_END_GI_REGEX = () => /DOCSMATH[0-9a-f]+END/gi;
+/**
+ * Provides the matcher for unescaped dollar-delimited inline-math source.
+ * @returns A fresh global expression capturing non-empty math text without newline characters.
+ */
 const N_G_REGEX = () => /(?<!\\)\$([^$\n]+)\$/g;
 const BR_S_I_REGEX = /^<br\s*\/?>$/i;
+/**
+ * Provides the matcher that separates dollar-delimited math from surrounding token text.
+ * @returns A fresh global expression capturing a complete single-line `$...$` span.
+ */
 const N_G_CLASS_2 = () => /(\$[^$\n]+\$)/g;
 const N_REGEX = /^\$[^$\n]+\$$/;
 const R_N_REGEX = /\r?\n$/;
 const SHARED_REGEX = /^`+/;
 const S_REGEX = /\s/;
 const S_CLASS_2 = /\/\s*$/;
-const G_CLASS_2 = () => /&/g;
+/**
+ * Provides the shared ampersand matcher used when escaping embedded HTML.
+ * @returns A fresh global expression matching ampersands.
+ */
+const G_CLASS_2 = () => TerraQualityRegex.REGEX_G_REGEX_17();
 const DOCSBLOCK_D_PLACEHOLDER_REGEX = /DOCSBLOCK\d+PLACEHOLDER/;
-const G_CLASS_2_3 = () => /"/g;
+/**
+ * Provides the shared double-quote matcher used when generating JSX attributes.
+ * @returns A fresh global expression matching double quotes.
+ */
+const G_CLASS_2_3 = () => TerraQualityRegex.REGEX_G_REGEX_5();
+/**
+ * Provides the matcher used to reduce runs of three or more newlines to paragraph spacing.
+ * @returns A fresh global expression matching newline runs of at least three characters.
+ */
 const N_3_G_REGEX = () => /\n{3,}/g;
 const R_N_CLASS_2 = /[$\r\n]/;
 const R_N_CLASS_2_3 = /(?:\r?\n)+$/;
+/**
+ * Provides the matcher used to normalize CRLF and LF line endings.
+ * @returns A fresh global expression matching either line-ending form.
+ */
 const R_N_G_REGEX = () => /\r?\n/g;
-const N_G_CLASS_2_3 = () => /\n/g;
+/**
+ * Provides the shared newline matcher used to split rendered content.
+ * @returns A fresh global expression matching newline characters.
+ */
+const N_G_CLASS_2_3 = () => TerraQualityRegex.REGEX_N_G_REGEX_3();
 const N_CLASS_2 = /\n+$/;
+/**
+ * Provides the matcher used to unescape closing square brackets in generated Markdown.
+ * @returns A fresh global expression matching `\]`.
+ */
 const G_CLASS_2_3_4 = () => /\]/g;
-
+/**
+ * Creates the unique key stored on a Portable Text node or mark definition.
+ * @returns A UUID suitable for identifying one parsed value object.
+ */
 const key = () => crypto.randomUUID();
+
+/**
+ * Marked token fields used while translating Markdown into the Docs value model.
+ */
 type Token = {
   type: string;
   raw: string;
@@ -46,13 +108,21 @@ type Token = {
   checked?: boolean;
   [name: string]: unknown;
 };
-
+/**
+ * Encodes inline math as hexadecimal text so Marked can tokenize surrounding Markdown safely.
+ * @param code Math source without its dollar delimiters.
+ * @returns A placeholder containing six hexadecimal digits for each Unicode code point.
+ */
 function encodeInlineMathPlaceholder(code: string): string {
-  return `DOCSMATH${Array.from(code, (character) =>
-    (character.codePointAt(0) ?? 0).toString(16).padStart(6, '0'),
+  return `DOCSMATH${Array.from(code, (c) =>
+    (c.codePointAt(0) ?? 0).toString(16).padStart(6, '0'),
   ).join('')}END`;
 }
-
+/**
+ * Decodes a math placeholder, rejecting malformed lengths and invalid Unicode code points.
+ * @param value Candidate placeholder text.
+ * @returns Decoded math source, or `undefined` when the value is not a valid placeholder.
+ */
 function decodeInlineMathPlaceholder(value: string): string | undefined {
   const match = value.match(/^DOCSMATH([0-9a-f]+)END$/i);
   if (!match || match[1]!.length % 6 !== 0) return undefined;
@@ -64,18 +134,34 @@ function decodeInlineMathPlaceholder(value: string): string | undefined {
   }
   return String.fromCodePoint(...codepoints);
 }
-
+/**
+ * Replaces valid encoded math placeholders with their original `$...$` Markdown form.
+ * @param value Markdown string that may contain encoded inline math.
+ * @returns The string with valid placeholders restored and invalid placeholders preserved.
+ */
 function restoreInlineMathPlaceholders(value: string): string {
-  return value.replace(DOCSMATH_0_9A_F_END_GI_REGEX(), (placeholder) => {
-    const code = decodeInlineMathPlaceholder(placeholder);
-    return code === undefined ? placeholder : `$${code}$`;
+  return value.replace(DOCSMATH_0_9A_F_END_GI_REGEX(), (p) => {
+    const code = decodeInlineMathPlaceholder(p);
+    return code === undefined ? p : `$${code}$`;
   });
 }
-
+/**
+ * Creates a keyed Portable Text span carrying text and its inline formatting marks.
+ * @param text Span content.
+ * @param marks Formatting marks or link keys attached to the span.
+ * @returns A span object suitable for a Docs text block's children.
+ */
 function span(text: string, marks: string[] = []) {
   return { _type: 'span', _key: key(), text, marks };
 }
-
+/**
+ * Converts Marked inline tokens into Portable Text spans and inline math blocks.
+ * @param tokens Marked tokens to translate.
+ * @param markDefs Link definitions collected while visiting the tokens.
+ * @param inlineMath Whether dollar-delimited math should become math blocks.
+ * @param inheritedMarks Marks applied by a parent emphasis or link token.
+ * @returns Ordered text and math nodes preserving supported formatting and links.
+ */
 function inline(
   tokens: Token[] | undefined,
   markDefs: { _type: 'link'; _key: string; href: string }[],
@@ -87,9 +173,14 @@ function inline(
   const result: (
     ReturnType<typeof span> | { _type: 'math'; _key: string; code: string; inline: true }
   )[] = [];
+  /**
+   * Adds one inline mark to spans while leaving math nodes untouched.
+   * @param items Parsed text and inline-math nodes to update.
+   * @param mark Portable Text mark name to append to each text span.
+   * @returns A new node list with the mark added to each span's mark array.
+   */
   const addMark = (items: typeof result, mark: string) =>
     items.map((i) => (i._type === 'span' ? { ...i, marks: [...i.marks, mark] } : i));
-
   let normTokens = tokens;
   if (inlineMath) {
     const genTokens: Token[] = [];
@@ -133,7 +224,6 @@ function inline(
         });
       }
     }
-
     const mathTokens: Token[] = [];
     for (let index = 0; index < genTokens.length;) {
       if (!['text', 'escape'].includes(genTokens[index]!.type)) {
@@ -146,12 +236,17 @@ function inline(
         run.push(genTokens[index]!);
         index += 1;
       }
-      const source = run.map((token) => token.raw).join('');
+      const source = run.map((t) => t.raw).join('');
       const matches = [...source.matchAll(N_G_REGEX())];
       if (!matches.length) {
         mathTokens.push(...run);
         continue;
       }
+      /**
+       * Copies the portion of a source range while preserving token metadata at split boundaries.
+       * @param start Inclusive character offset in the concatenated text run.
+       * @param end Exclusive character offset in the concatenated text run.
+       */
       const appendSourceRange = (start: number, end: number) => {
         let offset = 0;
         for (const token of run) {
@@ -188,7 +283,6 @@ function inline(
     }
     normTokens = mathTokens;
   }
-
   for (const token of normTokens) {
     if (token.type === 'docsMath') {
       result.push({ _type: 'math', _key: key(), code: token.text ?? '', inline: true });
@@ -261,15 +355,10 @@ function inline(
         ...tokenText
           .split(N_G_CLASS_2())
           .filter(Boolean)
-          .map((piece) =>
-            inlineMath && N_REGEX.test(piece)
-              ? {
-                  _type: 'math' as const,
-                  _key: key(),
-                  code: piece.slice(1, -1),
-                  inline: true as const,
-                }
-              : span(piece, aMarks),
+          .map((p) =>
+            inlineMath && N_REGEX.test(p)
+              ? { _type: 'math' as const, _key: key(), code: p.slice(1, -1), inline: true as const }
+              : span(p, aMarks),
           ),
       );
       continue;
@@ -287,6 +376,14 @@ function inline(
   }
   return result;
 }
+/**
+ * Builds a Portable Text paragraph with inline marks and a fallback span for empty content.
+ * @param style Portable Text block style, such as `normal` or a heading style.
+ * @param tokens Inline Marked tokens that supply the block's child spans.
+ * @param fallback Text retained when token conversion produces no children.
+ * @param inlineMath Whether math spans should be parsed inside the block.
+ * @returns A keyed Portable Text block with collected link definitions and child spans.
+ */
 function textBlock(
   style: string,
   tokens: Token[] | undefined,
@@ -303,34 +400,54 @@ function textBlock(
     children: children.length ? children : [span(fallback)],
   };
 }
-
+/**
+ * Determines whether a block type is retained as a structured Docs block under the selected options.
+ * @param options Feature flags controlling supported rich blocks.
+ * @param type Portable Text or rich-block type being considered.
+ * @returns `true` for core text blocks and enabled optional block types.
+ */
 function enabled(options: DocsBlockOptions, type: string): boolean {
   // Imported Portable Text paragraphs are part of the document model itself,
   // not optional rich blocks. Canonical JSON directives let local hosts retain
   // their marks and inline objects without a lossy Markdown round trip.
-  if (type === 'block' || type === 'block') return true;
+  if (type === 'block') return true;
   // Tabs and accordions are Markdown syntax, not structured editor blocks.
   if (type === 'accordion' || type === 'tabs') return options[type] !== false;
   return enabledDocsBlocks(options).includes(type as never);
 }
-
+/**
+ * Stores a rich block for later restoration and emits its indexed Markdown placeholder.
+ * @param blocks Collection used by the parser to restore opaque block payloads.
+ * @param block Rich block to preserve.
+ * @returns A blank-line-delimited placeholder referring to the appended block.
+ */
 function richPlaceholder(blocks: RichBlock[], block: RichBlock): string {
   blocks.push({ ...block, _key: block._key ?? key() });
   return `\n\nDOCSBLOCK${blocks.length - 1}PLACEHOLDER\n\n`;
 }
-
+/**
+ * Preserves unsupported Markdown syntax as a raw block through the placeholder mechanism.
+ * @param blocks Collection used by the parser to restore opaque block payloads.
+ * @param markdown Original Markdown fragment that cannot be represented safely.
+ * @returns The placeholder for the appended raw block.
+ */
 function rawPlaceholder(blocks: RichBlock[], markdown: string): string {
   return richPlaceholder(blocks, { _type: 'raw', markdown });
 }
-
+/** Source offsets delimiting a fenced Markdown or JSX component range. */
 type SourceRange = { start: number; end: number };
+/** Parsed attributes and source boundary for a component's JSX opening tag. */
 type JsxOpeningTag = {
   name: string;
   attributes: Record<string, unknown>;
   end: number;
   selfClosing: boolean;
 };
-
+/**
+ * Finds fenced-code ranges while treating Code components and inline code as opaque source.
+ * @param source Markdown or MDX source to scan.
+ * @returns Half-open source ranges for each fenced block, including an unmatched opening fence.
+ */
 function codeFenceRanges(source: string): SourceRange[] {
   const ranges: SourceRange[] = [];
   let open: { start: number; char: string; length: number } | undefined;
@@ -393,24 +510,34 @@ function codeFenceRanges(source: string): SourceRange[] {
 }
 
 // Line directives must skip fenced Markdown examples, including nested ones.
+/**
+ * Replaces fenced examples with placeholders so later line directives cannot rewrite their contents.
+ * @param source Markdown source containing code fences.
+ * @returns Shielded source and a restore function that reinstates each original fence.
+ */
 function shieldCodeFences(source: string) {
   const ranges = codeFenceRanges(source);
-  const fences = ranges.map(({ start, end }) => source.slice(start, end));
+  const fences = ranges.map(({ start: s, end: e }) => source.slice(s, e));
   return {
     source:
       ranges
         .map(
-          ({ start }, i) =>
-            `${source.slice(ranges[i - 1]?.end ?? 0, start)}DOCSFENCE${i}PLACEHOLDER`,
+          ({ start: s }, i) =>
+            `${source.slice(ranges[i - 1]?.end ?? 0, s)}DOCSFENCE${i}PLACEHOLDER`,
         )
         .join('') + source.slice(ranges.at(-1)?.end ?? 0),
-    restore: (value: string) =>
-      value.replace(/DOCSFENCE(\d+)PLACEHOLDER/g, (match, number: string) =>
+    restore: (v: string) =>
+      v.replace(/DOCSFENCE(\d+)PLACEHOLDER/g, (match, number: string) =>
         fences[Number(number)] === undefined ? match : fences[Number(number)]!,
       ),
   };
 }
-
+/**
+ * Reads a balanced JSX expression while ignoring braces inside quoted strings and template literals.
+ * @param source Source containing the expression.
+ * @param start Offset where the opening brace is expected.
+ * @returns Expression contents and the offset after its closing brace, or `undefined` if unmatched.
+ */
 function readBracedExpr(source: string, start: number): { value: string; end: number } | undefined {
   if (source[start] !== '{') return undefined;
   let depth = 1;
@@ -437,7 +564,11 @@ function readBracedExpr(source: string, start: number): { value: string; end: nu
   }
   return undefined;
 }
-
+/**
+ * Parses the literal forms supported in a canonical JSX attribute without evaluating expressions.
+ * @param source Raw attribute value or braced literal expression.
+ * @returns Decoded string, number, boolean, null, JSON value, or `undefined` for unsupported syntax.
+ */
 function parseJsxLiteral(source: string): unknown {
   const value = source.trim();
   if (!value) return '';
@@ -460,7 +591,12 @@ function parseJsxLiteral(source: string): unknown {
     return undefined;
   }
 }
-
+/**
+ * Reads a capitalized JSX opening tag and parses its literal attributes.
+ * @param source JSX or MDX source to scan.
+ * @param start Offset of the opening `<` character.
+ * @returns Parsed tag name, attributes, end offset, and self-closing state; `undefined` if invalid.
+ */
 function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undefined {
   if (source[start] !== '<') return undefined;
   const name = source.slice(start + 1).match(/^([A-Z][A-Za-z0-9_]*)\b/)?.[1];
@@ -544,14 +680,24 @@ function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undef
   }
   return { name, attributes: attrs, end, selfClosing: S_CLASS_2.test(shell) };
 }
-
+/**
+ * Finds a Code component's braced template-literal body at the end of its opening tag.
+ * @param source JSX source containing the Code component.
+ * @param start Offset immediately after the opening tag.
+ * @returns Parsed body expression offsets, or `undefined` when the body is not a template literal.
+ */
 function codeBodyExpr(source: string, start: number): { value: string; end: number } | undefined {
   const first = source.slice(start).match(/^\s*\{/);
   if (!first) return undefined;
   const exprStart = start + first[0].length - 1;
   return source.slice(exprStart + 1).match(/^\s*`/) ? readBracedExpr(source, exprStart) : undefined;
 }
-
+/**
+ * Finds the end of a JSX component, accounting for embedded Code bodies and legacy missing closers.
+ * @param source JSX or MDX source containing the component.
+ * @param opening Parsed opening-tag data.
+ * @returns Body end and full component end offsets, or `undefined` when no closing boundary exists.
+ */
 function jsxComponentRange(
   source: string,
   opening: JsxOpeningTag,
@@ -570,7 +716,11 @@ function jsxComponentRange(
   }
   return close ? { bodyEnd: close.index, end: close.index + close[0].length } : undefined;
 }
-
+/**
+ * Accepts an array-valued JSX attribute directly or parses a JSON-encoded array string.
+ * @param value Parsed attribute value.
+ * @returns An array value, or `undefined` for non-arrays and invalid JSON.
+ */
 function parseArrayAttr(value: unknown): unknown[] | undefined {
   if (Array.isArray(value)) return value;
   if (typeof value !== 'string') return undefined;
@@ -582,7 +732,12 @@ function parseArrayAttr(value: unknown): unknown[] | undefined {
   }
 }
 
-/** Replace supported components outside code and structured Markdown blocks. */
+/**
+ * Replaces supported JSX component fragments while leaving code fences and structured blocks untouched.
+ * @param source Markdown or MDX source to scan.
+ * @param replace Callback that converts a parsed block or raw component string.
+ * @returns Source with supported components replaced; returns the original source when no match exists.
+ */
 export function replaceCanonicalComponents(
   source: string,
   replace: (block: RichBlock | undefined, raw: string, inTable: boolean) => string,
@@ -592,7 +747,7 @@ export function replaceCanonicalComponents(
     ...source.matchAll(/^(:{3,})docs [A-Za-z]+(?:\[[^\]\n]*\])?\s*\r?\n[\s\S]*?^\1\s*$/gm),
     ...source.matchAll(/^(:{4,})docs (?:accordion|tabs)\s*\r?\n[\s\S]*?^\1\s*$/gm),
   ]
-    .map((match) => ({ start: match.index ?? 0, end: (match.index ?? 0) + match[0].length }))
+    .map((m) => ({ start: m.index ?? 0, end: (m.index ?? 0) + m[0].length }))
     .sort((a, b) => a.start - b.start);
   let fenceIndex = 0;
   let structuredIndex = 0;
@@ -713,23 +868,27 @@ export function replaceCanonicalComponents(
   }
   return output ? output + source.slice(copiedUntil) : source;
 }
-
+/**
+ * Decodes the numeric and named HTML entities supported by the Docs importer.
+ * @param value Text containing encoded HTML entities.
+ * @returns Text with recognized entities decoded and invalid numeric references preserved.
+ */
 function decodeHtml(value: string): string {
   return value
-    .replace(/&#(\d+);?/g, (match, code: string) => {
-      const point = Number(code);
+    .replace(/&#(\d+);?/g, (m, c: string) => {
+      const point = Number(c);
       return Number.isInteger(point) && point >= 0 && point <= 0x10ffff
         ? String.fromCodePoint(point)
-        : match;
+        : m;
     })
-    .replace(/&#x([0-9a-f]+);?/gi, (match, code: string) => {
-      const point = Number.parseInt(code, 16);
+    .replace(/&#x([0-9a-f]+);?/gi, (m, c: string) => {
+      const point = Number.parseInt(c, 16);
       return Number.isInteger(point) && point >= 0 && point <= 0x10ffff
         ? String.fromCodePoint(point)
-        : match;
+        : m;
     })
-    .replace(/&(nbsp|amp|lt|gt|quot|apos|#39);/gi, (_match, entity: string) => {
-      switch (entity.toLowerCase()) {
+    .replace(/&(nbsp|amp|lt|gt|quot|apos|#39);/gi, (_match, e: string) => {
+      switch (e.toLowerCase()) {
         case 'nbsp':
           return ' ';
         case 'amp':
@@ -748,7 +907,11 @@ function decodeHtml(value: string): string {
       }
     });
 }
-
+/**
+ * Repeats HTML entity decoding until the value stops changing or reaches the eight-pass limit.
+ * @param value Text that may contain nested entity encoding.
+ * @returns The repeatedly decoded string.
+ */
 function decodeHtmlRepeated(value: string): string {
   let current = value;
   for (let pass = 0; pass < 8; pass += 1) {
@@ -758,7 +921,12 @@ function decodeHtmlRepeated(value: string): string {
   }
   return current;
 }
-
+/**
+ * Reads and entity-decodes one quoted or unquoted attribute from an HTML attribute string.
+ * @param attrs Raw attributes between a tag name and its closing bracket.
+ * @param name Attribute name to find, matched without regard to case.
+ * @returns Decoded attribute value, or `undefined` when the attribute is absent.
+ */
 function htmlAttr(attrs: string, name: string): string | undefined {
   const match = attrs.match(
     new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'),
@@ -766,36 +934,50 @@ function htmlAttr(attrs: string, name: string): string | undefined {
   const value = match?.[1] ?? match?.[2] ?? match?.[3];
   return value === undefined ? undefined : decodeHtml(value);
 }
-
+/**
+ * Escapes Markdown syntax in decoded text while leaving inline-math spans intact.
+ * @param value Text to represent literally in Markdown.
+ * @returns Markdown source with syntax characters escaped.
+ */
 function escapeMarkdownText(value: string): string {
   return decodeHtmlRepeated(value).replace(
     /(\$[^$\n]+\$)|([\\`*_{}\x5B\x5D#<>!$])/g,
-    (_match, math: string | undefined, character: string | undefined) => math ?? `\\${character}`,
+    (_match, m: string | undefined, c: string | undefined) => m ?? `\\${c}`,
   );
 }
-
+/**
+ * Encodes text as a Markdown code span using a backtick fence absent from the content.
+ * @param value Literal code text.
+ * @returns A code span with a safe delimiter and required edge padding.
+ */
 function markdownCodeSpan(value: string): string {
-  const fence = '`'.repeat(
-    1 + Math.max(0, ...[...value.matchAll(/`+/g)].map(([ticks]) => ticks.length)),
-  );
+  const fence = '`'.repeat(1 + Math.max(0, ...[...value.matchAll(/`+/g)].map(([t]) => t.length)));
   const padding = value.startsWith('`') || value.endsWith('`') ? ' ' : '';
   return `${fence}${padding}${value}${padding}${fence}`;
 }
-
+/**
+ * Encodes a link destination and wraps values containing Markdown delimiters in angle brackets.
+ * @param value Raw URL or link destination.
+ * @returns A Markdown-safe destination with spaces and closing angles percent-encoded.
+ */
 function markdownDestination(value: string): string {
-  const destination = decodeHtmlRepeated(value).replace(/[>\s]/g, (character) =>
-    character === '>' ? '%3E' : '%20',
+  const destination = decodeHtmlRepeated(value).replace(/[>\s]/g, (c) =>
+    c === '>' ? '%3E' : '%20',
   );
   return /[()[\]<>]/.test(destination) ? '<' + destination + '>' : destination;
 }
 
-/** Convert HTML table cells without letting ordinary underscores become Markdown emphasis. */
+/**
+ * Escapes HTML table-cell text while protecting math spans from Markdown emphasis parsing.
+ * @param value Raw HTML cell text.
+ * @param inlineMath Whether dollar-delimited math should remain unescaped for later parsing.
+ * @returns Markdown-safe cell text with any inline math represented by opaque placeholders.
+ */
 function escapeHtmlTableText(value: string, inlineMath: boolean): string {
   const decoded = decodeHtmlRepeated(value);
   if (!inlineMath) return escapeMarkdownText(decoded);
   const matches = [...decoded.matchAll(N_G_REGEX())];
   if (!matches.length) return escapeMarkdownText(decoded);
-
   let output = '';
   let cursor = 0;
   for (const match of matches) {
@@ -807,7 +989,14 @@ function escapeHtmlTableText(value: string, inlineMath: boolean): string {
   }
   return output + escapeMarkdownText(decoded.slice(cursor));
 }
-
+/**
+ * Converts a Marked table token into the Docs table, row, cell, and nested-content model.
+ * @param rows Header and body rows returned by Marked.
+ * @param markdown Original table source retained for faithful round trips.
+ * @param options Rich-block and math feature flags for nested cell content.
+ * @param header Human-readable label assigned to the table block.
+ * @returns A keyed table block, or `undefined` when there are no rows.
+ */
 function tableBlock(
   rows: Token[][],
   markdown: string,
@@ -820,24 +1009,22 @@ function tableBlock(
     _key: key(),
     header,
     markdown: restoreInlineMathPlaceholders(markdown),
-    rows: rows.map((cells) => ({
+    rows: rows.map((c) => ({
       _type: 'row',
       _key: key(),
-      cells: cells.map((cell) => {
+      cells: c.map((cell) => {
         const contentTokens: Token[][] = [[]];
         for (const token of Array.isArray(cell.tokens) ? cell.tokens : []) {
-          if (
-            token.type === 'html' &&
-            /^<br\s+data-docs-paragraph-break\s*\/?>$/i.test(token.raw)
-          ) {
+          if (token.type === 'html' && /^<br\s+data-docs-paragraph-break\s*\/?>$/i.test(token.raw))
             contentTokens.push([]);
-          } else contentTokens.at(-1)!.push(token);
+          else contentTokens.at(-1)!.push(token);
         }
         const inlineMath = options.inlineMath !== false && options.math !== false;
         const cellBlock: RichBlock = { _type: 'cell', _key: '' };
         cellBlock.content = contentTokens.flatMap((part) => {
           const result: RichBlock[] = [];
           let pending: Token[] = [];
+          /** Converts the pending text run to one paragraph before a non-text block is emitted. */
           const flush = () => {
             if (!pending.length) return;
             result.push(
@@ -850,7 +1037,6 @@ function tableBlock(
             );
             pending = [];
           };
-
           for (const token of part) {
             if (token.type === 'image' && enabled(options, 'docImage')) {
               flush();
@@ -868,8 +1054,7 @@ function tableBlock(
             }
           }
           flush();
-
-          if (!result.length) {
+          if (!result.length)
             result.push(
               textBlock(
                 'normal',
@@ -878,7 +1063,6 @@ function tableBlock(
                 inlineMath,
               ),
             );
-          }
           return result;
         });
         cellBlock._key = key();
@@ -888,11 +1072,22 @@ function tableBlock(
   };
 }
 
-/** Decode Markdown without dropping unsupported syntax; opaque tokens become raw blocks. */
+/**
+ * Parses Markdown into Docs blocks while preserving unsupported syntax as raw blocks.
+ * @param markdown Markdown source to parse.
+ * @param options Feature flags for rich blocks, images, and inline math.
+ * @returns Docs value blocks with supported Markdown and opaque rich content retained.
+ */
 export function markdownToDocsValue(markdown: string, options: DocsBlockOptions = {}): DocsValue {
   return parseMarkdown(markdown, options, []);
 }
-
+/**
+ * Parses Markdown recursively, restoring protected JSX blocks, table cells, and delimiter groups.
+ * @param markdown Markdown fragment at the current nesting level.
+ * @param options Feature flags shared with nested content parsing.
+ * @param blocks Registry of rich blocks referenced by temporary placeholders.
+ * @returns Parsed Docs blocks for this fragment.
+ */
 function parseMarkdown(
   markdown: string,
   options: DocsBlockOptions,
@@ -902,21 +1097,21 @@ function parseMarkdown(
   // Keep the existing typed and captioned table forms lossless; other rich
   // components use the shared JSX scanner above.
   const fencedAccordions = shieldCodeFences(
-    replaceCanonicalComponents(markdown, (block, raw, inTable) => {
-      if (!block || !enabled(options, block._type)) return rawPlaceholder(blocks, raw);
-      if (inTable)
-        return `<code>${String(block.value ?? block.source ?? '')
+    replaceCanonicalComponents(markdown, (b, r, i) => {
+      if (!b || !enabled(options, b._type)) return rawPlaceholder(blocks, r);
+      if (i)
+        return `<code>${String(b.value ?? b.source ?? '')
           .replace(G_CLASS_2(), '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')}</code>`;
-      return richPlaceholder(blocks, block);
+          .replace(TerraQualityRegex.REGEX_G_REGEX_7(), '&lt;')
+          .replace(TerraQualityRegex.REGEX_G_REGEX_8(), '&gt;')}</code>`;
+      return richPlaceholder(blocks, b);
     })
       .replace(
         TerraQualityRegex.REGEX_3_DOCS_TABLE_S_N_S_S_1_S_GM_REGEX(),
-        (source, _fence: string, payload: string) => {
+        (s, _fence: string, p: string) => {
           try {
-            let tableData = parseYaml(payload) as RichBlock;
-            if (tableData?._type !== 'table') return rawPlaceholder(blocks, source);
+            let tableData = parseYaml(p) as RichBlock;
+            if (tableData?._type !== 'table') return rawPlaceholder(blocks, s);
             const sourceData = tableData as Record<string, unknown>;
             if (sourceData._docsCellFormat === 'markdown-v1' && Array.isArray(sourceData.rows)) {
               const { rows: sourceRows, ...tableFields } = sourceData;
@@ -952,37 +1147,33 @@ function parseMarkdown(
             }
             return enabled(options, 'table')
               ? richPlaceholder(blocks, tableData)
-              : rawPlaceholder(blocks, source);
+              : rawPlaceholder(blocks, s);
           } catch {
-            return rawPlaceholder(blocks, source);
+            return rawPlaceholder(blocks, s);
           }
         },
       )
       .replace(
         TerraQualityRegex.REGEX_DOCS_TABLE_R_N_T_R_N_S_S_T_GM_REGEX(),
-        (source, caption: string, body: string) => {
-          if (!enabled(options, 'table')) return rawPlaceholder(blocks, source);
-          let header = caption;
+        (s, c: string, b: string) => {
+          if (!enabled(options, 'table')) return rawPlaceholder(blocks, s);
+          let header = c;
           try {
-            header = decodeURIComponent(caption);
+            header = decodeURIComponent(c);
           } catch {
             /* Keep the literal caption. */
           }
-          const token = (marked.lexer(body, { gfm: true }) as Token[]).find(
+          const token = (marked.lexer(b, { gfm: true }) as Token[]).find(
             (part) => part.type === 'table',
           );
-          if (!token) return rawPlaceholder(blocks, source);
-          const table = tableBlock(
-            [token.header ?? [], ...(token.rows ?? [])],
-            body,
-            options,
-            header,
-          );
-          return table ? richPlaceholder(blocks, table) : rawPlaceholder(blocks, source);
+          if (!token) return rawPlaceholder(blocks, s);
+          const table = tableBlock([token.header ?? [], ...(token.rows ?? [])], b, options, header);
+          return table ? richPlaceholder(blocks, table) : rawPlaceholder(blocks, s);
         },
       ),
   );
   let calloutSource = fencedAccordions.restore(fencedAccordions.source);
+  /** Source offsets and label for one open `|||` tab or `===` accordion section. */
   type MarkdownGroup = {
     delimiter: '===' | '|||';
     title: string;
@@ -1008,17 +1199,14 @@ function parseMarkdown(
       continue;
     }
     const open = line.match(/^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*$/);
-    if (open) {
+    if (open)
       groupStack.push({
         delimiter: open[1] as MarkdownGroup['delimiter'],
         title: open[2]!.trim(),
         start: groupOffset,
         bodyStart: lineEnd,
       });
-    } else if (
-      groupStack.at(-1)?.delimiter === line.trim() &&
-      /^(?:===|\|\|\|)$/.test(line.trim())
-    ) {
+    else if (groupStack.at(-1)?.delimiter === line.trim() && /^(?:===|\|\|\|)$/.test(line.trim())) {
       const group = groupStack.pop();
       if (group && !groupStack.length)
         groupRanges.push({ ...group, closeStart: groupOffset, end: lineEnd });
@@ -1045,6 +1233,7 @@ function parseMarkdown(
         : rawPlaceholder(blocks, calloutSource.slice(range.start, range.end))) +
       calloutSource.slice(range.end);
   }
+  /** Opening state retained while scanning a fenced callout or legacy block. */
   type OpenCallout = {
     start: number;
     bodyStart: number;
@@ -1072,7 +1261,7 @@ function parseMarkdown(
     const open = line.match(
       /^\s*(:{3,})(note|tip|caution|danger|example|warning)(?:\[([^\]\n]*)\])?\s*$/,
     );
-    if (open) {
+    if (open)
       stack.push({
         start: offset,
         bodyStart: end,
@@ -1080,7 +1269,7 @@ function parseMarkdown(
         kind: open[2]!,
         ...(open[3] ? { title: open[3].trim() } : {}),
       });
-    } else if (
+    else if (
       stack.length > 0 &&
       line.match(/^\s*(:{3,})\s*$/)?.[1]?.length === stack.at(-1)!.fenceLength
     ) {
@@ -1112,15 +1301,10 @@ function parseMarkdown(
   }
   const fencedMath = shieldCodeFences(calloutSource);
   let source = fencedMath.restore(
-    fencedMath.source.replace(TerraQualityRegex.REGEX_S_N_S_S_S_GM_REGEX(), (raw, code: string) =>
+    fencedMath.source.replace(TerraQualityRegex.REGEX_S_N_S_S_S_GM_REGEX(), (r, c: string) =>
       enabled(options, 'math')
-        ? richPlaceholder(blocks, {
-            _type: 'math',
-            code: code.trim(),
-            inline: false,
-            markdown: raw,
-          })
-        : rawPlaceholder(blocks, raw),
+        ? richPlaceholder(blocks, { _type: 'math', code: c.trim(), inline: false, markdown: r })
+        : rawPlaceholder(blocks, r),
     ),
   );
   if (inlineMath) {
@@ -1136,7 +1320,6 @@ function parseMarkdown(
         index = fence.end;
         continue;
       }
-
       if (source[index] === '`' && source[index - 1] !== '\\') {
         const marker = source.slice(index).match(SHARED_REGEX)?.[0];
         const end = marker ? source.indexOf(marker, index + marker.length) : -1;
@@ -1145,7 +1328,6 @@ function parseMarkdown(
           continue;
         }
       }
-
       if (source[index] !== '$' || source[index - 1] === '\\') {
         index += 1;
         continue;
@@ -1159,7 +1341,6 @@ function parseMarkdown(
         index += 2;
         continue;
       }
-
       let end = index + 1;
       while (end < source.length && source[end] !== '\n') {
         if (source[end] === '$' && source[end - 1] !== '\\' && source[end + 1] !== '$') break;
@@ -1169,7 +1350,6 @@ function parseMarkdown(
         index += 1;
         continue;
       }
-
       output +=
         source.slice(cursor, index) + encodeInlineMathPlaceholder(source.slice(index + 1, end));
       index = end + 1;
@@ -1214,7 +1394,7 @@ function parseMarkdown(
         });
         continue;
       }
-      if (token.tokens?.some((child) => child.type === 'image')) {
+      if (token.tokens?.some((c) => c.type === 'image')) {
         result.push({ _type: 'raw', _key: key(), markdown: token.raw });
         continue;
       }
@@ -1336,10 +1516,10 @@ function parseMarkdown(
             _key: key(),
             header: 'Table',
             markdown: restoreInlineMathPlaceholders(tableSource),
-            rows: rows.map((cells) => ({ _type: 'row', _key: key(), cells })),
+            rows: rows.map((c) => ({ _type: 'row', _key: key(), cells: c })),
           }))(
-            [...tableSource.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)].map((row) =>
-              [...(row[1] ?? '').matchAll(/<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)\s*>/gi)].map(
+            [...tableSource.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)].map((r) =>
+              [...(r[1] ?? '').matchAll(/<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)\s*>/gi)].map(
                 (cell) => {
                   const html = cell[1] ?? '';
                   const inlineMath = options.inlineMath !== false && options.math !== false;
@@ -1361,7 +1541,6 @@ function parseMarkdown(
                     const attrs = match[2] ?? '';
                     markdown += escapeHtmlTableText(html.slice(copiedUntil, index), inlineMath);
                     copiedUntil = tagPattern.lastIndex;
-
                     if (/^<\//.test(raw)) {
                       const openIndex = stack.map((tag) => tag.name).lastIndexOf(name);
                       if (openIndex >= 0) {
@@ -1447,7 +1626,6 @@ function parseMarkdown(
                             insideLink: insideLink || imageToken.type === 'link',
                           });
                     }
-
                     let cursor = 0;
                     for (const imageToken of imgs) {
                       const raw = imageToken.raw;
@@ -1511,11 +1689,20 @@ function parseMarkdown(
   }
   return grouped as DocsValue;
 }
-
+/**
+ * Checks that an object contains no keys outside the canonical field list for its Markdown form.
+ * @param value Object to validate.
+ * @param fields Allowed own-property names.
+ * @returns `true` when every own key is in the allowed list.
+ */
 function onlyOwnFields(value: Record<string, unknown>, fields: string[]): boolean {
-  return Object.keys(value).every((name) => fields.includes(name));
+  return Object.keys(value).every((n) => fields.includes(n));
 }
-
+/**
+ * Determines whether a Portable Text block uses only fields and marks that Markdown can preserve.
+ * @param block Rich block being considered for readable Markdown serialization.
+ * @returns `true` when its structure is representable by the supported inline syntax.
+ */
 function markdownInlineBlock(block: RichBlock): boolean {
   if (
     !onlyOwnFields(block, ['_type', '_key', 'style', 'listItem', 'level', 'markDefs', 'children'])
@@ -1546,10 +1733,10 @@ function markdownInlineBlock(block: RichBlock): boolean {
   }
   if (typeof block.children === 'string') return true;
   if (!Array.isArray(block.children)) return false;
-  return block.children.every((child) => {
-    if (!child || typeof child !== 'object') return false;
-    const value = child as Record<string, unknown>;
-    if (value._type === 'span') {
+  return block.children.every((c) => {
+    if (!c || typeof c !== 'object') return false;
+    const value = c as Record<string, unknown>;
+    if (value._type === 'span')
       return (
         onlyOwnFields(value, ['_type', '_key', 'text', 'marks']) &&
         typeof value.text === 'string' &&
@@ -1561,7 +1748,6 @@ function markdownInlineBlock(block: RichBlock): boolean {
               links.has(mark)),
         )
       );
-    }
     return (
       value._type === 'math' &&
       onlyOwnFields(value, ['_type', '_key', 'code', 'inline']) &&
@@ -1571,34 +1757,34 @@ function markdownInlineBlock(block: RichBlock): boolean {
     );
   });
 }
-
+/**
+ * Serializes a text block's spans, math, links, and decorators without changing their grouping.
+ * @param block Portable Text block with children, marks, and link definitions.
+ * @returns Readable Markdown or HTML-backed Markdown when ordinary syntax would alter the structure.
+ * @throws Error when no supported inline representation round-trips faithfully.
+ */
 function blockContentToMarkdown(block: RichBlock): string {
   const markDefs = new Map(
     (Array.isArray(block.markDefs) ? block.markDefs : [])
       .filter(
-        (mark): mark is { _key: string; _type: string; href: string } =>
-          typeof mark === 'object' && mark !== null && '_key' in mark && 'href' in mark,
+        (m): m is { _key: string; _type: string; href: string } =>
+          typeof m === 'object' && m !== null && '_key' in m && 'href' in m,
       )
-      .map((mark) => [mark._key, mark.href]),
+      .map((m) => [m._key, m.href]),
   );
   const children: { _type?: string; text?: string; marks?: string[]; code?: string }[] =
     typeof block.children === 'string'
       ? [{ _type: 'span', text: block.children, marks: [] }]
       : Array.isArray(block.children)
-        ? (block.children as {
-            _type?: string;
-            text?: string;
-            marks?: string[];
-            code?: string;
-          }[])
+        ? (block.children as { _type?: string; text?: string; marks?: string[]; code?: string }[])
         : [];
   const readable = children
-    .map((child) => {
-      if (child._type === 'math') return '$' + String(child.code ?? '') + '$';
-      const marks = child.marks ?? [];
+    .map((c) => {
+      if (c._type === 'math') return '$' + String(c.code ?? '') + '$';
+      const marks = c.marks ?? [];
       let text = marks.includes('code')
-        ? markdownCodeSpan(child.text ?? '')
-        : escapeMarkdownText(child.text ?? '');
+        ? markdownCodeSpan(c.text ?? '')
+        : escapeMarkdownText(c.text ?? '');
       for (const mark of marks) {
         if (mark === 'strong') text = '**' + text + '**';
         else if (mark === 'em') text = '*' + text + '*';
@@ -1610,16 +1796,15 @@ function blockContentToMarkdown(block: RichBlock): string {
       return text;
     })
     .join('');
-  if (children.every((child) => child._type === 'span' && !child.marks?.length)) return readable;
+  if (children.every((c) => c._type === 'span' && !c.marks?.length)) return readable;
   if (inlineMarkdownRoundTrips(children, readable, markDefs)) return readable;
-
   const preserved = children
-    .map((child) => {
-      if (child._type === 'math') return '$' + String(child.code ?? '') + '$';
-      const marks = child.marks ?? [];
+    .map((c) => {
+      if (c._type === 'math') return '$' + String(c.code ?? '') + '$';
+      const marks = c.marks ?? [];
       let text = marks.includes('code')
         ? '<code>' +
-          (child.text ?? '').replace(/[&<>`*_\x5B\x5D\\!$|~\r\n]/g, (character) => {
+          (c.text ?? '').replace(/[&<>`*_\x5B\x5D\\!$|~\r\n]/g, (character) => {
             switch (character) {
               case '&':
                 return '&amp;';
@@ -1654,7 +1839,7 @@ function blockContentToMarkdown(block: RichBlock): string {
             }
           }) +
           '</code>'
-        : escapeMarkdownText(child.text ?? '');
+        : escapeMarkdownText(c.text ?? '');
       for (const mark of marks) {
         if (mark === 'strong') text = '<strong>' + text + '</strong>';
         else if (mark === 'em') text = '<em>' + text + '</em>';
@@ -1672,7 +1857,13 @@ function blockContentToMarkdown(block: RichBlock): string {
     );
   return preserved;
 }
-
+/**
+ * Verifies that parsing a Markdown candidate reconstructs the same inline text, math, and marks.
+ * @param children Source child spans or inline math nodes.
+ * @param markdown Candidate Markdown representation.
+ * @param sourceMarkDefs Source link keys mapped to their destinations.
+ * @returns `true` when parsed and source inline signatures are identical.
+ */
 function inlineMarkdownRoundTrips(
   children: { _type?: string; text?: string; marks?: string[]; code?: string }[],
   markdown: string,
@@ -1694,13 +1885,19 @@ function inlineMarkdownRoundTrips(
     ? (parsedBlock.children as { _type?: string; text?: string; marks?: string[]; code?: string }[])
     : [];
   const sentinelIndex = parsed.findIndex(
-    (child) => child._type === 'span' && child.text?.startsWith(sentinel) && !child.marks?.length,
+    (c) => c._type === 'span' && c.text?.startsWith(sentinel) && !c.marks?.length,
   );
   if (sentinelIndex < 0) return false;
   const sentinelChild = parsed[sentinelIndex]!;
   const remainingText = String(sentinelChild.text ?? '').slice(sentinel.length);
   if (remainingText) sentinelChild.text = remainingText;
   else parsed.splice(sentinelIndex, 1);
+  /**
+   * Creates a stable comparison form for inline children and their link definitions.
+   * @param values Parsed child nodes whose rendering behavior is being compared.
+   * @param definitions Link-key map used to compare actual destinations instead of IDs.
+   * @returns JSON for supported text/math sequences, or `undefined` for unsupported nodes.
+   */
   const signature = (
     values: { _type?: string; text?: string; marks?: string[]; code?: string }[],
     definitions: Map<string, string>,
@@ -1713,7 +1910,7 @@ function inlineMarkdownRoundTrips(
       }
       if (value._type !== 'span') return undefined;
       const marks = (value.marks ?? [])
-        .map((mark) => (definitions.has(mark) ? 'link:' + definitions.get(mark) : mark))
+        .map((m) => (definitions.has(m) ? 'link:' + definitions.get(m) : m))
         .sort();
       const valueText = String(value.text ?? '');
       for (const piece of marks.includes('code')
@@ -1742,30 +1939,34 @@ function inlineMarkdownRoundTrips(
       new Map(
         (Array.isArray(parsedBlock.markDefs) ? parsedBlock.markDefs : [])
           .filter(
-            (mark): mark is { _key: string; _type: 'link'; href: string } =>
-              typeof mark === 'object' && mark !== null && '_key' in mark && 'href' in mark,
+            (m): m is { _key: string; _type: 'link'; href: string } =>
+              typeof m === 'object' && m !== null && '_key' in m && 'href' in m,
           )
-          .map((mark) => [mark._key, mark.href]),
+          .map((m) => [m._key, m.href]),
       ),
     )
   );
 }
-
+/**
+ * Serializes a rich table as a fenced YAML directive with a fence longer than any payload fence.
+ * @param block Table block to encode.
+ * @returns A Markdown directive that preserves the table's structured fields.
+ */
 function tableDirective(block: RichBlock): string {
   const payload = stringifyYaml(block, { lineWidth: 0 }).replace(R_N_REGEX, '');
   const fence = ':'.repeat(
     Math.max(
       3,
-      1 +
-        Math.max(
-          0,
-          ...[...payload.matchAll(/^(:{3,})(?:[ \t].*)?$/gm)].map((match) => match[1]!.length),
-        ),
+      1 + Math.max(0, ...[...payload.matchAll(/^(:{3,})(?:[ \t].*)?$/gm)].map((m) => m[1]!.length)),
     ),
   );
   return fence + 'docs table\n' + payload + '\n' + fence;
 }
-
+/**
+ * Checks whether a block is a supported Portable Text list item.
+ * @param block Candidate rich block.
+ * @returns `true` for a normal-style bullet or numbered block that can round-trip as Markdown.
+ */
 function isListBlock(block: RichBlock): boolean {
   return (
     block._type === 'block' &&
@@ -1774,7 +1975,11 @@ function isListBlock(block: RichBlock): boolean {
     markdownInlineBlock(block)
   );
 }
-
+/**
+ * Returns a nested block's original Markdown or rebuilds it from structured content when placeholders remain.
+ * @param block Callout, tab, or accordion item with optional Markdown and content fields.
+ * @returns Markdown source safe to serialize outside the parser's temporary placeholder registry.
+ */
 function nestedMarkdown(block: Record<string, unknown>): string {
   // Component parsing replaces JSX blocks with placeholders before parsing nested
   // containers such as callouts and tabs. That transformed source is useful while
@@ -1791,23 +1996,25 @@ function nestedMarkdown(block: Record<string, unknown>): string {
     ? docsValueToMarkdown(block.content as DocsValue).trimEnd()
     : '';
 }
-
+/**
+ * Identifies an empty default Portable Text paragraph that Markdown cannot visibly represent.
+ * @param value Candidate block or arbitrary nested value.
+ * @returns `true` only for a metadata-free normal paragraph containing no marked text.
+ */
 function emptyPortableTextParagraph(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const block = value as Record<string, unknown>;
-  if (block._type !== 'block' && block._type !== 'block') return false;
+  if (block._type !== 'block') return false;
   if (
-    Object.keys(block).some(
-      (name) => !['_type', '_key', 'style', 'markDefs', 'children'].includes(name),
-    )
+    Object.keys(block).some((n) => !['_type', '_key', 'style', 'markDefs', 'children'].includes(n))
   )
     return false;
   if (block.listItem || (block.style !== undefined && block.style !== 'normal')) return false;
   if (Array.isArray(block.markDefs) && block.markDefs.length > 0) return false;
   if (!Array.isArray(block.children)) return false;
-  return block.children.every((child) => {
-    if (!child || typeof child !== 'object') return false;
-    const span = child as Record<string, unknown>;
+  return block.children.every((c) => {
+    if (!c || typeof c !== 'object') return false;
+    const span = c as Record<string, unknown>;
     return (
       span._type === 'span' &&
       String(span.text ?? '').trim() === '' &&
@@ -1816,15 +2023,18 @@ function emptyPortableTextParagraph(value: unknown): boolean {
     );
   });
 }
-
-function semanticMarkdownValue(value: unknown): unknown {
-  if (Array.isArray(value))
-    return value.filter((i) => !emptyPortableTextParagraph(i)).map(semanticMarkdownValue);
-  if (!value || typeof value !== 'object') return value;
-
-  const block = value as Record<string, unknown>;
+/**
+ * Canonicalizes a Docs value for round-trip comparison by removing generated metadata and normalizing text blocks.
+ * @param v Value or nested array to canonicalize.
+ * @returns A semantic representation that ignores generated keys and equivalent empty paragraphs.
+ */
+function semanticMarkdownValue(v: unknown): unknown {
+  if (Array.isArray(v))
+    return v.filter((i) => !emptyPortableTextParagraph(i)).map(semanticMarkdownValue);
+  if (!v || typeof v !== 'object') return v;
+  const block = v as Record<string, unknown>;
   const type = block._type;
-  if (type === 'block' || type === 'block') {
+  if (type === 'block') {
     const definitions = new Map(
       (Array.isArray(block.markDefs) ? block.markDefs : [])
         .filter((i): i is Record<string, unknown> => Boolean(i) && typeof i === 'object')
@@ -1842,8 +2052,8 @@ function semanticMarkdownValue(value: unknown): unknown {
         continue;
       }
       const marks = (Array.isArray(item.marks) ? item.marks : [])
-        .map((mark) => definitions.get(String(mark)) ?? mark)
-        .map((mark) => JSON.stringify(mark))
+        .map((m) => definitions.get(String(m)) ?? m)
+        .map((m) => JSON.stringify(m))
         .sort();
       for (const piece of String(item.text ?? '')
         .split(N_G_CLASS_2())
@@ -1863,7 +2073,7 @@ function semanticMarkdownValue(value: unknown): unknown {
       ...Object.fromEntries(
         Object.entries(block)
           .filter(
-            ([name]) =>
+            ([n]) =>
               ![
                 '_type',
                 '_key',
@@ -1876,10 +2086,10 @@ function semanticMarkdownValue(value: unknown): unknown {
                 'level',
                 'markDefs',
                 'children',
-              ].includes(name),
+              ].includes(n),
           )
-          .sort(([left], [right]) => left.localeCompare(right))
-          .map(([name, i]) => [name, semanticMarkdownValue(i)]),
+          .sort(([l], [r]) => l.localeCompare(r))
+          .map(([n, i]) => [n, semanticMarkdownValue(i)]),
       ),
       _type: 'textBlock',
       style: block.style ?? 'normal',
@@ -1896,27 +2106,31 @@ function semanticMarkdownValue(value: unknown): unknown {
   return ((nestedContent) =>
     Object.fromEntries(
       Object.entries(block)
-        .filter(([name]) => !['_key', '_rev', '_createdAt', '_updatedAt', '_system'].includes(name))
-        .filter(([name]) => !(name === '_type' && type === 'item'))
-        .filter(([name]) => !(name === 'markdown' && nestedContent))
+        .filter(([n]) => !['_key', '_rev', '_createdAt', '_updatedAt', '_system'].includes(n))
+        .filter(([n]) => !(n === '_type' && type === 'item'))
+        .filter(([n]) => !(n === 'markdown' && nestedContent))
         // Accordions and tabs can also carry an empty editor cache at the root.
         // Grouped Markdown reconstructs the item bodies directly, so this cache
         // is not source content and must not force an otherwise faithful YAML
         // fallback.
-        .filter(([name]) => !(name === 'markdown' && ['accordion', 'tabs'].includes(String(type))))
+        .filter(([n]) => !(n === 'markdown' && ['accordion', 'tabs'].includes(String(type))))
         .filter(
-          ([name]) =>
-            !(name === 'markdown' && ['math', 'docImage', 'table'].includes(String(type))),
+          ([n]) => !(n === 'markdown' && ['math', 'docImage', 'table'].includes(String(type))),
         )
         .filter(
-          ([name]) =>
-            !(name === 'markdown' && type === 'code' && ('value' in block || 'source' in block)),
+          ([n]) =>
+            !(n === 'markdown' && type === 'code' && ('value' in block || 'source' in block)),
         )
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([name, i]) => [name, semanticMarkdownValue(i)]),
+        .sort(([l], [r]) => l.localeCompare(r))
+        .map(([n, i]) => [n, semanticMarkdownValue(i)]),
     ))(Array.isArray(block.content) ? block.content : undefined);
 }
-
+/**
+ * Checks whether Markdown parsing reconstructs the semantic structure of a rich value.
+ * @param value Source block or nested rich value.
+ * @param markdown Candidate Markdown serialization.
+ * @returns `true` when both normalized structures match; `false` when parsing fails or differs.
+ */
 function markdownPreservesValue(value: unknown, markdown: string): boolean {
   try {
     return (
@@ -1927,26 +2141,40 @@ function markdownPreservesValue(value: unknown, markdown: string): boolean {
     return false;
   }
 }
-
+/**
+ * Serializes a rich block as a canonical DocsBlock JSX node carrying its JSON data.
+ * @param block Rich block to preserve in Markdown.
+ * @returns A self-closing DocsBlock component with its type and data attributes.
+ * @throws Error when the block type is not a valid component identifier.
+ */
 function richBlockDirective(block: RichBlock): string {
   const type = String(block._type ?? '');
   if (!/^[A-Za-z][A-Za-z0-9]*$/.test(type))
     throw new Error('Cannot serialize Docs block with an invalid type.');
   return '<DocsBlock type="' + type + '" data={' + JSON.stringify(block) + '} />';
 }
-
+/**
+ * Wraps code in a Markdown fence longer than every backtick run in the code body.
+ * @param code Code contents to preserve verbatim.
+ * @param lang Optional language label for the opening fence.
+ * @returns A fenced code block with a safe delimiter and normalized trailing newline.
+ */
 function codeFence(code: string, lang: string): string {
   const tick = String.fromCharCode(96);
   const fence = tick.repeat(
     Math.max(
       3,
-      1 + Math.max(0, ...(code.match(new RegExp(tick + '+', 'g')) ?? []).map((run) => run.length)),
+      1 + Math.max(0, ...(code.match(new RegExp(tick + '+', 'g')) ?? []).map((r) => r.length)),
     ),
   );
   return fence + (lang ? lang : '') + '\n' + code.replace(N_CLASS_2, '') + '\n' + fence;
 }
 
-/** Serialize readable Markdown where it is faithful and typed source where it is not. */
+/**
+ * Serializes Docs values as readable Markdown when faithful, using typed source for richer structures.
+ * @param value Docs blocks to serialize.
+ * @returns Markdown that preserves representable text and encodes other supported blocks explicitly.
+ */
 export function docsValueToMarkdown(value: DocsValue): string {
   const blocks = value as unknown as RichBlock[];
   const result: string[] = [];
@@ -1983,7 +2211,6 @@ export function docsValueToMarkdown(value: DocsValue): string {
       continue;
     }
     index += 1;
-
     if (item._type === 'block') {
       if (!markdownInlineBlock(item) || item.listItem !== undefined) {
         result.push(richBlockDirective(item));
@@ -1998,9 +2225,8 @@ export function docsValueToMarkdown(value: DocsValue): string {
       else result.push(richBlockDirective(item));
       continue;
     }
-
     const extra = Object.keys(item).some(
-      (name) =>
+      (n) =>
         ![
           '_type',
           '_key',
@@ -2016,16 +2242,14 @@ export function docsValueToMarkdown(value: DocsValue): string {
               tabs: ['markdown', 'items'],
             } as Record<string, string[]>
           )[item._type] ?? []),
-        ].includes(name),
+        ].includes(n),
     );
-
     if (item._type === 'raw' && !extra && typeof item.markdown === 'string') {
       result.push(
         markdownPreservesValue(item, item.markdown) ? item.markdown : richBlockDirective(item),
       );
       continue;
     }
-
     if (item._type === 'code' && !extra) {
       const lang = String(item.language ?? '');
       if (lang && !/^[A-Za-z0-9_+.-]+$/.test(lang)) {
@@ -2045,7 +2269,6 @@ export function docsValueToMarkdown(value: DocsValue): string {
       }
       continue;
     }
-
     if (item._type === 'docImage' && !extra) {
       if (item.width !== undefined || item.height !== undefined) {
         result.push(richBlockDirective(item));
@@ -2067,7 +2290,6 @@ export function docsValueToMarkdown(value: DocsValue): string {
       );
       continue;
     }
-
     if (item._type === 'math' && !extra && typeof item.code === 'string') {
       if (
         String(item.code).includes('$$') ||
@@ -2083,23 +2305,22 @@ export function docsValueToMarkdown(value: DocsValue): string {
       }
       continue;
     }
-
     if (item._type === 'table') {
       const markdown = ((block: RichBlock, rows: Record<string, unknown>[]) =>
         ((fallback: string) => {
           if (!rows.length) return fallback;
-          const colCounts = rows.map((row) => (Array.isArray(row.cells) ? row.cells.length : 0));
+          const colCounts = rows.map((r) => (Array.isArray(r.cells) ? r.cells.length : 0));
           if (
             ((simpleRows) =>
               !onlyOwnFields(block, ['_type', '_key', 'header', 'rows', 'markdown']) ||
               !simpleRows)(
-              colCounts.every((count) => count === colCounts[0]) &&
-                rows.every((row) => {
-                  if (row._type !== 'row' || !onlyOwnFields(row, ['_type', '_key', 'cells']))
+              colCounts.every((c) => c === colCounts[0]) &&
+                rows.every((r) => {
+                  if (r._type !== 'row' || !onlyOwnFields(r, ['_type', '_key', 'cells']))
                     return false;
                   return (
-                    Array.isArray(row.cells) &&
-                    row.cells.every((cell) => {
+                    Array.isArray(r.cells) &&
+                    r.cells.every((cell) => {
                       if (!cell || typeof cell !== 'object') return false;
                       const value = cell as Record<string, unknown>;
                       if (
@@ -2146,17 +2367,15 @@ export function docsValueToMarkdown(value: DocsValue): string {
               _type: 'table',
               ...Object.fromEntries(
                 Object.entries(block as Record<string, unknown>).filter(
-                  ([name]) => !['_type', '_key', 'rows', 'markdown'].includes(name),
+                  ([n]) => !['_type', '_key', 'rows', 'markdown'].includes(n),
                 ),
               ),
               _docsCellFormat: 'markdown-v1',
-              rows: rows.map((row) => ({
+              rows: rows.map((r) => ({
                 ...Object.fromEntries(
-                  Object.entries(row).filter(
-                    ([name]) => !['_type', '_key', 'cells'].includes(name),
-                  ),
+                  Object.entries(r).filter(([name]) => !['_type', '_key', 'cells'].includes(name)),
                 ),
-                cells: (Array.isArray(row.cells) ? row.cells : []).map((cell) => {
+                cells: (Array.isArray(r.cells) ? r.cells : []).map((cell) => {
                   if (!cell || typeof cell !== 'object') return cell;
                   const value = cell as Record<string, unknown>;
                   return {
@@ -2174,12 +2393,16 @@ export function docsValueToMarkdown(value: DocsValue): string {
                 }),
               })),
             });
-
-          const cells = rows.map((row) =>
-            (Array.isArray(row.cells) ? row.cells : []).map((cell) => {
+          const cells = rows.map((r) =>
+            (Array.isArray(r.cells) ? r.cells : []).map((cell) => {
               const value =
                 cell && typeof cell === 'object' ? (cell as Record<string, unknown>) : {};
               const protectedParts: string[] = [];
+              /**
+               * Stores Markdown fragments that table escaping must leave intact.
+               * @param source Original link or code fragment from the table cell.
+               * @returns A unique placeholder that can be restored after GFM escaping.
+               */
               const protect = (source: string) => {
                 protectedParts.push(source);
                 return `DOCSTABLEPROTECTED${protectedParts.length - 1}TOKEN`;
@@ -2211,14 +2434,12 @@ export function docsValueToMarkdown(value: DocsValue): string {
                 .replace(N_G_CLASS_2_3(), '<br>');
             }),
           );
-          const width = Math.max(1, ...cells.map((row) => row.length));
-          const padded = cells.map((row) =>
-            Array.from({ length: width }, (_cell, i) => row[i] ?? ''),
-          );
+          const width = Math.max(1, ...cells.map((r) => r.length));
+          const padded = cells.map((r) => Array.from({ length: width }, (_cell, i) => r[i] ?? ''));
           const markdown = [
             '| ' + (padded[0] ?? Array.from({ length: width }, () => '')).join(' | ') + ' |',
             '| ' + Array.from({ length: width }, () => '---').join(' | ') + ' |',
-            ...padded.slice(1).map((row) => '| ' + row.join(' | ') + ' |'),
+            ...padded.slice(1).map((r) => '| ' + r.join(' | ') + ' |'),
           ].join('\n');
           const caption = String(block.header ?? 'Table');
           return caption !== 'Table'
@@ -2231,7 +2452,6 @@ export function docsValueToMarkdown(value: DocsValue): string {
       result.push(markdownPreservesValue(item, markdown) ? markdown : tableDirective(item));
       continue;
     }
-
     if (item._type === 'callout' && !extra) {
       const kind = String(item.kind ?? 'info');
       const title = String(item.title ?? kind);
@@ -2247,7 +2467,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
             1 +
               Math.max(
                 0,
-                ...[...content.matchAll(/^(:+)(?:[ \t].*)?$/gm)].map((match) => match[1]!.length),
+                ...[...content.matchAll(/^(:+)(?:[ \t].*)?$/gm)].map((m) => m[1]!.length),
               ),
           ),
         );
@@ -2263,16 +2483,15 @@ export function docsValueToMarkdown(value: DocsValue): string {
       }
       continue;
     }
-
     if ((item._type === 'accordion' || item._type === 'tabs') && !extra) {
       const entries = Array.isArray(item.items) ? (item.items as Record<string, unknown>[]) : [];
       if (
         !entries.every(
-          (entry) =>
-            onlyOwnFields(entry, ['_type', '_key', 'title', 'markdown', 'content']) &&
-            (entry._type === undefined || entry._type === 'item') &&
-            (entry.markdown === undefined || typeof entry.markdown === 'string') &&
-            (entry.content === undefined || Array.isArray(entry.content)),
+          (e) =>
+            onlyOwnFields(e, ['_type', '_key', 'title', 'markdown', 'content']) &&
+            (e._type === undefined || e._type === 'item') &&
+            (e.markdown === undefined || typeof e.markdown === 'string') &&
+            (e.content === undefined || Array.isArray(e.content)),
         ) ||
         !entries.length
       ) {
@@ -2288,15 +2507,12 @@ export function docsValueToMarkdown(value: DocsValue): string {
       result.push(
         entries
           .map(
-            (entry) =>
+            (e) =>
               delimiter +
               '[' +
-              (typeof entry.title === 'string' ? entry.title : 'Item').replace(
-                G_CLASS_2_3_4(),
-                '\\]',
-              ) +
+              (typeof e.title === 'string' ? e.title : 'Item').replace(G_CLASS_2_3_4(), '\\]') +
               ']\n' +
-              nestedMarkdown(entry).replace(N_CLASS_2, '') +
+              nestedMarkdown(e).replace(N_CLASS_2, '') +
               '\n' +
               delimiter,
           )
@@ -2304,41 +2520,38 @@ export function docsValueToMarkdown(value: DocsValue): string {
       );
       continue;
     }
-
     if (item._type === 'nodes' && !extra) {
       result.push(
         '<Nodes ' +
           Object.entries({
             ...Object.fromEntries(
               Object.entries(item).filter(
-                ([name]) => !['_type', '_key', 'nodes', 'edges'].includes(name),
+                ([n]) => !['_type', '_key', 'nodes', 'edges'].includes(n),
               ),
             ),
             nodes: item.nodes ?? [],
             edges: item.edges ?? [],
           })
-            .map(([name, value]) => name + '={' + JSON.stringify(value) + '}')
+            .map(([n, v]) => n + '={' + JSON.stringify(v) + '}')
             .join(' ') +
           ' />',
       );
       continue;
     }
-
     if (item._type === 'code' && !extra) {
       result.push(codeFence(String(item.value ?? item.source ?? ''), String(item.language ?? '')));
       continue;
     }
-
     if (item._type === 'embed' && !extra) {
       result.push(
         '<Embed ' +
           Object.entries(item)
-            .filter(([name]) => !['_type', '_key'].includes(name))
+            .filter(([n]) => !['_type', '_key'].includes(n))
             .map(
-              ([name, value]) =>
-                name +
+              ([n, v]) =>
+                n +
                 '="' +
-                String(value).replace(G_CLASS_2(), '&amp;').replace(G_CLASS_2_3(), '&quot;') +
+                String(v).replace(G_CLASS_2(), '&amp;').replace(G_CLASS_2_3(), '&quot;') +
                 '"',
             )
             .join(' ') +
@@ -2346,7 +2559,6 @@ export function docsValueToMarkdown(value: DocsValue): string {
       );
       continue;
     }
-
     if (item._type === 'quiz' && !extra) result.push('<Quiz />');
     else result.push(richBlockDirective(item));
   }

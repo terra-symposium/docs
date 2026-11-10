@@ -1,4 +1,12 @@
-import type { JSX } from 'react';
+/**
+ * src/components/NotFound.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// COMPONENTS
 import {
   Badge,
   ButtonLink,
@@ -10,6 +18,22 @@ import {
   CardHeading,
 } from '@terra-symposium/styling/ui';
 
+// TYPES
+import type { JSX } from 'react';
+
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Shows the shared 404 card with a return link to the embedding application's Docs home.
+ *
+ * @param appName Application label used in the return-link text.
+ * @param homeHref Public Docs home URL for the current host.
+ * @param description Explanation shown below the not-found heading.
+ *
+ * @return The styled not-found page with a link back to the host.
+ */
 export function DocsNotFound({
   appName = 'Docs',
   homeHref = '/',

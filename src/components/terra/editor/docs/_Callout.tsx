@@ -1,26 +1,46 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
-/** Docs callout renderer with view and edit modes. */
+/**
+ * src/components/terra/editor/docs/_Callout.tsx
+ * Docs callout renderer with view and edit modes.
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { useEditor } from '@portabletext/editor';
-import { TerraContentEditor } from './_editor.js';
+
+// COMPONENTS
 import { ErrorBoundary } from '../../ui.js';
 import { Input } from '@terra-symposium/styling/ui';
+import { TerraContentEditor } from './_editor.js';
 
-import type { DocsNestedContent } from '../../../../lib/terra/runtime/types.js';
+// TYPES
+import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
 import type {
   DocsBlock,
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
-import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
+import type { JSX } from 'react';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 /** Sanity Portable Text callout data consumed by the docs editor and renderer. */
 type CalloutBlock = DocsBlock<'callout'>;
 
-/** Renders a Docs callout and its nested rich-text body.
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Renders a Docs callout and its nested rich-text body.
  *
- * @param props - Portable Text block and editor attributes for the authored callout title, style, and content.
- * @returns The rendered callout block.
+ * @param block Authored callout fields, including its title, kind, and nested Portable Text content.
+ *
+ * @return The rendered callout block.
  */
 function Callout({ block }: { block: CalloutBlock }): JSX.Element {
   return (
@@ -33,7 +53,6 @@ function Callout({ block }: { block: CalloutBlock }): JSX.Element {
         <TerraContentEditor
           content={(block.content ?? []) as unknown as ContentData}
           docsAttachments={[]}
-          memberProfile="docs"
           nested
           readOnly
         />
@@ -41,13 +60,16 @@ function Callout({ block }: { block: CalloutBlock }): JSX.Element {
     </ErrorBoundary>
   );
 }
-Object.assign(Callout, { displayName: 'DocsCalloutPreview' });
-/** Renders editable Docs callout controls and nested content. */
+
 /**
- * Renders the CalloutEditor component.
+ * Renders editable Docs callout controls and nested content.
  *
- * @param props - Portable Text editor attributes, nested children, block node, and path used to edit a callout.
- * @returns The editable callout and nested rich-text surface.
+ * @param attrs DOM attributes supplied by the Portable Text editor.
+ * @param children Nested editor content rendered after the editable callout fields.
+ * @param node Callout block whose title and nested content are being edited.
+ * @param path Portable Text path targeted by the title and content updates.
+ *
+ * @return The editable callout and nested rich-text surface.
  */
 function CalloutEditor({
   attributes: attrs,
@@ -81,13 +103,12 @@ function CalloutEditor({
         <TerraContentEditor
           content={(block.content ?? []) as unknown as ContentData}
           docsAttachments={[]}
-          memberProfile="docs"
           nested
           onChange={(c) =>
             editor.send({
               type: 'block.set',
               at: path,
-              props: { content: c as DocsNestedContent, markdown: '' },
+              props: { content: c as ContentData, markdown: '' },
             })
           }
         />
@@ -96,14 +117,17 @@ function CalloutEditor({
     </ErrorBoundary>
   );
 }
-Object.assign(CalloutEditor, { displayName: 'DocsCalloutEditor' });
 
-/** Adapts Portable Text's block-object contract to the callout renderer. */
 /**
- * Renders the renderCallout component.
+ * Adapts Portable Text's block-object contract to the callout renderer.
  *
- * @param props - Portable Text renderer attributes, nested children, callout node, path, and read-only mode.
- * @returns The callout renderer in editable or read-only mode.
+ * @param attrs DOM attributes supplied by the Portable Text renderer.
+ * @param children Nested editor content associated with the callout block.
+ * @param node Callout data containing its kind, title, and body.
+ * @param path Portable Text path used by the editable renderer.
+ * @param readOnly Selects the static callout view when editing is disabled.
+ *
+ * @return The callout renderer in editable or read-only mode.
  */
 export function renderCallout({
   attributes: attrs,
@@ -118,4 +142,6 @@ export function renderCallout({
     <CalloutEditor attributes={attrs} children={children} node={node} path={path} />
   );
 }
+Object.assign(Callout, { displayName: 'DocsCalloutPreview' });
+Object.assign(CalloutEditor, { displayName: 'DocsCalloutEditor' });
 Object.assign(renderCallout, { displayName: 'DocsCalloutRenderer' });

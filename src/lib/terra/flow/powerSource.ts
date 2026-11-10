@@ -1,5 +1,5 @@
 /**
- * astro/src/components/flow/powerSource.ts
+ * src/lib/terra/flow/powerSource.ts
  * Power Source graph placement and route presentation.
  */
 
@@ -9,10 +9,6 @@ IMPORTS
 
 // TYPES
 import type { PowerSrcGraph } from '../runtime/types.js';
-
-/*//////////////////////////////////////////////////
-CONFIG
-//////////////////////////////////////////////////*/
 
 /*//////////////////////////////////////////////////
 HELPERS

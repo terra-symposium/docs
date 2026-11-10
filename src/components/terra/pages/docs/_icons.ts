@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_icons.ts
+ * src/components/terra/pages/docs/_icons.ts
  * Shared Docs block icon registry.
  */
 

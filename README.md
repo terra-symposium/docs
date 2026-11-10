@@ -45,6 +45,8 @@ pnpm run build
 
 The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). Build output defaults to `dist/docs/`.
 
+The Docs content root is also the default package root for resolving the consumer's dependencies. If a repository keeps its package manifest and `node_modules` in a nested directory, set `DOCS_PACKAGE_ROOT` to that directory relative to the Docs content root (for example, `DOCS_PACKAGE_ROOT=config pnpm --dir config run build`). `DOCS_ROOT` continues to select the directory containing `docs/` and the build output.
+
 Move the full agent tree into `docs/agents/`. `SKILL.md` files there route as the index page for their folder, so the complete tree uses normal Docs navigation, search, and asset handling. The Agents section is included by default. Set `docs.includeAgents` to `false` in the repository's `package.json`, or pass `--agents false`, to hide it for one Docs instance.
 
 Set each site's `title` and `description` explicitly in its `docs` configuration in `package.json` (or pass `--title` and `--description`). The launcher does not infer site metadata from the npm package name or description. Configure `docs.base`, `docs.site`, and `docs.out` alongside those values. Each repository builds its own site; the starter CI checks builds and leaves deployment to the repository owner.

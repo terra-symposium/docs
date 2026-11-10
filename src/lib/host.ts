@@ -1,6 +1,19 @@
+/**
+ * src/lib/host.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// TYPES
 import type { ComponentType, ReactNode } from 'react';
 import type { DocsBlockOptions } from '../components/blocks.js';
 import type { DocsQuizConfig } from '../components/quiz.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 /** The portable tree-node shape used by the original Docs workspace. */
 export type DocsHostTreeNode = {
@@ -15,7 +28,6 @@ export type DocsHostTreeNode = {
   children?: DocsHostTreeNode[];
   [key: string]: unknown;
 };
-
 /** A portable document value handed to the workspace by its storage adapter. */
 export type DocsHostDocument = {
   id?: string;
@@ -29,7 +41,6 @@ export type DocsHostDocument = {
   updatedAt?: string;
   [key: string]: unknown;
 };
-
 /** The subset of the signed-in account the shared navigation can display. */
 export type DocsHostUser = {
   id?: string;
@@ -38,7 +49,6 @@ export type DocsHostUser = {
   image?: string;
   [key: string]: unknown;
 };
-
 /** Portable attachment metadata. The host resolves and authorizes its URL. */
 export type DocsHostAttachment = {
   id?: string;
@@ -48,7 +58,6 @@ export type DocsHostAttachment = {
   size?: number;
   [key: string]: unknown;
 };
-
 /** Capability flags control which mutating controls the shared UI displays. */
 export type DocsHostCapabilities = {
   read?: boolean;
@@ -59,14 +68,14 @@ export type DocsHostCapabilities = {
   history?: boolean;
   publish?: boolean;
 };
-
+/** Operation names supported by the shared host action bridge. */
 export type DocsActionOperation =
   | `read.${'asset' | 'doc' | 'external' | 'source' | 'util'}.${string}`
   | `read.${'tsdocs'}`
   | `write.${'asset' | 'attachment' | 'doc'}.${string}`;
-
+/** Result envelope returned by host reads and writes. */
 export type DocsActionResult<T = unknown> = { data?: T; error?: unknown };
-
+/** Route components resolved from a host pathname by its Docs adapter. */
 export type DocsResolvedRoute = {
   sectionId: string;
   groupId?: string;
@@ -74,7 +83,6 @@ export type DocsResolvedRoute = {
   targetId: string;
   pathname: string;
 };
-
 /** Type contract for the stable host operations used by the shared UI. */
 export type DocsHostOperationContracts = {
   'read.doc.list': {
@@ -106,13 +114,19 @@ export type DocsHostOperationContracts = {
     output: null;
   };
 };
-
 /** Host boundary for storage, authorization, URLs, and mutations. */
 export type DocsHostAdapter = {
   capabilities: DocsHostCapabilities;
   /** Whether this host must load each document as its own browser page. */
   navigationMode?: 'client' | 'document';
-  /** Legacy action bridge for host-specific operations outside the stable contract. */
+  /**
+   * Legacy action bridge for host-specific operations outside the stable contract.
+   *
+   * @param op Stable or host-specific operation name requested by the shared UI.
+   * @param input Operation payload shaped according to the selected action contract.
+   *
+   * @return The host result, with an error when the operation cannot be completed.
+   */
   invoke<T = unknown>(op: DocsActionOperation, input?: unknown): Promise<DocsActionResult<T>>;
   /** Load a host-owned draft when an editor enters Edit mode. */
   loadDraft?: (path: string) => Promise<DocsHostDocument | null>;
@@ -135,7 +149,6 @@ export type DocsHostAdapter = {
   /** Optional shared hue for hosts whose Docs surface needs its own palette. */
   hue?: number | null;
 };
-
 /** A host-specific rich block renderer. Generic blocks live in @terra-symposium/docs. */
 export type DocsCustomBlock = {
   name: string;
@@ -147,7 +160,6 @@ export type DocsCustomBlock = {
   exportValue?: string;
   [key: string]: unknown;
 };
-
 /** Root inputs required to mount the original Docs workspace. */
 export type DocsWorkspaceProps = {
   host: DocsHostAdapter;

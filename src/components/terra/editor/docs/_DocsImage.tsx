@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/_DocsImage.tsx
+ * src/components/terra/editor/docs/_DocsImage.tsx
  * Docs image renderer with view and edit modes.
  */
 
@@ -12,12 +11,9 @@ IMPORTS
 import { useEditor } from '@portabletext/editor';
 
 // COMPONENTS
-import { AlertError } from '@terra-symposium/styling/ui';
-import { Button } from '@terra-symposium/styling/ui';
-import { ErrorBoundary } from '../../ui.js';
-import { Empty } from '../../ui.js';
+import { AlertError, Button, Input } from '@terra-symposium/styling/ui';
+import { Empty, ErrorBoundary } from '../../ui.js';
 import { Image as ImageIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
-import { Input } from '@terra-symposium/styling/ui';
 
 // TYPES
 import type {
@@ -25,6 +21,7 @@ import type {
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
+import type { JSX } from 'react';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -41,7 +38,7 @@ HELPERS
 /**
  * Renders a Docs image block from its authored block.
  *
- * @param props - Authored image block containing the source URL, dimensions, and accessibility metadata.
+ * @param block Authored image URL, alternate text, title, and optional dimensions.
  *
  * @return The image with its authored caption and alternate text.
  */
@@ -65,13 +62,15 @@ function Img({ block }: { block: DocsImgBlock }): JSX.Element {
     </ErrorBoundary>
   );
 }
-Object.assign(Img, { displayName: 'DocsImagePreview' });
 
-/** Adapts Portable Text's block-object contract to the image renderer. */
 /**
- * Renders the renderImage component.
+ * Adapts Portable Text's block-object contract to the image renderer.
  *
- * @param props - Portable Text renderer attributes, nested children, image node, path, and read-only mode.
+ * @param attrs DOM attributes supplied by the Portable Text renderer.
+ * @param children Nested editor content associated with the image block.
+ * @param node Image block fields used by the static preview or metadata form.
+ * @param path Portable Text path targeted by image metadata edits.
+ * @param readOnly Selects the static image preview when editing is disabled.
  *
  * @return The image renderer in editable or read-only mode.
  */
@@ -88,13 +87,14 @@ export function renderImage({
     <ImgEditor attributes={attrs} children={children} node={node} path={path} />
   );
 }
-Object.assign(renderImage, { displayName: 'DocsImageRenderer' });
 
-/** Connects the image block's local controls to its Portable Text state. */
 /**
- * Renders the ImageEditor component.
+ * Connects the image block's local controls to its Portable Text state.
  *
- * @param props - Portable Text editor attributes, nested children, image node, and path used to update image metadata.
+ * @param attrs DOM attributes supplied by the Portable Text editor.
+ * @param children Nested editor content rendered after the image metadata form.
+ * @param node Image block whose URL, title, alternate text, and dimensions are editable.
+ * @param path Portable Text path targeted by metadata updates and deletion.
  *
  * @return The editable image block controls.
  */
@@ -105,6 +105,12 @@ function ImgEditor({
   path,
 }: PortableTextBlockEditorProps<DocsImgBlock>): JSX.Element {
   const editor = useEditor();
+  /**
+   * Updates one image property at the current Portable Text path.
+   * @param field Metadata field controlled by the image form.
+   * @param val New value entered by the user.
+   * @returns No value; sends the changed image field to the editor.
+   */
   const update = (
     field:
       | /** Image metadata keys edited by the docs image form. */ 'alt'
@@ -217,4 +223,6 @@ function ImgEditor({
     </ErrorBoundary>
   );
 }
+Object.assign(Img, { displayName: 'DocsImagePreview' });
+Object.assign(renderImage, { displayName: 'DocsImageRenderer' });
 Object.assign(ImgEditor, { displayName: 'DocsImageEditor' });

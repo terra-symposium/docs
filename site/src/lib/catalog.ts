@@ -11,9 +11,11 @@ IMPORTS
 // API
 import { getHue } from '@terra-symposium/styling';
 
+// COMPONENTS
+import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
+
 // TYPES
 import type { DocsNavNode } from '../../../src/components/navigation.js';
-import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -39,7 +41,6 @@ const B_P_L_GU_REGEX = () => TerraQualityRegex.REGEX_B_P_L_GU_REGEX();
 const G_CLASS_2 = () => TerraQualityRegex.REGEX_G_REGEX_35();
 /** Matches a leading YAML frontmatter block in a Markdown or MDX page. */
 const S_N_S_S_N_S_N_REGEX = /^---\s*\n[\s\S]*?\n---\s*\n/;
-
 /**
  * Renderable Docs page metadata derived from its Markdown source and frontmatter.
  */
@@ -81,30 +82,29 @@ const routes = new Map<string, string>();
 /** Visible Docs pages sorted by configured sidebar order and source path. */
 export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
   .filter(
-    ([file]) =>
-      import.meta.env.PUBLIC_DOCS_INCLUDE_AGENTS !== 'false' || !file.startsWith('/docs/agents/'),
+    ([f]) =>
+      import.meta.env.PUBLIC_DOCS_INCLUDE_AGENTS !== 'false' || !f.startsWith('/docs/agents/'),
   )
-  .map(([file, module]) => {
-    const relativeFile = file.replace(/^\/docs\//, '');
+  .map(([f, m]) => {
+    const relativeFile = f.replace(/^\/docs\//, '');
     if (
       !['index.md', 'index.mdx'].includes(relativeFile.toLowerCase()) &&
       !relativeFile.includes('/')
-    ) {
-      throw new Error(`Markdown pages must be grouped in folders directly under docs/: ${file}`);
-    }
-    const slug = file
+    )
+      throw new Error(`Markdown pages must be grouped in folders directly under docs/: ${f}`);
+    const slug = f
       .replace(/^\/?docs\//, '')
       .replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2(), '')
       .replace(TerraQualityRegex.REGEX_SKILL_I_REGEX(), '')
       .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX_2(), '')
       .replace(G_CLASS_2(), '');
     if (routes.has(slug))
-      throw new Error(`Duplicate Docs route "${slug || '/'}": ${routes.get(slug)} and ${file}`);
-    routes.set(slug, file);
-    const markdown = pageInputs.sources[file] ?? '';
-    const frontmatter = module.frontmatter ?? {};
+      throw new Error(`Duplicate Docs route "${slug || '/'}": ${routes.get(slug)} and ${f}`);
+    routes.set(slug, f);
+    const markdown = pageInputs.sources[f] ?? '';
+    const frontmatter = m.frontmatter ?? {};
     return {
-      file,
+      file: f,
       slug,
       title:
         frontmatter.title ??
@@ -122,13 +122,19 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
       hidden:
         frontmatter.sidebar?.hidden ?? frontmatter.hidden ?? frontmatter.visibility === 'hidden',
       order: frontmatter.sidebar?.order ?? frontmatter.order ?? Number.MAX_SAFE_INTEGER,
-      content: module.Content ?? module.default,
+      content: m.Content ?? m.default,
       markdown: markdown.replace(S_N_S_S_N_S_N_REGEX, ''),
     };
   })
-  .sort((left, right) => left.order - right.order || left.file.localeCompare(right.file));
+  .sort((l, r) => l.order - r.order || l.file.localeCompare(r.file));
+/** In-progress navigation node whose children are indexed by route segment. */
 type MutableNode = Omit<DocsNavNode, 'children'> & { children: Map<string, MutableNode> };
 const rootNodes = new Map<string, MutableNode>();
+/** Navigation tree built from the visible pages after their routes are registered. */
+export const siteNavigation: DocsNavNode[] = [];
+const pending: { source: Map<string, MutableNode>; target: DocsNavNode[] }[] = [
+  { source: rootNodes, target: siteNavigation },
+];
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -142,7 +148,7 @@ HELPERS
  * @return Human-readable navigation text.
  */
 function label(value: string): string {
-  return value.replace(G_REGEX(), ' ').replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase());
+  return value.replace(G_REGEX(), ' ').replace(B_P_L_GU_REGEX(), (l) => l.toUpperCase());
 }
 
 /**
@@ -166,7 +172,7 @@ export function pageHref(slug: string, base = '/'): string {
  * @return The matching page, or `undefined` when the catalog has no such route.
  */
 export function pageForSlug(slug: string): SitePage | undefined {
-  return sitePages.find((page) => page.slug === slug);
+  return sitePages.find((p) => p.slug === slug);
 }
 
 /**
@@ -179,9 +185,8 @@ export function firstAvailableLeafHref(): string | undefined {
   while (pending.length) {
     const node = pending.pop();
     if (!node) continue;
-    if (node.children?.length) {
-      pending.push(...[...node.children].reverse());
-    } else if (node.href && node.href !== pageHref('', base)) {
+    if (node.children?.length) pending.push(...[...node.children].reverse());
+    else if (node.href && node.href !== pageHref('', base)) {
       return node.href;
     }
   }
@@ -218,12 +223,6 @@ for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '' && i.slug 
       ...(page.hue !== undefined ? { hue: page.hue } : {}),
     });
 }
-
-/** Navigation tree built from the visible pages after their routes are registered. */
-export const siteNavigation: DocsNavNode[] = [];
-const pending: { source: Map<string, MutableNode>; target: DocsNavNode[] }[] = [
-  { source: rootNodes, target: siteNavigation },
-];
 while (pending.length) {
   const branch = pending.pop();
   if (!branch) continue;

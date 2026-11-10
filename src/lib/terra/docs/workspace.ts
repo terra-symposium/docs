@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_helpers.ts
+ * src/lib/terra/docs/workspace.ts
  * Shared Docs state, browser coordination, and pure helpers used by multiple Docs surfaces.
  * Folder boundary: cross-surface contracts only; page composition, sidebar UI, editor lifecycle, and visual blocks remain in their owners.
  */
@@ -12,7 +11,7 @@ IMPORTS
 // API
 import { actions } from '../runtime/action-proxy.js';
 import { getHue } from '@terra-symposium/styling';
-import { validateType, warn } from '../runtime/runtime.js';
+import { errorMessage, warn } from '../runtime/runtime.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../regex.mjs';
@@ -35,6 +34,8 @@ export const document: Document =
  * Handles sanitize name.
  *
  * @param name - Document name used to construct the canonical path.
+ *
+ * @return
  */
 export const sanitizeName = (name: string): string =>
   name.replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX(), '-').toLowerCase();
@@ -42,6 +43,8 @@ export const sanitizeName = (name: string): string =>
  * Handles is index file.
  *
  * @param path - Docs path to normalize into a route-safe identifier.
+ *
+ * @return
  */
 export const isIndexFile = (path: string): boolean =>
   TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
@@ -68,6 +71,8 @@ export { getHue };
  * Handles get stable key.
  *
  * @param node - Docs tree node whose route should be resolved.
+ *
+ * @return
  */
 export const getStableKey = (node: TreeType): string => {
   if (node.type === 'branch') return node.origName;
@@ -123,7 +128,7 @@ export async function uploadAssetChunked(
     try {
       // native Astro Actions client automatically handles multipart/form-data encoding and routing!
       const { data, error } = await actions.write.asset.upload(formData);
-      if (error) throw new Error(error.message || 'Action rejected the payload');
+      if (error) throw new Error(errorMessage(error, 'Action rejected the payload'));
       if (c === totalChunks - 1)
         finalAsset = data as {
           path?: string;
@@ -342,7 +347,6 @@ export function htmlToMd(html: string): string {
     warn('htmlToMd', 'Window context unavailable; returning raw markup.');
     return html;
   }
-
   const root = new DOMParser().parseFromString(html, 'text/html').body;
   const rendered = new Map<Node, string>();
   const pending: Array<{ node: Node; visited: boolean }> = [{ node: root, visited: false }];
@@ -371,7 +375,7 @@ export function htmlToMd(html: string): string {
     }
     const tag = element.tagName.toLowerCase();
     const children = Array.from(element.childNodes)
-      .map((child) => rendered.get(child) || '')
+      .map((c) => rendered.get(c) || '')
       .join('');
     let text = children;
     switch (tag) {
@@ -381,13 +385,13 @@ export function htmlToMd(html: string): string {
       case 'tfoot':
       case 'tr':
         text = `<${tag}${Array.from(element.attributes)
-          .map((attribute) => ` ${attribute.name}="${attribute.value}"`)
+          .map((a) => ` ${a.name}="${a.value}"`)
           .join('')}>\n${children}\n</${tag}>`;
         break;
       case 'th':
       case 'td':
         text = `<${tag}${Array.from(element.attributes)
-          .map((attribute) => ` ${attribute.name}="${attribute.value}"`)
+          .map((a) => ` ${a.name}="${a.value}"`)
           .join('')}>\n${children.trim()}\n</${tag}>`;
         break;
       case 'h1':
@@ -507,10 +511,6 @@ export { EditStateCtx } from './state.js';
 export { EditorSurfaceCtx } from './state.js';
 
 /*//////////////////////////////////////////////////
-CONFIG
-//////////////////////////////////////////////////*/
-
-/*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
@@ -559,8 +559,12 @@ NAVIGATION
 /**
  * Handles keep deep path.
  *
+ * @param curr
+ * @param n
  * @param current - Current value before the update.
  * @param next - Proposed value to compare with the current value.
+ *
+ * @return
  */
 export const keepDeepPath = (curr: string, n: string): string => {
   // prettier-ignore
@@ -576,7 +580,10 @@ export const keepDeepPath = (curr: string, n: string): string => {
 /**
  * Handles is doc body.
  *
+ * @param val
  * @param value - Value whose display label should be derived.
+ *
+ * @return
  */
 export const isDocBody = (val: unknown): val is DocBody =>
   Array.isArray(val) && val.every((b) => b && typeof b === 'object' && '_type' in b);
@@ -587,6 +594,7 @@ export const isDocBody = (val: unknown): val is DocBody =>
  * @param prev - Previous state used as the base for the update.
  * @param detail - Change detail merged into the next state.
  */
+
 /*//////////////////////////////////////////////////
 TOOLBAR
 //////////////////////////////////////////////////*/

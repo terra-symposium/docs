@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_editable.tsx
+ * src/components/terra/pages/docs/_editable.tsx
  * JSON draft state and persistence provider for Docs View, Edit, and Attachments modes.
  */
 
@@ -21,13 +20,13 @@ import {
   useAtom,
   useTransitionState,
 } from '../../../../lib/terra/docs/state.js';
-import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
-import { isDocBody } from '../../../../lib/terra/runtime/types.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
 import { cn } from '../../../../lib/terra/runtime/runtime.js';
-import { toast } from 'sonner';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
+import { isDocBody } from '../../../../lib/terra/runtime/types.js';
+import { toast } from 'sonner';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // COMPONENTS
 import React from 'react';
@@ -35,12 +34,10 @@ import { EditStateCtx, EditorSurfaceCtx, TransitionCtx } from '../../../../lib/t
 import { ErrorBoundary } from '../../ui.js';
 import { Progress } from '@terra-symposium/styling/ui';
 
-// DATA
-
 // TYPES
 import type {
-  DocsPermissionLevel as Permission,
   DocBody,
+  DocsPermissionLevel as Permission,
   Draft,
   EditorRefs,
   EditorSel,
@@ -51,18 +48,13 @@ import type {
 import type { ReactNode } from 'react';
 
 /*//////////////////////////////////////////////////
-CONFIG
-//////////////////////////////////////////////////*/
-
-/*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
  * Renders the loader component.
  *
- * @param props - Optional styling for the loading indicator while a Docs route or editor is resolving.
- * @param className - Additional CSS classes merged into loader.
+ * @param className Optional classes added to the loading indicator.
  *
  * @return The accessible loading indicator used by Docs transitions.
  */
@@ -105,11 +97,11 @@ export function Loader({ className }: { className?: string }): React.JSX.Element
 /**
  * Orchestrates layout math and hydration visibility to prevent FOUC during navigation.
  *
- * @param props - Child content, visual class, navigation mode, and optional route key for the Docs page transition.
  * @param children - Child content nested inside transition shell's rendered output.
  * @param className - Additional CSS classes merged into transition shell.
  * @param mode - Mode input supplied to transition shell's operation.
  * @param path - Source or route path resolved for transition shell.
+ * @param staticContent Whether the body is already rendered and can skip editor-mount visibility gating.
  *
  * @return A transition wrapper that keeps page visibility synchronized with route hydration.
  */
@@ -136,18 +128,24 @@ export function TransitionShell({
     armed: boolean;
     loading: boolean;
     ready: boolean;
-  }>({ armed: false, loading: true, ready: false });
+  }>(() => ({ armed: staticContent, loading: !staticContent, ready: staticContent }));
 
   // LIFECYCLE
   // enforces loading guard during cross-page transitions to prevent layout shifts
   useEffect(() => {
+    if (staticContent) {
+      reported.current = false;
+      pending.current = false;
+      setState((p) => ({ ...p, armed: true, loading: false, ready: true }));
+      return;
+    }
     if (transition === 'idle') return;
     reported.current = false;
     pending.current = true;
     $editReadyPath.set(null);
     $surfaceReady.set(null);
     setState((p) => ({ ...p, armed: false, loading: true, ready: false }));
-  }, [transition]);
+  }, [staticContent, transition]);
   useEffect(() => {
     if (mode === 'edit') return;
     setState((p) => (p.armed ? p : { ...p, armed: true }));
@@ -155,7 +153,7 @@ export function TransitionShell({
 
   // A missing editor readiness event must not leave the document hidden without feedback.
   useEffect(() => {
-    if (!state.loading || !state.armed) return;
+    if (staticContent || !state.loading || !state.armed) return;
     let a = true;
     window.setTimeout(() => {
       if (!a || reported.current) return;
@@ -168,7 +166,7 @@ export function TransitionShell({
     return () => {
       a = false;
     };
-  }, [state.armed, state.loading]);
+  }, [state.armed, state.loading, staticContent]);
 
   // releases layout lock once the internal editor or viewer confirms mounting
   useEffect(() => {
@@ -194,10 +192,12 @@ export function TransitionShell({
   // SYNCHRONIZATION
   // Keeps the transition lock aligned with the structured editor lifecycle.
   useEffect(() => {
+    if (staticContent) return;
     const root = container.current;
     if (!root) return;
     /**
      * Handles check.
+     *
      */
     const check = () => {
       const tgt =
@@ -225,10 +225,8 @@ export function TransitionShell({
       $hydrating.listen(check),
     ];
     check();
-    return (): void => {
-      for (let i = 0; i < stop.length; i++) stop[i]();
-    };
-  }, [mode, path, transition]);
+    return (): void => stop.forEach((unsubscribe) => unsubscribe());
+  }, [mode, path, staticContent, transition]);
 
   // restores cursor or scroll position globally once shell unlocks
   useEffect(() => {
@@ -281,7 +279,6 @@ export function TransitionShell({
 /**
  * Renders the editable component.
  *
- * @param props - Document content, title, path, source, and permission state that determine whether the page is editable or read-only.
  * @param children - Child content nested inside editable's rendered output.
  * @param content - Content input supplied to editable's operation.
  * @param description - Supporting text shown in editable.
@@ -289,6 +286,7 @@ export function TransitionShell({
  * @param permission - Permission input supplied to editable's operation.
  * @param pathname - Pathname input supplied to editable's operation.
  * @param title - Heading text shown in editable.
+ * @param src Optional source identifier used by the host's document adapter.
  * @param source - Source node identifier for the connection drawn by editable.
  *
  * @return The document editor or read-only view configured for the supplied document and permission.
@@ -375,24 +373,22 @@ export default function Editable({
   useEffect(() => {
     if (content.length || !src) return;
     let a = true;
-    void actions.read.source
-      .body({ source: src })
-      .then(({ data: d, error: err }: { data?: unknown; error?: { message?: string } | null }) => {
-        if (!a) return;
-        if (err || !d) {
-          setErr(err?.message || 'Unable to convert source to document blocks.');
-          setState((p) => ({ ...p, loaded: true }));
-        } else if (isDocBody(d))
-          setState((p) => ({
-            ...p,
-            draft: { ...p.draft, content: d },
-            loaded: true,
-          }));
-        else {
-          setErr('Converted source did not return valid document blocks.');
-          setState((p) => ({ ...p, loaded: true }));
-        }
-      });
+    void actions.read.source.body({ source: src }).then(({ data: d, error: err }) => {
+      if (!a) return;
+      if (err || !d) {
+        setErr(err instanceof Error ? err.message : 'Unable to convert source to document blocks.');
+        setState((p) => ({ ...p, loaded: true }));
+      } else if (isDocBody(d))
+        setState((p) => ({
+          ...p,
+          draft: { ...p.draft, content: d },
+          loaded: true,
+        }));
+      else {
+        setErr('Converted source did not return valid document blocks.');
+        setState((p) => ({ ...p, loaded: true }));
+      }
+    });
     return () => {
       a = false;
     };
@@ -477,7 +473,9 @@ export default function Editable({
           source: state.draft.source,
         });
         if (err || !data) {
-          setErr(err?.message || 'Unable to convert source to document blocks.');
+          setErr(
+            err instanceof Error ? err.message : 'Unable to convert source to document blocks.',
+          );
           return;
         }
         if (!isDocBody(data)) {
@@ -491,12 +489,12 @@ export default function Editable({
     [draftContent.length, state.draft.source, update],
   );
   const insert = useCallback(
-    (m: string, _replace = false, s?: EditorSel | null): void => {
+    (m: string, r = false, s?: EditorSel | null): void => {
       void actions.read.source
         .body({ source: m })
         .then(({ data: d, error: err }) => {
           if (err || !d) {
-            toast.error(err?.message || 'Unable to convert pasted Markdown.');
+            toast.error(err instanceof Error ? err.message : 'Unable to convert pasted Markdown.');
             return;
           }
           if (!isDocBody(d)) {
@@ -505,6 +503,7 @@ export default function Editable({
           }
           update({
             content:
+              !r &&
               Boolean(s?.text?.trim()) &&
               s?.text?.trim().length === (refs.current.body?.innerText.trim() || '').length
                 ? d
@@ -577,7 +576,7 @@ export default function Editable({
               setState((p) => ({ ...p, dirty: true }));
             },
             references: refs,
-            save: (code?: string) => void save(code),
+            save: () => void save(),
             setCode,
             setSrc: setCode,
             source: state.draft.source,
@@ -595,8 +594,8 @@ export default function Editable({
               mode,
               onBodyChange,
               onMdChange: setCode,
-              onVisualError: (err) => {
-                setErr(err);
+              onVisualError: (error) => {
+                setErr(error instanceof Error ? error.message : String(error));
               },
               parseError: err,
               path,

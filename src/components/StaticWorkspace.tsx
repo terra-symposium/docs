@@ -9,21 +9,22 @@ IMPORTS
 // API
 import { $surfaceReady, useTransitionState } from '../lib/terra/docs/state.js';
 import { docsHueTheme } from '../lib/docs-theme.js';
-import { markdownToDocsValue } from '../lib/markdown-model.js';
+import { docsValueToMarkdown, markdownToDocsValue } from '../lib/markdown-model.js';
 import { useEffect } from 'react';
 
 // COMPONENTS
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 import { Button } from '@terra-symposium/styling/ui';
-import { ErrorBoundary } from '@terra-symposium/standards-error-boundaries/react';
 import { DocsWorkspace } from './terra/Workspace.js';
-import type { DocsQuizConfig } from './quiz.js';
+import { ErrorBoundary } from '@terra-symposium/standards-error-boundaries/react';
+import { DocsMarkdown } from './MarkdownContent.js';
 
 // TYPES
 import type { DocsAttachment, DocsLeaf, DocsSection } from '../lib/workspace-types.js';
 import type { DocsHostAdapter, DocsHostTreeNode } from '../lib/host.js';
 import type { DocsNavNode } from './navigation.js';
+import type { DocsQuizConfig } from './quiz.js';
 import type { JSX, ReactNode } from 'react';
-import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -53,7 +54,7 @@ const slug = (value: string): string =>
     .trim()
     .toLowerCase()
     .replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-')
-    .replace(/^-|-$/g, '') || 'index';
+    .replace(TerraQualityRegex.REGEX_G_REGEX_20(), '') || 'index';
 /**
  * Normalizes a route for comparison while preserving its fragment identifier.
  *
@@ -84,13 +85,6 @@ const storageKey = (value: string): string => {
     return value.replace(G_REGEX(), '') || 'index.mdx';
   }
 };
-/**
- * Converts the host's nested navigation nodes into Docs sections and leaf records.
- *
- * @param nodes Navigation roots supplied by the host site.
- *
- * @return Sections that preserve the source grouping and include only linked pages as leaves.
- */
 /*//////////////////////////////////////////////////
 COMPONENTS
 //////////////////////////////////////////////////*/
@@ -98,8 +92,7 @@ COMPONENTS
 /**
  * Signals that static content is visible after the workspace transition completes.
  *
- * @param props Component props containing the host-rendered content.
- * @param props.children Markdown or MDX content to reveal when the workspace is ready.
+ * @param children Markdown or MDX content to reveal when the workspace is ready.
  *
  * @return The content fragment after marking the view surface as ready.
  */
@@ -114,7 +107,23 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
 /**
  * Adapts a host's local Markdown pages to the original, read-only Docs workspace.
  *
- * @param props Page content, navigation, attachment metadata, and optional host render slots.
+ * @param title Site title shown by the host's shared Docs chrome.
+ * @param homeHref Destination for the site brand link.
+ * @param description Supporting site description shown in the sidebar.
+ * @param pageTitle Current page title used by navigation and document metadata.
+ * @param hue Optional Styling hue applied to the workspace palette.
+ * @param nodes Navigation tree used when explicit sections are not provided.
+ * @param sections Resolved section and leaf data for the current Docs tree.
+ * @param currentPath Browser path used to select and identify the current page.
+ * @param rootPath Host Docs root used when building fallback routes.
+ * @param markdown Markdown source converted when no structured content is supplied.
+ * @param content Pre-parsed content value used by the shared workspace.
+ * @param attachments Attachments available to the current page.
+ * @param updatedAt Optional document update timestamp.
+ * @param renderContent Optional static React body supplied by the host.
+ * @param children Fallback body content when `renderContent` is absent.
+ * @param staticContent Whether page content is already static and can skip editor transition work.
+ * @param quiz Optional host-owned quiz toolbar and generation callback.
  *
  * @return The Docs workspace configured for read-only navigation and page viewing.
  */
@@ -156,65 +165,67 @@ export function DocsStaticWorkspace({
   /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
   quiz?: DocsQuizConfig;
 }): JSX.Element {
-  const workspaceSections: DocsSection[] =
-    sections ??
-    (function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
-      /**
-       * Converts a linked navigation node to a Docs leaf while ignoring non-link groups.
-       *
-       * @param node Navigation node to map.
-       *
-       * @return Leaf metadata when the node has an `href`, otherwise `null`.
-       */
-      const toLeaf = (node: DocsNavNode): DocsLeaf | null =>
-        node.href
-          ? {
-              ...(node.id ? { id: node.id } : {}),
-              ...(node.path ? { path: node.path } : {}),
-              title: node.title,
-              href: node.href,
-              ...(node.description ? { description: node.description } : {}),
-              ...(node.hue !== undefined ? { hue: node.hue } : {}),
-              ...(node.updatedAt ? { updatedAt: node.updatedAt } : {}),
-              ...(node.attachments ? { attachments: node.attachments } : {}),
-            }
-          : null;
-      return nodes.map((section) => {
-        const children = section.children ?? [];
-        return {
-          ...(section.id ? { id: section.id } : {}),
-          ...(section.path ? { path: section.path } : {}),
-          ...(section.hue !== undefined ? { hue: section.hue } : {}),
-          title: section.title,
-          groups: children.some((node) => Boolean(node.children?.length))
-            ? children.map((group) => ({
-                ...(group.id ? { id: group.id } : {}),
-                ...(group.path ? { path: group.path } : {}),
-                ...(group.hue !== undefined ? { hue: group.hue } : {}),
-                title: group.title,
-                leaves: (group.children ?? [])
+  /**
+   * Adapts the host's nested navigation model to the shared Docs section/group shape.
+   * @param navigation Ordered navigation sections with optional linked children.
+   * @returns Docs sections preserving grouping, link metadata, and display order.
+   */
+  const sectionsFromNavigation = (navigation: DocsNavNode[]): DocsSection[] => {
+    /**
+     * Converts a linked navigation node to its page metadata and skips branch-only entries.
+     * @param node Navigation item whose `href` determines whether it represents a page.
+     * @returns Docs leaf metadata for linked items, or `null` for items without a URL.
+     */
+    const toLeaf = (node: DocsNavNode): DocsLeaf | null =>
+      node.href
+        ? {
+            ...(node.id ? { id: node.id } : {}),
+            ...(node.path ? { path: node.path } : {}),
+            title: node.title,
+            href: node.href,
+            ...(node.description ? { description: node.description } : {}),
+            ...(node.hue !== undefined ? { hue: node.hue } : {}),
+            ...(node.updatedAt ? { updatedAt: node.updatedAt } : {}),
+            ...(node.attachments ? { attachments: node.attachments } : {}),
+          }
+        : null;
+    return navigation.map((s) => {
+      const children = s.children ?? [];
+      return {
+        ...(s.id ? { id: s.id } : {}),
+        ...(s.path ? { path: s.path } : {}),
+        ...(s.hue !== undefined ? { hue: s.hue } : {}),
+        title: s.title,
+        groups: children.some((node) => Boolean(node.children?.length))
+          ? children.map((group) => ({
+              ...(group.id ? { id: group.id } : {}),
+              ...(group.path ? { path: group.path } : {}),
+              ...(group.hue !== undefined ? { hue: group.hue } : {}),
+              title: group.title,
+              leaves: (group.children ?? [])
+                .map(toLeaf)
+                .filter((leaf): leaf is DocsLeaf => leaf !== null),
+            }))
+          : [
+              {
+                title: s.title,
+                leaves: (children.length ? children : [s])
                   .map(toLeaf)
                   .filter((leaf): leaf is DocsLeaf => leaf !== null),
-              }))
-            : [
-                {
-                  title: section.title,
-                  leaves: (children.length ? children : [section])
-                    .map(toLeaf)
-                    .filter((leaf): leaf is DocsLeaf => leaf !== null),
-                },
-              ],
-        };
-      });
-    })(nodes);
+              },
+            ],
+      };
+    });
+  };
+  const workspaceSections: DocsSection[] = sections ?? sectionsFromNavigation(nodes);
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
-  const allLeaves = workspaceSections.flatMap((section, sectionIndex) =>
-    section.groups.flatMap((group, groupIndex) =>
+  const allLeaves = workspaceSections.flatMap((s, v) =>
+    s.groups.flatMap((group, groupIndex) =>
       group.leaves.map((leaf, leafIndex) => ({
-        section,
+        section: s,
         group,
         leaf,
-        sectionIndex,
+        sectionIndex: v,
         groupIndex,
         leafIndex,
       })),
@@ -225,22 +236,30 @@ export function DocsStaticWorkspace({
     allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(rootPath)) ??
     allLeaves[0];
   const docContent = Array.isArray(content) ? content : markdownToDocsValue(markdown);
-  const contentSlot = renderContent ?? children;
+  const markdownSource = markdown.trim()
+    ? markdown
+    : Array.isArray(content)
+      ? docsValueToMarkdown(content as Parameters<typeof docsValueToMarkdown>[0])
+      : '';
+  const contentSlot =
+    renderContent ??
+    children ??
+    (markdownSource ? <DocsMarkdown markdown={markdownSource} /> : undefined);
   const readyContent =
     contentSlot !== undefined || staticContent ? (
       <StaticContentSlot key={currentPath}>{contentSlot ?? null}</StaticContentSlot>
     ) : undefined;
-  const tree: DocsHostTreeNode[] = workspaceSections.map((section) => {
-    const sectionId = section.id ?? slug(section.title);
+  const tree: DocsHostTreeNode[] = workspaceSections.map((s) => {
+    const sectionId = s.id ?? slug(s.title);
     return {
       type: 'branch',
       origName: sectionId,
-      title: section.title,
-      path: section.path ?? sectionId,
-      ...(section.hue !== undefined ? { hue: section.hue } : {}),
-      url: section.groups[0]?.leaves[0]?.href ?? rootPath,
+      title: s.title,
+      path: s.path ?? sectionId,
+      ...(s.hue !== undefined ? { hue: s.hue } : {}),
+      url: s.groups[0]?.leaves[0]?.href ?? rootPath,
       permission: 'read',
-      children: section.groups.map((group) => {
+      children: s.groups.map((group) => {
         const groupKey = `${sectionId}/${group.id ?? slug(group.title)}`;
         return {
           type: 'branch',
@@ -264,16 +283,13 @@ export function DocsStaticWorkspace({
       }),
     };
   });
-
   return (
     <div className="docs-theme-scope" {...(theme ? { style: theme } : {})}>
       <ErrorBoundary
         name="Docs workspace"
         resetKey={currentPath}
-        onError={(error, context) =>
-          console.error(`[${context.name}]`, error, context.componentStack)
-        }
-        fallback={(error) => (
+        onError={(e, c) => console.error(`[${c.name}]`, e, c.componentStack)}
+        fallback={(e) => (
           <section
             aria-labelledby="docs-workspace-error-title"
             className="mx-auto my-12 max-w-2xl rounded-xl border border-primary-7 bg-primary-2 p-6 text-primary-12"
@@ -284,7 +300,7 @@ export function DocsStaticWorkspace({
             </h1>
             <p className="mb-4">The Docs workspace could not render this page.</p>
             <pre className="mb-4 overflow-auto whitespace-pre-wrap break-words rounded-md bg-primary-3 p-3 text-sm">
-              {error.message}
+              {e.message}
             </pre>
             <Button onClick={() => window.location.reload()} variant="primary-tonal">
               Reload page
@@ -378,20 +394,28 @@ export function DocsStaticWorkspace({
                       .filter(
                         (i) =>
                           !folder ||
-                          (i.leaf.path ?? i.leaf.href).replace(/^\/+/, '').startsWith(`${folder}/`),
+                          (i.leaf.path ?? i.leaf.href)
+                            .replace(TerraQualityRegex.REGEX_PATTERN_REGEX_6(), '')
+                            .startsWith(`${folder}/`),
                       )
                       .map((i) => i.leaf.path ?? i.leaf.href);
                   } else data = [];
                 } else if (op === 'read.doc.get') {
+                  /**
+                   * Finds a leaf by route while retaining the active-page fallback.
+                   * @param path Optional source path or route supplied by the reader action.
+                   * @returns The matching leaf, or the active leaf when no path was requested.
+                   */
+                  const leafForPath = (path?: string): DocsLeaf | undefined => {
+                    if (!path) return a?.leaf;
+                    return allLeaves.find(
+                      (i) =>
+                        routeKey(i.leaf.href) === routeKey(path) ||
+                        storageKey(i.leaf.path ?? i.leaf.href) === storageKey(path),
+                    )?.leaf;
+                  };
                   const selected =
-                    (function leafForPath(path?: string): DocsLeaf | undefined {
-                      if (!path) return a?.leaf;
-                      return allLeaves.find(
-                        (i) =>
-                          routeKey(i.leaf.href) === routeKey(path) ||
-                          storageKey(i.leaf.path ?? i.leaf.href) === storageKey(path),
-                      )?.leaf;
-                    })((input as { path?: string } | undefined)?.path) ?? a?.leaf;
+                    leafForPath((input as { path?: string } | undefined)?.path) ?? a?.leaf;
                   if (
                     selected &&
                     typeof window !== 'undefined' &&

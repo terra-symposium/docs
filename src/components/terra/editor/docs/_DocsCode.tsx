@@ -1,48 +1,79 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
-/** Docs code block renderer with view and edit modes. */
+/**
+ * src/components/terra/editor/docs/_DocsCode.tsx
+ * Docs code block renderer with view and edit modes.
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { useEditor } from '@portabletext/editor';
 import { useEffect, useRef, useState } from 'react';
-import { ErrorBoundary } from '../../ui.js';
-import { Button } from '@terra-symposium/styling/ui';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@terra-symposium/styling/ui';
-import { Input } from '@terra-symposium/styling/ui';
-import { Label } from '@terra-symposium/styling/ui';
-import { CodeBlock } from './_CodeBlock.js';
 
+// COMPONENTS
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+} from '@terra-symposium/styling/ui';
+import { CodeBlock } from './_CodeBlock.js';
+import { ErrorBoundary } from '../../ui.js';
+
+// TYPES
 import type { BlockTgt } from '../../../../lib/terra/runtime/types.js';
 import type {
   DocsBlock,
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
+import type { JSX } from 'react';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 /** Sanity Portable Text code-block fields used by the docs editor. */
 type CodeBlockData = DocsBlock<'code'>;
-/** Renders a Docs code block from its authored block.
+
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Renders a Docs code block from its authored block.
  *
- * @param props - Authored code block and its language, title, and display settings.
- * @returns The authored code block and its preview.
+ * @param block Authored code block containing source text, language, and optional endpoint.
+ *
+ * @return The authored code block and its preview.
  */
 function Code({ block }: { block: CodeBlockData }): JSX.Element {
   return (
     <ErrorBoundary name="Code">
       <CodeBlock
-        code={block.value ?? ''}
+        code={typeof block.value === 'string' ? block.value : ''}
         language={block.language ?? 'text'}
-        source={block.source}
+        {...(block.source !== undefined ? { source: block.source } : {})}
         tone="view"
       />
     </ErrorBoundary>
   );
 }
-Object.assign(Code, { displayName: 'DocsCodePreview' });
-/** Adapts Portable Text's block-object contract to the code renderer. */
+
 /**
- * Renders the renderCode component.
+ * Adapts Portable Text's block-object contract to the code renderer.
  *
- * @param props - Portable Text renderer attributes, nested children, code block node, path, and read-only mode.
- * @returns The code block renderer in editable or read-only mode.
+ * @param attrs DOM attributes supplied by the Portable Text renderer.
+ * @param children Nested editor content associated with the code block.
+ * @param node Code block fields used by either the static preview or editor.
+ * @param path Portable Text path targeted by code and language edits.
+ * @param readOnly Selects the static code preview when editing is disabled.
+ *
+ * @return The code block renderer in editable or read-only mode.
  */
 export function renderCode({
   attributes: attrs,
@@ -57,14 +88,16 @@ export function renderCode({
     <CodeEditor attributes={attrs} children={children} node={node} path={path} />
   );
 }
-Object.assign(renderCode, { displayName: 'DocsCodeRenderer' });
 
-/** Connects the code block's local controls to its Portable Text state. */
 /**
- * Renders the CodeEditor component.
+ * Connects the code block's local controls to its Portable Text state.
  *
- * @param props - Portable Text editor attributes, nested children, code node, and path used to update code content.
- * @returns The editable code block controls.
+ * @param attrs DOM attributes supplied by the Portable Text editor.
+ * @param children Nested editor content rendered after the CodeMirror surface.
+ * @param node Code block whose source, language, and endpoint are being edited.
+ * @param path Portable Text path targeted by code updates.
+ *
+ * @return The editable code block controls.
  */
 function CodeEditor({
   attributes: attrs,
@@ -79,6 +112,11 @@ function CodeEditor({
   const boundary = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!boundary.current) return;
+    /**
+     * Stops code-editor input and focus events from triggering the parent Portable Text editor.
+     * @param e DOM event originating within the code editor boundary.
+     * @returns No value; the event is stopped before reaching the parent editor.
+     */
     const stop = (e: Event): void => e.stopPropagation();
     const es = [
       'beforeinput',
@@ -115,7 +153,8 @@ function CodeEditor({
                 '[data-docs-code-received][data-state="received"]',
               );
               if (!received) return;
-              const { source: _source, ...localCode } = code;
+              const localCode = { ...code };
+              delete localCode.source;
               editor.send({
                 type: 'set',
                 at: path,
@@ -139,6 +178,12 @@ function CodeEditor({
     };
   }, [code.language, code.source, editor, path]);
   useEffect(() => setEndpoint(code.source ?? ''), [code.source]);
+  /**
+   * Writes the edited code and language while preserving the current API endpoint.
+   * @param val New code text produced by the block editor.
+   * @param lang Language label selected for syntax highlighting.
+   * @returns No value; sends the changed block fields to the Portable Text editor.
+   */
   const update = (val: string, lang = code.language ?? 'text'): void =>
     editor.send({
       type: 'block.set',
@@ -156,10 +201,10 @@ function CodeEditor({
           data-docs-editor-block="code"
         >
           <CodeBlock
-            code={code.value ?? ''}
+            code={typeof code.value === 'string' ? code.value : ''}
             expandAll
             language={code.language ?? 'text'}
-            source={code.source}
+            {...(code.source !== undefined ? { source: code.source } : {})}
             tone="edit"
             onCodeChange={(v) => update(v)}
             onCommit={(v, l) => update(v, l)}
@@ -167,10 +212,7 @@ function CodeEditor({
           />
           {children}
         </div>
-        <Dialog
-          open={endpointDialog !== null}
-          onOpenChange={(open) => !open && setEndpointDialog(null)}
-        >
+        <Dialog open={endpointDialog !== null} onOpenChange={(o) => !o && setEndpointDialog(null)}>
           <DialogContent aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>
@@ -214,4 +256,6 @@ function CodeEditor({
     </ErrorBoundary>
   );
 }
+Object.assign(Code, { displayName: 'DocsCodePreview' });
+Object.assign(renderCode, { displayName: 'DocsCodeRenderer' });
 Object.assign(CodeEditor, { displayName: 'DocsCodeEditor' });

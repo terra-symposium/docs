@@ -1,7 +1,28 @@
-import { colors } from '@terra-symposium/styling';
-import type { DocsAttachment } from '../lib/workspace-types.js';
-import type { CSSProperties, JSX } from 'react';
+/**
+ * src/components/navigation.tsx
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { colors } from '@terra-symposium/styling';
+
+// TYPES
+import type { CSSProperties, JSX } from 'react';
+import type { DocsAttachment } from '../lib/workspace-types.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
+
+/**
+ * One entry in the Docs sidebar tree.
+ *
+ * A section or group can supply `children` without a destination; a leaf supplies `href` or `path`.
+ * Optional description, update time, attachments, and hue carry the metadata shown for that entry.
+ */
 export type DocsNavNode = {
   id?: string;
   path?: string;
@@ -14,6 +35,19 @@ export type DocsNavNode = {
   children?: DocsNavNode[];
 };
 
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Renders the documentation tree as nested links and non-clickable section labels.
+ *
+ * @param nodes Navigation nodes to display in their supplied order.
+ * @param currentPath Current public URL used to mark the active leaf.
+ * @param hue Primary Styling hue used for the navigation accent.
+ *
+ * @return An accessible navigation landmark containing the nested page tree.
+ */
 export function DocsNavigation({
   nodes,
   currentPath,

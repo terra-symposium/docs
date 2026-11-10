@@ -109,7 +109,19 @@ export function markdownToDocsValue(markdown: string, options: DocsBlockOptions 
     const marker = token.raw.trim().match(/^TERRADOCSBLOCK(\d+)PLACEHOLDER$/);
     if (marker) {
       const block = blocks[Number(marker[1])];
-      if (block) result.push(block);
+      if (block) {
+        const previous = result.at(-1);
+        if (
+          (block._type === 'accordion' || block._type === 'tabs') &&
+          previous?._type === block._type &&
+          Array.isArray(previous.items) &&
+          Array.isArray(block.items)
+        ) {
+          previous.items.push(...block.items);
+        } else {
+          result.push(block);
+        }
+      }
       continue;
     }
     if (token.type === 'heading') {

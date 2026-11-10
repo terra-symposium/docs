@@ -56,7 +56,8 @@
     "build": "rm -rf dist/lib && tsc -p config/tsconfig.json && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
     "test:browser": "playwright test --config config/playwright.config.ts",
     "check": "prettier --config config/.prettierrc.json --ignore-path config/.prettierignore --check . && eslint --config config/eslint.config.js . && tsc --noEmit -p config/tsconfig.json && tsc -p config/tsconfig.demo.json",
-    "test": "pnpm run build && node --test test/*.test.mjs && pnpm run test:browser",
+    "test:unit": "pnpm run build && node --test test/*.test.mjs",
+    "test": "pnpm run test:unit && pnpm run test:browser",
     "prepare": "husky config/husky"
   },
   "devDependencies": {

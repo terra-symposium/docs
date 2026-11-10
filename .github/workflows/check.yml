@@ -18,6 +18,7 @@ jobs:
         with:
           node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check
 
@@ -30,6 +31,7 @@ jobs:
         with:
           node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vite build --config config/vite.config.ts
 
@@ -42,6 +44,7 @@ jobs:
         with:
           node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run docs
 
@@ -57,6 +60,7 @@ jobs:
         with:
           node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - uses: Terra-Symposium/standards/packages/testing@3d782b9dfc4cc5b421ccbe395d65aacec9d8956d

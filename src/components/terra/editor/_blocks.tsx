@@ -247,6 +247,31 @@ export function EditorTabsList({
   }[];
   value: string;
 }): React.JSX.Element {
+  if (!onRename && !onDelete && !onAdd) {
+    return (
+      <ErrorBoundary name="EditorTabsList">
+        <Tabs value={a} onValueChange={onValChange}>
+          <TabsList className="mb-0 inline-flex w-full items-center justify-start gap-0 overflow-x-auto">
+            {tabs.map((t) => (
+              <TabsTrigger
+                key={t.value}
+                value={t.value}
+                className={cn(
+                  'group flex min-w-32 items-center gap-1 border-none px-2 py-1 font-bold',
+                  t.value === a && 'bg-primary-3',
+                )}
+              >
+                <strong className="px-1 text-sm font-bold">
+                  {t.title || t.fallback || 'Untitled'}
+                </strong>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary name="EditorTabsList">
       <Tabs value={a} onValueChange={onValChange}>

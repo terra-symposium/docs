@@ -2,29 +2,39 @@ import katex from 'katex';
 import type { JSX, ReactNode } from 'react';
 import { DocsQuizBlock } from './quiz.js';
 import * as TerraQualityRegex from '../lib/terra/regex.mjs';
-import { MarkdownAccordion, MarkdownTabs } from './MarkdownComponents.js';
 import { MarkdownContent } from './MarkdownContent.js';
+import { docsValueToMarkdown } from '../lib/markdown-model.js';
 import { DOCS_BLOCK_TYPES } from '../lib/block-types.js';
-import type { DocsBlockType, RichBlock } from '../lib/block-types.js';
-import { stringifyDocBody } from '../lib/terra/runtime/content/document-markdown.js';
-import type { DocBody } from '../lib/terra/runtime/types.js';
+import type {
+  DocsBlockOptions,
+  DocsBlockType,
+  DocsEditorBlockType,
+  RichBlock,
+} from '../lib/block-types.js';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@terra-symposium/styling/ui';
 
 /** The portable Docs members. A host can disable any member without changing stored data. */
 export { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../lib/block-types.js';
-export type { DocsBlockOptions, DocsBlockType, RichBlock } from '../lib/block-types.js';
+export type {
+  DocsBlockOptions,
+  DocsBlockType,
+  DocsEditorBlockType,
+  RichBlock,
+} from '../lib/block-types.js';
 
 export const DOCS_BLOCK_FIELDS: Record<
-  DocsBlockType,
+  DocsEditorBlockType,
   { name: string; type: 'string' | 'number' | 'boolean' | 'array' | 'object' }[]
 > = {
-  accordion: [
-    { name: 'items', type: 'array' },
-    { name: 'markdown', type: 'string' },
-  ],
-  tabs: [
-    { name: 'items', type: 'array' },
-    { name: 'markdown', type: 'string' },
-  ],
   table: [
     { name: 'header', type: 'string' },
     { name: 'rows', type: 'array' },
@@ -80,11 +90,9 @@ export const DOCS_BLOCK_FIELDS: Record<
   ],
 };
 
-export function defaultDocsBlock(type: DocsBlockType): RichBlock {
+export function defaultDocsBlock(type: DocsEditorBlockType): RichBlock {
   return structuredClone(
     {
-      accordion: { _type: 'accordion', items: [{ title: 'Item', content: [] }] },
-      tabs: { _type: 'tabs', items: [{ title: 'Tab', content: [] }] },
       table: { _type: 'table', header: 'Table', rows: [] },
       callout: { _type: 'callout', kind: 'info', title: 'Note', content: [] },
       code: { _type: 'code', language: 'text', value: '' },
@@ -119,14 +127,29 @@ function sUrl(value: unknown): string | undefined {
   }
 }
 
+function groupItemMarkdown(item: Record<string, unknown>): string {
+  const content = Array.isArray(item.content) ? item.content : [];
+  return content.length
+    ? docsValueToMarkdown(content as Parameters<typeof docsValueToMarkdown>[0])
+    : typeof item.markdown === 'string'
+      ? item.markdown
+      : '';
+}
+
 function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
+  const children =
+    typeof block.children === 'string'
+      ? [{ _type: 'span', text: block.children, marks: [] }]
+      : Array.isArray(block.children)
+        ? block.children
+        : [];
   const style = typeof block.style === 'string' ? block.style : 'normal';
   const Tag = TerraQualityRegex.REGEX_H_2_6_REGEX().test(style)
     ? (style as 'h2' | 'h3' | 'h4' | 'h5' | 'h6')
     : style === 'blockquote'
       ? 'blockquote'
       : 'p';
-  const rendered = (Array.isArray(block.children) ? block.children : []).map((child, i) =>
+  const rendered = children.map((child, i) =>
     (function renderPortableTextChild(child: unknown, key: string): JSX.Element | string | null {
       if (!child || typeof child !== 'object') return null;
       const member = child as Record<string, unknown>;
@@ -178,64 +201,91 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
     );
   return <Tag>{rendered}</Tag>;
 }
-function NestedContent({ value }: { value: unknown }): JSX.Element {
+function NestedContent({
+  value,
+  options,
+}: {
+  value: unknown;
+  options?: DocsBlockOptions | undefined;
+}): JSX.Element {
   if (Array.isArray(value))
     return (
       <>
         {value.map((member, i) => (
-          <NestedContent key={i} value={member} />
+          <NestedContent key={i} value={member} options={options} />
         ))}
       </>
     );
   if (!value || typeof value !== 'object')
-    return typeof value === 'string' ? <MarkdownContent markdown={value} /> : <>{text(value)}</>;
+    return typeof value === 'string' ? (
+      <MarkdownContent markdown={value} options={options} />
+    ) : (
+      <>{text(value)}</>
+    );
 
   const member = value as RichBlock;
   if (member._type === 'block') return <PortableTextBlockView block={member} />;
   if (typeof member._type === 'string' && DOCS_BLOCK_TYPES.includes(member._type as DocsBlockType))
-    return <DocsRichBlock block={member} />;
+    return <DocsRichBlock block={member} options={options} />;
   if (Array.isArray(member.content) && member.content.length)
-    return <NestedContent value={member.content} />;
-  if (typeof member.markdown === 'string') return <MarkdownContent markdown={member.markdown} />;
+    return <NestedContent value={member.content} options={options} />;
+  if (typeof member.markdown === 'string')
+    return <MarkdownContent markdown={member.markdown} options={options} />;
   return <>{text(member)}</>;
 }
 
-function NestedMarkdown({ item }: { item: Record<string, unknown> }): JSX.Element {
-  return (
-    <MarkdownContent
-      markdown={
-        stringifyDocBody(
-          Array.isArray(item.content) ? (item.content as unknown as DocBody) : undefined,
-        ) || (typeof item.markdown === 'string' ? item.markdown : '')
-      }
-    />
-  );
-}
-
 /** Read-only rendering for every reusable Docs member. Unknown data stays in the value. */
-export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
-  const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
+export function DocsRichBlock({
+  block,
+  options,
+}: {
+  block: RichBlock;
+  options?: DocsBlockOptions | undefined;
+}): JSX.Element {
+  if ((block._type === 'tabs' || block._type === 'accordion') && options?.[block._type] === false)
+    return (
+      <pre data-docs-unsupported-block={block._type}>
+        {docsValueToMarkdown([block] as unknown as Parameters<typeof docsValueToMarkdown>[0])}
+      </pre>
+    );
+
   switch (block._type) {
     case 'block':
       return <PortableTextBlockView block={block} />;
-    case 'accordion':
+    case 'tabs': {
+      const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
       return (
-        <MarkdownAccordion
-          items={items.map((i) => ({
-            title: text(i.title),
-            content: <NestedMarkdown item={i} />,
-          }))}
-        />
+        <Tabs defaultValue="tab-0">
+          <TabsList>
+            {items.map((item, index) => (
+              <TabsTrigger key={index} value={`tab-${index}`}>
+                {text(item.title) || `Tab ${index + 1}`}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {items.map((item, index) => (
+            <TabsContent key={index} value={`tab-${index}`}>
+              <MarkdownContent markdown={groupItemMarkdown(item)} options={options} />
+            </TabsContent>
+          ))}
+        </Tabs>
       );
-    case 'tabs':
+    }
+    case 'accordion': {
+      const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
       return (
-        <MarkdownTabs
-          items={items.map((i) => ({
-            title: text(i.title),
-            content: <NestedMarkdown item={i} />,
-          }))}
-        />
+        <Accordion type="multiple">
+          {items.map((item, index) => (
+            <AccordionItem key={index} value={`accordion-${index}`}>
+              <AccordionTrigger>{text(item.title) || `Item ${index + 1}`}</AccordionTrigger>
+              <AccordionContent>
+                <MarkdownContent markdown={groupItemMarkdown(item)} options={options} />
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       );
+    }
     case 'table':
       return (
         <section className="docs-table">
@@ -249,7 +299,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
                     : []
                   ).map((cell, j) => (
                     <td key={j}>
-                      <NestedContent value={cell} />
+                      <NestedContent value={cell} options={options} />
                     </td>
                   ))}
                 </tr>
@@ -270,6 +320,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
               value={
                 content.length ? content : typeof block.markdown === 'string' ? block.markdown : ''
               }
+              options={options}
             />
           </div>
         </aside>

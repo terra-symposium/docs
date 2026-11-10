@@ -85,16 +85,17 @@ const migratedTableFixture = [
 ] satisfies Content;
 
 test(
-  'root editor offers portable blocks and inserts a table from the toolbar',
+  'root editor offers portable blocks without structured tabs or accordions',
   XL_VIEWPORT_TEST,
   async ({ page }) => {
     await openEditor(page, textFixture, { toolbar: true });
     const toolbar = page.getByRole('toolbar', { name: 'Editor controls' });
     await toolbar.getByRole('button', { name: 'Insert content' }).click();
     const blocks = page.getByRole('listbox').getByRole('group', { name: 'Block' });
-    for (const type of ['Tabs', 'Accordion', 'Callout']) {
-      await expect(blocks.getByRole('option', { name: type, exact: true })).toBeVisible();
+    for (const type of ['Tabs', 'Accordion']) {
+      await expect(blocks.getByRole('option', { name: type, exact: true })).toHaveCount(0);
     }
+    await expect(blocks.getByRole('option', { name: 'Callout', exact: true })).toBeVisible();
     await blocks.getByRole('option', { name: 'Table', exact: true }).click();
 
     await expect(page.locator('[data-block="table"]')).toBeVisible();
@@ -155,34 +156,39 @@ test(
 );
 
 test(
-  'nested container editors prevent inserting another recursive container',
+  'legacy groups become Markdown and cannot be reinserted as structured blocks',
   XL_VIEWPORT_TEST,
   async ({ page }) => {
-    const nestedContent = [
-      {
-        _key: 'nested-text',
-        _type: 'block',
-        style: 'normal',
-        markDefs: [],
-        children: [{ _key: 'nested-span', _type: 'span', text: 'Nested text', marks: [] }],
-      },
-    ] satisfies Content;
     const container = {
       _key: 'accordion',
       _type: 'accordion',
-      items: [{ _key: 'item', _type: 'item', title: 'Section', content: nestedContent }],
-    };
+      items: [
+        {
+          _key: 'item',
+          _type: 'item',
+          title: 'Section',
+          content: [
+            {
+              _key: 'nested-text',
+              _type: 'block',
+              style: 'normal',
+              markDefs: [],
+              children: [{ _key: 'nested-span', _type: 'span', text: 'Nested text', marks: [] }],
+            },
+          ],
+        },
+      ],
+    } satisfies Content[number];
 
     await openEditor(page, [container]);
-    await page.getByRole('button', { name: 'Toggle Section', exact: true }).click();
-    await page
-      .locator('[data-block="accordion"]')
-      .getByRole('button', { name: 'Insert content', exact: true })
-      .click();
+    await expect(page.locator('[data-block="accordion"]')).toHaveCount(0);
+    const raw = page.locator('[data-docs-editor-block="Raw Markdown"]');
+    await expect(raw).toContainText('===[Section]');
+
+    await page.getByRole('button', { name: 'Insert content' }).click();
     const menu = page.getByRole('listbox');
-    for (const label of ['Tabs', 'Accordion', 'Callout']) {
+    for (const label of ['Tabs', 'Accordion']) {
       await expect(menu.getByRole('option', { name: label, exact: true })).toHaveCount(0);
     }
-    await expect(menu.getByRole('option', { name: 'Code', exact: true })).toBeVisible();
   },
 );

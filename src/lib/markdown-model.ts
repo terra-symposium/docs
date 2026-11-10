@@ -309,6 +309,8 @@ function enabled(options: DocsBlockOptions, type: string): boolean {
   // not optional rich blocks. Canonical JSON directives let local hosts retain
   // their marks and inline objects without a lossy Markdown round trip.
   if (type === 'block' || type === 'block') return true;
+  // Tabs and accordions are Markdown syntax, not structured editor blocks.
+  if (type === 'accordion' || type === 'tabs') return options[type] !== false;
   return enabledDocsBlocks(options).includes(type as never);
 }
 
@@ -1542,7 +1544,9 @@ function markdownInlineBlock(block: RichBlock): boolean {
       return false;
     links.add(mark._key);
   }
-  return (Array.isArray(block.children) ? block.children : []).every((child) => {
+  if (typeof block.children === 'string') return true;
+  if (!Array.isArray(block.children)) return false;
+  return block.children.every((child) => {
     if (!child || typeof child !== 'object') return false;
     const value = child as Record<string, unknown>;
     if (value._type === 'span') {
@@ -1577,9 +1581,17 @@ function blockContentToMarkdown(block: RichBlock): string {
       )
       .map((mark) => [mark._key, mark.href]),
   );
-  const children = Array.isArray(block.children)
-    ? (block.children as { _type?: string; text?: string; marks?: string[]; code?: string }[])
-    : [];
+  const children: { _type?: string; text?: string; marks?: string[]; code?: string }[] =
+    typeof block.children === 'string'
+      ? [{ _type: 'span', text: block.children, marks: [] }]
+      : Array.isArray(block.children)
+        ? (block.children as {
+            _type?: string;
+            text?: string;
+            marks?: string[];
+            code?: string;
+          }[])
+        : [];
   const readable = children
     .map((child) => {
       if (child._type === 'math') return '$' + String(child.code ?? '') + '$';
@@ -2278,7 +2290,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
           .map(
             (entry) =>
               delimiter +
-              ' [' +
+              '[' +
               (typeof entry.title === 'string' ? entry.title : 'Item').replace(
                 G_CLASS_2_3_4(),
                 '\\]',

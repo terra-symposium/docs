@@ -10,5 +10,4 @@ export { renderMathBlock as _MathBlock } from './_Math.js';
 export { NodesBlock as _NodesBlock } from './_Nodes.js';
 export { Raw as _Raw } from './_Raw.js';
 export { renderTable as _Table } from './_Table.js';
-export { renderSections as _Sections } from './_Tabs.js';
 export { TsDocs as _TsDocs } from './_TsDocs.js';

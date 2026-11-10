@@ -19,8 +19,8 @@ test('authored blocks parse and render through the shared package', () => {
     ['table', '| A | B |\n| --- | --- |\n| 1 | 2 |', '<table'],
     ['table', '<table><tr><th>A</th></tr><tr><td>1</td></tr></table>', '<table'],
     ['code', '```js\nconsole.log(1)\n```', '<code'],
-    ['accordion', '=== [Title]\nBody\n===', 'data-orientation="vertical"'],
-    ['tabs', '||| [Tab]\nBody\n|||', 'role="tablist"'],
+    ['accordion', '===[Title]\nBody\n===', 'data-orientation="vertical"'],
+    ['tabs', '|||[Tab]\nBody\n|||', 'role="tablist"'],
     ['nodes', '<Nodes nodes={`[{"id":"a","data":{"title":"A"}}]`} edges={`[]`} />', 'docs-diagram'],
     ['embed', '<Embed src="https://example.com" title="Example" />', '<iframe'],
   ];
@@ -44,11 +44,11 @@ test('canonical component scanning converts supported source without touching co
 test('fenced authoring examples stay literal and do not leak parser placeholders', () => {
   const source = [
     '```md',
-    '=== [Further detail]',
+    '===[Further detail]',
     'Supporting explanation.',
     '===',
     '',
-    '||| [Linux]',
+    '|||[Linux]',
     'Linux instructions.',
     '|||',
     '```',
@@ -56,13 +56,13 @@ test('fenced authoring examples stay literal and do not leak parser placeholders
   const value = markdownToDocsValue(source);
   assert.equal(value.length, 1);
   assert.equal(value[0]?._type, 'code');
-  assert.match(value[0].value, /=== \[Further detail\]/);
-  assert.match(value[0].value, /\|\|\| \[Linux\]/);
+  assert.match(value[0].value, /===\[Further detail\]/);
+  assert.match(value[0].value, /\|\|\|\[Linux\]/);
   assert.doesNotMatch(renderMarkdown(source), /DOCSBLOCK|DOCSFENCE/);
 });
 
 test('accordion bodies can contain fenced delimiter examples', () => {
-  const source = ['=== [Details]', '```md', '===', '```', 'More detail.', '==='].join('\n');
+  const source = ['===[Details]', '```md', '===', '```', 'More detail.', '==='].join('\n');
   const value = markdownToDocsValue(source);
   assert.equal(value[0]?._type, 'accordion');
   assert.equal(value[0].items[0].content[0]?._type, 'code');

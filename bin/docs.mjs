@@ -13,6 +13,7 @@ import { parse } from 'yaml';
 import { spawn } from 'node:child_process';
 import { watch } from 'node:fs';
 import { createConsumerProject } from '../site/project-config.mjs';
+import { parseDocsArguments } from './arguments.mjs';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../src/lib/terra/regex.mjs';
@@ -37,12 +38,18 @@ const args = [
     resolve(dirname(fileURLToPath(import.meta.url)), '..', 'site/config/astro.config.mjs'),
   ),
 ];
-const options = new Map();
-const passthrough = [];
 const docsRoot = resolve(root, 'docs');
 const publicRoot = resolve(root, 'dist/public');
 const publicAssetsRoot = resolve(publicRoot, '_docs/assets');
 const docsConfig = consumerProject.manifest.docs ?? {};
+let parsedArguments;
+try {
+  parsedArguments = parseDocsArguments(process.argv.slice(3));
+} catch (error) {
+  console.error(error.message);
+  process.exit(2);
+}
+const { options, passthrough } = parsedArguments;
 const searchIndexPath = resolve(publicRoot, '_docs/search-index.json');
 const excludedDirs = new Set(['node_modules', '.astro', 'dist']);
 const configuredAgents = docsConfig.includeAgents ?? docsConfig.includeSkills ?? true;
@@ -178,32 +185,6 @@ async function buildSearchIndex() {
 function isAgentsContent(relativePath) {
   const norm = relativePath.split(sep).join('/');
   return norm === 'agents' || norm.startsWith('agents/');
-}
-for (let index = 3; index < process.argv.length; index += 1) {
-  const argument = process.argv[index];
-  if (
-    [
-      '--title',
-      '--description',
-      '--site',
-      '--base',
-      '--out',
-      '--port',
-      '--host',
-      '--skills',
-      '--agents',
-    ].includes(argument)
-  ) {
-    const value = process.argv[index + 1];
-    if (!value || value.startsWith('--')) {
-      console.error(`Missing value for ${argument}`);
-      process.exit(2);
-    }
-    options.set(argument, value);
-    index += 1;
-  } else {
-    passthrough.push(argument);
-  }
 }
 if (typeof configuredAgents !== 'boolean')
   throw new Error('package.json docs.includeAgents must be true or false');

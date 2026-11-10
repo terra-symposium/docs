@@ -19,6 +19,7 @@ import {
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { parseDocsArguments } from '../bin/arguments.mjs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 
@@ -126,4 +127,25 @@ test('Docs CLI validates its mode before starting Astro with the resolved option
   assert.equal(result.status, 2);
   assert.match(output, /Usage: docs/);
   assert.doesNotMatch(output, /includeAgents|ReferenceError/);
+});
+test('Docs CLI parses server and content options before resolving their defaults', () => {
+  const { options, passthrough } = parseDocsArguments([
+    '--port',
+    '2050',
+    '--host',
+    '127.0.0.1',
+    '--base',
+    '/standards/',
+    '--agents',
+    'false',
+    '--strictPort',
+  ]);
+  assert.equal(options.get('--port'), '2050');
+  assert.equal(options.get('--host'), '127.0.0.1');
+  assert.equal(options.get('--base'), '/standards/');
+  assert.equal(options.get('--agents'), 'false');
+  assert.deepEqual(passthrough, ['--strictPort']);
+});
+test('Docs CLI reports missing option values without producing a stack trace', () => {
+  assert.throws(() => parseDocsArguments(['--port']), /Missing value for --port/);
 });

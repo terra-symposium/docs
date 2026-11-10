@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs';
 import { extname, relative, resolve, sep } from 'node:path';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../src/lib/terra/regex.mjs';
+import * as TerraQualityRegex from '../src/lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -123,9 +123,11 @@ export function docsContentPlugin({ root, base }) {
     enforce: 'pre',
     /**
      * Rewrites local documentation links and asset URLs before Markdown compilation.
+     *
      * @param source Markdown or MDX file contents.
      * @param id Absolute source filename with any Vite query suffix.
-     * @returns Transformed source for files under `docs/`, or `null` for unrelated modules.
+     *
+     * @return Transformed source for files under `docs/`, or `null` for unrelated modules.
      */
     transform(source, id) {
       if (id.includes('?') || !markdownExts.has(extname(id).toLowerCase())) return null;

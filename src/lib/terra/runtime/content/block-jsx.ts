@@ -1,6 +1,17 @@
-/** Converts supported Docs block markers to and from JSX wrappers. */
-import * as TerraQualityRegex from '../../regex.mjs';
+/**
+ * src/lib/terra/runtime/content/block-jsx.ts
+ * Converts supported Docs block markers to and from JSX wrappers.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { codeJsx, quote } from './markdown.js';
+
+// COMPONENTS
+import * as TerraQualityRegex from '../../regex.mjs';
 
 /*//////////////////////////////////////////////////
 BLOCK SYNTAX
@@ -83,16 +94,15 @@ export function fromBlockJsx(jsx: string): string {
     if (result.includes('<pre><code'))
       result = result.replace(
         TerraQualityRegex.REGEX_PRE_CODE_S_CLASS_LANGUAGE_S_S_CODE_PRE_GI_REGEX(),
-        (_, language: string, value: string) => codeJsx(language || '', value),
+        (_, l: string, v: string) => codeJsx(l || '', v),
       );
     result = result.replace(
       TerraQualityRegex.REGEX_CODE_B_S_S_S_CODE_S_S_S_G_REGEX(),
-      (_match, props: string, content: string, expression: string | undefined) =>
-        `<Code${props} source=${quote(expression !== undefined ? expression.replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1') : content)} />`,
+      (_match, p: string, c: string, e: string | undefined) =>
+        `<Code${p} source=${quote(e !== undefined ? e.replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1') : c)} />`,
     );
     return blocks.reduce(
-      (source, block, blockIndex) =>
-        source.replace(new RegExp(`TERRA_PROTECTED_${blockIndex}__`, 'g'), block),
+      (s, b, v) => s.replace(new RegExp(`TERRA_PROTECTED_${v}__`, 'g'), b),
       result,
     );
   })()

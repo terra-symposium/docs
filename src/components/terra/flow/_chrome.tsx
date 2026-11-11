@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/flow/_chrome.tsx
+ * src/components/terra/flow/_chrome.tsx
  * Shared React Flow presentation primitives.
  */
 
@@ -9,94 +8,15 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
-import {
-  applyEdgeChanges,
-  applyNodeChanges,
-  getSmoothStepPath,
-  useInternalNode,
-  useNodeConnections,
-  useStore,
-} from '@xyflow/react';
-import {
-  canonicalId,
-  cn,
-  isNumber,
-  isRec,
-  normArcGraph,
-  resolvedEdges,
-} from '../../../lib/terra/runtime/runtime.js';
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { cn, isRec } from '../../../lib/terra/runtime/runtime.js';
 
 // COMPONENTS
-import {
-  Background,
-  BackgroundVariant,
-  BaseEdge,
-  EdgeLabelRenderer,
-  Handle,
-  Position as HandlePos,
-  ReactFlow,
-  ReactFlowProvider,
-} from '@xyflow/react';
-import { Card, CardDescription } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../ui.js';
-import { Textarea } from '@terra-symposium/styling/ui';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@terra-symposium/styling/ui';
+import { Handle, Position as HandlePos } from '@xyflow/react';
 
 // TYPES
-// TYPES
-import type {
-  ArcCanvasEls,
-  ArcCanvasNodeData,
-  ArcFn,
-  ArcGraph,
-  ArcGraphEdge,
-  ArcGraphNode,
-  FlowCtxMenuState,
-  FlowNodeLike,
-  FlowProblem,
-  FlowProblemNodeData,
-  FlowSize,
-  FlowSkin,
-  FlowTone,
-  GroupNodeData,
-  Pos,
-  Problem,
-} from '../../../lib/terra/runtime/types.js';
-import type {
-  ComponentPropsWithoutRef,
-  ComponentType,
-  CSSProperties,
-  ElementType,
-  MouseEvent,
-  MouseEventHandler,
-  ReactNode,
-} from 'react';
-import type {
-  Connection,
-  Edge,
-  EdgeChange,
-  EdgeProps,
-  Node,
-  NodeChange,
-  NodeProps,
-  Position as HandlePosition,
-  ReactFlowInstance,
-  XYPosition,
-} from '@xyflow/react';
+import type { ComponentPropsWithoutRef, ElementType, JSX } from 'react';
+import type { FlowNodeLike, Pos } from '../../../lib/terra/runtime/types.js';
 
 /*//////////////////////////////////////////////////
 LAYOUT
@@ -142,7 +62,10 @@ export function getNodeSize(
     erdHeight: 60,
   },
   extraHeight?: (n: FlowNodeLike) => number | undefined,
-): FlowSize {
+): {
+  w: number;
+  h: number;
+} {
   const style: Record<string, unknown> = isRec(n.style) ? n.style : {};
   const width = Number(
     n.measured?.width ??
@@ -166,19 +89,6 @@ export function getNodeSize(
   };
 }
 
-/**
- * Lays out a graph with Dagre and reprojects the result back to the node model.
- *
- * @param nodes - Nodes to position.
- * @param edges - Graph connections rendered and updated by layout graph.
- * @param direction - Layout direction that arranges layout graph's graph.
- * @param nodeSep - Spacing between nodes on the same rank.
- * @param rankSep - Spacing between ranks.
- * @param opts - Layout hooks that adapt the generic Dagre result to the caller's node model.
- *
- * @returns Positioned nodes and the resulting graph height.
- */
-
 /*//////////////////////////////////////////////////
 NODE CHROME
 //////////////////////////////////////////////////*/
@@ -186,10 +96,9 @@ NODE CHROME
 /**
  * Renders all handles for a node based on editability and required directions.
  *
- * @param props - Editable state and source/target handle positions that determine which connection points are active.
- * @param sources - Required source handle directions.
- * @param tgts - Required target handle directions.
- * @param editable - Editability flag controlling whether handles accepts changes.
+ * @param editable Whether every handle should accept connections.
+ * @param srcs Required source-side handle positions shown when the node is read-only.
+ * @param tgts Required target-side handle positions shown when the node is read-only.
  *
  * @return The full handle set for a node.
  */
@@ -243,10 +152,10 @@ export function Handles({
 /**
  * Renders the compact skeleton card used while a flow is resolving.
  *
- * @param props - Polymorphic card props.
- * @param as - As input supplied to skeleton card's operation.
- * @param className - Additional CSS classes merged into skeleton card.
- * @param style - Inline style values merged into skeleton card.
+ * @param as HTML element used for the skeleton card, defaulting to a `div`.
+ * @param className Additional classes merged onto the selected element.
+ * @param style Inline presentation values forwarded to the selected element.
+ * @param htmlAttrs Native element attributes forwarded to the card, including accessibility labels and event handlers.
  *
  * @return The loading skeleton card.
  */
@@ -254,7 +163,7 @@ export function SkeletonCard<T extends ElementType = 'div'>({
   as = 'div' as T,
   className,
   style,
-  ...props
+  ...htmlAttrs
 }: { as?: T; className?: string } & Omit<
   ComponentPropsWithoutRef<T>,
   'as' | 'className' | 'children'
@@ -263,7 +172,7 @@ export function SkeletonCard<T extends ElementType = 'div'>({
   return (
     <ErrorBoundary name="SkeletonCard">
       <Element
-        {...props}
+        {...htmlAttrs}
         className={cn(
           'relative flex h-16 items-center justify-center overflow-visible rounded-md border-2 px-3 py-2 shadow-sm',
           className,

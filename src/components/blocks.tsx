@@ -1,35 +1,35 @@
+/**
+ * src/components/blocks.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import katex from 'katex';
-import type { JSX, ReactNode } from 'react';
-import { DocsQuizBlock } from './quiz.js';
-import * as TerraQualityRegex from '../lib/terra/regex.mjs';
-import { MarkdownContent } from './MarkdownContent.js';
 import { docsValueToMarkdown } from '../lib/markdown-model.js';
+
+// COMPONENTS
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
+import { DocsQuizBlock } from './quiz.js';
+import { DocsMarkdown } from './MarkdownContent.js';
+
+// DATA
 import { DOCS_BLOCK_TYPES } from '../lib/block-types.js';
+
+// TYPES
 import type {
   DocsBlockOptions,
   DocsBlockType,
   DocsEditorBlockType,
   RichBlock,
 } from '../lib/block-types.js';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@terra-symposium/styling/ui';
+import type { JSX, ReactNode } from 'react';
 
-/** The portable Docs members. A host can disable any member without changing stored data. */
-export { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../lib/block-types.js';
-export type {
-  DocsBlockOptions,
-  DocsBlockType,
-  DocsEditorBlockType,
-  RichBlock,
-} from '../lib/block-types.js';
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 export const DOCS_BLOCK_FIELDS: Record<
   DocsEditorBlockType,
@@ -90,6 +90,15 @@ export const DOCS_BLOCK_FIELDS: Record<
   ],
 };
 
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Creates a fresh default payload for one supported Docs editor block type.
+ * @param type Editor block type to initialize.
+ * @returns A cloned rich block with its required fields and empty editable content.
+ */
 export function defaultDocsBlock(type: DocsEditorBlockType): RichBlock {
   return structuredClone(
     {
@@ -107,15 +116,26 @@ export function defaultDocsBlock(type: DocsEditorBlockType): RichBlock {
   );
 }
 
-function text(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value.map(text).join(' ');
-  if (value && typeof value === 'object') {
-    const item = value as Record<string, unknown>;
+/**
+ * Extracts display text recursively from strings, arrays, and common rich-content fields.
+ * @param v Value, nested content, or rich block to read.
+ * @returns Human-readable text, with array entries separated by spaces.
+ */
+function text(v: unknown): string {
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) return v.map(text).join(' ');
+  if (v && typeof v === 'object') {
+    const item = v as Record<string, unknown>;
     return text(item.markdown ?? item.text ?? item.children ?? item.content ?? '');
   }
   return '';
 }
+
+/**
+ * Accepts HTTP, HTTPS, and mailto destinations while rejecting other protocols.
+ * @param value Candidate URL, including a permitted relative URL.
+ * @returns The original non-empty URL string when its resolved protocol is allowed, otherwise `undefined`.
+ */
 function sUrl(value: unknown): string | undefined {
   if (typeof value !== 'string' || !value.trim()) return undefined;
   try {
@@ -127,15 +147,11 @@ function sUrl(value: unknown): string | undefined {
   }
 }
 
-function groupItemMarkdown(item: Record<string, unknown>): string {
-  const content = Array.isArray(item.content) ? item.content : [];
-  return content.length
-    ? docsValueToMarkdown(content as Parameters<typeof docsValueToMarkdown>[0])
-    : typeof item.markdown === 'string'
-      ? item.markdown
-      : '';
-}
-
+/**
+ * Renders a Portable Text block with its style, decorators, links, lists, and inline math.
+ * @param block Text block and its optional children, marks, and link definitions.
+ * @returns A semantic heading, paragraph, list, blockquote, or inline-content element.
+ */
 function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
   const children =
     typeof block.children === 'string'
@@ -149,44 +165,44 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
     : style === 'blockquote'
       ? 'blockquote'
       : 'p';
-  const rendered = children.map((child, i) =>
-    (function renderPortableTextChild(child: unknown, key: string): JSX.Element | string | null {
-      if (!child || typeof child !== 'object') return null;
-      const member = child as Record<string, unknown>;
-      if (member._type === 'math') return <DocsRichBlock key={key} block={member as RichBlock} />;
-      if (member._type !== 'span') return null;
-
-      let node: ReactNode = (typeof member.text === 'string' ? member.text : '')
-        .split('\n')
-        .flatMap((line, i) => (i ? [<br key={`${key}-br-${i}`} />, line] : [line]));
-      for (const mark of Array.isArray(member.marks) ? member.marks : []) {
-        if (typeof mark !== 'string') continue;
-        if (mark === 'strong') node = <strong key={`${key}-strong`}>{node}</strong>;
-        else if (mark === 'em') node = <em key={`${key}-em`}>{node}</em>;
-        else if (mark === 'underline') node = <u key={`${key}-underline`}>{node}</u>;
-        else if (mark === 'strike-through') node = <del key={`${key}-strike`}>{node}</del>;
-        else if (mark === 'code') node = <code key={`${key}-code`}>{node}</code>;
-        else {
-          const href = sUrl(
-            (Array.isArray(block.markDefs) ? block.markDefs : []).find(
-              (definition) =>
-                definition &&
-                typeof definition === 'object' &&
-                typeof definition._key === 'string' &&
-                definition._key === mark,
-            )?.href,
+  /**
+   * Renders one Portable Text span or inline math child with its marks and link definitions.
+   * @param child Portable Text child value supplied by the host document.
+   * @param key Stable React key derived from the parent block position.
+   * @returns The supported inline element, plain text, or `null` for unsupported child types.
+   */
+  const renderPortableTextChild = (child: unknown, key: string): JSX.Element | string | null => {
+    if (!child || typeof child !== 'object') return null;
+    const member = child as Record<string, unknown>;
+    if (member._type === 'math') return <DocsRichBlock key={key} block={member as RichBlock} />;
+    if (member._type !== 'span') return null;
+    let node: ReactNode = (typeof member.text === 'string' ? member.text : '')
+      .split('\n')
+      .flatMap((l, i) => (i ? [<br key={`${key}-br-${i}`} />, l] : [l]));
+    for (const mark of Array.isArray(member.marks) ? member.marks : []) {
+      if (typeof mark !== 'string') continue;
+      if (mark === 'strong') node = <strong key={`${key}-strong`}>{node}</strong>;
+      else if (mark === 'em') node = <em key={`${key}-em`}>{node}</em>;
+      else if (mark === 'underline') node = <u key={`${key}-underline`}>{node}</u>;
+      else if (mark === 'strike-through') node = <del key={`${key}-strike`}>{node}</del>;
+      else if (mark === 'code') node = <code key={`${key}-code`}>{node}</code>;
+      else {
+        const href = sUrl(
+          (Array.isArray(block.markDefs) ? block.markDefs : []).find(
+            (d) => d && typeof d === 'object' && typeof d._key === 'string' && d._key === mark,
+          )?.href,
+        );
+        if (href)
+          node = (
+            <a key={`${key}-link`} href={href}>
+              {node}
+            </a>
           );
-          if (href)
-            node = (
-              <a key={`${key}-link`} href={href}>
-                {node}
-              </a>
-            );
-        }
       }
-      return <span key={key}>{node}</span>;
-    })(child, `portable-${i}`),
-  );
+    }
+    return <span key={key}>{node}</span>;
+  };
+  const rendered = children.map((c, i) => renderPortableTextChild(c, `portable-${i}`));
   if (block.listItem === 'bullet')
     return (
       <ul>
@@ -201,6 +217,13 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
     );
   return <Tag>{rendered}</Tag>;
 }
+
+/**
+ * Recursively renders nested rich content, falling back to Markdown or readable text for unknown shapes.
+ * @param value Nested Docs value, block, Markdown string, or scalar content.
+ * @param options Optional feature flags passed into nested Markdown and block rendering.
+ * @returns Rendered child nodes for the nested value.
+ */
 function NestedContent({
   value,
   options,
@@ -211,18 +234,17 @@ function NestedContent({
   if (Array.isArray(value))
     return (
       <>
-        {value.map((member, i) => (
-          <NestedContent key={i} value={member} options={options} />
+        {value.map((m, i) => (
+          <NestedContent key={i} value={m} options={options} />
         ))}
       </>
     );
   if (!value || typeof value !== 'object')
     return typeof value === 'string' ? (
-      <MarkdownContent markdown={value} options={options} />
+      <DocsMarkdown markdown={value} options={options} />
     ) : (
       <>{text(value)}</>
     );
-
   const member = value as RichBlock;
   if (member._type === 'block') return <PortableTextBlockView block={member} />;
   if (typeof member._type === 'string' && DOCS_BLOCK_TYPES.includes(member._type as DocsBlockType))
@@ -230,11 +252,17 @@ function NestedContent({
   if (Array.isArray(member.content) && member.content.length)
     return <NestedContent value={member.content} options={options} />;
   if (typeof member.markdown === 'string')
-    return <MarkdownContent markdown={member.markdown} options={options} />;
+    return <DocsMarkdown markdown={member.markdown} options={options} />;
   return <>{text(member)}</>;
 }
 
-/** Read-only rendering for every reusable Docs member. Unknown data stays in the value. */
+/**
+ * Read-only rendering for every reusable Docs member. Unknown data stays in the value.
+ *
+ * @param block Rich block value to render, including its type-specific fields.
+ * @param options Optional rich-block feature flags for nested content.
+ * @returns The read-only React representation of the block; disabled tabs and accordions retain their Markdown source.
+ */
 export function DocsRichBlock({
   block,
   options,
@@ -242,60 +270,27 @@ export function DocsRichBlock({
   block: RichBlock;
   options?: DocsBlockOptions | undefined;
 }): JSX.Element {
-  if ((block._type === 'tabs' || block._type === 'accordion') && options?.[block._type] === false)
-    return (
-      <pre data-docs-unsupported-block={block._type}>
-        {docsValueToMarkdown([block] as unknown as Parameters<typeof docsValueToMarkdown>[0])}
-      </pre>
-    );
-
+  if (block._type === 'tabs' || block._type === 'accordion') {
+    const markdown = docsValueToMarkdown([block] as unknown as Parameters<
+      typeof docsValueToMarkdown
+    >[0]);
+    if (options?.[block._type] === false)
+      return <pre data-docs-unsupported-block={block._type}>{markdown}</pre>;
+    return <DocsMarkdown markdown={markdown} options={options} />;
+  }
   switch (block._type) {
     case 'block':
       return <PortableTextBlockView block={block} />;
-    case 'tabs': {
-      const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
-      return (
-        <Tabs defaultValue="tab-0">
-          <TabsList>
-            {items.map((item, index) => (
-              <TabsTrigger key={index} value={`tab-${index}`}>
-                {text(item.title) || `Tab ${index + 1}`}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {items.map((item, index) => (
-            <TabsContent key={index} value={`tab-${index}`}>
-              <MarkdownContent markdown={groupItemMarkdown(item)} options={options} />
-            </TabsContent>
-          ))}
-        </Tabs>
-      );
-    }
-    case 'accordion': {
-      const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
-      return (
-        <Accordion type="multiple">
-          {items.map((item, index) => (
-            <AccordionItem key={index} value={`accordion-${index}`}>
-              <AccordionTrigger>{text(item.title) || `Item ${index + 1}`}</AccordionTrigger>
-              <AccordionContent>
-                <MarkdownContent markdown={groupItemMarkdown(item)} options={options} />
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      );
-    }
     case 'table':
       return (
         <section className="docs-table">
           <strong>{text(block.header)}</strong>
           <table>
             <tbody>
-              {(Array.isArray(block.rows) ? block.rows : []).map((row, i) => (
+              {(Array.isArray(block.rows) ? block.rows : []).map((r, i) => (
                 <tr key={i}>
-                  {(Array.isArray((row as Record<string, unknown>).cells)
-                    ? ((row as Record<string, unknown>).cells as unknown[])
+                  {(Array.isArray((r as Record<string, unknown>).cells)
+                    ? ((r as Record<string, unknown>).cells as unknown[])
                     : []
                   ).map((cell, j) => (
                     <td key={j}>
@@ -366,18 +361,23 @@ export function DocsRichBlock({
         <div className="docs-math" aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
       );
     }
-    case 'nodes':
-      return (function Diagram(block: RichBlock): JSX.Element {
+    case 'nodes': {
+      /**
+       * Renders a simple flow diagram from the node and edge data stored in a rich block.
+       * @param block Rich block containing optional nodes, edges, direction, and label fields.
+       * @returns An accessible figure whose SVG positions follow the requested orientation.
+       */
+      const renderDiagram = (block: RichBlock): JSX.Element => {
         const nodes = (Array.isArray(block.nodes) ? block.nodes : []).filter(
-          (node): node is Record<string, unknown> => Boolean(node) && typeof node === 'object',
+          (n): n is Record<string, unknown> => Boolean(n) && typeof n === 'object',
         );
         const edges = (Array.isArray(block.edges) ? block.edges : []).filter(
-          (edge): edge is Record<string, unknown> => Boolean(edge) && typeof edge === 'object',
+          (e): e is Record<string, unknown> => Boolean(e) && typeof e === 'object',
         );
         const horizontal = block.direction === 'LR';
         const positions = new Map(
-          nodes.map((node, i) => [
-            String(node.id ?? i),
+          nodes.map((n, i) => [
+            String(n.id ?? i),
             horizontal ? { x: 90 + i * 180, y: 70 } : { x: 160, y: 70 + i * 100 },
           ]),
         );
@@ -400,9 +400,9 @@ export function DocsRichBlock({
                   <path d="M0 0 L8 4 L0 8 Z" fill="currentColor" />
                 </marker>
               </defs>
-              {edges.map((edge, i) => {
-                const from = positions.get(String(edge.source ?? ''));
-                const to = positions.get(String(edge.target ?? ''));
+              {edges.map((e, i) => {
+                const from = positions.get(String(e.source ?? ''));
+                const to = positions.get(String(e.target ?? ''));
                 return from && to ? (
                   <line
                     key={i}
@@ -415,8 +415,8 @@ export function DocsRichBlock({
                   />
                 ) : null;
               })}
-              {nodes.map((node, i) => {
-                const point = positions.get(String(node.id ?? i))!;
+              {nodes.map((n, i) => {
+                const point = positions.get(String(n.id ?? i))!;
                 return (
                   <g key={i}>
                     <rect
@@ -430,9 +430,9 @@ export function DocsRichBlock({
                     />
                     <text x={point.x} y={point.y + 5} textAnchor="middle">
                       {text(
-                        (node.data && typeof node.data === 'object'
-                          ? (node.data as Record<string, unknown>).title
-                          : undefined) ?? node.id,
+                        (n.data && typeof n.data === 'object'
+                          ? (n.data as Record<string, unknown>).title
+                          : undefined) ?? n.id,
                       )}
                     </text>
                   </g>
@@ -444,9 +444,14 @@ export function DocsRichBlock({
             </figcaption>
           </figure>
         );
-      })(block);
-    case 'raw':
-      return <pre>{text(block.markdown)}</pre>;
+      };
+      return renderDiagram(block);
+    }
+    case 'raw': {
+      const markdown = text(block.markdown);
+      if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(markdown.trim())) return <hr data-docs-raw-divider />;
+      return <pre>{markdown}</pre>;
+    }
     case 'tsDocs':
       return (
         <section className="docs-tsdocs">
@@ -462,3 +467,12 @@ export function DocsRichBlock({
       );
   }
 }
+
+/** The portable Docs members. A host can disable any member without changing stored data. */
+export { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../lib/block-types.js';
+export type {
+  DocsBlockOptions,
+  DocsBlockType,
+  DocsEditorBlockType,
+  RichBlock,
+} from '../lib/block-types.js';

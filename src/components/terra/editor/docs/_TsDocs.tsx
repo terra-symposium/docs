@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/_TsDocs.tsx
+ * src/components/terra/editor/docs/_TsDocs.tsx
  */
 
 /*//////////////////////////////////////////////////
@@ -14,24 +13,22 @@ import { useEffect, useState } from 'react';
 
 // COMPONENTS
 import { AlertError } from '@terra-symposium/styling/ui';
-import { ErrorBoundary } from '../../ui.js';
-import { Empty } from '../../ui.js';
+import { Empty, ErrorBoundary } from '../../ui.js';
 import { TerraContentEditor } from './_editor.js';
 
 // TYPES
+import type { Content as ContentData, TsDocsItem } from '../../../../lib/terra/runtime/types.js';
 import type { DocsBlock } from '../types.js';
-import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
-import type { TsDocsItem } from '../../../../lib/terra/runtime/types.js';
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
-/** Loads and renders TypeScript documentation for a selected scope. */
 /**
- * Renders the TsDocsRenderer component.
+ * Loads and renders TypeScript documentation for a selected scope.
  *
- * @param props - Optional API documentation scope and styling class used to load the reference panel.
+ * @param scope Package or symbol scope whose TypeScript reference entries should be loaded.
+ * @param className Additional class applied to the rendered reference panel.
  *
  * @return The API reference panel, or `null` when no scope is selected.
  */
@@ -127,7 +124,6 @@ function TsDocsRenderer({
             <TerraContentEditor
               content={d.body as unknown as ContentData}
               docsAttachments={[]}
-              memberProfile="docs"
               nested
               readOnly
             />
@@ -137,12 +133,11 @@ function TsDocsRenderer({
     </ErrorBoundary>
   );
 }
-Object.assign(TsDocsRenderer, { displayName: 'TsDocsRenderer' });
 
 /**
  * Renders the ts docs component.
  *
- * @param props - TypeScript documentation block data and rendering props.
+ * @param block TypeScript Docs block selecting the API scope to display.
  *
  * @return Rendered TypeScript documentation content.
  */
@@ -157,4 +152,5 @@ export function TsDocs({
     </ErrorBoundary>
   );
 }
+Object.assign(TsDocsRenderer, { displayName: 'TsDocsRenderer' });
 Object.assign(TsDocs, { displayName: 'TsDocs' });

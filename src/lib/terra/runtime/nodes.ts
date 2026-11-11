@@ -1,5 +1,5 @@
 /**
- * astro/src/actions/docs/nodes.ts
+ * src/lib/terra/runtime/nodes.ts
  * Pure utility functions for parsing and rendering node blocks.
  * Extracted from the React component to prevent circular dependencies.
  */
@@ -118,9 +118,9 @@ const NODES = {
     tag: /<Nodes\b[\s\S]*?\/>/g,
     meta: /\b(nodes|edges|direction|height|nodeSep|rankSep|proximityConnect)=\{metadata\.([A-Za-z0-9_$]+)\}/g,
   },
-  inline: (content: string, meta: Md = {}): string => {
-    trace('inline.start', { length: content.length });
-    const n = content
+  inline: (r: string, m: Md = {}): string => {
+    trace('inline.start', { length: r.length });
+    const n = r
       ?.replace(NODES.rx.import, '')
       ?.replace(NODES.rx.tag, (c) => {
         const vals: Record<string, boolean | string | undefined> = {};
@@ -202,7 +202,7 @@ const NODES = {
             const trimmed = content.trim();
             const key = trimmed.match(/^metadata\.([A-Za-z0-9_$]+)$/)?.[1];
             if (key) {
-              result[NODES.keys[field.key]] = meta[key];
+              result[NODES.keys[field.key]] = m[key];
             } else result[NODES.keys[field.key]] = scalar(trimmed);
           }
         }
@@ -319,7 +319,7 @@ const NODES = {
         );
       });
     trace('inline.complete', {
-      inputLength: content.length,
+      inputLength: r.length,
       outputLength: n?.length ?? 0,
       hasNodes: n?.includes('<Nodes'),
     });
@@ -330,11 +330,14 @@ const NODES = {
 /**
  * Encodes node payload arrays into a serializer-safe string literal.
  *
+ * @param val
+ * @param value - Node or edge array to encode for safe serializer round-tripping.
+ *
+ * @return
+ *
  * @remarks
  * A template literal keeps the payload readable while preventing mdxeditor from compacting the
  * payload back into a raw array expression during code/edit round-trips.
- *
- * @param value - Node or edge array to encode for safe serializer round-tripping.
  */
 export const encodeNodesPayload = (val: unknown): string =>
   `\`${(Array.isArray(val) ? `[\n${val.map((i) => `    ${literal(i)}`).join(',\n')}\n  ]` : '[]')
@@ -345,10 +348,13 @@ export const encodeNodesPayload = (val: unknown): string =>
 /**
  * Decodes a serializer-safe node payload back into arrays.
  *
+ * @param val
+ * @param value - Serialized node payload in array, JSON, or quoted literal form.
+ *
+ * @return
+ *
  * @remarks
  * Accepts raw arrays, JSON strings, backtick-wrapped literals, and the newer quoted payload.
- *
- * @param value - Serialized node payload in array, JSON, or quoted literal form.
  */
 export const decodeNodesPayload = (val: unknown): unknown[] => {
   if (Array.isArray(val)) return val;
@@ -374,7 +380,6 @@ export const decodeNodesPayload = (val: unknown): unknown[] => {
     return [];
   }
 };
-
 const FIELDS = new Map<string, Field>(NODES.fields.map((f) => [f.key, f]));
 
 /*//////////////////////////////////////////////////
@@ -386,18 +391,17 @@ FUNCTIONS
  *
  * @param v - Value to stringify.
  *
- * @returns A one-line literal that stays readable inside MDX attribute shells.
+ * @return A one-line literal that stays readable inside MDX attribute shells.
  *
  * @remarks Keeps serialized node metadata compact enough to embed inside MDX attributes.
  */
 const literal = (v: unknown): string => {
   if (Array.isArray(v)) return `[${v.map(literal).join(', ')}]`;
-  if (v && typeof v === 'object') {
+  if (v && typeof v === 'object')
     return `{ ${Object.entries(v as Record<string, unknown>)
       .sort(([l], [r]) => l.localeCompare(r))
       .map(([k, e]) => `${JSON.stringify(k)}: ${literal(e)}`)
       .join(', ')} }`;
-  }
   if (typeof v === 'string') return JSON.stringify(v);
   if (typeof v === 'number' || typeof v === 'boolean') return `${v}`;
   if (v === null) return 'null';
@@ -407,9 +411,10 @@ const literal = (v: unknown): string => {
 /**
  * Interprets a plain scalar string without forcing object or array parsing.
  *
+ * @param val
  * @param value - Scalar text to interpret.
  *
- * @returns Scalar value, or the original string when it should remain a literal label.
+ * @return Scalar value, or the original string when it should remain a literal label.
  *
  * @remarks The scalar path preserves plain strings unless they clearly parse as another primitive.
  */
@@ -437,7 +442,7 @@ const scalar = (val: string): unknown => {
  *
  * @param vals - Normalized node payload.
  *
- * @returns Rendered `Nodes` JSX string used by the editor and source view.
+ * @return Rendered `Nodes` JSX string used by the editor and source view.
  *
  * @remarks The rendered tag shape matches the editor-side `Nodes` component contract.
  */
@@ -479,7 +484,7 @@ const jsx = (vals: Record<string, unknown>): string => {
  *
  * @param x - String value to quote if needed.
  *
- * @returns Original string when it is already safe, otherwise a JSON-quoted literal.
+ * @return Original string when it is already safe, otherwise a JSON-quoted literal.
  *
  * @remarks Plain identifiers are preserved so the generated YAML stays readable.
  */
@@ -499,7 +504,7 @@ const quote = (x: string): string => {
  *
  * @param body - Raw node block source.
  *
- * @returns Source with bare scalar values quoted so YAML does not misread them.
+ * @return Source with bare scalar values quoted so YAML does not misread them.
  *
  * @remarks This pass quotes bare values that would otherwise be misread as JS expressions.
  */

@@ -1,8 +1,34 @@
-/** Uploads, assembles, and downloads Docs assets. */
+/**
+ * src/lib/terra/docs/assets.ts
+ * Uploads, assembles, and downloads Docs assets.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { actions } from '../runtime/action-proxy.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const ASSET_CHUNK_SIZE_BYTES = 0.9 * 1024 * 1024;
 
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Uploads a file in bounded chunks so the host can assemble large attachments without one request body.
+ *
+ * @param file Browser file whose bytes and MIME type are sent to the host attachment API.
+ * @param dPath Document path that owns the uploaded asset.
+ * @param opts Optional image conversion settings and byte-progress callback.
+ * @return Asset metadata returned by the host after the final chunk, or an empty object if it omits metadata.
+ * @remarks Chunk requests reuse a stable upload ID; image options and preview paths are sent with each part.
+ */
 export async function uploadAssetChunked(
   file: File,
   dPath: string,
@@ -43,7 +69,7 @@ export async function uploadAssetChunked(
     try {
       // native Astro Actions client automatically handles multipart/form-data encoding and routing!
       const { data, error } = await actions.write.asset.upload(formData);
-      if (error) {
+      if (error)
         throw new Error(
           error instanceof Error
             ? error.message
@@ -54,7 +80,6 @@ export async function uploadAssetChunked(
               ? error.message
               : 'Action rejected the payload',
         );
-      }
       if (c === totalChunks - 1)
         finalAsset = data as {
           id?: string;

@@ -1,21 +1,68 @@
+/**
+ * src/components/terra/Workspace.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { applyHue } from '@terra-symposium/styling';
-import { useEffect, useRef, useState } from 'react';
-import type { JSX } from 'react';
-import { docsHueTheme } from '../../lib/docs-theme.js';
-import Scaffold from './pages/docs/_main.js';
 import { configureDocsHost } from '../../lib/host-runtime.js';
-import type { DocsWorkspaceProps } from '../../lib/host.js';
+import { docsHueTheme } from '../../lib/docs-theme.js';
+import { useEffect, useRef, useState } from 'react';
+
+// COMPONENTS
+import Scaffold from './pages/docs/_main.js';
 import { DocsQuizProvider } from '../quiz.js';
 
-/** The source-preserving shared Docs workspace used by host route adapters. */
-export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
-  configureDocsHost(props.host, props.customBlocks);
+// TYPES
+import type { DocsWorkspaceProps } from '../../lib/host.js';
+import type { JSX } from 'react';
+
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * The source-preserving shared Docs workspace used by host route adapters.
+ *
+ * @param workspaceOptions Host adapter, navigation, permission, current page, and optional render capabilities.
+ * @param workspaceOptions.host Storage, routing, capability, and rendering boundary supplied by the consumer.
+ * @param workspaceOptions.tree Navigation tree used to resolve current section metadata.
+ * @param workspaceOptions.pathname Current page route selected by the host.
+ * @param workspaceOptions.permission Current page permission used by the editor controls.
+ * @param workspaceOptions.path Optional source path of the current document.
+ * @param workspaceOptions.title Current document title.
+ * @param workspaceOptions.description Optional current document description.
+ * @param workspaceOptions.contributors Optional people credited on the current document.
+ * @param workspaceOptions.updatedAt Optional source update timestamp.
+ * @param workspaceOptions.userData Optional signed-in user details shown by the sidebar.
+ * @param workspaceOptions.source Optional Markdown source associated with the current document.
+ * @param workspaceOptions.content Optional Portable Text value rendered by the editor.
+ * @param workspaceOptions.renderContent Optional static React content for the canonical View surface.
+ * @param workspaceOptions.staticContent Whether host content is static and can skip editor transition guards.
+ * @param workspaceOptions.beforeContent Optional host content placed before the document body.
+ * @param workspaceOptions.afterContent Optional host content placed after the document body.
+ * @param workspaceOptions.standalone Whether to render without the surrounding site shell.
+ * @param workspaceOptions.full Whether the workspace should occupy the full available width.
+ * @param workspaceOptions.mode Optional explicit view, edit, or attachments mode.
+ * @param workspaceOptions.blocks Optional switches controlling shared rich block rendering.
+ * @param workspaceOptions.customBlocks Optional host-specific rich block renderers.
+ * @param workspaceOptions.quiz Optional host-owned quiz toolbar and generation callback.
+ *
+ * @return The workspace shell, current document, and host-aware Docs controls.
+ */
+export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element {
+  configureDocsHost(workspaceOptions.host, workspaceOptions.customBlocks);
   const portalThemeRoot = useRef<HTMLDivElement>(null);
-  const [aPath, setActivePath] = useState(props.pathname);
-
-  useEffect(() => setActivePath(props.pathname), [props.pathname]);
-
+  const [aPath, setActivePath] = useState(workspaceOptions.pathname);
+  useEffect(() => setActivePath(workspaceOptions.pathname), [workspaceOptions.pathname]);
   useEffect(() => {
+    /**
+     * Updates the active workspace route after Docs, Astro, or browser history navigation.
+     * @param event Optional event carrying an explicit Docs pathname or URL.
+     */
     const updatePath = (event?: Event) => {
       const detail = (event as CustomEvent<{ pathname?: unknown; url?: unknown }> | undefined)
         ?.detail;
@@ -25,7 +72,6 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
         ) ?? window.location.href,
       );
     };
-
     document.addEventListener('docs:navigate', updatePath);
     document.addEventListener('astro:after-swap', updatePath);
     window.addEventListener('hashchange', updatePath);
@@ -37,20 +83,19 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
       window.removeEventListener('popstate', updatePath);
     };
   }, []);
-
   let aRoute;
   try {
-    aRoute = props.host.resolveRoute?.(aPath);
+    aRoute = workspaceOptions.host.resolveRoute?.(aPath);
   } catch {
     aRoute = undefined;
   }
-  let hue = props.host.hue;
+  let hue = workspaceOptions.host.hue;
   for (const target of [aRoute?.leafId, aRoute?.groupId, aRoute?.sectionId, aRoute?.targetId]) {
     if (!target) continue;
-    const pending = props.tree
+    const pending = workspaceOptions.tree
       .slice()
       .reverse()
-      .map((node) => ({ node, ancestors: [] as typeof props.tree }));
+      .map((n) => ({ node: n, ancestors: [] as typeof workspaceOptions.tree }));
     let foundTarget = false;
     while (pending.length > 0) {
       const current = pending.pop();
@@ -88,6 +133,7 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
       },
     };
     const appliedBackground = 'rgb(var(--primary-1))';
+    /** Applies the selected hue to the shared Styling tokens and document canvas. */
     const applyPageHue = () => {
       applyHue(hue);
       root.style.setProperty('background-color', appliedBackground);
@@ -96,9 +142,13 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
     const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
     applyPageHue();
     colorScheme.addEventListener('change', applyPageHue);
-
     return () => {
       colorScheme.removeEventListener('change', applyPageHue);
+      /**
+       * Restores the previous inline color only while this effect still owns the applied value.
+       * @param element Document element whose background was updated.
+       * @param original Original inline value and priority to restore.
+       */
       const restore = (element: HTMLElement, original: { value: string; priority: string }) => {
         if (element.style.getPropertyValue('background-color') !== appliedBackground) return;
         if (original.value)
@@ -109,7 +159,6 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
       restore(body, originalBackgrounds.body);
     };
   }, [hue]);
-
   useEffect(() => {
     const workspace = portalThemeRoot.current?.querySelector<HTMLElement>('.docs-workspace');
     if (!workspace || typeof document === 'undefined') return;
@@ -132,7 +181,10 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
     };
     let appliedBodyFont: string | undefined;
     let appliedThemeClasses: { dark: boolean; light: boolean } | undefined;
-
+    /**
+     * Mirrors the Docs palette and typeface onto body-mounted Radix portals.
+     * @returns No value; synchronizes body classes, fonts, and custom properties in place.
+     */
     const syncPortalTheme = () => {
       const computed = getComputedStyle(workspace);
       // The original Radix primitives portal directly to body. Make that
@@ -169,7 +221,6 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
         if (target.style.getPropertyValue(token) !== value) target.style.setProperty(token, value);
         appliedValues.set(token, value);
       }
-
       const explicitTheme = workspace.closest<HTMLElement>('.dark, .light');
       if (explicitTheme) {
         const nClasses = {
@@ -181,7 +232,6 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
         appliedThemeClasses = nClasses;
       }
     };
-
     syncPortalTheme();
     const observer = new MutationObserver(syncPortalTheme);
     for (
@@ -196,7 +246,6 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
     }
     const darkPreference = window.matchMedia('(prefers-color-scheme: dark)');
     darkPreference.addEventListener('change', syncPortalTheme);
-
     return () => {
       observer.disconnect();
       darkPreference.removeEventListener('change', syncPortalTheme);
@@ -227,30 +276,54 @@ export function DocsWorkspace(props: DocsWorkspaceProps): JSX.Element {
       if (!originalThemeClasses.docsScope) target.classList.remove('docs-theme-scope');
     };
   }, []);
-
   return (
     <div ref={portalThemeRoot} className="docs-theme-scope" {...(theme ? { style: theme } : {})}>
-      <DocsQuizProvider config={props.quiz ?? {}} title={props.title} markdown={props.source ?? ''}>
+      <DocsQuizProvider
+        config={workspaceOptions.quiz ?? {}}
+        title={workspaceOptions.title}
+        markdown={workspaceOptions.source ?? ''}
+      >
         <Scaffold
-          tree={props.tree as any}
-          pathname={props.pathname}
-          permission={props.permission}
-          userData={props.userData ?? null}
-          title={props.title}
-          {...(props.path ? { path: props.path } : {})}
-          {...(props.description ? { description: props.description } : {})}
-          {...(props.contributors ? { contributors: props.contributors } : {})}
-          {...(props.updatedAt ? { updatedAt: props.updatedAt } : {})}
-          {...(props.source ? { source: props.source } : {})}
-          {...(props.content !== undefined ? { content: props.content as any } : {})}
-          {...(props.renderContent !== undefined ? { viewContent: props.renderContent } : {})}
-          {...(props.staticContent !== undefined ? { staticContent: props.staticContent } : {})}
-          {...(props.beforeContent !== undefined ? { beforeContent: props.beforeContent } : {})}
-          {...(props.afterContent !== undefined ? { afterContent: props.afterContent } : {})}
-          {...(props.standalone !== undefined ? { standalone: props.standalone } : {})}
-          {...(props.full !== undefined ? { full: props.full } : {})}
-          {...(props.mode ? { mode: props.mode } : {})}
-          {...(props.blocks ? { blocks: props.blocks } : {})}
+          tree={
+            workspaceOptions.tree as unknown as import('../../lib/terra/runtime/types.js').Tree[]
+          }
+          pathname={workspaceOptions.pathname}
+          permission={workspaceOptions.permission}
+          userData={workspaceOptions.userData ?? null}
+          title={workspaceOptions.title}
+          {...(workspaceOptions.path ? { path: workspaceOptions.path } : {})}
+          {...(workspaceOptions.description ? { description: workspaceOptions.description } : {})}
+          {...(workspaceOptions.contributors
+            ? { contributors: workspaceOptions.contributors }
+            : {})}
+          {...(workspaceOptions.updatedAt ? { updatedAt: workspaceOptions.updatedAt } : {})}
+          {...(workspaceOptions.source ? { source: workspaceOptions.source } : {})}
+          {...(workspaceOptions.content !== undefined
+            ? {
+                content: workspaceOptions.content as unknown as
+                  | string
+                  | import('../../lib/terra/runtime/types.js').DocVer[]
+                  | import('../../lib/terra/runtime/types.js').DocBody,
+              }
+            : {})}
+          {...(workspaceOptions.renderContent !== undefined
+            ? { viewContent: workspaceOptions.renderContent }
+            : {})}
+          {...(workspaceOptions.staticContent !== undefined
+            ? { staticContent: workspaceOptions.staticContent }
+            : {})}
+          {...(workspaceOptions.beforeContent !== undefined
+            ? { beforeContent: workspaceOptions.beforeContent }
+            : {})}
+          {...(workspaceOptions.afterContent !== undefined
+            ? { afterContent: workspaceOptions.afterContent }
+            : {})}
+          {...(workspaceOptions.standalone !== undefined
+            ? { standalone: workspaceOptions.standalone }
+            : {})}
+          {...(workspaceOptions.full !== undefined ? { full: workspaceOptions.full } : {})}
+          {...(workspaceOptions.mode ? { mode: workspaceOptions.mode } : {})}
+          {...(workspaceOptions.blocks ? { blocks: workspaceOptions.blocks } : {})}
         />
       </DocsQuizProvider>
     </div>

@@ -1,11 +1,37 @@
-/** Shared state, transitions, contexts, and surface readiness for Docs. */
+/**
+ * src/lib/terra/docs/state.ts
+ * Shared state, transitions, contexts, and surface readiness for Docs.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { atom, map } from 'nanostores';
 import { createContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { validateType } from '../runtime/runtime.js';
+
+// TYPES
 import type { EditorSel, EditorSurface, Mode, ToolbarState, Transition } from '../runtime/types.js';
 
+/**
+ * Subscribes a React component to a Nanostores-compatible value store.
+ *
+ * @param store Store exposing a current snapshot and a change subscription.
+ * @returns The current store value, kept in sync with subsequent notifications.
+ */
 export function useAtom<Value>(store: {
+  /**
+   * Returns the store's current snapshot for React's render cycle.
+   * @returns The current typed store value.
+   */
   get(): Value;
+  /**
+   * Registers a callback for future store snapshots.
+   * @param listener Notification callback invoked after the stored value changes.
+   * @returns Function that removes this listener from the store.
+   */
   subscribe(listener: (val: Value) => void): () => void;
 }): Value {
   return useSyncExternalStore(
@@ -17,7 +43,14 @@ export function useAtom<Value>(store: {
     () => store.get(),
   );
 }
-
+/**
+ * Loads and validates a JSON value from browser storage, falling back on inaccessible or invalid data.
+ *
+ * @param key Browser storage key to read.
+ * @param fallback Value returned when storage is unavailable or validation fails.
+ * @param valid Type guard that accepts only values safe for the caller to use.
+ * @returns The parsed value when it passes `valid`, otherwise `fallback`.
+ */
 function readStorage<T>(key: string, fallback: T, valid: (input: unknown) => input is T): T {
   if (validateType(['undefined'], globalThis.window)) return fallback;
   try {
@@ -50,7 +83,6 @@ function writeStorage(key: string, v: unknown): void {
     return;
   }
 }
-
 export const $mode = atom<Mode>(
   readStorage('docs-mode', 'view', (i): i is Mode =>
     ['view', 'edit', 'attachments'].includes(i as string),
@@ -190,6 +222,7 @@ export function setTransition(transition: Transition): void {
 /**
  * Clears the active docs transition state.
  *
+ *
  * @remarks Idle is the only state that leaves the transition flag unset.
  */
 export function clearTransition(): void {
@@ -209,6 +242,7 @@ export function useTransitionState(): Transition {
   useEffect(() => {
     /**
      * Handles update.
+     *
      */
     const update = (): void => {
       setTransitionState(transitionStore.transition);
@@ -232,7 +266,6 @@ export const TransitionCtx = createContext<{
   setSourceReady: (ready: boolean) => void;
   setLoading: (loading: boolean) => void;
 } | null>(null);
-
 export const EditStateCtx = createContext<{
   busy: string | null;
   code: string;
@@ -255,7 +288,6 @@ export const EditStateCtx = createContext<{
  * @remarks This lets nested components reach the active editor surface without prop drilling.
  */
 export const EditorSurfaceCtx = createContext<EditorSurface | null>(null);
-
 export const $editorMounts = atom<{ expected: string[]; mounted: string[]; path: string | null }>({
   expected: [],
   mounted: [],

@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_tree.tsx
+ * src/components/terra/pages/docs/_tree.tsx
  * Recursively rendering branch nodes composing the sidebar UI tree structure, alongside leaves and menus.
  * Folder boundary: recursive sidebar tree presentation only; sidebar state and dialogs remain in `_sidebar.tsx`.
  */
@@ -18,16 +17,7 @@ import {
   setTransition,
   useAtom,
 } from '../../../../lib/terra/docs/state.js';
-import {
-  extractAllNodeIds,
-  getStableKey,
-  isIndexFile,
-  sanitizeName,
-} from '../../../../lib/terra/docs/tree.js';
-import { runMutation } from '../../../../lib/terra/docs/mutations.js';
-import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
-import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import {
   bName,
   cTitle,
@@ -38,8 +28,17 @@ import {
   toPaths,
 } from '../../../../lib/terra/runtime/shared.js';
 import { cn, notify, warn } from '../../../../lib/terra/runtime/runtime.js';
+import {
+  extractAllNodeIds,
+  getStableKey,
+  isIndexFile,
+  sanitizeName,
+} from '../../../../lib/terra/docs/tree.js';
+import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
+import { runMutation } from '../../../../lib/terra/docs/mutations.js';
 import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
 import { toast } from 'sonner';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { useEffect, useRef, useState } from 'react';
 
 // COMPONENTS
@@ -58,8 +57,8 @@ import {
   MagicWand as MagicIcon,
   TrashCan as TrashIcon,
 } from '@carbon/icons-react';
-import { Button } from '@terra-symposium/styling/ui';
 import {
+  Button,
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -68,9 +67,6 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from '@terra-symposium/styling/ui';
-import { ErrorBoundary } from '../../ui.js';
-import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -78,6 +74,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@terra-symposium/styling/ui';
+import { ErrorBoundary } from '../../ui.js';
 
 // DATA
 import { REORDER } from '../../../../lib/terra/runtime/shared.js';
@@ -116,11 +113,11 @@ MENU COMPONENTS
 /**
  * Renders a standard ContextMenu with support for nested sub-actions and separators.
  *
- * @param props - Ordered menu actions, including labels, optional icons, disabled state, separators, and nested sub-actions.
+ * @param actions Ordered menu actions, including labels, optional icons, disabled state, separators, and nested sub-actions.
  *
  * @return The context menu with the supplied actions and any nested menus.
  */
-export function Menu({ actions }: { actions: MenuAction[] }): JSX.Element {
+export function Menu({ actions }: { actions: MenuAction[] }): React.JSX.Element {
   // prettier-ignore
   return <ErrorBoundary name='Menu'>{actions.map((a, i) => (
 				<Fragment key={a.label + i}>
@@ -138,8 +135,7 @@ export function Menu({ actions }: { actions: MenuAction[] }): JSX.Element {
 /**
  * Renders the link component.
  *
- * @param props - Tree node state, display mode, navigation context, and optional trailing control for one sidebar link.
- * @param active - Boolean flag controlling link's active behaviour.
+ * @param a Whether the row is the current page.
  * @param contexting - Contexting input supplied to link's operation.
  * @param dragging - Dragging input supplied to link's operation.
  * @param renaming - Renaming input supplied to link's operation.
@@ -168,7 +164,7 @@ function Link({
   trailing?: ReactNode;
   mode: Mode;
   transitioning?: boolean;
-}): JSX.Element {
+}): React.JSX.Element {
   const unsaved = useAtom($unsavedDrafts);
   const asset = node.type === 'leaf' && node.asset === true;
   const isDirty =
@@ -280,7 +276,6 @@ COMPONENTS
  * Encapsulates the drag handler button for consistent visual implementation
  * across branch and leaf levels to reduce boilerplate logic.
  *
- * @param props - Drag availability, visibility, and start/end callbacks for the branch or leaf reorder handle.
  * @param disabled - Disabled state controlling whether drag handle accepts interaction.
  * @param isVisible - Boolean flag controlling drag handle's is visible behaviour.
  * @param onDragStart - Callback invoked for drag start.
@@ -345,8 +340,7 @@ LEAF COMPONENTS
   /**
    * Renders the leaf component.
    *
-   * @param props - Leaf metadata, parent path, sibling nodes, and tree interaction handlers for rendering a document entry.
-   * @param active - Boolean flag controlling leaf's active behaviour.
+   * @param a Whether this leaf is selected as the current route.
    * @param bPath - B path input supplied to leaf's operation.
    * @param node - Node input supplied to leaf's operation.
    * @param ctx - Ctx input supplied to leaf's operation.
@@ -436,7 +430,7 @@ LEAF COMPONENTS
       setTree: React.Dispatch<React.SetStateAction<TreeType[]>>;
       refreshTree: () => Promise<void>;
     };
-  }): JSX.Element {
+  }): React.JSX.Element {
     // STATES
     const { creating, drag, dState, mode, shellPermission, hovered } = ctx;
     const [contexting, setContexting] = useState(false);
@@ -476,6 +470,7 @@ LEAF COMPONENTS
       if (!a || !leafRef.current) return;
       /**
        * Returns the raise.
+       *
        */
       const raise = () => {
         const el = leafRef.current;
@@ -525,7 +520,7 @@ LEAF COMPONENTS
                 sisList.push({
                   name: bName(p),
                   path: p,
-                  title: sNode && sNode.type === 'leaf' ? sNode.title : undefined,
+                  ...(sNode && sNode.type === 'leaf' && sNode.title ? { title: sNode.title } : {}),
                   isMd,
                 });
               }
@@ -637,12 +632,12 @@ LEAF COMPONENTS
        *
        * @param mode - Value passed to the helper.
        */
-      duplicate: (mode: 'reference' | 'content'): void => {
+      duplicate: (m: 'reference' | 'content'): void => {
         if (creating || !node.path) return;
         // prettier-ignore
         ctx.setInputDlg({
 			open: true,
-			title: mode === 'reference' ? 'Duplicate by Reference' : 'Duplicate by Content',
+			title: m === 'reference' ? 'Duplicate by Reference' : 'Duplicate by Content',
 			label: 'New page name',
 			value: `${path.split('/').at(-1)?.replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX(), '') ?? ''}-copy`,
 			onCancel: () => {},
@@ -653,7 +648,7 @@ LEAF COMPONENTS
 					const nPath = `${bPath}/${sanitizeName(t)}.mdx`;
 					// MDX natively acts as a reference symlink when imported
 					let finalSrc = cur.source as string;
-					if (mode === 'reference') {
+					if (m === 'reference') {
 						finalSrc = `import Reference from './${path.split('/').pop()}';\n\n<Reference />`;
 					}
 					// find the parent ID directly from bPath to prevent orphaned docs
@@ -677,6 +672,7 @@ LEAF COMPONENTS
 							}
 							const n = frame.nodes[frame.index];
 							frame.index += 1;
+              if (!n) continue;
 							if (n.type === 'leaf' && n.path === path) {
 								// GUARANTEE ORIGINAL KEY: Fallback to a highly unique temp ID so React doesn't share state
 								// prettier-ignore
@@ -728,7 +724,10 @@ LEAF COMPONENTS
         async () => {
           let totalSize = 0;
           let uploadedSize = 0;
-          for (let i = 0; i < files.length; i++) if (files[i]) totalSize += files[i].size;
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file) totalSize += file.size;
+          }
           for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (!file) continue;
@@ -885,7 +884,7 @@ LEAF COMPONENTS
                   path: nPath,
                   name: sisterDetails.name,
                   isMd: true,
-                  title: sisterDetails.title,
+                  ...(sisterDetails.title === undefined ? {} : { title: sisterDetails.title }),
                 },
               ]);
               ctx.setInputDlg(null);
@@ -1227,13 +1226,12 @@ TREE COMPONENTS
   /**
    * Main recursive tree mapping structural layers evaluating context dependencies natively.
    *
-   * @param props - Tree path, current node, sibling list, and shared navigation/mutation state for recursively rendering sidebar levels.
-   * @param {TreeType[]} [props.siblings] - Sibling nodes within the same local directory layer.
    * @param bPath - B path input supplied to tree's operation.
    * @param node - Node input supplied to tree's operation.
    * @param ctx - Ctx input supplied to tree's operation.
+   * @param sibs Sibling nodes at the current branch level, when already available to the caller.
    *
-   * @return {JSX.Element} The rendered SidebarGroup bounding nested leaves and child trees.
+   * @return {React.JSX.Element} The rendered SidebarGroup bounding nested leaves and child trees.
    */
   Tree({
     bPath,
@@ -1327,7 +1325,7 @@ TREE COMPONENTS
       >;
       setAssetTarget: React.Dispatch<React.SetStateAction<{ path: string; title: string } | null>>;
     };
-  }): JSX.Element {
+  }): React.JSX.Element {
     // STATES
     const { creating, drag, dState, pathname, shellPermission, setDState, setHovered, hovered } =
       ctx;
@@ -1382,6 +1380,7 @@ TREE COMPONENTS
                 const idx = frame.index;
                 const curr = frame.nodes[idx];
                 frame.index += 1;
+                if (!curr) continue;
                 if (curr.type !== 'branch') continue;
                 if (curr.origName === node.origName) {
                   frame.nodes[idx] = { ...curr, title: nName };
@@ -1462,7 +1461,7 @@ TREE COMPONENTS
             bPath={bPath}
             node={node}
             ctx={ctx}
-            siblings={sibs}
+            {...(sibs === undefined ? {} : { siblings: sibs })}
           />
         </ErrorBoundary>
       );
@@ -1659,6 +1658,5 @@ TREE COMPONENTS
     );
   },
 };
-
 export const { Tree } = TREE_COMPONENTS;
 export default TREE_COMPONENTS.Tree;

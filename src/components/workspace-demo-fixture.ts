@@ -1,4 +1,19 @@
-import { markdownToDocsValue, docsValueToMarkdown } from '../lib/markdown-model.js';
+/**
+ * src/components/workspace-demo-fixture.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { docsValueToMarkdown, markdownToDocsValue } from '../lib/markdown-model.js';
+
+// COMPONENTS
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
+
+// TYPES
+import type { DocVer } from '../lib/terra/runtime/types.js';
 import type {
   DocsActionOperation,
   DocsActionResult,
@@ -6,19 +21,22 @@ import type {
   DocsHostAttachment,
   DocsHostTreeNode,
 } from '../lib/host.js';
-import type { DocVer } from '../lib/terra/runtime/types.js';
-import * as TerraQualityRegex from '../lib/terra/regex.mjs';
+
 /*//////////////////////////////////////////////////
 REGEX
 //////////////////////////////////////////////////*/
-const MD_MDX_I_REGEX = /\.(?:md|mdx)$/i;
-const G_REGEX = () => /^\/+|\/+$/g;
 
+const MD_MDX_I_REGEX = /\.(?:md|mdx)$/i;
+/**
+ * Removes leading and trailing separators before constructing demo document routes.
+ * @returns Global expression matching those route separators.
+ */
+const G_REGEX = () => /^\/+|\/+$/g;
 const WORKSPACE_DEMO_STORAGE_KEY = 'docs-workspace-demo-v1';
 export const WORKSPACE_DEMO_PATH = '/workspace-demo/';
-
+/** Saved demo attachment bytes plus the document that owns the attachment. */
 type WorkspaceDemoAsset = DocsHostAttachment & { bytes: number[]; docId: string };
-
+/** Complete demo document record persisted in browser storage. */
 type WorkspaceDemoDocument = {
   id: string;
   path: string;
@@ -32,14 +50,13 @@ type WorkspaceDemoDocument = {
   attachments: DocsHostAttachment[];
   versions: DocVer[];
 };
-
+/** Versioned workspace fixture state containing navigation, documents, and local assets. */
 export type WorkspaceDemoState = {
   schema: 1;
   tree: DocsHostTreeNode[];
   documents: Record<string, WorkspaceDemoDocument>;
   assets: Record<string, WorkspaceDemoAsset>;
 };
-
 const initialWorkspaceDemoState: { content: unknown[]; tree: DocsHostTreeNode[] } = {
   content: [
     {
@@ -165,7 +182,15 @@ const initialWorkspaceDemoState: { content: unknown[]; tree: DocsHostTreeNode[] 
     },
   ],
 };
-
+/**
+ * Creates one demo document and derives its route and Markdown source from Portable Text.
+ * @param id Stable ID used in routes and the document map.
+ * @param path Source-relative path stored on the document.
+ * @param title Display title shown by the workspace.
+ * @param description Supporting text shown with the page metadata.
+ * @param content Portable Text body to store and serialize as Markdown.
+ * @returns Complete demo document with an empty attachment/version list.
+ */
 function makeDocument(
   id: string,
   path: string,
@@ -187,7 +212,10 @@ function makeDocument(
     versions: [],
   };
 }
-
+/**
+ * Returns the pristine navigation tree and sample documents shown by the workspace demo.
+ * @returns Fresh version-one state with sample pages and a small local PDF fixture.
+ */
 export function createWorkspaceDemoSeed(): WorkspaceDemoState {
   const salesphere = makeDocument(
     'salesphere',
@@ -236,9 +264,17 @@ export function createWorkspaceDemoSeed(): WorkspaceDemoState {
     },
   };
 }
-
+/**
+ * Makes an independent fixture snapshot using the same JSON-safe values stored in browser state.
+ *
+ * @param value Serializable fixture data to copy before a demo mutation.
+ * @returns A deep copy with no shared object references to the input.
+ */
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-
+/**
+ * Loads a valid browser-saved demo state or restores the built-in seed when it is absent or invalid.
+ * @returns Valid saved state, or the seed after an absent, malformed, or unsupported value.
+ */
 export function readWorkspaceDemoState(): WorkspaceDemoState {
   const seed = createWorkspaceDemoSeed();
   if (typeof window === 'undefined') return seed;
@@ -266,13 +302,23 @@ export function readWorkspaceDemoState(): WorkspaceDemoState {
     return seed;
   }
 }
-
+/**
+ * Saves demo state and announces the update to other mounted demo surfaces.
+ * @param state Complete workspace fixture state to persist.
+ * @returns Nothing; server-side calls leave storage untouched.
+ */
 function writeWorkspaceDemoState(state: WorkspaceDemoState): void {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(WORKSPACE_DEMO_STORAGE_KEY, JSON.stringify(state));
   window.dispatchEvent(new CustomEvent('docs-fixture-updated'));
 }
-
+/**
+ * Encodes section, group, and leaf identifiers as the demo's query-based route.
+ * @param sectionId Top-level navigation identifier.
+ * @param groupId Optional nested branch identifier.
+ * @param leafId Optional page identifier.
+ * @returns Demo path with selected identifiers in its query string.
+ */
 function buildWorkspaceRoute(sectionId?: string, groupId?: string, leafId?: string): string {
   if (!sectionId) return WORKSPACE_DEMO_PATH;
   const query = new URLSearchParams({ section: sectionId });
@@ -280,7 +326,13 @@ function buildWorkspaceRoute(sectionId?: string, groupId?: string, leafId?: stri
   if (leafId) query.set('leaf', leafId);
   return `${WORKSPACE_DEMO_PATH}?${query.toString()}`;
 }
-
+/**
+ * Finds a navigation node by ID or source path and returns its ancestor chain.
+ * @param nodes Current navigation subtree to search.
+ * @param id Node ID or path to match.
+ * @param ancestors Parent nodes accumulated before this recursive call.
+ * @returns Matching node and its ancestors, or `undefined` if it is absent.
+ */
 function findNode(
   nodes: DocsHostTreeNode[],
   id: string,
@@ -293,7 +345,12 @@ function findNode(
   }
   return undefined;
 }
-
+/**
+ * Resolves a demo document by ID, source path, route, or extensionless leaf path.
+ * @param state Current workspace state containing demo documents.
+ * @param value Candidate ID, path, or URL from a host action.
+ * @returns Matching document, or `undefined` when the input is not a known document.
+ */
 function findDocument(
   state: WorkspaceDemoState,
   value: unknown,
@@ -303,16 +360,20 @@ function findDocument(
     value.split(TerraQualityRegex.REGEX_PATTERN_REGEX_4(), 1)[0]?.replace(G_REGEX(), '') ?? value;
   const leafName = c.split('/').at(-1)?.replace(MD_MDX_I_REGEX, '') ?? c;
   return Object.values(state.documents).find(
-    (document) =>
-      document.id === value ||
-      document.path === value ||
-      document.pathname === value ||
-      document.path.replace(MD_MDX_I_REGEX, '') === c ||
-      document.id === leafName ||
-      document.path.endsWith(`/${leafName}.mdx`),
+    (d) =>
+      d.id === value ||
+      d.path === value ||
+      d.pathname === value ||
+      d.path.replace(MD_MDX_I_REGEX, '') === c ||
+      d.id === leafName ||
+      d.path.endsWith(`/${leafName}.mdx`),
   );
 }
-
+/**
+ * Converts a proposed document label into a lowercase route-safe identifier.
+ * @param value Human-readable title or proposed route segment.
+ * @returns Lowercase hyphenated slug, using `untitled` when no characters remain.
+ */
 function slug(value: string): string {
   return (
     value
@@ -322,7 +383,12 @@ function slug(value: string): string {
       .replace(/^-+|-+$/g, '') || 'untitled'
   );
 }
-
+/**
+ * Adds a numeric suffix until the proposed ID is unique across documents and navigation nodes.
+ * @param state Current tree and document map to check for collisions.
+ * @param proposed New title or ID to normalize.
+ * @returns Unique route-safe identifier.
+ */
 function uniqueId(state: WorkspaceDemoState, proposed: string): string {
   let candidate = slug(proposed);
   let index = 2;
@@ -332,53 +398,68 @@ function uniqueId(state: WorkspaceDemoState, proposed: string): string {
   }
   return candidate;
 }
-
+/**
+ * Clones the navigation tree with mode-aware permissions and URLs on every branch and leaf.
+ * @param nodes Navigation subtree to enrich.
+ * @param readOnly Whether generated nodes should be read-only.
+ * @param sectionId Current top-level section for nested route construction.
+ * @param groupId Current group for leaf routes.
+ * @returns A new tree with resolved URLs and permissions on each node.
+ */
 function withRoutes(
   nodes: DocsHostTreeNode[],
   readOnly: boolean,
   sectionId?: string,
   groupId?: string,
 ): DocsHostTreeNode[] {
-  return nodes.map((node) => {
-    if (node.type === 'branch') {
-      const nSection = sectionId ?? node.origName;
+  return nodes.map((n) => {
+    if (n.type === 'branch') {
+      const nSection = sectionId ?? n.origName;
       return {
-        ...node,
+        ...n,
         permission: readOnly ? 'read' : 'write',
-        url: sectionId
-          ? buildWorkspaceRoute(nSection, node.origName)
-          : buildWorkspaceRoute(nSection),
+        url: sectionId ? buildWorkspaceRoute(nSection, n.origName) : buildWorkspaceRoute(nSection),
         children: withRoutes(
-          node.children ?? [],
+          n.children ?? [],
           readOnly,
           nSection,
-          sectionId ? node.origName : undefined,
+          sectionId ? n.origName : undefined,
         ),
       };
     }
     return {
-      ...node,
+      ...n,
       permission: readOnly ? 'read' : 'write',
-      url: buildWorkspaceRoute(sectionId, groupId, node.origName),
+      url: buildWorkspaceRoute(sectionId, groupId, n.origName),
     };
   });
 }
-
+/**
+ * Finds the top-level section and optional group containing a leaf ID.
+ * @param state Current navigation tree.
+ * @param leafId Leaf identifier to locate.
+ * @returns Section and optional group IDs, falling back to the first section when absent.
+ */
 function sectionForLeaf(
   state: WorkspaceDemoState,
   leafId: string,
 ): { sectionId: string; groupId?: string } {
   const branches = (findNode(state.tree, leafId)?.ancestors ?? []).filter(
-    (node) => node.type === 'branch',
+    (n) => n.type === 'branch',
   );
   return {
     sectionId: branches[0]?.origName ?? state.tree[0]?.origName ?? 'overview',
     ...(branches[1] ? { groupId: branches[1].origName } : {}),
   };
 }
-
+/**
+ * Removes the first matching node from a mutable navigation subtree.
+ * @param nodes Mutable sibling list to search and update.
+ * @param id Node ID or path to remove.
+ * @returns Whether a matching node was removed.
+ */
 function removeNodeById(nodes: DocsHostTreeNode[], id: string): boolean {
-  const index = nodes.findIndex((node) => node.origName === id || node.path === id);
+  const index = nodes.findIndex((n) => n.origName === id || n.path === id);
   if (index >= 0) {
     nodes.splice(index, 1);
     return true;
@@ -388,7 +469,13 @@ function removeNodeById(nodes: DocsHostTreeNode[], id: string): boolean {
   }
   return false;
 }
-
+/**
+ * Replaces the first matching node with an updated value while preserving tree structure.
+ * @param nodes Mutable sibling list to search.
+ * @param id Node ID or path to update.
+ * @param update Transformation applied to the matching node.
+ * @returns Whether a matching node was updated.
+ */
 function updateNodeById(
   nodes: DocsHostTreeNode[],
   id: string,
@@ -405,7 +492,11 @@ function updateNodeById(
   }
   return false;
 }
-
+/**
+ * Creates the localStorage-backed host adapter used by editable and read-only demos.
+ * @param readOnly Whether the adapter should reject writes, reorder, and history controls.
+ * @returns Host implementation for the demo's routes, navigation, documents, and assets.
+ */
 export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
   return {
     capabilities: {
@@ -422,6 +513,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
     siteTitle: 'Salesphere Docs',
     siteDescription: 'Product and engineering documentation.',
     assetUrl: () => undefined,
+    /**
+     * Resolves query-selected demo pages while preserving the selected section and group.
+     * @param value Route or URL whose query parameters select the demo destination.
+     * @returns Section, group, leaf, and pathname state for the selected page.
+     */
     resolveRoute(value) {
       const url = new URL(value, 'http://localhost');
       const state = readWorkspaceDemoState();
@@ -433,22 +529,28 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         ? findNode(state.tree, requestedSection)
         : undefined;
       const requestedGroupMatch = requestedGroup ? findNode(state.tree, requestedGroup) : undefined;
+      /**
+       * Selects the first document nested beneath a requested section or group.
+       * @param node Navigation branch or leaf whose first document should be resolved.
+       * @returns The matching document, or `undefined` when the branch has no page.
+       */
+      const firstLeaf = (node: DocsHostTreeNode | undefined): WorkspaceDemoDocument | undefined => {
+        if (!node) return undefined;
+        if (node.type === 'leaf') return state.documents[node.origName];
+        for (const child of node.children ?? []) {
+          const found = firstLeaf(child);
+          if (found) return found;
+        }
+        return undefined;
+      };
       const document =
         requestedDocument ??
-        (function firstLeaf(node: DocsHostTreeNode | undefined): WorkspaceDemoDocument | undefined {
-          if (!node) return undefined;
-          if (node.type === 'leaf') return state.documents[node.origName];
-          for (const child of node.children ?? []) {
-            const found = firstLeaf(child);
-            if (found) return found;
-          }
-          return undefined;
-        })(requestedGroupMatch?.node ?? requestedSectionMatch?.node) ??
+        firstLeaf(requestedGroupMatch?.node ?? requestedSectionMatch?.node) ??
         state.documents.salesphere ??
         Object.values(state.documents)[0];
       const position = document ? sectionForLeaf(state, document.id) : { sectionId: 'overview' };
       const requestedGroupAncestors = (requestedGroupMatch?.ancestors ?? []).filter(
-        (node) => node.type === 'branch',
+        (n) => n.type === 'branch',
       );
       const sectionId = requestedDocument
         ? position.sectionId
@@ -470,6 +572,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       };
     },
     buildRoute: buildWorkspaceRoute,
+    /**
+     * Maps a document ID, source path, or branch to its demo route.
+     * @param value Document path, page ID, branch ID, or generated route.
+     * @returns The matched document or branch route, with the demo root as fallback.
+     */
     routePath(value) {
       const state = readWorkspaceDemoState();
       const requested = value.replace(G_REGEX(), '');
@@ -479,17 +586,20 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       const branch = findNode(state.tree, requested)?.node;
       if (branch?.type === 'branch') {
         const parent =
-          findNode(state.tree, branch.origName)?.ancestors.filter(
-            (node) => node.type === 'branch',
-          ) ?? [];
+          findNode(state.tree, branch.origName)?.ancestors.filter((n) => n.type === 'branch') ?? [];
         return parent.length > 0
           ? buildWorkspaceRoute(parent[0]?.origName, branch.origName)
           : buildWorkspaceRoute(branch.origName);
       }
       return WORKSPACE_DEMO_PATH;
     },
-    isDevelopmentOrigin: (origin) =>
-      /^(?:https?:\/\/)?(?:localhost|127\.0\.0\.1)(?::\d+)?$/u.test(origin),
+    isDevelopmentOrigin: (o) => /^(?:https?:\/\/)?(?:localhost|127\.0\.0\.1)(?::\d+)?$/u.test(o),
+    /**
+     * Handles browser fixture actions against the per-tab demo state.
+     * @param op Docs operation issued by the workspace.
+     * @param input Optional operation fields describing the document or asset.
+     * @returns The fixture-backed action result.
+     */
     async invoke<T = unknown>(
       op: DocsActionOperation,
       input?: unknown,
@@ -499,20 +609,15 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           __docsActionCalls?: Array<{ operation: string; input?: unknown }>;
         };
         browserWindow.__docsActionCalls ??= [];
-        browserWindow.__docsActionCalls.push({
-          operation: op,
-          input: clone(input),
-        });
+        browserWindow.__docsActionCalls.push({ operation: op, input: clone(input) });
       }
-
       const request = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
       const state = readWorkspaceDemoState();
       let data: unknown = null;
       let changed = false;
-
-      if (op === 'read.doc.list') {
+      if (op === 'read.doc.list')
         data = request.type === 'nav' ? withRoutes(state.tree, readOnly) : [];
-      } else if (op === 'read.doc.get') {
+      else if (op === 'read.doc.get') {
         data = clone(findDocument(state, request.path ?? request.id) ?? null);
       } else if (op === 'read.doc.attachments') {
         data = clone(findDocument(state, request.path)?.attachments ?? []);
@@ -659,20 +764,16 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           const parent = findNode(state.tree, String(request.parentId ?? 'start-here'))?.node;
           if (parent?.type === 'branch') {
             parent.children ??= [];
-            if (
-              !parent.children.some(
-                (child) => child.type === 'leaf' && child.origName === newDocument.id,
-              )
-            ) {
+            if (!parent.children.some((c) => c.type === 'leaf' && c.origName === newDocument.id)) {
               parent.children.push(node);
             }
           } else {
-            const group = state.tree[0]?.children?.find((child) => child.type === 'branch');
+            const group = state.tree[0]?.children?.find((c) => c.type === 'branch');
             if (group) group.children = [...(group.children ?? []), node];
           }
         }
-        updateNodeById(state.tree, existing?.id ?? id, (node) => ({
-          ...node,
+        updateNodeById(state.tree, existing?.id ?? id, (n) => ({
+          ...n,
           origName: id,
           path,
           title: newDocument.title,
@@ -688,11 +789,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           document.title = title;
           document.updatedAt = new Date().toISOString();
         }
-        updateNodeById(state.tree, id, (node) => ({ ...node, title }));
+        updateNodeById(state.tree, id, (n) => ({ ...n, title }));
         changed = true;
       } else if (op === 'write.doc.hue') {
-        updateNodeById(state.tree, String(request.id ?? ''), (node) => ({
-          ...node,
+        updateNodeById(state.tree, String(request.id ?? ''), (n) => ({
+          ...n,
           hue: Number(request.hue),
         }));
         changed = true;
@@ -705,35 +806,35 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           .filter(Boolean);
         const parent = findNode(state.tree, typeof request.id === 'string' ? request.id : '')?.node;
         if (parent?.type === 'branch') {
-          const reorderable = parent.children?.filter((node) => node.type === field) ?? [];
+          const reorderable = parent.children?.filter((n) => n.type === field) ?? [];
           const ordered: DocsHostTreeNode[] = [];
           for (let index = 0; index < references.length; index += 1) {
             const reference = references[index];
-            const node = reorderable.find(
-              (candidate) => candidate.origName === reference || candidate.path === reference,
-            );
+            const node = reorderable.find((c) => c.origName === reference || c.path === reference);
             if (node) ordered.push(node);
           }
           parent.children = [
             ...ordered,
             ...reorderable.filter(
-              (node) => !ordered.some((orderedNode) => orderedNode.origName === node.origName),
+              (n) => !ordered.some((orderedNode) => orderedNode.origName === n.origName),
             ),
-            ...(parent.children?.filter((node) => node.type !== field) ?? []),
+            ...(parent.children?.filter((n) => n.type !== field) ?? []),
           ];
         }
         changed = true;
       } else if (op === 'write.doc.retargetSources') {
         const target = findDocument(state, request.targetId);
         const sourceIds = Array.isArray(request.sourceIds)
-          ? request.sourceIds.filter((value): value is string => typeof value === 'string')
+          ? request.sourceIds.filter((v): v is string => typeof v === 'string')
           : [];
         if (!target || sourceIds.length === 0) {
-          return {
-            error: new Error('The merge target or source pages could not be found.'),
-          };
+          return { error: new Error('The merge target or source pages could not be found.') };
         }
-
+        /**
+         * Gives copied attachments a stable identity when the host ID is absent.
+         * @param attachment Attachment whose duplicate identity is being checked.
+         * @returns Host ID when present, otherwise a path/name composite key.
+         */
         const attachmentKey = (attachment: DocsHostAttachment): string =>
           attachment.id || `${attachment.path}\u0000${attachment.name}`;
         const seenAttachments = new Set(target.attachments.map(attachmentKey));
@@ -770,13 +871,18 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
             if (routeNodeId) found = findNode(state.tree, routeNodeId);
           }
           if (found) {
-            (function removeDocumentsForNode(node: DocsHostTreeNode): void {
+            /**
+             * Removes every stored page nested beneath the branch being deleted.
+             * @param node Leaf or branch whose associated documents should be removed.
+             */
+            const removeDocumentsForNode = (node: DocsHostTreeNode): void => {
               if (node.type === 'leaf') {
                 delete state.documents[node.origName];
                 return;
               }
               for (const child of node.children ?? []) removeDocumentsForNode(child);
-            })(found.node);
+            };
+            removeDocumentsForNode(found.node);
             removeNodeById(state.tree, found.node.origName);
           }
         }
@@ -800,8 +906,8 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           state.documents[nId] = document;
           const position = sectionForLeaf(state, priorId);
           document.pathname = buildWorkspaceRoute(position.sectionId, position.groupId, nId);
-          updateNodeById(state.tree, priorId, (node) => ({
-            ...node,
+          updateNodeById(state.tree, priorId, (n) => ({
+            ...n,
             origName: nId,
             path: nPath,
             title: document.title,
@@ -871,13 +977,18 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         }
         changed = true;
       }
-
       if (changed) writeWorkspaceDemoState(state);
       return { data: data as T };
     },
   };
 }
-
+/**
+ * Builds the demo URL for a document using its current navigation section and group.
+ * @param state Current tree and document records.
+ * @param value Document ID, path, or already resolved demo document.
+ * @param routeBuilder Host-specific route function, defaulting to the demo query route.
+ * @returns Document route, or the demo root if the document is not in the state.
+ */
 export function routeForWorkspaceDocument(
   state: WorkspaceDemoState,
   value: string | WorkspaceDemoDocument,
@@ -888,7 +999,12 @@ export function routeForWorkspaceDocument(
   const position = sectionForLeaf(state, document.id);
   return (routeBuilder ?? buildWorkspaceRoute)(position.sectionId, position.groupId, document.id);
 }
-
+/**
+ * Returns the demo navigation tree annotated with current routes and edit permissions.
+ * @param state Current demo tree and documents.
+ * @param readOnly Whether node permissions should disable editing.
+ * @returns Routed copy of the navigation tree.
+ */
 export function routedWorkspaceTree(
   state: WorkspaceDemoState,
   readOnly: boolean,

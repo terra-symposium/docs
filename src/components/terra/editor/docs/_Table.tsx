@@ -1,32 +1,64 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
-/** Docs table renderer with view and edit modes. */
+/**
+ * src/components/terra/editor/docs/_Table.tsx
+ * Docs table renderer with view and edit modes.
+ */
 
-import { useEditor } from '@portabletext/editor';
-import { Add as AddIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
-import { TerraContentEditor } from './_editor.js';
-import { ErrorBoundary } from '../../ui.js';
-import { Button } from '@terra-symposium/styling/ui';
-import { Input } from '@terra-symposium/styling/ui';
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { isRec } from '../../../../lib/terra/runtime/runtime.js';
+import { useEditor } from '@portabletext/editor';
 
-import type { DocTableCell } from '../../../../lib/terra/runtime/types.js';
+// COMPONENTS
+import { Add as AddIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
+import { Button, Input } from '@terra-symposium/styling/ui';
+import { ErrorBoundary } from '../../ui.js';
+import { TerraContentEditor } from './_editor.js';
+
+// TYPES
+import type { Content as ContentData, DocTableCell } from '../../../../lib/terra/runtime/types.js';
 import type {
   DocsBlock,
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
-import type { Content as ContentData } from '../../../../lib/terra/runtime/types.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 /** Sanity Portable Text table rows and headers. */
 type TableBlock = DocsBlock<'table'>;
 /** Sanity Portable Text table cell content and formatting. */
 type TableCell = NonNullable<NonNullable<TableBlock['rows']>[number]['cells']>[number];
-
+/**
+ * Returns a persisted Portable Text key or the stable fallback used by the current render.
+ * @param val Cell or row record whose `_key` may be present.
+ * @param fallback Render-local key used when the record lacks a stable key.
+ * @returns The stored key or `fallback`.
+ */
 const key = (val: unknown, fallback: string): string =>
   isRec(val) && typeof val._key === 'string' ? val._key : fallback;
+/**
+ * Produces a fixed-width cell list so short rows align with the widest row.
+ * @param vals Cells already present in the row.
+ * @param count Number of cells in the widest row.
+ * @returns Array with exactly `count` entries, leaving missing cells undefined.
+ */
 const cells = <T,>(vals: T[], count: number): Array<T | undefined> =>
   Array.from({ length: count }, (_cell, i) => vals[i]);
+/**
+ * Creates a compact key for newly inserted table rows, cells, and text blocks.
+ * @returns A UUID with dashes removed.
+ */
 const newKey = (): string => crypto.randomUUID().replaceAll('-', '');
+/**
+ * Builds a Portable Text cell containing one paragraph when text is supplied.
+ * @param text Optional text for the new cell's first paragraph.
+ * @returns Cell data with generated keys and an empty body when `text` is blank.
+ */
 const cell = (text = ''): TableCell => ({
   _key: newKey(),
   _type: 'cell',
@@ -43,20 +75,30 @@ const cell = (text = ''): TableCell => ({
     : [],
 });
 
-/** Renders a Docs table and its nested cell content.
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Renders a Docs table and its nested cell content.
  *
- * @param props - Authored table block with its headers, rows, and cell content.
- * @returns The accessible table view.
+ * @param block Authored table block whose first row supplies the headings.
+ *
+ * @return The accessible table view.
  */
 function Table({ block }: { block: TableBlock }): React.JSX.Element {
   const rows = (block.rows ?? []) as Array<{ _key: string; _type: 'row'; cells: DocTableCell[] }>;
   const count = rows.reduce((m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0), 0);
+  /**
+   * Renders a cell's nested Portable Text with attachments disabled in read-only mode.
+   * @param c Optional cell value at the current row and column.
+   * @returns The nested cell editor, or `null` for a padded empty cell.
+   */
   const renderCell = (c: DocTableCell | undefined): React.JSX.Element | null =>
     c ? (
       <TerraContentEditor
         content={(Array.isArray(c.content) ? c.content : []) as unknown as ContentData}
         docsAttachments={[]}
-        memberProfile="docs"
         nested
         readOnly
       />
@@ -89,12 +131,16 @@ function Table({ block }: { block: TableBlock }): React.JSX.Element {
     </ErrorBoundary>
   );
 }
-Object.assign(Table, { displayName: 'DocsTablePreview' });
 
-/** Renders editable Docs table controls and cells.
+/**
+ * Renders editable Docs table controls and cells.
  *
- * @param props - Portable Text editor attributes, nested children, table node, and path used to update rows and cells.
- * @returns The editable table controls and cells.
+ * @param attrs DOM attributes supplied by the Portable Text editor.
+ * @param children Nested editor content rendered after the table controls.
+ * @param node Table block containing the header label and current rows.
+ * @param path Portable Text path targeted by row, column, and header updates.
+ *
+ * @return The editable table controls and cells.
  */
 function TableEditor({
   attributes: attrs,
@@ -106,6 +152,11 @@ function TableEditor({
   const block = node;
   const rows = block.rows ?? [];
   const colCount = Math.max(1, ...rows.map((r) => r.cells?.length ?? 0));
+  /**
+   * Commits the updated row matrix at this table block's Portable Text path.
+   * @param nRows Rows after the selected table operation.
+   * @returns No value; updates the table block in the editor.
+   */
   const update = (nRows: NonNullable<TableBlock['rows']>): void =>
     editor.send({ type: 'block.set', at: path, props: { rows: nRows } });
   return (
@@ -197,7 +248,7 @@ function TableEditor({
                               cells: Array.from({ length: colCount }, (_cell, x) => {
                                 const curr = r.cells?.[x] ?? cell();
                                 return c === v && x === i
-                                  ? { ...curr, content: cell(text).content }
+                                  ? { ...curr, content: cell(text).content ?? [] }
                                   : curr;
                               }),
                             })),
@@ -247,12 +298,17 @@ function TableEditor({
     </ErrorBoundary>
   );
 }
-Object.assign(TableEditor, { displayName: 'DocsTableEditor' });
 
-/** Adapts Portable Text's block-object contract to the table renderer.
+/**
+ * Adapts Portable Text's block-object contract to the table renderer.
  *
- * @param props - Portable Text renderer attributes, nested children, table node, path, and read-only mode.
- * @returns The table renderer in editable or read-only mode.
+ * @param attrs DOM attributes supplied by the Portable Text renderer.
+ * @param children Nested editor content associated with the block.
+ * @param node Table block data containing row and cell content.
+ * @param path Portable Text path used to target the editable table.
+ * @param readOnly Selects the static table view when editing is disabled.
+ *
+ * @return The table renderer in editable or read-only mode.
  */
 export function renderTable({
   attributes: attrs,
@@ -267,4 +323,6 @@ export function renderTable({
     <TableEditor attributes={attrs} children={children} node={node} path={path} />
   );
 }
+Object.assign(Table, { displayName: 'DocsTablePreview' });
+Object.assign(TableEditor, { displayName: 'DocsTableEditor' });
 Object.assign(renderTable, { displayName: 'DocsTableRenderer' });

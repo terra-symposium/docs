@@ -1,22 +1,28 @@
+/**
+ * src/components/navigation.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { colors } from '@terra-symposium/styling';
-import type { DocsAttachment } from '../lib/workspace-types.js';
+
+// TYPES
 import type { CSSProperties, JSX } from 'react';
+import type { DocsAttachment } from '../lib/workspace-types.js';
 
-const pathKey = (value: string): string => {
-  try {
-    const url = new URL(value, 'http://docs.local');
-    return url.pathname.replace(/\/+$/, '') || '/';
-  } catch {
-    return (value.split('#', 1)[0] ?? '').replace(/\/+$/, '') || '/';
-  }
-};
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
-const isActivePath = (href: string, currentPath: string): boolean => {
-  const target = pathKey(href);
-  const current = pathKey(currentPath);
-  return current === target || current.startsWith(`${target}/`);
-};
-
+/**
+ * One entry in the Docs sidebar tree.
+ *
+ * A section or group can supply `children` without a destination; a leaf supplies `href` or `path`.
+ * Optional description, update time, attachments, and hue carry the metadata shown for that entry.
+ */
 export type DocsNavNode = {
   id?: string;
   path?: string;
@@ -29,6 +35,49 @@ export type DocsNavNode = {
   children?: DocsNavNode[];
 };
 
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Removes query/hash data and trailing slashes before comparing Docs routes.
+ *
+ * @param value URL or path supplied by the site or current browser route.
+ *
+ * @return A normalized pathname suitable for exact and parent-route matching.
+ */
+const pathKey = (value: string): string => {
+  try {
+    const url = new URL(value, 'http://docs.local');
+    return url.pathname.replace(/\/+$/, '') || '/';
+  } catch {
+    return (value.split('#', 1)[0] ?? '').replace(/\/+$/, '') || '/';
+  }
+};
+
+/**
+ * Marks a leaf active when the current route is that page or one of its descendants.
+ *
+ * @param href Navigation destination to compare with the current route.
+ * @param currentPath Current browser or public-site path.
+ *
+ * @return Whether the destination owns the current path.
+ */
+const isActivePath = (href: string, currentPath: string): boolean => {
+  const target = pathKey(href);
+  const current = pathKey(currentPath);
+  return current === target || current.startsWith(`${target}/`);
+};
+
+/**
+ * Renders the documentation tree as nested links and non-clickable section labels.
+ *
+ * @param nodes Navigation nodes to display in their supplied order.
+ * @param currentPath Current public URL used to mark the active leaf.
+ * @param hue Primary Styling hue used for the navigation accent.
+ *
+ * @return An accessible navigation landmark containing the nested page tree.
+ */
 export function DocsNavigation({
   nodes,
   currentPath,
@@ -59,7 +108,9 @@ export function DocsNavigation({
               {list.parent.node.href ? (
                 <a
                   href={list.parent.node.href}
-                  aria-current={list.parent.node.href === currentPath ? 'page' : undefined}
+                  aria-current={
+                    pathKey(list.parent.node.href) === pathKey(currentPath) ? 'page' : undefined
+                  }
                 >
                   {list.parent.node.title}
                 </a>

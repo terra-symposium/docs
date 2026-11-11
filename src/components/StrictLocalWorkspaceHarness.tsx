@@ -1,20 +1,31 @@
-import { StrictMode, useState } from 'react';
+/**
+ * src/components/StrictLocalWorkspaceHarness.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { useState } from 'react';
+
+// COMPONENTS
 import { DocsLocalWorkspace } from './LocalDocsWorkspace.js';
+import { StrictMode } from 'react';
+
+// TYPES
 import type { DocsLocalWorkspaceProps } from './LocalDocsWorkspace.js';
 import type { JSX } from 'react';
 
-declare global {
-  interface Window {
-    __docsLocalWorkspaceFixture?: DocsLocalWorkspaceProps;
-    __docsQuizHarness?: {
-      failure?: string;
-      response?: unknown;
-      toolbar?: boolean;
-    };
-  }
-}
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
 
-/** Exercise the local host adapter under the same React StrictMode as consumers. */
+/**
+ * Exercise the local host adapter under the same React StrictMode as consumers.
+ *
+ * @return A fixture-backed local workspace or a diagnostic message when no fixture was supplied.
+ */
 export default function StrictLocalWorkspaceHarness(): JSX.Element {
   const [fixture] = useState(() =>
     typeof window === 'undefined' ? undefined : window.__docsLocalWorkspaceFixture,
@@ -25,14 +36,13 @@ export default function StrictLocalWorkspaceHarness(): JSX.Element {
     (quizHarness
       ? {
           ...(quizHarness.toolbar !== undefined ? { toolbar: quizHarness.toolbar } : {}),
-          generate: async (input: unknown) => {
-            document.documentElement.dataset.quizInput = JSON.stringify(input);
+          generate: async (i: unknown) => {
+            document.documentElement.dataset.quizInput = JSON.stringify(i);
             if (quizHarness.failure) throw new Error(quizHarness.failure);
             return quizHarness.response;
           },
         }
       : undefined);
-
   return (
     <StrictMode>
       {fixture ? (
@@ -42,4 +52,15 @@ export default function StrictLocalWorkspaceHarness(): JSX.Element {
       )}
     </StrictMode>
   );
+}
+declare global {
+  /** Browser-only fixture contract installed by the local-workspace test harness. */
+  interface Window {
+    __docsLocalWorkspaceFixture?: DocsLocalWorkspaceProps;
+    __docsQuizHarness?: {
+      failure?: string;
+      response?: unknown;
+      toolbar?: boolean;
+    };
+  }
 }

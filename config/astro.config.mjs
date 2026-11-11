@@ -1,8 +1,18 @@
-import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
-import { defineConfig } from 'astro/config';
-import react from '@astrojs/react';
-import { DOCS_VITE_OPTIMIZE_DEPS } from '.././dist/lib/lib/astro.js';
+/**
+ * config/astro.config.mjs
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import react from '@astrojs/react';
+import { defineConfig } from 'astro/config';
+import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
+
+// DATA
+import { DOCS_VITE_OPTIMIZE_DEPS } from '.././dist/lib/lib/astro.js';
 export default defineConfig({
   outDir: './dist/site/',
   devToolbar: { enabled: false },

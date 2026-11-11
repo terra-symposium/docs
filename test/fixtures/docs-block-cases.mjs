@@ -1,4 +1,8 @@
-/** Data-driven Markdown examples for Docs block parsing and serialization tests. */
+/**
+ * test/fixtures/docs-block-cases.mjs
+ * Data-driven Markdown examples for Docs block parsing and serialization tests.
+ */
+
 export const DOCS_BLOCK_TEST_CASES = [
   { name: 'heading', source: '## Heading', types: ['block'] },
   { name: 'paragraph', source: 'Paragraph with **bold** text.', types: ['block'] },

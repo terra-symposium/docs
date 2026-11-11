@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/heading.tsx
+ * src/components/terra/editor/docs/heading.tsx
  * Shared Docs heading identifiers and copyable read-only headings.
  */
 
@@ -8,16 +7,17 @@
 IMPORTS
 //////////////////////////////////////////////////*/
 
-import { Children, isValidElement, useEffect, useRef, useState } from 'react';
-import { Link as LinkIcon } from '@carbon/icons-react';
+// API
+import { isValidElement, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+
+// COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import { Children } from 'react';
+import { Link as LinkIcon } from '@carbon/icons-react';
 
+// TYPES
 import type { ReactNode } from 'react';
-
-/*//////////////////////////////////////////////////
-CONFIG
-//////////////////////////////////////////////////*/
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -27,7 +27,8 @@ HELPERS
  * Normalizes text into the URL identifier used by Docs headings and their table of contents.
  *
  * @param text - The heading text to normalize.
- * @returns The heading's URL fragment.
+ *
+ * @return The heading's URL fragment.
  */
 export const toHeadingId = (text: string): string =>
   text
@@ -42,8 +43,10 @@ COMPONENTS
 /**
  * Renders a Docs heading with a keyboard-accessible control for copying its link.
  *
- * @param props - The heading level and its content.
- * @returns A heading with a copy-link button.
+ * @param children Heading content whose rendered text determines the copied fragment.
+ * @param level Semantic heading element used for the requested outline depth.
+ *
+ * @return A heading with a copy-link button.
  */
 export function DocsHeading({
   children,

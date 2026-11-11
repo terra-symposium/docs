@@ -9,13 +9,14 @@ IMPORTS
 // API
 import { $surfaceReady, useTransitionState } from '../lib/terra/docs/state.js';
 import { docsHueTheme } from '../lib/docs-theme.js';
-import { markdownToDocsValue } from '../lib/markdown-model.js';
+import { docsValueToMarkdown, markdownToDocsValue } from '../lib/markdown-model.js';
 import { useEffect } from 'react';
 
 // COMPONENTS
 import { Button } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '@terra-symposium/standards-error-boundaries/react';
 import { DocsWorkspace } from './terra/Workspace.js';
+import { DocsMarkdown } from './MarkdownContent.js';
 import type { DocsQuizConfig } from './quiz.js';
 
 // TYPES
@@ -76,7 +77,7 @@ const slug = (value: string): string =>
     .trim()
     .toLowerCase()
     .replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-')
-    .replace(/^-|-$/g, '') || 'index';
+    .replace(TerraQualityRegex.REGEX_G_REGEX_20(), '') || 'index';
 /**
  * Normalizes a route for comparison while preserving its fragment identifier.
  *
@@ -246,7 +247,15 @@ export function DocsStaticWorkspace({
   const docPath = a?.leaf.href ?? currentPath;
   const effectivePageDescription = pageDescription ?? a?.leaf.description;
   const docContent = Array.isArray(content) ? content : markdownToDocsValue(markdown);
-  const contentSlot = renderContent ?? children;
+  const markdownSource = markdown.trim()
+    ? markdown
+    : Array.isArray(content)
+      ? docsValueToMarkdown(content as Parameters<typeof docsValueToMarkdown>[0])
+      : '';
+  const contentSlot =
+    renderContent ??
+    children ??
+    (markdownSource ? <DocsMarkdown markdown={markdownSource} /> : undefined);
   const readyContent =
     contentSlot !== undefined || staticContent ? (
       <StaticContentSlot key={currentPath}>{contentSlot ?? null}</StaticContentSlot>

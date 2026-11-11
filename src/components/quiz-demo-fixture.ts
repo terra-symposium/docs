@@ -1,4 +1,8 @@
-/** Shared quiz leaf data used by the public demo and its Playwright fixture. */
+/**
+ * src/components/quiz-demo-fixture.ts
+ * Shared quiz leaf data used by the public demo and its Playwright fixture.
+ */
+
 export const quizDemoLeaf = {
   id: 'quiz-leaf',
   path: 'content/course/quiz-leaf/index.md',

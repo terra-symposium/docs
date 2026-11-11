@@ -1,5 +1,13 @@
-import preset from '@terra-symposium/styling/tailwind-preset';
+/**
+ * config/tailwind.docs.config.mjs
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import preset from '@terra-symposium/styling/tailwind-preset';
 export default {
   presets: [preset],
   // Keep Docs utilities inside the theme wrapper so later host utility sheets

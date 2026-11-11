@@ -1,6 +1,21 @@
+/**
+ * test/browser/components/terra/editor/docs/nesting.spec.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { expect, test } from '@playwright/test';
 import { openEditor } from '../../../../support/editor.js';
+
+// TYPES
 import type { Content } from '../../../../support/editor.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const XL_VIEWPORT_TEST = {
   tag: '@viewport:xl',
@@ -9,7 +24,6 @@ const XL_VIEWPORT_TEST = {
     description: 'Root and nested editor insertion controls use the desktop editor layout.',
   },
 } as const;
-
 const textFixture = [
   {
     _key: 'paragraph',
@@ -19,7 +33,6 @@ const textFixture = [
     children: [{ _key: 'paragraph-text', _type: 'span', marks: [], text: 'Editor text' }],
   },
 ] satisfies Content;
-
 const migratedTableFixture = [
   {
     _key: 'before-table',
@@ -83,82 +96,73 @@ const migratedTableFixture = [
     children: [{ _key: 'after-text', _type: 'span', marks: [], text: 'After table' }],
   },
 ] satisfies Content;
-
 test(
   'root editor offers portable blocks without structured tabs or accordions',
   XL_VIEWPORT_TEST,
-  async ({ page }) => {
-    await openEditor(page, textFixture, { toolbar: true });
-    const toolbar = page.getByRole('toolbar', { name: 'Editor controls' });
+  async ({ page: p }) => {
+    await openEditor(p, textFixture, { toolbar: true });
+    const toolbar = p.getByRole('toolbar', { name: 'Editor controls' });
     await toolbar.getByRole('button', { name: 'Insert content' }).click();
-    const blocks = page.getByRole('listbox').getByRole('group', { name: 'Block' });
+    const blocks = p.getByRole('listbox').getByRole('group', { name: 'Block' });
     for (const type of ['Tabs', 'Accordion']) {
       await expect(blocks.getByRole('option', { name: type, exact: true })).toHaveCount(0);
     }
     await expect(blocks.getByRole('option', { name: 'Callout', exact: true })).toBeVisible();
     await blocks.getByRole('option', { name: 'Table', exact: true }).click();
-
-    await expect(page.locator('[data-block="table"]')).toBeVisible();
+    await expect(p.locator('[data-block="table"]')).toBeVisible();
     await expect
       .poll(async () => {
-        const content = JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]');
+        const content = JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]');
         return content.some((block: { _type?: string }) => block._type === 'table');
       })
       .toBe(true);
   },
 );
-
 test(
   'nested editor hides recursive blocks but keeps portable tables available',
   XL_VIEWPORT_TEST,
-  async ({ page }) => {
-    await openEditor(page, textFixture, { nested: true, toolbar: true });
-    const toolbar = page.getByRole('toolbar', { name: 'Editor controls' });
+  async ({ page: p }) => {
+    await openEditor(p, textFixture, { nested: true, toolbar: true });
+    const toolbar = p.getByRole('toolbar', { name: 'Editor controls' });
     await toolbar.getByRole('button', { name: 'Insert content' }).click();
-    const blocks = page.getByRole('listbox').getByRole('group', { name: 'Block' });
+    const blocks = p.getByRole('listbox').getByRole('group', { name: 'Block' });
     for (const type of ['Tabs', 'Accordion', 'Callout']) {
       await expect(blocks.getByRole('option', { name: type, exact: true })).toHaveCount(0);
     }
     await expect(blocks.getByRole('option', { name: 'Table', exact: true })).toBeVisible();
   },
 );
-
 test(
   'canonical migrated table content renders, edits, and reloads without legacy nesting',
   XL_VIEWPORT_TEST,
-  async ({ page }) => {
-    await openEditor(page, migratedTableFixture, { persistKey: 'docs-migrated-table' });
-    const table = page.locator('[data-block="table"]');
+  async ({ page: p }) => {
+    await openEditor(p, migratedTableFixture, { persistKey: 'docs-migrated-table' });
+    const table = p.locator('[data-block="table"]');
     await expect(table).toBeVisible();
-    await expect(page.getByText('Before table', { exact: true })).toBeVisible();
-    await expect(page.getByText('After table', { exact: true })).toBeVisible();
-    await expect(page.getByText('Original value', { exact: true })).toBeVisible();
-
-    await page.getByRole('textbox', { name: 'Table cell 2, 1' }).fill('Updated value');
+    await expect(p.getByText('Before table', { exact: true })).toBeVisible();
+    await expect(p.getByText('After table', { exact: true })).toBeVisible();
+    await expect(p.getByText('Original value', { exact: true })).toBeVisible();
+    await p.getByRole('textbox', { name: 'Table cell 2, 1' }).fill('Updated value');
     await expect
       .poll(async () => {
-        const content = JSON.parse((await page.getByTestId('editor-output').textContent()) ?? '[]');
+        const content = JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]');
         return {
           blockTypes: content.map((block: { _type?: string }) => block._type),
           value: content[1]?.rows?.[1]?.cells?.[0]?.content?.[0]?.children?.[0]?.text,
         };
       })
       .toEqual({ blockTypes: ['block', 'table', 'block'], value: 'Updated value' });
-
-    await page.reload();
-    await expect(page.locator('[data-block="table"]')).toBeVisible();
-    await expect(page.getByText('Before table', { exact: true })).toBeVisible();
-    await expect(page.getByText('After table', { exact: true })).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'Table cell 2, 1' })).toHaveValue(
-      'Updated value',
-    );
+    await p.reload();
+    await expect(p.locator('[data-block="table"]')).toBeVisible();
+    await expect(p.getByText('Before table', { exact: true })).toBeVisible();
+    await expect(p.getByText('After table', { exact: true })).toBeVisible();
+    await expect(p.getByRole('textbox', { name: 'Table cell 2, 1' })).toHaveValue('Updated value');
   },
 );
-
 test(
   'legacy groups become Markdown and cannot be reinserted as structured blocks',
   XL_VIEWPORT_TEST,
-  async ({ page }) => {
+  async ({ page: p }) => {
     const container = {
       _key: 'accordion',
       _type: 'accordion',
@@ -179,14 +183,12 @@ test(
         },
       ],
     } satisfies Content[number];
-
-    await openEditor(page, [container]);
-    await expect(page.locator('[data-block="accordion"]')).toHaveCount(0);
-    const raw = page.locator('[data-docs-editor-block="Raw Markdown"]');
+    await openEditor(p, [container]);
+    await expect(p.locator('[data-block="accordion"]')).toHaveCount(0);
+    const raw = p.locator('[data-docs-editor-block="Raw Markdown"]');
     await expect(raw).toContainText('===[Section]');
-
-    await page.getByRole('button', { name: 'Insert content' }).click();
-    const menu = page.getByRole('listbox');
+    await p.getByRole('button', { name: 'Insert content' }).click();
+    const menu = p.getByRole('listbox');
     for (const label of ['Tabs', 'Accordion']) {
       await expect(menu.getByRole('option', { name: label, exact: true })).toHaveCount(0);
     }

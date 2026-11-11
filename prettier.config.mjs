@@ -1,3 +1,11 @@
-import config from './config/.prettierrc.json' with { type: 'json' };
+/**
+ * prettier.config.mjs
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import config from './config/.prettierrc.json';
 export default config;

@@ -8,6 +8,9 @@ IMPORTS
 
 // API
 import { useEffect, useMemo, useState } from 'react';
+
+// COMPONENTS
+import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
 import {
   CommandDialog,
   CommandEmpty,
@@ -16,13 +19,13 @@ import {
   CommandItem,
   CommandList,
 } from '@terra-symposium/styling/ui';
-import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
 //////////////////////////////////////////////////*/
 
 const S_REGEX = TerraQualityRegex.REGEX_S_REGEX_2();
+/** Search-index entry displayed by the site's command palette. */
 type SearchDocument = {
   title: string;
   description: string;
@@ -37,7 +40,7 @@ COMPONENTS
 /**
  * Provides a keyboard-accessible dialog for searching the generated Docs index.
  *
- * @param props Optional base path used to fetch the site's search index.
+ * @param base Optional deployment prefix used to fetch the site's search index.
  *
  * @return Search controls, loading and error states, and links to matching pages.
  */
@@ -144,9 +147,9 @@ export function DocsSiteSearch({ base = '/' }: { base?: string }) {
   return (
     <CommandDialog
       open={opened}
-      onOpenChange={(nextOpen) => {
-        setOpened(nextOpen);
-        if (!nextOpen) setQuery('');
+      onOpenChange={(n) => {
+        setOpened(n);
+        if (!n) setQuery('');
       }}
       size="lg"
       className="max-w-2xl"
@@ -161,22 +164,22 @@ export function DocsSiteSearch({ base = '/' }: { base?: string }) {
         ) : null}
         {results.length > 0 ? (
           <CommandGroup>
-            {results.map(({ document, excerpt }) => (
+            {results.map(({ document: d, excerpt: e }) => (
               <CommandItem
-                key={document.href}
-                value={`${document.title} ${document.description} ${document.text}`}
+                key={d.href}
+                value={`${d.title} ${d.description} ${d.text}`}
                 onSelect={() => {
-                  window.location.assign(document.href);
+                  window.location.assign(d.href);
                   setOpened(false);
                 }}
                 className="items-start py-3"
               >
                 <span className="flex min-w-0 flex-col gap-1">
-                  <strong>{document.title}</strong>
-                  {document.description ? (
-                    <span className="text-sm text-primary-11">{document.description}</span>
+                  <strong>{d.title}</strong>
+                  {d.description ? (
+                    <span className="text-sm text-primary-11">{d.description}</span>
                   ) : null}
-                  <small className="line-clamp-2 text-xs text-primary-10">{excerpt}</small>
+                  <small className="line-clamp-2 text-xs text-primary-10">{e}</small>
                 </span>
               </CommandItem>
             ))}

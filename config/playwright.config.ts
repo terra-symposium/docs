@@ -1,22 +1,32 @@
+/**
+ * config/playwright.config.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { defineConfig } from '@playwright/test';
 import { resolve } from 'node:path';
+import { publishedDocsSmokeTests } from './playwright-selection.mjs';
 import { withResponsivePlaywright } from '@terra-symposium/standards-reporting/viewports';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const port = Number(process.env.DOCS_PLAYWRIGHT_PORT ?? 4335);
 const baseURL = `http://127.0.0.1:${port}`;
-
 export default withResponsivePlaywright(
   defineConfig({
     testDir: resolve(process.cwd(), 'test/browser'),
+    grepInvert: publishedDocsSmokeTests,
     workers: 1,
     outputDir: resolve(process.cwd(), 'tests/results/playwright-output'),
     projects: [{ name: 'chromium' }],
     use: { baseURL, browserName: 'chromium' },
-    expect: {
-      toHaveScreenshot: {
-        pathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}',
-      },
-    },
+    expect: { toHaveScreenshot: { pathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}' } },
     webServer: {
       command: `python3 -m http.server ${port} --bind 127.0.0.1 --directory ${resolve(process.cwd(), 'dist/site')}`,
       url: `${baseURL}/`,

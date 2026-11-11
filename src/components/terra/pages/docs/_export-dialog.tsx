@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_export-dialog.tsx
+ * src/components/terra/pages/docs/_export-dialog.tsx
  */
 
 /*//////////////////////////////////////////////////
@@ -11,19 +10,19 @@ IMPORTS
 import { useState } from 'react';
 
 // COMPONENTS
-import { Button } from '@terra-symposium/styling/ui';
-import { Checkbox } from '@terra-symposium/styling/ui';
 import {
+  Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Label,
+  Progress,
 } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../../ui.js';
-import { Label } from '@terra-symposium/styling/ui';
-import { Progress } from '@terra-symposium/styling/ui';
 
 // TYPES
 import type {
@@ -44,9 +43,12 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the export dialog component.
+ * Presents export targets and reports the selected format's progress to the caller.
  *
- * @param props - Export target, document data, and dialog state callbacks.
+ * @param tgt Currently selected export target, or `null` before a target is chosen.
+ * @param setTgt Updates the target selected in the dialog.
+ * @param disabled Disables export controls while the caller cannot accept a new export.
+ * @param onExport Caller operation that serializes the chosen target and reports progress.
  *
  * @return Dialog for exporting documentation content.
  */

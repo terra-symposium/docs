@@ -1,6 +1,21 @@
-import { openEditor } from '../../../../support/editor.js';
+/**
+ * test/browser/components/terra/editor/docs/nodes.spec.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { expect, test } from '@playwright/test';
+import { openEditor } from '../../../../support/editor.js';
+
+// TYPES
 import type { Content } from '../../../../support/editor.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const nodesFixture = [
   {
@@ -37,22 +52,6 @@ const nodesFixture = [
     ],
   },
 ] satisfies Content;
-
-test('nodes.spec: Preserve canvas height', async ({ page }) => {
-  await openEditor(page, nodesFixture);
-  await expect(page.locator('[data-docs-editor-block="Nodes"]')).toHaveCSS('height', '240px');
-});
-
-test('nodes.spec: Render nodes and edges', async ({ page }) => {
-  await openEditor(page, nodesFixture);
-  const flowchart = page.locator('[data-docs-editor-block="Nodes"]');
-  await expect(flowchart).toBeVisible();
-  await expect(flowchart).toHaveCSS('height', '240px');
-  await expect(flowchart.getByText('Start step')).toBeVisible();
-  await expect(flowchart.getByText('Finish step')).toBeVisible();
-  await expect(flowchart.locator('.react-flow__attribution')).toHaveCSS('display', 'none');
-});
-
 const autoLayoutNodesFixture = [
   {
     _key: 'nodes-without-positions',
@@ -86,16 +85,6 @@ const autoLayoutNodesFixture = [
     ],
   },
 ] satisfies Content;
-
-test('nodes.spec: Auto-layout Sanity nodes that have no saved positions', async ({ page }) => {
-  await openEditor(page, autoLayoutNodesFixture);
-  const flowchart = page.locator('[data-docs-editor-block="Nodes"]');
-  await expect(flowchart.locator('.react-flow__node')).toHaveCount(2);
-  await expect(flowchart.locator('.react-flow__edge')).toHaveCount(1);
-  await expect(flowchart.getByText('Unpositioned start')).toBeVisible();
-  await expect(flowchart.getByText('Unpositioned finish')).toBeVisible();
-});
-
 const selfLoopNodesFixture = [
   {
     _key: 'nodes-with-self-loop',
@@ -121,19 +110,6 @@ const selfLoopNodesFixture = [
     ],
   },
 ] satisfies Content;
-
-test('nodes.spec: Auto-layout graphs with self-loop edges', async ({ page }) => {
-  const pageErrors: string[] = [];
-  page.on('pageerror', (error) => pageErrors.push(error.message));
-
-  await openEditor(page, selfLoopNodesFixture);
-  const flowchart = page.locator('[data-docs-editor-block="Nodes"]');
-  await expect(flowchart.locator('.react-flow__node')).toHaveCount(1);
-  await expect(flowchart.locator('.react-flow__edge')).toHaveCount(1);
-  await expect(flowchart.getByText('Repeat this step')).toBeVisible();
-  expect(pageErrors).toEqual([]);
-});
-
 const compoundGroupNodesFixture = [
   {
     _key: 'nodes-with-compound-groups',
@@ -170,13 +146,7 @@ const compoundGroupNodesFixture = [
         type: 'process',
         data: { title: 'Target child', groupId: 'group-target' },
       },
-      {
-        _key: 'driver',
-        _type: 'node',
-        id: 'driver',
-        type: 'note',
-        data: { title: 'Driver' },
-      },
+      { _key: 'driver', _type: 'node', id: 'driver', type: 'note', data: { title: 'Driver' } },
     ],
     edges: [
       {
@@ -186,13 +156,7 @@ const compoundGroupNodesFixture = [
         source: 'source-child',
         target: 'target-child',
       },
-      {
-        _key: 'to-group',
-        _type: 'edge',
-        id: 'to-group',
-        source: 'driver',
-        target: 'group-target',
-      },
+      { _key: 'to-group', _type: 'edge', id: 'to-group', source: 'driver', target: 'group-target' },
       {
         _key: 'child-self-loop',
         _type: 'edge',
@@ -203,17 +167,46 @@ const compoundGroupNodesFixture = [
     ],
   },
 ] satisfies Content;
-
+test('nodes.spec: Preserve canvas height', async ({ page: p }) => {
+  await openEditor(p, nodesFixture);
+  await expect(p.locator('[data-docs-editor-block="Nodes"]')).toHaveCSS('height', '240px');
+});
+test('nodes.spec: Render nodes and edges', async ({ page: p }) => {
+  await openEditor(p, nodesFixture);
+  const flowchart = p.locator('[data-docs-editor-block="Nodes"]');
+  await expect(flowchart).toBeVisible();
+  await expect(flowchart).toHaveCSS('height', '240px');
+  await expect(flowchart.getByText('Start step')).toBeVisible();
+  await expect(flowchart.getByText('Finish step')).toBeVisible();
+  await expect(flowchart.locator('.react-flow__attribution')).toHaveCSS('display', 'none');
+});
+test('nodes.spec: Auto-layout Sanity nodes that have no saved positions', async ({ page: p }) => {
+  await openEditor(p, autoLayoutNodesFixture);
+  const flowchart = p.locator('[data-docs-editor-block="Nodes"]');
+  await expect(flowchart.locator('.react-flow__node')).toHaveCount(2);
+  await expect(flowchart.locator('.react-flow__edge')).toHaveCount(1);
+  await expect(flowchart.getByText('Unpositioned start')).toBeVisible();
+  await expect(flowchart.getByText('Unpositioned finish')).toBeVisible();
+});
+test('nodes.spec: Auto-layout graphs with self-loop edges', async ({ page: p }) => {
+  const pageErrs: string[] = [];
+  p.on('pageerror', (error) => pageErrs.push(error.message));
+  await openEditor(p, selfLoopNodesFixture);
+  const flowchart = p.locator('[data-docs-editor-block="Nodes"]');
+  await expect(flowchart.locator('.react-flow__node')).toHaveCount(1);
+  await expect(flowchart.locator('.react-flow__edge')).toHaveCount(1);
+  await expect(flowchart.getByText('Repeat this step')).toBeVisible();
+  expect(pageErrs).toEqual([]);
+});
 test('nodes.spec: Auto-layout compound groups with group-target and self-loop edges', async ({
-  page,
+  page: p,
 }) => {
-  const pageErrors: string[] = [];
-  page.on('pageerror', (error) => pageErrors.push(error.message));
-
-  await openEditor(page, compoundGroupNodesFixture);
-  const flowchart = page.locator('[data-docs-editor-block="Nodes"]');
+  const pageErrs: string[] = [];
+  p.on('pageerror', (error) => pageErrs.push(error.message));
+  await openEditor(p, compoundGroupNodesFixture);
+  const flowchart = p.locator('[data-docs-editor-block="Nodes"]');
   await expect(flowchart.locator('.react-flow__node')).toHaveCount(5);
   await expect(flowchart.locator('.react-flow__edge')).toHaveCount(3);
   await expect(flowchart.getByText('Target child')).toBeVisible();
-  expect(pageErrors).toEqual([]);
+  expect(pageErrs).toEqual([]);
 });

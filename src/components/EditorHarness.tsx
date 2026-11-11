@@ -1,41 +1,49 @@
-import { StrictMode, useState } from 'react';
-import { ContentEditor } from './terra/editor/ContentEditor.js';
+/**
+ * src/components/EditorHarness.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { configureDocsHost } from '../lib/host-runtime.js';
-import type { DocsActionOperation } from '../lib/host.js';
+import { useState } from 'react';
+
+// COMPONENTS
+import { ContentEditor } from './terra/editor/ContentEditor.js';
+import { StrictMode } from 'react';
+
+// TYPES
+import type { DocsActionOperation, DocsHostAttachment } from '../lib/host.js';
 import type { DocsBlockOptions } from './blocks.js';
-import type { DocsHostAttachment } from '../lib/host.js';
 import type { JSX } from 'react';
 
-declare global {
-  interface Window {
-    __contentFixture?: unknown[];
-    __contentOptions?: {
-      attachments?: DocsHostAttachment[];
-      blocks?: DocsBlockOptions;
-      nested?: boolean;
-      persistKey?: string;
-      readOnly?: boolean;
-      toolbar?: boolean;
-    };
-    __docsMockResponses?: Record<
-      string,
-      { data?: unknown; dataByInput?: Record<string, unknown>; error?: string }
-    >;
-  }
-}
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
 
-function mapContent(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(mapContent);
-  if (!value || typeof value !== 'object') return value;
-  const node = value as Record<string, unknown>;
+/**
+ * Copies supported Portable Text containers while preserving their field values.
+ *
+ * @param v Fixture content that may include nested arrays and objects.
+ *
+ * @return A recursively copied value with `_type` discriminators retained verbatim.
+ */
+function mapContent(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(mapContent);
+  if (!v || typeof v !== 'object') return v;
+  const node = v as Record<string, unknown>;
   return Object.fromEntries(
-    Object.entries(node).map(([key, entry]) => [
-      key,
-      key === '_type' ? node._type : mapContent(entry),
-    ]),
+    Object.entries(node).map(([k, e]) => [k, k === '_type' ? node._type : mapContent(e)]),
   );
 }
 
+/**
+ * Mounts the Docs editor with the fixture data and host-action mocks supplied by the browser tests.
+ *
+ * @return A strict-mode editor harness whose output is available to the browser tests.
+ */
 export default function EditorHarness(): JSX.Element {
   configureDocsHost({
     capabilities: {
@@ -47,6 +55,12 @@ export default function EditorHarness(): JSX.Element {
       history: true,
       publish: true,
     },
+    /**
+     * Resolves editor actions from the per-operation fixtures installed by browser tests.
+     * @param op Host operation being requested by the editor.
+     * @param input Optional operation input used to select a source-specific fixture response.
+     * @returns Fixture data or a normalized error response for the requested action.
+     */
     async invoke<T = unknown>(
       op: DocsActionOperation,
       input?: unknown,
@@ -90,10 +104,9 @@ export default function EditorHarness(): JSX.Element {
             nested={options.nested ?? false}
             toolbar={options.toolbar ?? true}
             readOnly={readOnly}
-            onChange={(value) => {
-              setContent(value);
-              if (options.persistKey)
-                sessionStorage.setItem(options.persistKey, JSON.stringify(value));
+            onChange={(v) => {
+              setContent(v);
+              if (options.persistKey) sessionStorage.setItem(options.persistKey, JSON.stringify(v));
             }}
           />
           <pre data-testid="editor-output" className="sr-only">
@@ -103,4 +116,22 @@ export default function EditorHarness(): JSX.Element {
       </div>
     </StrictMode>
   );
+}
+declare global {
+  /** Browser globals used to seed editor integration tests without a remote Docs host. */
+  interface Window {
+    __contentFixture?: unknown[];
+    __contentOptions?: {
+      attachments?: DocsHostAttachment[];
+      blocks?: DocsBlockOptions;
+      nested?: boolean;
+      persistKey?: string;
+      readOnly?: boolean;
+      toolbar?: boolean;
+    };
+    __docsMockResponses?: Record<
+      string,
+      { data?: unknown; dataByInput?: Record<string, unknown>; error?: string }
+    >;
+  }
 }

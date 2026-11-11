@@ -1,14 +1,40 @@
-/** DOM selection, clipboard, and HTML conversion for the Docs editor. */
+/**
+ * src/lib/terra/docs/editor-dom.ts
+ * DOM selection, clipboard, and HTML conversion for the Docs editor.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { warn } from '../runtime/runtime.js';
+
+// COMPONENTS
 import * as TerraQualityRegex from '../regex.mjs';
+
+// TYPES
 import type { EditorSel } from '../runtime/types.js';
 import type { EditorView } from '@codemirror/view';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 export const document: Document =
   typeof globalThis !== 'undefined' && typeof globalThis.document !== 'undefined'
     ? globalThis.document
     : (undefined as unknown as Document);
 
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Reads the browser's current selection when it is a collapsed caret.
+ *
+ * @return The active zero-width selection range, or `null` when there is no browser selection or it spans text.
+ */
 export function getCollapsedRange(): Range | null {
   if (typeof window === 'undefined') return null;
   const sel = window.getSelection();
@@ -88,6 +114,11 @@ export function pasteMd(
   insert(md, false, selection ?? null);
 }
 
+/**
+ * Finds the CodeMirror view belonging to the currently focused Docs code block.
+ *
+ * @return The active embedded CodeMirror view, or `null` when focus is elsewhere or the editor is not mounted.
+ */
 export function codeViewOf(): EditorView | null {
   if (typeof document === 'undefined') return null;
   return (
@@ -111,7 +142,6 @@ export function htmlToMd(html: string): string {
     warn('htmlToMd', 'Window context unavailable; returning raw markup.');
     return html;
   }
-
   const root = new DOMParser().parseFromString(html, 'text/html').body;
   const rendered = new Map<Node, string>();
   const pending: Array<{ node: Node; visited: boolean }> = [{ node: root, visited: false }];
@@ -140,7 +170,7 @@ export function htmlToMd(html: string): string {
     }
     const tag = element.tagName.toLowerCase();
     const children = Array.from(element.childNodes)
-      .map((child) => rendered.get(child) || '')
+      .map((c) => rendered.get(c) || '')
       .join('');
     let text = children;
     switch (tag) {
@@ -150,13 +180,13 @@ export function htmlToMd(html: string): string {
       case 'tfoot':
       case 'tr':
         text = `<${tag}${Array.from(element.attributes)
-          .map((attribute) => ` ${attribute.name}="${attribute.value}"`)
+          .map((a) => ` ${a.name}="${a.value}"`)
           .join('')}>\n${children}\n</${tag}>`;
         break;
       case 'th':
       case 'td':
         text = `<${tag}${Array.from(element.attributes)
-          .map((attribute) => ` ${attribute.name}="${attribute.value}"`)
+          .map((a) => ` ${a.name}="${a.value}"`)
           .join('')}>\n${children.trim()}\n</${tag}>`;
         break;
       case 'h1':

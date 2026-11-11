@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_attachments.tsx
+ * src/components/terra/pages/docs/_attachments.tsx
  * Docs attachment collection, uploads, and attachment-specific context menus.
  */
 
@@ -9,15 +8,13 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
+import { $attachmentFilter } from '../../../../lib/terra/docs/attachments.js';
 import {
   $surfaceReady,
   $transition,
   clearTransition,
   useAtom,
 } from '../../../../lib/terra/docs/state.js';
-import { $attachmentFilter } from '../../../../lib/terra/docs/attachments.js';
-import { sanitizeName } from '../../../../lib/terra/docs/tree.js';
-import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
 import { cn, isRec, logErr, notify, warn } from '../../../../lib/terra/runtime/runtime.js';
 import {
@@ -32,7 +29,9 @@ import {
 } from 'react';
 import { currLeafSrc } from '../../../../lib/terra/runtime/leaf.js';
 import { dirname, docsPath, isDocsPath } from '../../../../lib/terra/runtime/shared.js';
+import { sanitizeName } from '../../../../lib/terra/docs/tree.js';
 import { toast } from 'sonner';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
@@ -51,38 +50,44 @@ import {
   TrashCan as TrashIcon,
   Upload as UploadIcon,
 } from '@carbon/icons-react';
-import { Button } from '@terra-symposium/styling/ui';
-import { Card, CardDescription, CardHeader, CardTitle } from '@terra-symposium/styling/ui';
-import { CodeBlock } from '../../editor/docs/_CodeBlock.js';
 import {
+  Button,
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@terra-symposium/styling/ui';
-import { ErrorBoundary } from '../../ui.js';
-import { Empty } from '../../ui.js';
-import { Input } from '@terra-symposium/styling/ui';
-import { Label } from '@terra-symposium/styling/ui';
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Textarea,
 } from '@terra-symposium/styling/ui';
-import { Textarea } from '@terra-symposium/styling/ui';
+import { CodeBlock } from '../../editor/docs/_CodeBlock.js';
+import { Empty, ErrorBoundary } from '../../ui.js';
 import { TsDocsSelect } from './_blocks.js';
 
 // DATA
 import { ATTCH_TYPES } from '../../../../lib/terra/docs/attachments.js';
 
 // TYPES
-import type { AttchType, DocsTreeMenuAction, Sister } from '../../../../lib/terra/runtime/types.js';
-import type { Leaf as LeafNode, Tree as TreeType } from '../../../../lib/terra/runtime/types.js';
-import type { Md } from '../../../../lib/terra/runtime/types.js';
+import type {
+  AttchType,
+  DocsTreeMenuAction,
+  Leaf as LeafNode,
+  Md,
+  Sister,
+  Tree as TreeType,
+} from '../../../../lib/terra/runtime/types.js';
+import type { JSX } from 'react';
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -92,25 +97,29 @@ HELPERS
  * Handles latest content.
  *
  * @param content - Docs content whose attachment references should be collected.
+ *
+ * @return
  */
 const latestContent = (content: unknown): string => {
   try {
-    return currLeafSrc(content, '_attachments.latestContent');
-  } catch (_err) {
+    return currLeafSrc(content);
+  } catch {
     return typeof content === 'string' ? content : '';
   }
 };
 
 /**
- * Handles text asset.
+ * Identifies text-based attachments that can be inspected in the Docs attachment browser.
  *
  * @param sis - Attachment records to normalize for the Docs editor.
+ *
+ * @return `true` when the attachment name, title, or path ends in a supported text extension.
  */
 const textAsset = (sis: Sister): boolean => {
   return [sis.name, sis.title, sis.path].some(
-    (candidate) =>
-      typeof candidate === 'string' &&
-      /\.(?:csv|json|log|md|mdx|text|txt|xml|ya?ml)(?:[?#].*)?$/i.test(candidate.trim()),
+    (c) =>
+      typeof c === 'string' &&
+      /\.(?:csv|json|log|md|mdx|text|txt|xml|ya?ml)(?:[?#].*)?$/i.test(c.trim()),
   );
 };
 
@@ -121,7 +130,8 @@ COMPONENTS
 /**
  * Renders the document attachment manager for filtering, selecting, uploading, and organizing assets.
  *
- * @param props - The document path and current Docs tree used to scope and display its attachments.
+ * @param dPath Source path of the document whose attachment list is being managed.
+ * @param tree Navigation tree used to resolve document and ancestor attachment scopes.
  *
  * @return The attachment manager and its upload, selection, and organization controls.
  */
@@ -204,7 +214,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       if (s.type === 'youtube') cat = 'youtube';
       else if (
         s.name.toLowerCase().endsWith('.pdf') ||
-        s.path.toLowerCase().split('?')[0].endsWith('.pdf') ||
+        (s.path.toLowerCase().split('?')[0] ?? '').endsWith('.pdf') ||
         s.isMd ||
         s.type === 'document'
       )
@@ -314,13 +324,11 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   const processUpload = async (file: File, tempId: string, isMdFile: boolean) => {
     try {
       const finalAsset = await uploadAssetChunked(file, docId, {
-        onProgress: ({ currentChunk: currChunk, totalChunks, message: msg }) => {
-          if (msg) setSisters((p) => p.map((s) => (s.id === tempId ? { ...s, name: msg } : s)));
-          else if (totalChunks > 1)
+        onProgress: ({ currentChunk: c, totalChunks: t, message: m }) => {
+          if (m) setSisters((p) => p.map((s) => (s.id === tempId ? { ...s, name: m } : s)));
+          else if (t > 1)
             setSisters((p) =>
-              p.map((s) =>
-                s.id === tempId ? { ...s, name: `Uploading (${currChunk}/${totalChunks})...` } : s,
-              ),
+              p.map((s) => (s.id === tempId ? { ...s, name: `Uploading (${c}/${t})...` } : s)),
             );
         },
       });
@@ -392,7 +400,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         urls.map(async (u, i) => {
           let aType = t;
           if (t === 'other') {
-            if (u.toLowerCase().split('?')[0].endsWith('.pdf')) aType = 'document';
+            if ((u.toLowerCase().split('?')[0] ?? '').endsWith('.pdf')) aType = 'document';
             else if (
               TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(
                 u.toLowerCase().split('?')[0] ?? '',
@@ -417,7 +425,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                 path: u,
                 name: `${title} Video`,
                 isMd: false,
-                title,
+                ...(title === undefined ? {} : { title }),
                 type: 'youtube',
                 sourceUrl: u,
               };
@@ -432,7 +440,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
               const { data: docData, error: wErr } = await actions.write.doc.editor({
                 path: nPath,
                 source: text,
-                title,
+                ...(title === undefined ? {} : { title }),
                 type: 'website',
                 sourceUrl: u,
               });
@@ -442,10 +450,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                 path: nPath,
                 name: nPath.split('/').pop() || '',
                 isMd: true,
-                title,
+                ...(title === undefined ? {} : { title }),
                 type: 'website',
                 sourceUrl: u,
-                source: text,
+                ...(text === undefined ? {} : { source: text }),
               };
             } else if (aType === 'tsdocs') {
               const fmtUrl = u.startsWith('http')
@@ -504,8 +512,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                 sourceUrl: u,
               };
             }
-            setSisters((p) => p.map((s) => (s.id === tmpId ? item : s)));
-          } catch (_err) {
+            setSisters((p) =>
+              item ? p.map((s) => (s.id === tmpId ? item : s)) : p.filter((s) => s.id !== tmpId),
+            );
+          } catch {
             setSisters((p) => p.filter((s) => s.id !== tmpId));
             toast.error(`Failed to process ${u}`);
           }
@@ -539,8 +549,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
             ),
           );
           const docUrls = [
-            ...urls.filter((u) => u.toLowerCase().split('?')[0].endsWith('.pdf')),
-            ...urls.filter((u) => u.toLowerCase().split('?')[0].endsWith('.json')),
+            ...urls.filter((u) => (u.toLowerCase().split('?')[0] ?? '').endsWith('.pdf')),
+            ...urls.filter((u) => (u.toLowerCase().split('?')[0] ?? '').endsWith('.json')),
           ];
           const webUrls = urls.filter(
             (u) =>
@@ -646,7 +656,6 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       });
     }
   };
-
   const isDialogOpen =
     !!mergePdfState ||
     !!viewDlg ||
@@ -911,7 +920,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                   },
                   ...(selItems.every(
                     (s) =>
-                      s.path.toLowerCase().split('?')[0].endsWith('.pdf') ||
+                      (s.path.toLowerCase().split('?')[0] ?? '').endsWith('.pdf') ||
                       s.name.toLowerCase().endsWith('.pdf'),
                   )
                     ? [
@@ -1077,7 +1086,9 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                               path: ctxAttachment.item.path,
                               name: ctxAttachment.item.name,
                               isMd: ctxAttachment.item.isMd || false,
-                              id: ctxAttachment.item.id,
+                              ...(ctxAttachment.item.id === undefined
+                                ? {}
+                                : { id: ctxAttachment.item.id }),
                             });
                           },
                           icon: <EditIcon />,
@@ -1213,8 +1224,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       )}
       <Dialog
         open={isDialogOpen}
-        onOpenChange={(open) => {
-          if (open) return;
+        onOpenChange={(o) => {
+          if (o) return;
           if (viewDlg) setViewDlg(null);
           if (renameDlg?.open) {
             setRenameDlg(null);
@@ -1273,10 +1284,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                   try {
                     const { PDFDocument } = await import('pdf-lib');
                     const mergedPdf = await PDFDocument.create();
-                    for (let i = 0; i < mergePdfState.pdfs.length; i++) {
-                      const pdfDoc = await PDFDocument.load(
-                        await mergePdfState.pdfs[i].arrayBuffer(),
-                      );
+                    for (const pdf of mergePdfState.pdfs) {
+                      const pdfDoc = await PDFDocument.load(await pdf.arrayBuffer());
                       (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach((p) =>
                         mergedPdf.addPage(p),
                       );
@@ -1387,7 +1396,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                 );
                                 const a = document.createElement('a');
                                 a.href = url;
-                                a.download = `${sanitizeName(scope.replace(TerraQualityRegex.REGEX_G_REGEX_10(), '-'))}.json`;
+                                a.download = `${sanitizeName((scope ?? 'docs').replace(TerraQualityRegex.REGEX_G_REGEX_10(), '-'))}.json`;
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
@@ -1432,7 +1441,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                             a.click();
                             document.body.removeChild(a);
                             URL.revokeObjectURL(url);
-                          } catch (_err) {
+                          } catch {
                             toast.error('Failed to download asset.');
                           }
                         })();
@@ -1698,5 +1707,4 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     </ErrorBoundary>
   );
 }
-
 Attachments.displayName = 'DocsAttachments';

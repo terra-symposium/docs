@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/_Nodes.tsx
+ * src/components/terra/editor/docs/_Nodes.tsx
  */
 
 /*//////////////////////////////////////////////////
@@ -18,6 +17,7 @@ import { ErrorBoundary } from '../../ui.js';
 // TYPES
 import type { DocsBlock } from '../types.js';
 import type { Edge, FlowNode, NodesProps } from '../../../../lib/terra/runtime/types.js';
+import type { JSX } from 'react';
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -26,11 +26,19 @@ HELPERS
 /**
  * Decodes and renders a Docs flow diagram.
  *
- * @param props - Node data, optional styling class, and rendering state used to display a graph preview.
+ * @param diagramOptions Encoded graph nodes and edges with optional layout and presentation settings.
+ * @param diagramOptions.nodes Serialized or typed graph nodes passed to the shared flow renderer.
+ * @param diagramOptions.edges Serialized or typed connections whose endpoints refer to node IDs.
+ * @param diagramOptions.direction Optional graph layout direction.
+ * @param diagramOptions.height Requested graph viewport height, with a 384-pixel fallback.
+ * @param diagramOptions.nodeSep Optional space between sibling nodes.
+ * @param diagramOptions.rankSep Optional space between graph ranks.
+ * @param diagramOptions.proximityConnect Whether nearby nodes may be joined automatically.
+ * @param diagramOptions.className Additional class applied to the graph container.
  *
  * @return The graph preview for the supplied node data.
  */
-function NodesRenderer(props: NodesProps & { className?: string }): JSX.Element {
+function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX.Element {
   const {
     className,
     nodes: rawNodes,
@@ -41,7 +49,7 @@ function NodesRenderer(props: NodesProps & { className?: string }): JSX.Element 
     rankSep,
     proximityConnect,
     ...rest
-  } = props;
+  } = diagramOptions;
   const resolvedHeight = Number.isFinite(Number(height)) ? Number(height) : 384;
   return (
     <ErrorBoundary name="Nodes">
@@ -57,11 +65,11 @@ function NodesRenderer(props: NodesProps & { className?: string }): JSX.Element 
       >
         <Canvas
           {...rest}
-          direction={direction}
           height={resolvedHeight}
-          nodeSep={nodeSep}
-          rankSep={rankSep}
-          proximityConnect={proximityConnect}
+          {...(direction === undefined ? {} : { direction })}
+          {...(nodeSep === undefined ? {} : { nodeSep })}
+          {...(rankSep === undefined ? {} : { rankSep })}
+          {...(proximityConnect === undefined ? {} : { proximityConnect })}
           nodes={decodeNodesPayload(rawNodes).filter((n): n is FlowNode => {
             if (!n || typeof n !== 'object') return false;
             const val = n as Record<string, unknown>;
@@ -82,12 +90,11 @@ function NodesRenderer(props: NodesProps & { className?: string }): JSX.Element 
     </ErrorBoundary>
   );
 }
-Object.assign(NodesRenderer, { displayName: 'DocsNodesRenderer' });
 
 /**
  * Renders the nodes block component.
  *
- * @param props - Portable Text node props passed to the renderer.
+ * @param block Docs node block containing serialized graph data and layout options.
  *
  * @return Rendered documentation node content.
  */
@@ -96,6 +103,7 @@ export function NodesBlock({
 }: {
   block: /** Sanity Portable Text graph data and its visualization settings. */ DocsBlock<'nodes'>;
 }): JSX.Element {
+  const height = Number(block.height);
   return (
     <ErrorBoundary name="NodesBlock">
       <NodesRenderer
@@ -112,7 +120,7 @@ export function NodesBlock({
         {...(block.direction === 'TB' || block.direction === 'LR'
           ? { direction: block.direction }
           : {})}
-        {...(block.height === undefined ? {} : { height: block.height })}
+        {...(Number.isFinite(height) ? { height } : {})}
         {...(block.nodeSep === undefined ? {} : { nodeSep: block.nodeSep })}
         {...(block.proximityConnect === undefined
           ? {}
@@ -122,4 +130,5 @@ export function NodesBlock({
     </ErrorBoundary>
   );
 }
+Object.assign(NodesRenderer, { displayName: 'DocsNodesRenderer' });
 Object.assign(NodesBlock, { displayName: 'DocsNodesBlock' });

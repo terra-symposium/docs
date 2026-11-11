@@ -2,12 +2,13 @@
  * src/lib/astro.ts
  * Vite dependencies that must be pre-bundled when an Astro React island loads
  * the published Docs package. Astro's island loader does not reliably expose
- * these package imports to Vite's dependency crawler, so both Docs entrypoints
- * and their nested CommonJS dependencies need explicit optimization.
+ * these package imports to Vite's dependency crawler, so each public JavaScript Docs entrypoint
+ * and its nested CommonJS dependencies is optimized explicitly.
  */
 
 export const DOCS_VITE_OPTIMIZE_DEPS = [
   '@terra-symposium/docs',
+  '@terra-symposium/docs/astro',
   '@terra-symposium/docs/local-workspace',
   // Docs imports shared UI and hue utilities from this peer package. Include
   // it as a root so Vite also pre-bundles its CommonJS runtime dependencies.

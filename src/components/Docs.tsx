@@ -1,17 +1,33 @@
-import { lazy, Suspense, type JSX } from 'react';
+/**
+ * src/components/Docs.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { lazy } from 'react';
+
+// COMPONENTS
+import { Suspense } from 'react';
+
+// TYPES
 import type { DocsBlockOptions } from './blocks.js';
+import type { JSX } from 'react';
 import type { PortableTextBlock } from '@portabletext/editor';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const ContentEditor = lazy(() =>
   import('./terra/editor/ContentEditor.js').then((module) => ({ default: module.ContentEditor })),
 );
-
 /** Portable Text blocks supplied and retained by the host application. */
 export type DocsValue = PortableTextBlock[];
-
 /** Selects editing or read-only rendering. */
 export type DocsMode = 'edit' | 'view';
-
 /** Controlled content with editing callbacks available only in edit mode. */
 export type DocsProps = {
   value: DocsValue;
@@ -19,17 +35,32 @@ export type DocsProps = {
   blocks?: DocsBlockOptions;
 } & ({ mode: 'edit'; onChange: (value: DocsValue) => void } | { mode: 'view'; onChange?: never });
 
-/** Controlled editor surface backed by the canonical Docs editor. */
-export function Docs(props: DocsProps): JSX.Element {
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Controlled editor surface backed by the canonical Docs editor.
+ *
+ * @param editorOptions Controlled value, rendering mode, and optional block capabilities for one editor surface.
+ * @param editorOptions.value Controlled Portable Text document value.
+ * @param editorOptions.className Optional class applied to the editor root.
+ * @param editorOptions.blocks Optional rich-block capabilities supplied by the host.
+ * @param editorOptions.mode Selects editable controls or read-only rendering.
+ * @param editorOptions.onChange Required callback in edit mode for updated content.
+ *
+ * @return The Docs editor surface in editable or read-only mode.
+ */
+export function Docs(editorOptions: DocsProps): JSX.Element {
   return (
-    <div className={['docs', props.className].filter(Boolean).join(' ')}>
+    <div className={['docs', editorOptions.className].filter(Boolean).join(' ')}>
       <Suspense fallback={null}>
         <ContentEditor
-          content={props.value}
-          readOnly={props.mode === 'view'}
-          {...(props.blocks !== undefined ? { blocks: props.blocks } : {})}
-          {...(props.mode === 'edit'
-            ? { onChange: (value: unknown[]) => props.onChange(value as DocsValue) }
+          content={editorOptions.value}
+          readOnly={editorOptions.mode === 'view'}
+          {...(editorOptions.blocks !== undefined ? { blocks: editorOptions.blocks } : {})}
+          {...(editorOptions.mode === 'edit'
+            ? { onChange: (v: unknown[]) => editorOptions.onChange(v as DocsValue) }
             : {})}
         />
       </Suspense>

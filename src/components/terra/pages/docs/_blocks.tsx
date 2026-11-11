@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_blocks.tsx
+ * src/components/terra/pages/docs/_blocks.tsx
  * Legacy Docs utilities and TypeDoc scope selector.
  */
 
@@ -16,7 +15,20 @@ import { useEffect, useMemo, useState } from 'react';
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
-import { Button } from '@terra-symposium/styling/ui';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  SearchEmpty,
+} from '@terra-symposium/styling/ui';
 import {
   Checkmark as CheckmarkIcon,
   ChevronDown as ChevronDownIcon,
@@ -26,23 +38,7 @@ import {
   Folder as FolderIcon,
   Search as SearchIcon,
 } from '@carbon/icons-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@terra-symposium/styling/ui';
-import { ErrorBoundary } from '../../ui.js';
-import { Empty } from '../../ui.js';
-import { Input } from '@terra-symposium/styling/ui';
-import { Popover, PopoverContent, PopoverTrigger } from '@terra-symposium/styling/ui';
-import { SearchEmpty } from '@terra-symposium/styling/ui';
-
-/*//////////////////////////////////////////////////
-CONFIG
-//////////////////////////////////////////////////*/
+import { Empty, ErrorBoundary } from '../../ui.js';
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -79,18 +75,17 @@ export function toImgAlt(v: string): string {
 }
 
 /**
- * Controller input handling scope selections mapped against active documented resources.
+ * Renders a searchable resource picker that can select one path or several paths.
  *
- * @param props - Interactive config mapping tracking single/multi value inputs.
- * @param value - Value supplied to ts docs select for rendering or processing.
- * @param onChange - Callback invoked for change.
- * @param className - Additional CSS classes merged into ts docs select.
- * @param variant - Visual variant controlling ts docs select's presentation.
- * @param multiple - Multiple input supplied to ts docs select's operation.
+ * @param value Current selected path, or the selected paths when multiple selection is enabled.
+ * @param onChange Receives the chosen path or path list after a selection.
+ * @param className Optional classes added to the picker root.
+ * @param variant Chooses the compact inline picker or the larger dialog picker.
+ * @param multiple Allows the picker to retain more than one selected resource.
  *
  * @return Interactive dropdown presentation filtering file structures directly.
  *
- * @remarks Evaluates fetched payload blobs compiling the text formats to valid functional react representations natively.
+ * @remarks Search results are derived from the host's Docs tree and asset metadata.
  */
 export function TsDocsSelect({
   value,
@@ -178,7 +173,7 @@ export function TsDocsSelect({
   /**
    * Renders the TypeDoc scope tree.
    *
-   * @returns The scope tree.
+   * @return The scope tree.
    */
   const renderTree = (): React.JSX.Element => (
     <div className="flex flex-col gap-0.5">

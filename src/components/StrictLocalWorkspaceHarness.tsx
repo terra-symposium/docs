@@ -24,7 +24,7 @@ HELPERS
 /**
  * Exercise the local host adapter under the same React StrictMode as consumers.
  *
- * @return A fixture-backed local workspace or a diagnostic message when no fixture was supplied.
+ * @returns The supplied local fixture rendered through the Docs workspace under StrictMode.
  */
 export default function StrictLocalWorkspaceHarness(): JSX.Element {
   const [fixture] = useState(() =>
@@ -54,7 +54,9 @@ export default function StrictLocalWorkspaceHarness(): JSX.Element {
   );
 }
 declare global {
-  /** Browser-only fixture contract installed by the local-workspace test harness. */
+  /**
+   * Browser fixture fields used to provide local workspace and quiz test data.
+   */
   interface Window {
     __docsLocalWorkspaceFixture?: DocsLocalWorkspaceProps;
     __docsQuizHarness?: {

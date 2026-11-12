@@ -29,7 +29,7 @@ import type { JSX, ReactNode } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** One context-menu command that can be selected for an editor block. */
+/** One selectable command in a Docs block context menu. */
 type BlockActionItem = {
   text: string;
   icon?: ReactNode;
@@ -39,7 +39,7 @@ type BlockActionItem = {
 /** Command, separator, or submenu entry collected from the clicked block and its ancestors. */
 type BlockAction =
   BlockActionItem | { sep: true } | { text: string; icon?: ReactNode; sub: BlockActionItem[] };
-/** Editor element carrying optional commands used by the shared block context menu. */
+/** DOM element carrying optional commands used by the shared block context menu. */
 type BlockActionTarget = HTMLElement & { __blockActions?: BlockAction[] };
 
 /*//////////////////////////////////////////////////
@@ -47,12 +47,12 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Preserve the original Docs block context menu and its deferred focus handoff.
+ * Shows registered block actions and returns focus after the selected action runs.
  *
- * @param children Editor content wrapped by the context-menu event handler.
- * @param enabled Whether to install the menu trigger around the content.
+ * @param children - Editor content whose block actions are collected on context-menu input.
+ * @param enabled - Whether to install the menu trigger around the content.
  *
- * @return Content with block context-menu actions when enabled.
+ * @returns The content with block context-menu actions when enabled.
  */
 export function BlockContext({
   children,

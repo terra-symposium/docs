@@ -23,16 +23,16 @@ const FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS = 'flex flex-col gap-1 text-sm';
 const ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS =
   'rounded-md bg-primary-9 px-4 py-2 text-primary-1';
 
-/** Question formats understood by the Docs quiz generator and answer checker. */
+/** Question formats supported by the shared quiz runner. */
 export type DocsQuizQuestionType = 'multipleChoice' | 'keyword';
-/** Input sent to a host's quiz-generation service for one source page. */
+/** Source and constraints sent to a host when it generates a page quiz. */
 export type DocsQuizGenerationInput = {
   title: string;
   markdown: string;
   count: number;
   types: DocsQuizQuestionType[];
 };
-/** Validated question data rendered by the quiz review and play stages. */
+/** Validated question data consumed by the Docs quiz review and answer screens. */
 export type DocsQuizQuestion =
   | {
       type: 'multipleChoice';
@@ -50,14 +50,14 @@ export type DocsQuizQuestion =
       explanation?: string;
       section?: string;
     };
-/** Quiz title and validated questions returned by a host generation endpoint. */
+/** A generated quiz title and its validated questions. */
 export type DocsQuizDocument = { title: string; questions: DocsQuizQuestion[] };
-/** Host options for displaying the quiz toolbar and generating questions from page Markdown. */
+/** Host options for showing quiz controls and requesting generated question data. */
 export type DocsQuizConfig = {
   toolbar?: boolean;
   generate?: (input: DocsQuizGenerationInput) => Promise<unknown>;
 };
-/** Current page context shared with the Markdown quiz block. */
+/** Current document and generation settings shared with Markdown quiz blocks. */
 type DocsQuizContextValue = {
   config: DocsQuizConfig;
   title: string;
@@ -69,13 +69,13 @@ const DocsQuizContext = createContext<DocsQuizContextValue | null>(null);
 HELPERS
 //////////////////////////////////////////////////*/
 
-/**
- * Provides the current page's quiz generator and source to Docs quiz controls below it.
- * @param children Page content wrapped by the quiz context.
- * @param config Host-provided toolbar and generation settings.
- * @param title Current page title used in the generated quiz.
- * @param markdown Current page Markdown source supplied to the generator.
- * @returns The provider containing its children.
+/** Provides the current page and its host-supplied quiz generator to nested blocks.
+ *
+ * @param children - Descendant content that can request the page's quiz context.
+ * @param config - Host controls for toolbar visibility and server-backed generation.
+ * @param title - Page title used in quiz labels and as a generation fallback.
+ * @param markdown - Page source from which a host may generate questions.
+ * @returns The provider subtree with quiz context available to descendants.
  */
 export function DocsQuizProvider({
   children,
@@ -90,19 +90,20 @@ export function DocsQuizProvider({
   );
 }
 
-/**
- * Reads the current Docs quiz provider value for a quiz block.
- * @returns Page context when rendered below a provider, otherwise `null`.
+/** Returns the active page quiz context, or `null` outside a quiz provider.
+ *
+ * @returns The current page title, Markdown, and generation settings.
  */
 export function useDocsQuizContext(): DocsQuizContextValue | null {
   return useContext(DocsQuizContext);
 }
 
 /**
- * Validates an unknown generation response and narrows it to supported question shapes.
- * @param v Untrusted value returned by the host's quiz endpoint.
- * @returns Quiz document with valid prompts, choices or accepted answers, and optional explanations.
- * @throws Error when the title, question count, prompt, options, answer, or question type is invalid.
+ * Validates and normalizes the untrusted response returned by a quiz endpoint.
+ *
+ * @param v - Endpoint response expected to contain a title and one to twenty questions.
+ * @returns A quiz document with supported question fields copied into the public shape.
+ * @throws When the response, question prompts, answer options, or accepted answers are invalid.
  */
 export function parseDocsQuiz(v: unknown): DocsQuizDocument {
   if (!v || typeof v !== 'object') throw new Error('The quiz endpoint returned invalid quiz data.');
@@ -173,10 +174,11 @@ export function parseDocsQuiz(v: unknown): DocsQuizDocument {
 }
 
 /**
- * Checks a submitted response using exact choice matching or normalized keyword-answer rules.
- * @param question Validated quiz question.
- * @param response User-entered answer or selected multiple-choice text.
- * @returns `true` for the exact correct option or an accepted answer/keyword combination.
+ * Checks an answer using exact option matching or case-insensitive accepted keywords.
+ *
+ * @param question - Validated question whose answer rules should be applied.
+ * @param response - User-entered response to compare with those rules.
+ * @returns Whether the response satisfies the question's accepted-answer rules.
  */
 function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean {
   const norm = response.trim().toLowerCase();
@@ -192,12 +194,12 @@ function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean 
 }
 
 /**
- * Shared quiz setup, generation, review, and runner UI for Docs hosts.
+ * Renders quiz setup, host-backed generation, question review, and answer results.
  *
- * @param title Source page title displayed during setup and as the fallback quiz heading.
- * @param markdown Markdown sent to the host's quiz-generation callback.
- * @param gen Optional host callback that generates quiz questions from the selected settings.
- * @returns Interactive setup, review, question, and results UI held in the page session.
+ * @param title - Page title shown in the quiz heading and generation request.
+ * @param markdown - Page source supplied to the host's quiz-generation callback.
+ * @param gen - Optional host callback that returns questions for validation and review.
+ * @returns The quiz UI for the current page and generation settings.
  */
 export function DocsQuizGenerator({
   title,
@@ -218,9 +220,10 @@ export function DocsQuizGenerator({
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   /**
-   * Replaces one draft question while retaining the rest of the generated quiz.
-   * @param questionIndex Position of the question being revised.
-   * @param update Pure transformation applied to the selected question.
+   * Replaces one generated question while preserving the rest of the quiz.
+   *
+   * @param questionIndex - Position of the question to replace.
+   * @param update - Function that returns the revised question data.
    */
   const updateQuestion = (
     questionIndex: number,
@@ -624,7 +627,7 @@ export function DocsQuizGenerator({
 /**
  * Renders the Markdown opt-in directive using the active host configuration.
  *
- * @returns The configured quiz generator, or an explanatory message when no host provider exists.
+ * @returns The configured quiz generator, or an explanation when no host context exists.
  */
 export function DocsQuizBlock(): JSX.Element {
   const context = useDocsQuizContext();

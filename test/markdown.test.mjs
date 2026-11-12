@@ -31,6 +31,13 @@ test('nested and malformed groups preserve canonical Markdown behavior', () => {
   assert.match(malformed, /\|\|\|\[Unclosed\]/);
   assert.doesNotMatch(malformed, /role="tablist"/);
 });
+test('mismatched group closers leave the malformed source readable', () => {
+  const html = renderMarkdown('|||[Unclosed]\nBody\n===\n\nAfter the malformed group.');
+  assert.match(html, /\|\|\|\[Unclosed\]/);
+  assert.match(html, /Body/);
+  assert.match(html, /After the malformed group\./);
+  assert.doesNotMatch(html, /role="tablist"|data-orientation="vertical"/);
+});
 test('legacy spaced group delimiters remain readable', () => {
   const html = renderMarkdown('=== [Older syntax]\nBody\n===');
   assert.match(html, /data-orientation="vertical"/);

@@ -47,12 +47,12 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * React Markdown renderer shared by the site, nested blocks, and editor preview.
+ * Renders Docs Markdown through the shared view and editor block components.
  *
- * @param markdown Markdown source to parse into supported Docs blocks.
- * @param options Optional block capabilities forwarded to parsing and rendering.
+ * @param markdown - Source Markdown whose block syntax is converted to Docs values.
+ * @param options - Host-specific block renderers available to the conversion.
  *
- * @return React elements for each parsed block, using the same rich-block renderer as Docs pages.
+ * @returns React elements for converted rich blocks, including shared tabs and accordions.
  */
 export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Element {
   const blocks = markdownToDocsValue(markdown, options) as RichBlock[];

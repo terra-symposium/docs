@@ -24,9 +24,9 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Opens the pinned visual-parity route and waits for its shared Docs shell to finish rendering.
+ * Loads the stable parity fixture and waits until its document and fonts are ready to capture.
  *
- * @param page Playwright page configured with the viewport under comparison.
+ * @param page Playwright page used to open the parity route at the reference viewport.
  */
 async function openParityFixture(page: import('@playwright/test').Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -37,10 +37,10 @@ async function openParityFixture(page: import('@playwright/test').Page): Promise
 }
 
 /**
- * Compares the current Docs page with the named screenshot captured from the pinned consumer.
+ * Compares the current page with a pinned website screenshot at the same viewport and state.
  *
- * @param page Rendered page whose pixels are checked against the committed baseline.
- * @param name Baseline suffix that identifies the view or viewport being compared.
+ * @param page Playwright page whose rendered Docs UI should match the reference image.
+ * @param name Viewport label used to select the corresponding screenshot baseline.
  */
 async function expectOriginalScreenshot(
   page: import('@playwright/test').Page,
@@ -55,10 +55,10 @@ async function expectOriginalScreenshot(
 }
 
 /**
- * Selects a Docs mode through the visible mode control, exercising the user-facing navigation path.
+ * Selects a Docs surface mode through the visible mode control.
  *
- * @param page Page showing the Docs workspace.
- * @param mode View, Edit, or Attachments option to activate.
+ * @param page Playwright page containing the Docs mode combobox.
+ * @param mode Mode option to activate in the editor.
  */
 async function setMode(
   page: import('@playwright/test').Page,

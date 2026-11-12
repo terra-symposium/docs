@@ -25,10 +25,11 @@ const XL_VIEWPORT_TEST = {
   },
 } as const;
 /**
- * Wraps text in the document shape expected by the tsDocs fixture.
+ * Builds the read-source response body expected by the TSDocs browser fixture.
  *
- * @param text Content shown alongside generated documentation in the browser scenario.
- * @returns A one-paragraph Portable Text document.
+ * @param text Paragraph text shown by a generated API reference page.
+ *
+ * @return A one-paragraph Portable Text response body.
  */
 const paragraph = (text: string): Content => [
   {

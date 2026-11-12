@@ -25,7 +25,7 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 const S_REGEX = TerraQualityRegex.REGEX_S_REGEX_2();
-/** Search-index entry displayed by the site's command palette. */
+/** Search-index fields consumed by the Docs search ranking and result link renderer. */
 type SearchDocument = {
   title: string;
   description: string;
@@ -40,7 +40,7 @@ COMPONENTS
 /**
  * Provides a keyboard-accessible dialog for searching the generated Docs index.
  *
- * @param base Optional deployment prefix used to fetch the site's search index.
+ * @param base - Public base path used to fetch the site's search index.
  *
  * @return Search controls, loading and error states, and links to matching pages.
  */

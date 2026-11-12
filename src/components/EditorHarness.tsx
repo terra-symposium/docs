@@ -24,11 +24,11 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Copies supported Portable Text containers while preserving their field values.
+ * Recursively copies a fixture value while preserving Portable Text type tags.
+ * Browser fixtures use the copy to avoid mutating the window-owned test data.
  *
- * @param v Fixture content that may include nested arrays and objects.
- *
- * @return A recursively copied value with `_type` discriminators retained verbatim.
+ * @param v - Fixture value to copy; arrays and record fields are traversed recursively.
+ * @returns A detached value with its `_type` fields preserved.
  */
 function mapContent(v: unknown): unknown {
   if (Array.isArray(v)) return v.map(mapContent);
@@ -40,9 +40,11 @@ function mapContent(v: unknown): unknown {
 }
 
 /**
- * Mounts the Docs editor with the fixture data and host-action mocks supplied by the browser tests.
+ * Mounts the editor with browser-provided fixture data and mock host actions.
+ * When a persistence key is present, edits are saved to session storage so a
+ * browser test can inspect the resulting content after interacting with it.
  *
- * @return A strict-mode editor harness whose output is available to the browser tests.
+ * @returns A themed editor harness for Docs component tests and previews.
  */
 export default function EditorHarness(): JSX.Element {
   configureDocsHost({
@@ -56,10 +58,11 @@ export default function EditorHarness(): JSX.Element {
       publish: true,
     },
     /**
-     * Resolves editor actions from the per-operation fixtures installed by browser tests.
-     * @param op Host operation being requested by the editor.
-     * @param input Optional operation input used to select a source-specific fixture response.
-     * @returns Fixture data or a normalized error response for the requested action.
+     * Resolves a mocked host action and clones its configured response for the editor.
+     *
+     * @param op - Host operation whose test fixture response should be returned.
+     * @param input - Optional operation input used to select a source-specific fixture value.
+     * @returns The cloned response data or the configured error as an `Error` instance.
      */
     async invoke<T = unknown>(
       op: DocsActionOperation,
@@ -118,7 +121,7 @@ export default function EditorHarness(): JSX.Element {
   );
 }
 declare global {
-  /** Browser globals used to seed editor integration tests without a remote Docs host. */
+  /** Values exposed by the editor browser harness to fixture pages and tests. */
   interface Window {
     __contentFixture?: unknown[];
     __contentOptions?: {

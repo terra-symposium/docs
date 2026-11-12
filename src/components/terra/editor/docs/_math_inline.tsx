@@ -20,9 +20,9 @@ COMPONENTS
 /**
  * Renders a read-only Docs formula as an inline Portable Text object.
  *
- * @param attrs DOM attributes supplied by the Portable Text inline-object renderer.
- * @param children Nested editor content following the formula.
- * @param node Inline math object containing its optional source string.
+ * @param attrs Portable Text wrapper attributes applied to the inline formula.
+ * @param children Nested rendered content supplied by the Portable Text renderer.
+ * @param node Inline math object containing its optional source string and display metadata.
  *
  * @return Inline rendered formula.
  */

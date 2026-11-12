@@ -15,7 +15,7 @@ import type { Page } from '@playwright/test';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Portable Text array accepted by the browser editor fixture. */
+/** Flexible Portable Text fixtures, including legacy and production-shaped Docs block records. */
 export type Content = unknown[];
 
 /*//////////////////////////////////////////////////
@@ -23,11 +23,13 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Opens the shared editor with a deterministic document and optional host capabilities.
+ * Loads the editor harness with fixture content and optional host, toolbar, and mode settings.
  *
- * @param page Browser page that loads the editor harness.
- * @param content Portable Text fixture installed before the page scripts run.
- * @param options Attachments, block flags, toolbar state, and mocked host replies for this fixture.
+ * @param page Playwright page used to install the fixture and open the editor harness.
+ * @param content Portable Text blocks passed into the editor for this browser test.
+ * @param options Optional attachments, blocks, persistence, mock actions, and display settings.
+ *
+ * @return Resolves after the harness mounts its content editor.
  */
 export async function openEditor(
   page: Page,

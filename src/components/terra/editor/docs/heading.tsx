@@ -43,8 +43,8 @@ COMPONENTS
 /**
  * Renders a Docs heading with a keyboard-accessible control for copying its link.
  *
- * @param children Heading content whose rendered text determines the copied fragment.
- * @param level Semantic heading element used for the requested outline depth.
+ * @param children Rendered heading content used for the visible label and URL fragment.
+ * @param level Semantic heading element used for the rendered section.
  *
  * @return A heading with a copy-link button.
  */

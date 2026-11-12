@@ -19,9 +19,9 @@ HELPERS
 /**
  * Build both hue scales; CSS selects the active one for the host's theme.
  *
- * @param hue Primary palette hue, or `null` to use the neutral base palette.
+ * @param hue - Host accent hue; `null` selects the neutral Styling palette.
  *
- * @return CSS custom properties for the primary, secondary, and gray scales in both themes.
+ * @return CSS custom properties containing the primary, secondary, and gray theme scales.
  */
 export function docsHueTheme(hue: number | null): CSSProperties {
   const [primary, baseGray] = colors(hue);

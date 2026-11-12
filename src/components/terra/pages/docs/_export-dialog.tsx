@@ -43,14 +43,14 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Presents export targets and reports the selected format's progress to the caller.
+ * Lets the user select export formats and options for the current Docs target.
  *
- * @param tgt Currently selected export target, or `null` before a target is chosen.
- * @param setTgt Updates the target selected in the dialog.
- * @param disabled Disables export controls while the caller cannot accept a new export.
- * @param onExport Caller operation that serializes the chosen target and reports progress.
+ * @param tgt Selected section, branch, or leaf whose content is exported.
+ * @param setTgt Opens or closes the dialog by changing the selected export target.
+ * @param disabled Disables controls when the host cannot start an export.
+ * @param onExport Performs the export and reports progress while it runs.
  *
- * @return Dialog for exporting documentation content.
+ * @return The export dialog for the selected target, or `null` when no target is selected.
  */
 export function ExportDialog({
   target: tgt,

@@ -18,11 +18,10 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Changes the Docs route while preserving unrelated query parameters from the current page.
+ * Pushes a local Docs route into browser history while preserving other query parameters.
  *
- * @param href Destination URL resolved against the current site's origin.
- * @param mode View, edit, or attachment mode to encode in the destination query string.
- * @remarks Pushes browser history and dispatches `docs:navigate` so the workspace updates without a reload.
+ * @param href - Local Docs route to push into browser history.
+ * @param mode - Surface mode to preserve in the route; `view` removes the mode parameter.
  */
 export function navigateDocs({ href, mode }: { href: string; mode: Mode }): void {
   setTransition('local');

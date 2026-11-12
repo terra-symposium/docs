@@ -37,8 +37,9 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Copies runtime `.mjs` helpers from the source tree while preserving their relative directories.
- * @param dir Runtime source directory to walk recursively.
+ * Copies runtime `.mjs` modules into the package's nested runtime export directory.
+ *
+ * @param dir - Source directory whose JavaScript modules should be copied recursively.
  */
 async function copyRuntime(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {

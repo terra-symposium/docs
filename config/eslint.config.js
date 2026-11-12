@@ -18,7 +18,6 @@ export default tseslint.config(
       '**/.docs/**',
       '**/node_modules/**',
       '**/tests/results/**',
-      '**/demo-dist/**',
       '**/lib-dist/**',
       '**/site-dist/**',
       '**/test-results/**',
@@ -27,6 +26,7 @@ export default tseslint.config(
   },
   js.configs.recommended,
   tseslint.configs.recommended,
+  { files: ['**/*.cjs'], languageOptions: { globals: globals.node } },
   { files: ['bin/**/*.mjs', 'site/**/*.mjs'], languageOptions: { globals: globals.node } },
   { files: ['site/**/*.tsx'], languageOptions: { globals: globals.browser } },
 );

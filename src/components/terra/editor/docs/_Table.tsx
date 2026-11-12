@@ -1,7 +1,8 @@
 /**
  * src/components/terra/editor/docs/_Table.tsx
- * Docs table renderer with view and edit modes.
  */
+
+/* Docs table renderer with view and edit modes. */
 
 /*//////////////////////////////////////////////////
 IMPORTS
@@ -30,34 +31,43 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 /** Sanity Portable Text table rows and headers. */
-type TableBlock = DocsBlock<'table'>;
+type TableBlock = DocsBlock<'table'> & { header?: string; rows?: TableRow[] };
+/** Table row fields rendered by the table block. */
+type TableRow = { _key?: string; _type?: 'row'; cells?: DocTableCell[] };
 /** Sanity Portable Text table cell content and formatting. */
-type TableCell = NonNullable<NonNullable<TableBlock['rows']>[number]['cells']>[number];
+type TableCell = DocTableCell;
 /**
- * Returns a persisted Portable Text key or the stable fallback used by the current render.
- * @param val Cell or row record whose `_key` may be present.
- * @param fallback Render-local key used when the record lacks a stable key.
- * @returns The stored key or `fallback`.
+ * Reads a serialized block key or falls back to its stable row or column index.
+ *
+ * @param val Candidate cell or row data.
+ * @param fallback Index-based key to use when the content has no string `_key`.
+ *
+ * @return A string suitable for React's `key` attribute.
  */
 const key = (val: unknown, fallback: string): string =>
   isRec(val) && typeof val._key === 'string' ? val._key : fallback;
 /**
- * Produces a fixed-width cell list so short rows align with the widest row.
- * @param vals Cells already present in the row.
- * @param count Number of cells in the widest row.
- * @returns Array with exactly `count` entries, leaving missing cells undefined.
+ * Pads a row's cell list to the table's current column count.
+ *
+ * @param vals Existing cell values in the row.
+ * @param count Number of columns in the widest row.
+ *
+ * @return Exactly `count` cells, with undefined entries for missing cells.
  */
 const cells = <T,>(vals: T[], count: number): Array<T | undefined> =>
   Array.from({ length: count }, (_cell, i) => vals[i]);
 /**
- * Creates a compact key for newly inserted table rows, cells, and text blocks.
- * @returns A UUID with dashes removed.
+ * Creates a compact identifier for newly inserted table content.
+ *
+ * @return A UUID without hyphens.
  */
 const newKey = (): string => crypto.randomUUID().replaceAll('-', '');
 /**
- * Builds a Portable Text cell containing one paragraph when text is supplied.
- * @param text Optional text for the new cell's first paragraph.
- * @returns Cell data with generated keys and an empty body when `text` is blank.
+ * Creates a new table cell, with a paragraph when initial text is provided.
+ *
+ * @param text Optional initial cell text.
+ *
+ * @return Portable Text cell data with fresh keys for its nested records.
  */
 const cell = (text = ''): TableCell => ({
   _key: newKey(),
@@ -82,17 +92,18 @@ HELPERS
 /**
  * Renders a Docs table and its nested cell content.
  *
- * @param block Authored table block whose first row supplies the headings.
+ * @param block Authored table with its heading and row/cell content.
  *
  * @return The accessible table view.
  */
 function Table({ block }: { block: TableBlock }): React.JSX.Element {
-  const rows = (block.rows ?? []) as Array<{ _key: string; _type: 'row'; cells: DocTableCell[] }>;
+  const rows = (block.rows ?? []) as TableRow[];
   const count = rows.reduce((m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0), 0);
   /**
-   * Renders a cell's nested Portable Text with attachments disabled in read-only mode.
-   * @param c Optional cell value at the current row and column.
-   * @returns The nested cell editor, or `null` for a padded empty cell.
+   * Renders the Portable Text stored in one table cell.
+   *
+   * @param c - Cell data, or `undefined` when the row is padded to the table width.
+   * @returns A nested read-only editor for populated cells, or `null` for an empty cell.
    */
   const renderCell = (c: DocTableCell | undefined): React.JSX.Element | null =>
     c ? (
@@ -135,10 +146,10 @@ function Table({ block }: { block: TableBlock }): React.JSX.Element {
 /**
  * Renders editable Docs table controls and cells.
  *
- * @param attrs DOM attributes supplied by the Portable Text editor.
- * @param children Nested editor content rendered after the table controls.
- * @param node Table block containing the header label and current rows.
- * @param path Portable Text path targeted by row, column, and header updates.
+ * @param attrs Attributes applied to the editor wrapper.
+ * @param children Nested Portable Text content retained below the table controls.
+ * @param node Current table data.
+ * @param path Path of the table block in the document.
  *
  * @return The editable table controls and cells.
  */
@@ -153,9 +164,10 @@ function TableEditor({
   const rows = block.rows ?? [];
   const colCount = Math.max(1, ...rows.map((r) => r.cells?.length ?? 0));
   /**
-   * Commits the updated row matrix at this table block's Portable Text path.
-   * @param nRows Rows after the selected table operation.
-   * @returns No value; updates the table block in the editor.
+   * Replaces the table rows at this block's Portable Text path.
+   *
+   * @param nRows - Complete row list after an insertion, deletion, or cell change.
+   * @returns No value; the editor action writes the new rows to the block.
    */
   const update = (nRows: NonNullable<TableBlock['rows']>): void =>
     editor.send({ type: 'block.set', at: path, props: { rows: nRows } });
@@ -300,13 +312,13 @@ function TableEditor({
 }
 
 /**
- * Adapts Portable Text's block-object contract to the table renderer.
+ * Chooses a read-only table preview or the editor-backed table controls.
  *
- * @param attrs DOM attributes supplied by the Portable Text renderer.
- * @param children Nested editor content associated with the block.
- * @param node Table block data containing row and cell content.
- * @param path Portable Text path used to target the editable table.
- * @param readOnly Selects the static table view when editing is disabled.
+ * @param attrs Portable Text attributes applied to the editor wrapper.
+ * @param children Nested Portable Text content retained inside the wrapper.
+ * @param node Authored table block to display or edit.
+ * @param path Editor path used when rows, cells, or the heading change.
+ * @param readOnly Whether the workspace displays or edits this block.
  *
  * @return The table renderer in editable or read-only mode.
  */

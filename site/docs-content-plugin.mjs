@@ -24,13 +24,13 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Converts a Markdown source path into its public, extensionless site route.
+ * Converts an in-repository Markdown file path into its public Docs route.
  *
- * @param file Markdown document whose public URL is being constructed.
- * @param docsRoot Absolute root containing the published Markdown tree.
- * @param base Site deployment prefix, including its leading and trailing slashes.
+ * @param file - Resolved Markdown source file.
+ * @param docsRoot - Root directory containing the authored Docs pages.
+ * @param base - Public deployment base path.
  *
- * @return The route with `index` and `SKILL` filename segments removed.
+ * @return Trailing-slash route, with index and skill source names hidden from the URL.
  */
 function publicRoute(file, docsRoot, base) {
   const route = relative(docsRoot, file)
@@ -38,20 +38,20 @@ function publicRoute(file, docsRoot, base) {
     .join('/')
     .replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX(), '')
     .replace(TerraQualityRegex.REGEX_SKILL_I_REGEX(), '')
-    .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX(), '')
+    .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX_2(), '')
     .replace(TerraQualityRegex.REGEX_G_REGEX_6(), '');
   return `${base}${route ? `${route}/` : ''}`;
 }
 
 /**
- * Rewrites an in-tree Markdown or asset link for the built documentation site.
+ * Rewrites a Markdown or HTML link target to the corresponding public page or copied asset.
  *
- * @param rawTarget Link target as authored, including optional title syntax.
- * @param sourceFile Markdown file containing the link.
- * @param docsRoot Absolute root used to reject links escaping the documentation tree.
- * @param base Site deployment prefix used when producing public URLs.
+ * @param rawTarget - Authored target, including optional angle brackets, query, fragment, and suffix.
+ * @param sourceFile - Markdown file containing the target.
+ * @param docsRoot - Root directory used to reject links that escape the Docs content tree.
+ * @param base - Public deployment base path.
  *
- * @return The rewritten target when it points to a published Markdown or asset file; otherwise the original target.
+ * @return Rewritten target when it maps to local Docs content; otherwise the authored target.
  */
 function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
   const target = rawTarget.trim();
@@ -66,7 +66,7 @@ function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
   const query = queryParts.length ? `?${queryParts.join('?')}` : '';
   if (cPath.startsWith('/')) {
     const basePath =
-      base === '/' ? '' : `/${base.replace(TerraQualityRegex.REGEX_G_REGEX_6(), '')}`;
+      base === '/' ? '' : `/${base.replace(TerraQualityRegex.REGEX_G_REGEX_35(), '')}`;
     const rootBase = `${basePath}/`;
     const rewritten = `${
       base === '/' || cPath.startsWith(rootBase)
@@ -93,12 +93,12 @@ function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
 }
 
 /**
- * Applies a transformation only to Markdown outside fenced code blocks.
+ * Applies a transformation to Markdown sections outside fenced code blocks.
  *
- * @param source Markdown source containing any fenced examples.
- * @param callback Transformation to apply to each non-code segment.
+ * @param source - Markdown source containing optional backtick or tilde fences.
+ * @param callback - Transformation applied to each non-code section.
  *
- * @return Source with transformed prose and unchanged fenced examples.
+ * @return Source with transformed prose/HTML sections and original fenced code preserved.
  */
 function mapOutsideCode(source, callback) {
   return source

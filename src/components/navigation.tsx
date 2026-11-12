@@ -12,6 +12,7 @@ import { colors } from '@terra-symposium/styling';
 // TYPES
 import type { CSSProperties, JSX } from 'react';
 import type { DocsAttachment } from '../lib/workspace-types.js';
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -48,10 +49,16 @@ HELPERS
  */
 const pathKey = (value: string): string => {
   try {
-    const url = new URL(value, 'http://docs.local');
-    return url.pathname.replace(/\/+$/, '') || '/';
+    return (
+      new URL(value, 'http://docs.local').pathname.replace(
+        TerraQualityRegex.REGEX_PATTERN_REGEX_7(),
+        '',
+      ) || '/'
+    );
   } catch {
-    return (value.split('#', 1)[0] ?? '').replace(/\/+$/, '') || '/';
+    return (
+      (value.split('#', 1)[0] ?? '').replace(TerraQualityRegex.REGEX_PATTERN_REGEX_7(), '') || '/'
+    );
   }
 };
 

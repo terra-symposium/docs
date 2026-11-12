@@ -24,19 +24,19 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Decodes and renders a Docs flow diagram.
+ * Decodes Docs graph data and renders a filtered React Flow preview.
  *
- * @param diagramOptions Encoded graph nodes and edges with optional layout and presentation settings.
- * @param diagramOptions.nodes Serialized or typed graph nodes passed to the shared flow renderer.
- * @param diagramOptions.edges Serialized or typed connections whose endpoints refer to node IDs.
- * @param diagramOptions.direction Optional graph layout direction.
- * @param diagramOptions.height Requested graph viewport height, with a 384-pixel fallback.
- * @param diagramOptions.nodeSep Optional space between sibling nodes.
- * @param diagramOptions.rankSep Optional space between graph ranks.
- * @param diagramOptions.proximityConnect Whether nearby nodes may be joined automatically.
- * @param diagramOptions.className Additional class applied to the graph container.
+ * @param diagramOptions Graph data, layout options, and presentation props for the flow canvas.
+ * @param diagramOptions.className Additional classes merged into the Docs and canvas containers.
+ * @param diagramOptions.nodes Serialized or typed nodes to decode and validate before rendering.
+ * @param diagramOptions.edges Serialized or typed edges to decode and validate before rendering.
+ * @param diagramOptions.direction Optional top-to-bottom or left-to-right graph layout.
+ * @param diagramOptions.height Graph viewport height in pixels; defaults to 384 when omitted or invalid.
+ * @param diagramOptions.nodeSep Optional horizontal separation between sibling nodes in the layout.
+ * @param diagramOptions.rankSep Optional separation between graph ranks in the layout.
+ * @param diagramOptions.proximityConnect Whether the layout may connect eligible nearby nodes automatically.
  *
- * @return The graph preview for the supplied node data.
+ * @return A Docs diagram container with the validated graph and requested layout options.
  */
 function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX.Element {
   const {
@@ -92,11 +92,11 @@ function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX
 }
 
 /**
- * Renders the nodes block component.
+ * Renders a Portable Text nodes block through the Docs flow canvas.
  *
- * @param block Docs node block containing serialized graph data and layout options.
+ * @param block Portable Text nodes block with graph data and optional layout settings.
  *
- * @return Rendered documentation node content.
+ * @return The nodes block inside its rendering error boundary.
  */
 export function NodesBlock({
   block,

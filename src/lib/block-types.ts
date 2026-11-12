@@ -17,7 +17,7 @@ export const DOCS_BLOCK_TYPES = [
   'raw',
   'tsDocs',
 ] as const;
-/** Every structured Docs block type, including groups that remain Markdown-authored. */
+/** Portable Text types accepted by the loader, including legacy groups normalized to Markdown. */
 export type DocsBlockType = (typeof DOCS_BLOCK_TYPES)[number];
 /** Structured editor blocks; tabs and accordions are authored only as Markdown syntax. */
 export type DocsEditorBlockType = Exclude<DocsBlockType, 'accordion' | 'tabs'>;

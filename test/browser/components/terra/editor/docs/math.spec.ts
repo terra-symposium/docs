@@ -17,22 +17,6 @@ import type { Content } from '../../../../support/editor.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const blockFixture = [
-  { _key: 'math-under-test', _type: 'math', code: 'x^2', inline: false },
-] satisfies Content;
-const inlineFixture = [
-  {
-    _key: 'inline-math-paragraph',
-    _type: 'block',
-    style: 'normal',
-    markDefs: [],
-    children: [
-      { _key: 'before-math', _type: 'span', marks: [], text: 'Equation ' },
-      { _key: 'inline-math', _type: 'math', code: 'x^2', inline: true },
-      { _key: 'after-math', _type: 'span', marks: [], text: ' is useful.' },
-    ],
-  },
-] satisfies Content;
 test('math.spec: Render block and emit formula edits', async ({ page: p }) => {
   const missingKatexFonts: string[] = [];
   p.on('response', (response) => {
@@ -41,7 +25,9 @@ test('math.spec: Render block and emit formula edits', async ({ page: p }) => {
         missingKatexFonts.push(`${response.status()} ${response.url()}`);
     }
   });
-  await openEditor(p, blockFixture);
+  await openEditor(p, [
+    { _key: 'math-under-test', _type: 'math', code: 'x^2', inline: false },
+  ] satisfies Content);
   const math = p.locator('[data-docs-editor-block="math"]');
   await expect(math).toHaveAttribute('data-math-code', 'x^2');
   await expect(math.locator('.katex')).toBeVisible();
@@ -84,9 +70,20 @@ test('math.spec: Render inline within a paragraph', async ({ page: p }) => {
         missingKatexFonts.push(`${response.status()} ${response.url()}`);
     }
   });
-  await openEditor(p, inlineFixture);
-  const inline = p.locator('[data-terra-inline="math"]');
-  await expect(inline.locator('.katex')).toBeVisible();
+  await openEditor(p, [
+    {
+      _key: 'inline-math-paragraph',
+      _type: 'block',
+      style: 'normal',
+      markDefs: [],
+      children: [
+        { _key: 'before-math', _type: 'span', marks: [], text: 'Equation ' },
+        { _key: 'inline-math', _type: 'math', code: 'x^2', inline: true },
+        { _key: 'after-math', _type: 'span', marks: [], text: ' is useful.' },
+      ],
+    },
+  ] satisfies Content);
+  await expect(p.locator('[data-terra-inline="math"]').locator('.katex')).toBeVisible();
   await p.evaluate(() => document.fonts.ready);
   await expect.poll(() => p.evaluate(() => document.fonts.check('16px "KaTeX_Main"'))).toBe(true);
   expect(missingKatexFonts).toEqual([]);

@@ -1,6 +1,5 @@
 /**
  * src/components/terra/pages/docs/_toolbar.tsx
- * astro/src/pages/docs/_toolbar.tsx
  * Shared UI components, toolbars, and context menus for the visual MDX Editor.
  * Folder boundary: editor chrome and commands; document state, block rendering, and navigation remain outside this module.
  */
@@ -23,10 +22,12 @@ import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import { isDocBody } from '../../../../lib/terra/runtime/types.js';
 import { redo, redoDepth, undo, undoDepth } from '@codemirror/commands';
 import { stringifyDocBody } from '../../../../lib/terra/runtime/content/document-markdown.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 import { toast } from 'sonner';
 import { toolbarFocusValue } from '../../../../lib/terra/docs/toolbar.js';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useDocsQuizContext } from '../../../quiz.js';
+import type { JSX } from 'react';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
@@ -116,11 +117,10 @@ import type {
   Mode as ToolbarMode,
   RepoComponentWithLabel,
   ToolbarState,
-  ToolbarBlock,
   Tree,
 } from '../../../../lib/terra/runtime/types.js';
 import type { LexicalEditor, LexicalNode } from 'lexical';
-import type { MouseEvent, ReactNode } from 'react';
+import type { ComponentType, MouseEvent, ReactNode } from 'react';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -139,10 +139,12 @@ const SECONDARY_TEXT_CLASS = 'text-xs text-primary-11';
 const MENU_GAP_CLASS = 'gap-2';
 const FIELD_GAP_CLASS = 'space-y-1.5';
 const MENU_WIDTH_CLASS = 'w-56';
+
 /**
- * Renders a provided icon element or instantiates a component-style icon value.
- * @param icon Block icon element or component constructor.
- * @returns Element, instantiated icon, or `null` when unsupported.
+ * Renders a block icon supplied either as an existing React node or a component.
+ *
+ * @param icon - Host-provided icon node or component constructor.
+ * @returns The icon node, or `null` when the value cannot render an icon.
  */
 const blockIcon = (icon: BlockOpt['icon']): ReactNode =>
   React.isValidElement(icon)
@@ -151,19 +153,23 @@ const blockIcon = (icon: BlockOpt['icon']): ReactNode =>
       ? React.createElement(icon, { className: ICON_CLASS })
       : null;
 
+/**
+ * Narrows a host block to entries the toolbar can turn into a source import.
+ *
+ * @param c - Host-provided block metadata to validate.
+ *
+ * @returns Whether `component.path` is a non-empty module path.
+ */
+function hasComponentPath(
+  c: (typeof repoComponents)[number],
+): c is (typeof repoComponents)[number] & { path: string } {
+  return typeof c.path === 'string' && c.path.length > 0;
+}
+
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
-/**
- * Measures the visible text offset of a DOM position within the active editor.
- *
- * @param content Editor element whose rendered text supplies the offset basis.
- * @param node DOM node containing the position being measured.
- * @param val Offset within `node` at which the range should end.
- *
- * @return Character count before the position, or the full editor text length when the node is outside it.
- */
 /**
  * Prevents the active selection range from being lost when clicking toolbar buttons.
  *
@@ -176,20 +182,9 @@ function preserveSel(e: MouseEvent<HTMLElement>): void {
 }
 
 /**
- * Constructs a Regular Expression used to power the Find & Replace feature.
- *
- * @param cfg - Search options controlling markup removal, case sensitivity, the query text, and whole-word matching.
- * @param {boolean} cfg.blind - Whether to ignore markdown syntax.
- * @param {boolean} cfg.case - Whether the search is case-sensitive.
- * @param {string} cfg.find - The string sequence to search for.
- * @param {boolean} cfg.full - Whether to match full words only.
- *
- * @return {RegExp | null} The compiled RegExp object or null if no search term exists.
- */
-/**
  * Normalizes a saved document version into its structured body and preview representations.
  *
- * @param ver - Ver input supplied to parse ver body's operation.
+ * @param ver - Saved revision to parse, or `undefined` before history is available.
  *
  * @return The parsed body, original JSON text, and Markdown preview; empty values are returned when no version is available or parsing fails.
  */
@@ -227,7 +222,7 @@ function parseVerBody(ver: DocVer | undefined): {
 function looksLikeJsonBlob(val: string): boolean {
   const v = val.trim();
   // prettier-ignore
-  return ((v.startsWith('{') && v.endsWith('}')) || (v.startsWith('[') && v.endsWith(']'))) && v.length > 80;
+  return ([['{', '}'], ['[', ']']] as const).some(([s, e]) => v.startsWith(s) && v.endsWith(e)) && v.length > 80;
 }
 
 /*//////////////////////////////////////////////////
@@ -251,7 +246,7 @@ const Button = React.forwardRef<
    *
    * @return The styled button wrapped in its tooltip.
    */
-  function Button(x, n): React.JSX.Element {
+  function Button(x, n): JSX.Element {
     const {
       children: c,
       className: v,
@@ -288,13 +283,13 @@ Button.displayName = 'Button';
 /**
  * Mode control for the document viewer, visual editor, and attachment browser.
  *
- * @param mode Currently active view, edit, or attachments mode.
- * @param onModeChange Callback that applies a user-selected mode.
- * @param disabled Whether to disable the selector.
- * @param editable Whether the editor mode is available in this host.
- * @param size Styling control size used by the selector.
+ * @param mode - Currently selected workspace mode.
+ * @param onModeChange - Applies a user-selected mode to the owning workspace.
+ * @param disabled - Prevents mode changes while the workspace is busy.
+ * @param editable - Includes edit mode only when the current user can write.
+ * @param size - Styling size for the shared Select control.
  *
- * @return {React.JSX.Element} The Select dropdown for mode switching.
+ * @returns The Select control containing the modes available to this user.
  */
 function Mode({
   mode,
@@ -308,8 +303,7 @@ function Mode({
   disabled?: boolean;
   editable: boolean;
   size?: 'sm' | 'xs';
-}): React.JSX.Element {
-  void editable;
+}): JSX.Element {
   return (
     <Select
       size={size}
@@ -327,7 +321,7 @@ function Mode({
       </SelectTrigger>
       {/* prettier-ignore */}
       <SelectContent align='start'>
-				{(editable ? ['view', 'edit', 'attachments'] as const : ['view', 'attachments'] as const).map(o => <SelectItem key={o} value={o}>{o[0]!.toUpperCase() + o.slice(1)}</SelectItem>)}
+        {(editable ? ['view', 'edit', 'attachments'] : ['view', 'attachments']).map(o => <SelectItem key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</SelectItem>)}
 			</SelectContent>
     </Select>
   );
@@ -335,12 +329,14 @@ function Mode({
 const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, Uploader, Custom } =
   {
     /**
-     * Adds Docs-specific history, save, and version controls beside the editor toolbar.
-     * @param aMode Current document mode used to select relevant actions.
-     * @param editable Whether the host permits document changes.
-     * @param size Styling size for the toolbar controls.
-     * @param toolbar Current path and editor state used by save and history actions.
-     * @returns Supported Docs actions, or `null` when the host is read-only.
+     * Adds Docs-specific mode, history, save, and version controls beside the editor toolbar.
+     *
+     * @param aMode - Active workspace mode used to select the history actions.
+     * @param editable - Whether the current host allows document changes.
+     * @param size - Shared control size used by the toolbar buttons.
+     * @param toolbar - Document actions and saved-state data, or `null` before editor setup.
+     *
+     * @returns The Docs history and save controls, or `null` when no edit actions are available.
      */
     DocsToolbarActions({
       activeMode: aMode,
@@ -352,7 +348,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       editable: boolean;
       size?: 'sm' | 'xs';
       toolbar: ToolbarState | null;
-    }): React.JSX.Element | null {
+    }): JSX.Element | null {
       const edit = useContext(EditStateCtx);
       const [versions, setVersions] = useState<DocVer[]>([]);
       const [historyOpen, setHistoryOpen] = useState(false);
@@ -428,7 +424,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       if (!editable) return null;
       return (
         <TooltipProvider>
-          <div className="flex items-center gap-1" data-docs-toolbar-actions>
+          <div className={DOCS_LAYOUT_CLASSES.compactRow} data-docs-toolbar-actions>
             <Mode
               editable={editable}
               mode={aMode}
@@ -470,8 +466,9 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                       aria-label="Version History"
                       onMouseDown={preserveSel}
                       onClick={() => {
-                        if (!selectedVersionId && versions[0])
-                          setSelectedVersionId(versions[0].savedAt);
+                        const firstVersion = versions[0];
+                        if (firstVersion && !selectedVersionId)
+                          setSelectedVersionId(firstVersion.savedAt);
                         setHistoryOpen(true);
                       }}
                     >
@@ -504,7 +501,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                         </SelectContent>
                       </Select>
                     </DialogHeader>
-                    <div className="min-h-0 flex-1 overflow-y-auto">
+                    <div className={DOCS_LAYOUT_CLASSES.flexScrollArea}>
                       <CodeBlock
                         tone="view"
                         language="mdx"
@@ -547,13 +544,13 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
     },
 
     /**
-     * Undo and Redo control group dynamically checking CodeMirror depth levels.
+     * Renders undo and redo controls using the host adapter or the active CodeMirror history.
      *
-     * @param onMouseDown Handler that preserves editor focus during control interaction.
-     * @param disabled Whether to disable both history controls.
-     * @param adapter Optional editor adapter supplying its own undo/redo state and commands.
+     * @param onMouseDown - Preserves the editor selection when a history button receives focus.
+     * @param disabled - Prevents history actions while the editor is unavailable.
+     * @param adapter - Host-provided undo and redo actions and their available-state flags.
      *
-     * @return {React.JSX.Element} The paired undo/redo button group.
+     * @returns The paired undo and redo controls.
      */
     Undo({
       onMouseDown,
@@ -563,7 +560,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       onMouseDown: (e: MouseEvent<HTMLElement>) => void;
       disabled?: boolean;
       adapter?: EditorToolbarAdapter | undefined;
-    }): React.JSX.Element {
+    }): JSX.Element {
       // STATES
       const [state, setState] = useState<{ redo: boolean; undo: boolean }>({
         redo: false,
@@ -574,8 +571,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       useEffect(() => {
         let frame = 0;
         /**
-         * Handles sync.
-         *
+         * Reads the active CodeMirror undo and redo depths, clearing both when no view is mounted.
          */
         const sync = (): void => {
           const view = codeViewOf();
@@ -586,8 +582,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
         };
         sync();
         /**
-         * Handles refresh.
-         *
+         * Coalesces focus and input events into one next-frame history-depth read.
          */
         const refresh = (): void => {
           cancelAnimationFrame(frame);
@@ -649,15 +644,15 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
     },
 
     /**
-     * Dropdown dialog facilitating attachment uploads or selecting document attachments natively bound to the leaf.
+     * Opens the upload dialog and lists attachments already stored beside the active document.
      *
-     * @param Icon Carbon or React icon component displayed by the upload control.
-     * @param insert Optional callback that inserts the chosen attachment into the active editor.
-     * @param onMouseDown Handler that preserves editor selection when the popover opens.
-     * @param disabled Whether the attachment control is unavailable.
-     * @param ctx Current document path used to load its attachments.
+     * @param Icon - Icon rendered by the upload trigger.
+     * @param insert - Inserts the selected attachment link or embed into the editor.
+     * @param onMouseDown - Preserves the current selection before the dialog opens.
+     * @param disabled - Prevents uploads and insertions while the editor is unavailable.
+     * @param ctx - Active document path used to fetch sibling attachments.
      *
-     * @return {React.JSX.Element} The rendered Uploader dialog button.
+     * @returns The attachment dialog trigger and its upload/select controls.
      */
     Uploader({
       icon: Icon,
@@ -667,11 +662,11 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       ctx,
     }: {
       icon: React.ElementType;
-      insert?: (md: string, rootEnd?: boolean) => void;
+      insert?: ((md: string, rootEnd?: boolean) => void) | undefined;
       onMouseDown: (e: MouseEvent<HTMLElement>) => void;
       disabled?: boolean;
-      ctx?: string;
-    }): React.JSX.Element {
+      ctx?: string | undefined;
+    }): JSX.Element {
       // STATES
       const [cfg, setCfg] = useState({
         busy: false,
@@ -688,15 +683,30 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
           actions.read.doc
             .attachments({ path: ctx })
             .then(({ data: d }) => {
-              // prettier-ignore
-              if (a && Array.isArray(d))
-						setAtts(
-							d
-								.map((attachment) => ({
-									path: attachment.path,
-									name: attachment.name || attachment.path.split('/').pop() || 'attachment',
-								})),
-						);
+              if (!a || !Array.isArray(d)) return;
+              /**
+               * Accepts only attachment records with a usable local path.
+               *
+               * @param item - Value returned by the host attachment action.
+               *
+               * @returns Whether `item` has a string `path` field.
+               */
+              const hasPath = (item: unknown): item is { path: string } =>
+                Boolean(
+                  item &&
+                  typeof item === 'object' &&
+                  'path' in item &&
+                  typeof item.path === 'string',
+                );
+              setAtts(
+                d.filter(hasPath).map((attachment) => ({
+                  path: attachment.path,
+                  name:
+                    'name' in attachment && typeof attachment.name === 'string'
+                      ? attachment.name
+                      : attachment.path.split('/').pop() || 'attachment',
+                })),
+              );
             })
             .catch((e) => {
               console.error('[Toolbar:attachments] load-failed', {
@@ -712,9 +722,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       }, [cfg.open, ctx]);
 
       // HELPERS
-      /**
-       * Handles submit.
-       */
+      /** Formats the selected stored attachment as a link, image, or embed and inserts it. */
       const uploaderActions = {
         reset: useCallback(() => {
           setCfg({ busy: false, open: false, attachment: '' });
@@ -816,13 +824,13 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
     },
 
     /**
-     * Recursive structural map converting component tree branches into native interactive dropdown triggers natively.
+     * Renders a component folder and its children as nested import-menu entries.
      *
-     * @param name Component category shown by this submenu.
-     * @param tree Components and child categories nested under the category.
-     * @param onCopy - Callback invoked for copy.
+     * @param name - Folder label shown in the menu.
+     * @param tree - Components and subfolders contained by this folder.
+     * @param onCopy - Inserts the selected component into the editor when one is chosen.
      *
-     * @return {React.JSX.Element} React rendered menu node explicitly containing nested branches cleanly.
+     * @returns The nested menu trigger and its component or folder entries.
      */
     GlobalComponentMenuNode({
       name,
@@ -831,8 +839,8 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
     }: {
       name: string;
       tree: MenuTree;
-      onCopy?: (component: RepoComponentWithLabel) => void;
-    }): React.JSX.Element {
+      onCopy?: ((component: RepoComponentWithLabel) => void) | undefined;
+    }): JSX.Element {
       return (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="capitalize">
@@ -854,12 +862,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
               </DropdownMenuItem>
             ))}
             {Object.entries(tree.folders).map(([f, s]) => (
-              <GlobalComponentMenuNode
-                key={f}
-                name={f}
-                tree={s}
-                {...(onCopy === undefined ? {} : { onCopy })}
-              />
+              <GlobalComponentMenuNode key={f} name={f} tree={s} onCopy={onCopy} />
             ))}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
@@ -867,19 +870,18 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
     },
 
     /**
-     * Complex unified insertion menu tracking local sister references alongside globally configured repo components.
+     * Offers local document links, repository components, and saved block templates for insertion.
      *
-     * @param onInsert Callback that adds an imported component statement and JSX snippet to the editor.
-     * @param onInsertMd Fallback callback that inserts an authored Markdown block.
-     * @param onMouseDown Handler that preserves the editor selection when the menu opens.
-     * @param disabled Whether to disable component and document insertion.
-     * @param ctx Current document path used to resolve local sibling pages and attachments.
+     * @param onInsert - Adds a component import and its JSX at the current structured editor selection.
+     * @param onInsertMd - Inserts Markdown when structured insertion is unavailable.
+     * @param onMouseDown - Preserves the editor selection while opening the menu.
+     * @param disabled - Prevents opening or using the menu while the editor is unavailable.
+     * @param ctx - Current document path used to find nearby pages and attachments.
      *
-     * @return The React JSX Element representing the fully interactive Dropdown and Dialog boundary.
+     * @returns The insertion menu and dialogs for local references and components.
      *
      * @remarks
-     * Acts as the primary interface for embedding both local media, external components, and other documents
-     * directly into the active MDX editor. It natively handles Sanity ID resolution and AST injection.
+     * The host remains responsible for file access; this component uses the shared actions to list candidates and insert their references.
      */
     Custom({
       onInsert,
@@ -888,12 +890,12 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       disabled,
       ctx,
     }: {
-      onInsert?: (statement: string, snippet: string) => void;
-      onInsertMd?: (md: string, rootEnd?: boolean) => void;
+      onInsert?: ((statement: string, snippet: string) => void) | undefined;
+      onInsertMd?: ((md: string, rootEnd?: boolean) => void) | undefined;
       onMouseDown: (e: MouseEvent<HTMLElement>) => void;
       disabled?: boolean;
-      ctx?: string;
-    }): React.JSX.Element {
+      ctx?: string | undefined;
+    }): JSX.Element {
       // STATES
       const [sis, setSis] = useState<{ path: string; name: string }[]>([]);
       const [search, setSearch] = useState({
@@ -932,11 +934,9 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       const componentTree = useMemo(() => {
         const root: MenuTree = { components: [], folders: {} };
         const counts = new Map<string, number>();
-        repoComponents.forEach((c) => {
-          if (typeof c.path === 'string') counts.set(c.path, (counts.get(c.path) ?? 0) + 1);
-        });
-        repoComponents.forEach((c) => {
-          if (typeof c.path !== 'string') return;
+        const importableComponents = repoComponents.filter(hasComponentPath);
+        importableComponents.forEach((c) => counts.set(c.path, (counts.get(c.path) ?? 0) + 1));
+        importableComponents.forEach((c) => {
           const parts = c.path.split('/_custom/');
           if (parts.length <= 1) {
             root.components.push({ ...c, displayLabel: c.name });
@@ -956,7 +956,6 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       }, []);
       const copyComponent = useCallback(
         async (c: RepoComponentWithLabel): Promise<void> => {
-          if (typeof c.path !== 'string') return;
           if (onInsert) {
             onInsert(`import ${c.name} from '${c.path}';`, c.clipboardValue ?? `<${c.name} />`);
             return;
@@ -1040,8 +1039,11 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
             continue;
           }
           const n = frame.nodes[frame.index];
+          if (!n) {
+            frame.index += 1;
+            continue;
+          }
           frame.index += 1;
-          if (!n) continue;
           const currTitle = n.title || n.origName || 'Untitled';
           if (n.type === 'leaf') {
             const nodePath = n.path;
@@ -1088,8 +1090,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
         setTransition('p');
         try {
           if (isNew) {
-            // scope the new document natively UNDER the current document's path.
-            // this ensures string-based `verifyWrite` auth checks pass by matching the prefix of the inherited warrant.
+            // Keep the new page under the current path so its prefix-based `verifyWrite` authorization matches.
             const basePath = ctx ? ctx.replace(TerraQualityRegex.REGEX_PATTERN_REGEX_2(), '') : '';
             const sName = search.query.trim()
               ? search.query.replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX_2(), '-').toLowerCase()
@@ -1112,7 +1113,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
             }
             finalPath = (writeRes.data as Md)?.path || finalPath;
           }
-          // map leaf explicitly to the editor's attachment array unconditionally
+          // Link the leaf into the current document and capture the host's attachment metadata when available.
           if (ctx) {
             const attRes = await actions.write.attachment
               .docRef({
@@ -1125,7 +1126,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                 return { data: null, error: _err };
               });
             if (attRes && attRes.data) {
-              // Resolves the exact Sanity UUID returned to map directly into the React AST parameter
+              // Prefer the reference ID returned by the host when assigning the leaf link target.
               const attachment = {
                 leafId:
                   typeof attRes.data === 'object' &&
@@ -1145,7 +1146,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
               });
             }
           }
-          // delay AST injection to allow Sanity CDN replica propagation to finish
+          // Let the host finish exposing a newly written page before inserting its reference.
           if (isNew || ctx) await new Promise((r) => setTimeout(r, 1500));
           clearTransition();
           // 2. Yield to event loop to allow DOM reconciliation
@@ -1271,7 +1272,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                 <DropdownMenuSubContent className={MENU_WIDTH_CLASS}>
                   {menuGroups.globalComponents.map((c) => (
                     <DropdownMenuItem
-                      key={c.path ?? c.name}
+                      key={c.path}
                       onMouseDown={preserveSel}
                       onSelect={(e) => {
                         e.preventDefault();
@@ -1334,7 +1335,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
 							{search.busy && search.tree.length === 0 && <p className='py-4 text-center text-sm text-primary-11'>Loading...</p>}
 							{search.query.trim() && (
 								<UiButton variant='outline' className='mb-2 flex-col items-start gap-y-0 border-dashed py-6' onClick={() => void embed('', true)} disabled={search.busy}>
-									<span className='text-sm font-medium'>{search.busy ? 'Creating...' : `Create "${search.query}"`}</span>
+								<span className={DOCS_LAYOUT_CLASSES.controlTitle}>{search.busy ? 'Creating...' : `Create "${search.query}"`}</span>
 									<span className={SECONDARY_TEXT_CLASS}>Create page and embed as attachment</span>
 								</UiButton>
 							)}
@@ -1356,13 +1357,13 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
     /**
      * Dropdown control for quickly converting a block or inserting a supported block template.
      *
-     * @param disabled Whether the block selector is unavailable.
-     * @param toolbar Current toolbar state used to locate the selected block.
-     * @param adapter - Adapter input supplied to block type's operation.
-     * @param opts Block-type and insertion actions available to the selector.
-     * @param json - Json input supplied to block type's operation.
+     * @param disabled - Prevents block selection while the editor is unavailable.
+     * @param toolbar - Supplies the current insertion action, or `null` without an active editor.
+     * @param adapter - Applies block-type changes through the host editor adapter.
+     * @param opts - Block type and insertion actions shown in the menu.
+     * @param json - Uses structured block insertion when editing serialized document content.
      *
-     * @return {React.JSX.Element} The Select dropdown block wrapper.
+     * @returns The Select control for changing a block or inserting a template.
      */
     BlockType({
       disabled,
@@ -1376,7 +1377,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       adapter?: EditorToolbarAdapter | undefined;
       options: BlockOpt[];
       json?: boolean;
-    }): React.JSX.Element {
+    }): JSX.Element {
       // STATES
       const [val, setVal] = useState('p');
       // refs to persist the last known location of the user's cursor
@@ -1447,17 +1448,16 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
         };
         sync();
         /**
-         * Handles refresh.
-         *
+         * Rechecks the selected block after the browser has applied the current input or selection event.
          */
         const refresh = (): void => {
           cancelAnimationFrame(frame);
           frame = requestAnimationFrame(sync);
         };
         /**
-         * Handles on block select.
+         * Updates the menu to the block reported by a Docs selection event.
          *
-         * @param e - Change event received from the toolbar input.
+         * @param e - Event detail containing a selected block or its decorator element.
          */
         const onBlockSelect = (e: Event): void => {
           const { block: selBlock, decorator } =
@@ -1603,9 +1603,15 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
           <SelectContent align="start">
             {/* prettier-ignore */}
             <SelectGroup>
-					<SelectLabel>Block Type</SelectLabel>
-							{opts.filter(o => o.group === 'type').map(({ value: v, label: l, icon: i }) => (<SelectItem key={v} value={v} icon={blockIcon(i)}>{l}</SelectItem>))}
-				</SelectGroup>
+              <SelectLabel>Block Type</SelectLabel>
+              {opts
+                .filter((o) => o.group === 'type')
+                .map(({ value: v, label: l, icon: i }) => (
+                  <SelectItem key={v} value={v} icon={blockIcon(i)}>
+                    {l}
+                  </SelectItem>
+                ))}
+            </SelectGroup>
             <SelectSeparator />
             <SelectGroup>
               <SelectLabel>Insert Block</SelectLabel>
@@ -1625,14 +1631,14 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
     /**
      * Main floating action bar assembling all text and format mutation interactions into a single cohesive boundary.
      *
-     * @param aMode Active mode used to show mode-specific actions.
-     * @param editable - Editability flag controlling whether toolbar accepts changes.
-     * @param toolbar Editor state and document path for toolbar operations.
-     * @param blocks - Blocks input supplied to toolbar's operation.
-     * @param adapter - Adapter input supplied to toolbar's operation.
-     * @param docs - Docs input supplied to toolbar's operation.
+     * @param aMode - Explicitly selected workspace mode; defaults to view mode.
+     * @param editable - Whether the current user can change the document.
+     * @param toolbar - Current editor callbacks and document state, or `null` before setup completes.
+     * @param blocks - Optional host-provided block templates available in the insertion menu.
+     * @param adapter - Optional host editor actions for formatting, block changes, and history.
+     * @param docs - Enables Docs-specific controls such as find, history, and publish.
      *
-     * @return {React.JSX.Element | null} Assembled floating bar mapping components.
+     * @returns The active toolbar controls, or `null` when this surface has no available actions.
      */
     Toolbar({
       activeMode: aMode,
@@ -1646,10 +1652,17 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       editable: boolean;
       toolbar: ToolbarState | null;
       transitioning?: boolean;
-      blocks?: ToolbarBlock[];
+      blocks?: {
+        icon: ComponentType<{
+          className?: string;
+        }>;
+        insert: () => string;
+        label: string;
+        type: string;
+      }[];
       adapter?: EditorToolbarAdapter;
       docs?: boolean;
-    }): React.JSX.Element | null {
+    }): JSX.Element | null {
       // STATES
       const toolbarCtx = {
         edit: useContext(EditStateCtx),
@@ -1666,8 +1679,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       const codeLength = useRef(0);
       useEffect(() => {
         /**
-         * Handles sync.
-         *
+         * Stores the CodeMirror cursor range and source length before the toolbar takes focus.
          */
         const sync = (): void => {
           const view = codeViewOf();
@@ -1757,14 +1769,14 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
         [findMatcher, findSearchable],
       );
       const findJsonBlocked = looksLikeJsonBlob(findCfg.find) || looksLikeJsonBlob(findCfg.replace);
-      /** Focuses and selects the find input after the toolbar opens. */
+      /** Focuses and selects the search field after the find popover has opened. */
       const focusFind = (): void => {
         requestAnimationFrame(() => {
           findRef.current?.focus();
           findRef.current?.select();
         });
       };
-      /** Opens find with the current browser selection as its initial query. */
+      /** Opens find and replace with the current browser selection as the initial search text. */
       const openFindSelection = (): void => {
         setFindCfg((p) => ({
           ...p,
@@ -1774,8 +1786,9 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
         focusFind();
       };
       /**
-       * Advances or rewinds the active match and scrolls it clear of the sticky toolbar.
-       * @param backward Whether to move to the preceding match instead of the next one.
+       * Moves to the next or previous search result and keeps it visible below the toolbar.
+       *
+       * @param backward - Moves toward earlier matches when `true`.
        */
       const navigateFind = (backward = false): void => {
         const browser = window as Window & {
@@ -1834,8 +1847,9 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       useEffect(() => {
         if (!docs || mode === 'view') return;
         /**
-         * Handles editor find shortcuts and Enter-based match navigation.
-         * @param event Keyboard event from the Docs page.
+         * Routes keyboard shortcuts to the active find controls.
+         *
+         * @param event - Keyboard event used to detect find and result-navigation shortcuts.
          */
         const onKeyDown = (event: KeyboardEvent): void => {
           if ((event.metaKey || event.ctrlKey) && event.key?.toLowerCase() === 'f') {
@@ -1913,9 +1927,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
         previewPack.markdown.trim();
       }, [toolbar?.path, vers, selVer, previewPack.json, previewPack.markdown, previewPack.body]);
 
-      /**
-       * On restore preview.
-       */
+      /** Provides the current draft's discard action and the selected version's restore action. */
       const toolbarActions = {
         discard: toolbar
           ? async (e: { preventDefault: () => void }): Promise<void> => {
@@ -1990,12 +2002,12 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
 
       // SELECTION HANDLER
       /**
-       * Safe sel.
+       * Reads the editor selection for a toolbar template, falling back to the supplied sample text.
        *
-       * @param fallback - Value passed to the helper.
-       * @param isInline - Value passed to the helper.
+       * @param fallback - Sample text used when the current selection is empty or unavailable.
+       * @param isInline - Removes line breaks and Docs delimiters when the result must fit inline markup.
        *
-       * @return safe Sel.
+       * @returns Selected text or the fallback, normalized for inline insertion when requested.
        */
       const sSel = (fallback: string, isInline = false): string => {
         let text = '';
@@ -2009,23 +2021,23 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
               );
           } else {
             const winSel = window.getSelection();
-            // explicitly check that the selection is not collapsed to avoid capturing the whole block bounds
+            // Ignore collapsed selections so the entire containing block is not captured.
             if (winSel && winSel.rangeCount > 0 && !winSel.isCollapsed) text = winSel.toString();
           }
         } catch {
           // Fall back to the caller-provided text below.
         }
         if (!text.trim()) return fallback;
-        // strip structural markdown (tables, asides, newlines) that break inline link/bold syntax
+        // Remove Markdown delimiters and line breaks that would escape inline link or emphasis syntax.
         // prettier-ignore
         if (isInline) return text.replace(/[\r\n]+/g, ' ').replace(/(:::|\|\|\||===|\|)/g, '').replace(/\s{2,}/g, ' ').trim() || fallback;
         return text;
       };
 
       /**
-       * Handles click toolbar button.
+       * Activates a toolbar control through the same pointer and click events as a user interaction.
        *
-       * @param label - Label displayed beside the toolbar control.
+       * @param label - Accessible label of the control to activate.
        */
       const clickToolbarButton = (label: string): void => {
         const button = document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
@@ -2063,13 +2075,8 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
 		};
 
       // DATA
-      /**
-       * Handles insert code.
-       *
-       * @param source - Docs source payload sent to the endpoint.
-       * @param endpoint - API endpoint receiving the toolbar request.
-       */
       const insertionActions = {
+        // Inserts a starter text code block in structured or Markdown form.
         insertLocalCode: (): void => {
           if (
             jsonCmd({
@@ -2080,6 +2087,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
             return;
           insert?.(`\n\n<Code language="text">\n{\`\nCode...\n\`}\n</Code>\n\n`);
         },
+        // Inserts the local placeholder or serializes a received endpoint value as a JSON code block.
         insertCode: (s: 'local' | 'received', e = ''): void => {
           const code =
             s === 'received'
@@ -2144,9 +2152,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
           codeAtEnd.current = false;
           codeSel.current = null;
         },
-        /*
-         * Handles receive code.
-         */
+        // Inserts the trimmed endpoint result and closes the receive-value dialog.
         receiveCode: (): void => {
           const src = endpoint.trim();
           if (!src) return;
@@ -2160,9 +2166,9 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       useEffect(() => {
         if (mode === 'view' || !onSave) return;
         /**
-         * Handles key down.
+         * Saves the current draft when the user presses the platform save shortcut.
          *
-         * @param e - Value passed to the helper.
+         * @param e - Keyboard event used to detect and cancel the browser save action.
          */
         const handleKeyDown = (e: KeyboardEvent) => {
           if ((e.metaKey || e.ctrlKey) && e.key?.toLowerCase() === 's') {
@@ -2318,7 +2324,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                               (adapter?.format
                                 ? adapter.format(
                                     k === 'strikethrough'
-                                      ? 'strike'
+                                      ? 'strikethrough'
                                       : (k as 'bold' | 'italic' | 'underline' | 'link'),
                                   )
                                 : insert?.(f(sSel('text', true)))),
@@ -2399,7 +2405,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </ButtonGroup>
-                      <div className="flex items-center gap-1">
+                      <div className={DOCS_LAYOUT_CLASSES.compactRow}>
                         {/* MODE */}
                         {docs && (
                           <Mode
@@ -2632,7 +2638,9 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                                     e.preventDefault();
                                   }}
                                   onClick={() => {
-                                    if (!selVerId && vers[0]) setSelVerId(vers[0].savedAt);
+                                    const firstVersion = vers[0];
+                                    if (firstVersion && !selVerId)
+                                      setSelVerId(firstVersion.savedAt);
                                     setVerDialogOpen(true);
                                   }}
                                 >
@@ -2669,7 +2677,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                                       </SelectContent>
                                     </Select>
                                   </DialogHeader>
-                                  <div className="min-h-0 flex-1 overflow-y-auto">
+                                  <div className={DOCS_LAYOUT_CLASSES.flexScrollArea}>
                                     <CodeBlock
                                       tone="view"
                                       language="mdx"
@@ -2691,8 +2699,8 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                                 disabled={!ready || saving === 'saving'}
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
-                                  const path = toolbar?.path;
-                                  if (!publishDraft || !path) return;
+                                  if (!publishDraft || !toolbar?.path) return;
+                                  const path = toolbar.path;
                                   void (async () => {
                                     try {
                                       if (dirty && toolbar.save) await toolbar.save();
@@ -2717,19 +2725,17 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                       <div className="flex items-center gap-0.5">
                         <Uploader
                           icon={ImageIcon}
-                          {...(insert === undefined ? {} : { insert })}
+                          insert={insert}
                           onMouseDown={preserveSel}
                           disabled={!ready}
-                          {...(toolbar?.path === undefined ? {} : { ctx: toolbar.path })}
+                          ctx={toolbar?.path}
                         />
                         <Custom
-                          onInsert={(_statement, v) => {
-                            if (insert) insert(v, true);
-                          }}
-                          {...(insert === undefined ? {} : { onInsertMd: insert })}
+                          onInsert={(_statement, v) => insert?.(v, true)}
+                          onInsertMd={insert}
                           onMouseDown={preserveSel}
                           disabled={!ready}
-                          {...(toolbar?.path === undefined ? {} : { ctx: toolbar.path })}
+                          ctx={toolbar?.path}
                         />
                       </div>
                       <Dialog
@@ -2756,7 +2762,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                             placeholder="/api/docs?action=testimonials"
                           />
                           {/* prettier-ignore */}
-                          <div className='flex justify-end gap-2'>
+                          <div className={DOCS_LAYOUT_CLASSES.dialogActions}>
 										<UiButton variant='outline' onClick={() => { setEndpointOpen(false); }}>Cancel</UiButton>
 					<UiButton disabled={!endpoint.trim()} onClick={insertionActions.receiveCode}>Receive value</UiButton>
 									</div>

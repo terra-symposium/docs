@@ -13,14 +13,6 @@ import { expect, test } from '@playwright/test';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const XL_VIEWPORT_TEST = {
-  tag: '@viewport:xl',
-  annotation: {
-    type: 'viewport-reason',
-    description: 'Published tab and accordion interaction is checked in the desktop Docs layout.',
-  },
-} as const;
-
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
@@ -39,17 +31,17 @@ async function verifyPublishedMarkdownControls({
   await page.goto('/authoring/blocks/');
   await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
 
-  const tabs = page.getByRole('tablist');
-  const npmTab = page.getByRole('tab', { name: 'npm', exact: true });
   const gitTab = page.getByRole('tab', { name: 'Git', exact: true });
-  await expect(tabs).toBeVisible();
-  await expect(npmTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tablist')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'npm', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await gitTab.click();
   await expect(gitTab).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('git tag docs-release', { exact: true })).toBeVisible();
 
-  const accordion = page.getByRole('button', { name: 'Why use an accordion?', exact: true });
-  await accordion.click();
+  await page.getByRole('button', { name: 'Why use an accordion?', exact: true }).click();
   await expect(
     page.getByText('Keep optional background detail available', { exact: false }),
   ).toBeVisible();
@@ -57,6 +49,12 @@ async function verifyPublishedMarkdownControls({
 
 test(
   'published Markdown uses interactive Styling controls',
-  XL_VIEWPORT_TEST,
+  {
+    tag: '@viewport:xl',
+    annotation: {
+      type: 'viewport-reason',
+      description: 'Published tab and accordion interaction is checked in the desktop Docs layout.',
+    },
+  } as const,
   verifyPublishedMarkdownControls,
 );

@@ -21,12 +21,12 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Returns static HTML for integrations that cannot mount React; interactive pages should render `DocsMarkdown`.
+ * Server-renders Markdown through the same React renderer used by live Docs pages.
  *
- * @param markdown Markdown source to parse and render.
- * @param options Optional block switches passed through to the shared Markdown renderer.
+ * @param markdown - Markdown source whose blocks should use the shared Docs renderer.
+ * @param options - Optional block renderers and display options for those components.
  *
- * @return Static HTML produced by the same Docs components used by interactive pages.
+ * @return Static HTML produced by the same React tree used by live Docs pages.
  */
 export function renderMarkdown(markdown: string, options: DocsBlockOptions = {}): string {
   return renderToStaticMarkup(createElement(DocsMarkdown, { markdown, options }));

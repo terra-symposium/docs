@@ -3,13 +3,55 @@
   "root": ".",
   "tsconfig": "config/tsconfig.json",
   "sourceRoots": ["."],
-  "extensions": [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"],
+  "languageProfiles": ["c", "java", "python"],
+  "extensions": [
+    ".astro",
+    ".c",
+    ".cjs",
+    ".cpp",
+    ".cts",
+    ".css",
+    ".h",
+    ".html",
+    ".java",
+    ".js",
+    ".json",
+    ".jsx",
+    ".jsonc",
+    ".md",
+    ".mdx",
+    ".mjs",
+    ".mts",
+    ".py",
+    ".pyi",
+    ".rs",
+    ".sh",
+    ".sql",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml"
+  ],
   "tools": {
     "eslint": "node_modules/.bin/eslint"
   },
   "regexDedup": {
     "minimumCount": 2,
     "sharedModule": "src/lib/terra/regex.mjs"
+  },
+  "tailwindCanonical": {
+    "stylesheet": "src/styles/style.css"
+  },
+  "repeatedClasses": {
+    "minimumCount": 3
+  },
+  "uiPatterns": {
+    "forbidden": [
+      "<[^>]*\\brole\\s*=\\s*['\"]dialog['\"]",
+      "\\baria-modal\\s*=",
+      "\\bcreatePortal\\s*\\("
+    ]
   },
   "frameworkEntryExports": {
     "site/src/components/DocsSiteIsland.tsx": ["DocsSiteIsland"],
@@ -152,7 +194,8 @@
       "types": true,
       "functions": true,
       "exportedFunctions": true
-    }
+    },
+    "commandRoots": ["."]
   },
   "typecheckCommand": {
     "command": "pnpm",
@@ -164,5 +207,46 @@
       "command": "pnpm",
       "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.demo.json"]
     }
-  ]
+  ],
+  "enabledChecks": {
+    "document": true,
+    "format": true,
+    "import": true,
+    "name": true,
+    "forward": true,
+    "accessibility": true,
+    "display-name": true,
+    "performance-patterns": true,
+    "documented-commands": true,
+    "lint": true,
+    "knip": true,
+    "dead-code": true,
+    "type": true,
+    "recommend": true,
+    "command": true,
+    "diff": true,
+    "alias": true,
+    "security": true,
+    "repeated-classes": true,
+    "tailwind-canonical": true,
+    "regex-dedup": true,
+    "ui-patterns": true,
+    "ui-recommendations": true,
+    "error-boundaries": true,
+    "github": true
+  },
+  "performancePatterns": {
+    "extensions": [".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]
+  },
+  "security": {
+    "runtimeRoots": ["bin", "config", "scripts", "site/config", "test"],
+    "allowProcessEnvRoots": ["bin", "config", "scripts", "site/config", "test"],
+    "clientRoots": ["site/src"]
+  },
+  "github": {
+    "repositories": ["Terra-Symposium/docs"]
+  },
+  "autofix": {
+    "document": false
+  }
 }

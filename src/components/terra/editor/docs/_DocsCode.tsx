@@ -10,6 +10,7 @@ IMPORTS
 // API
 import { useEditor } from '@portabletext/editor';
 import { useEffect, useRef, useState } from 'react';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 
 // COMPONENTS
 import {
@@ -225,7 +226,7 @@ function CodeEditor({
               value={endpoint}
               onChange={(e) => setEndpoint(e.currentTarget.value)}
             />
-            <div className="flex justify-end gap-2">
+            <div className={DOCS_LAYOUT_CLASSES.dialogActions}>
               <Button variant="outline" onClick={() => setEndpointDialog(null)}>
                 Cancel
               </Button>

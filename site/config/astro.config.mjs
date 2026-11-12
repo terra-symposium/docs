@@ -10,15 +10,15 @@ IMPORTS
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import { basePathRemarkPlugin } from '../base-path-remark-plugin.mjs';
-import { createRequire } from 'node:module';
-import { defineConfig } from 'astro/config';
-import { dirname, resolve } from 'node:path';
-import { docsContentPlugin } from '../docs-content-plugin.mjs';
 import {
   createConsumerProject,
   createProjectExportAliases,
   resolveConsumerDependency,
 } from '../project-config.mjs';
+import { createRequire } from 'node:module';
+import { defineConfig } from 'astro/config';
+import { dirname, resolve } from 'node:path';
+import { docsContentPlugin } from '../docs-content-plugin.mjs';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
@@ -38,12 +38,9 @@ const packageRoot = fileURLToPath(new URL('../../', import.meta.url));
 const requireFromPackage = createRequire(import.meta.url);
 const astroManifestPath = requireFromPackage.resolve('astro/package.json');
 const astroManifest = JSON.parse(readFileSync(astroManifestPath, 'utf8'));
-const astroPackageRoot = dirname(astroManifestPath);
 const requireFromAstro = createRequire(astroManifestPath);
 const docsManifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8'));
 const projectRoot = process.env.DOCS_ROOT ?? process.cwd();
-const publicDir = resolve(projectRoot, 'dist/public');
-const outDir = resolve(projectRoot, process.env.DOCS_OUT ?? 'dist/docs');
 const site = process.env.DOCS_SITE;
 const base = process.env.DOCS_BASE ?? '/';
 const consumerProject = createConsumerProject(projectRoot, process.env.DOCS_PACKAGE_ROOT ?? '.');
@@ -57,7 +54,8 @@ HELPERS
 
 /**
  * Creates Vite aliases for package entry points declared by the consuming project's exports map.
- * @returns Alias records for concrete and wildcard project exports that target local files.
+ *
+ * @return Alias records for concrete and wildcard project exports that target local files.
  */
 function packageExportAliases() {
   return createProjectExportAliases(projectManifest, consumerRoot);
@@ -65,7 +63,8 @@ function packageExportAliases() {
 
 /**
  * Resolves Astro's internal MDX runtime and public non-wildcard exports from the Docs installation.
- * @returns Vite alias records that keep Astro imports on the package's compatible runtime.
+ *
+ * @return Vite alias records that keep Astro imports on the package's compatible runtime.
  */
 function astroPackageExportAliases() {
   return [
@@ -73,7 +72,7 @@ function astroPackageExportAliases() {
       // Astro's MDX renderer imports this internal runtime path, which Astro
       // does not expose through package exports. Resolve it from Docs' Astro.
       find: /^astro\/runtime\/(.+)$/,
-      replacement: resolve(astroPackageRoot, 'dist/runtime/$1'),
+      replacement: resolve(dirname(astroManifestPath), 'dist/runtime/$1'),
     },
     ...Object.keys(astroManifest.exports)
       .filter((k) => k.startsWith('./') && !k.includes('*'))
@@ -90,15 +89,17 @@ function astroPackageExportAliases() {
 /**
  * Resolves Astro's optimizer dependencies from the consumer or the Astro installation used by Docs.
  *
- * @returns Vite aliases for Astro's direct dependencies used by its client optimizer.
+ * @return Vite aliases for Astro's direct dependencies used by its client optimizer.
  */
 function astroDependencyAliases() {
   return Object.keys(astroManifest.dependencies ?? {}).flatMap((n) => {
     try {
+      const entry = resolveConsumerDependency(requireFromProject, requireFromAstro, n);
+      if (!isEsmDependencyEntry(entry)) return [];
       return [
         {
           find: new RegExp(`^${n.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}$`),
-          replacement: resolveConsumerDependency(requireFromProject, requireFromAstro, n),
+          replacement: entry,
         },
       ];
     } catch {
@@ -108,10 +109,36 @@ function astroDependencyAliases() {
 }
 
 /**
+ * Checks whether a Node-resolved dependency entry is an ES module suitable for a Vite alias.
+ *
+ * `require.resolve()` selects a package's CommonJS entry when it has conditional exports. Aliasing
+ * that file bypasses Vite's package resolution and makes the SSR module runner evaluate `require()`
+ * inside ESM. Leave CommonJS entries as package imports so Vite and Node retain their interop path.
+ *
+ * @param entry Resolved dependency entry selected by the consumer-first package resolver.
+ * @returns Whether the entry is an ES module file.
+ */
+function isEsmDependencyEntry(entry) {
+  if (/\.mjs$/i.test(entry)) return true;
+  if (/\.cjs$/i.test(entry)) return false;
+  let dir = dirname(entry);
+  while (dir !== resolve(dir, '..')) {
+    try {
+      return JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8')).type === 'module';
+    } catch {
+      dir = resolve(dir, '..');
+    }
+  }
+  return false;
+}
+
+/**
  * Finds the package manifest owning a resolved entry by walking parent directories.
+ *
  * @param name Expected package name used to confirm the owning manifest.
  * @param resolver Module resolver whose installation tree should be searched.
- * @returns The matching package manifest, or `null` when resolution or lookup fails.
+ *
+ * @return The matching package manifest, or `null` when resolution or lookup fails.
  */
 function dependencyManifest(name, resolver = requireFromPackage) {
   let entry;
@@ -122,9 +149,8 @@ function dependencyManifest(name, resolver = requireFromPackage) {
   }
   let dir = resolve(entry, '..');
   while (dir !== resolve(dir, '..')) {
-    const manifestPath = resolve(dir, 'package.json');
     try {
-      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      const manifest = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8'));
       if (manifest.name === name) return manifest;
     } catch {
       // Keep walking through package subdirectories until the owning manifest is found.
@@ -136,25 +162,30 @@ function dependencyManifest(name, resolver = requireFromPackage) {
 
 /**
  * Creates Vite aliases for Docs runtime dependencies and their concrete exported subpaths.
- * @returns Alias records resolved from the Docs package installation.
+ *
+ * @return Alias records resolved from the Docs package installation.
  */
 function packageDependencyAliases() {
   return Object.keys(docsManifest.dependencies ?? {})
-    .filter((n) => n !== 'astro')
+    .filter((n) => n !== 'astro' && n !== 'react' && n !== 'react-dom')
     .flatMap((n) => {
       const manifest = dependencyManifest(n);
       if (!manifest) return [];
-      const subpaths = Object.keys(manifest.exports ?? {}).filter(
-        (key) => key.startsWith('./') && !key.includes('*'),
-      );
-      return [n, ...subpaths.map((key) => `${n}${key.slice(1)}`)].flatMap((specifier) => {
+      return [
+        n,
+        ...Object.keys(manifest.exports ?? {})
+          .filter((key) => key.startsWith('./') && !key.includes('*'))
+          .map((key) => `${n}${key.slice(1)}`),
+      ].flatMap((specifier) => {
         try {
+          const entry = requireFromPackage.resolve(specifier);
+          if (!isEsmDependencyEntry(entry)) return [];
           return [
             {
               find: new RegExp(
                 `^${specifier.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}$`,
               ),
-              replacement: requireFromPackage.resolve(specifier),
+              replacement: entry,
             },
           ];
         } catch {
@@ -166,7 +197,8 @@ function packageDependencyAliases() {
 
 /**
  * Aligns styling dependencies with the consumer's installation to avoid duplicate runtime packages.
- * @returns Alias records for the styling package's non-React peer dependencies.
+ *
+ * @return Alias records for the styling package's non-React peer dependencies.
  */
 function stylingDependencyAliases() {
   const stylingManifest =
@@ -182,17 +214,21 @@ function stylingDependencyAliases() {
     .flatMap((n) => {
       const manifest = dependencyManifest(n, requireFromProject);
       if (!manifest) return [];
-      const subpaths = Object.keys(manifest.exports ?? {}).filter(
-        (key) => key.startsWith('./') && !key.includes('*'),
-      );
-      return [n, ...subpaths.map((key) => `${n}${key.slice(1)}`)].flatMap((specifier) => {
+      return [
+        n,
+        ...Object.keys(manifest.exports ?? {})
+          .filter((key) => key.startsWith('./') && !key.includes('*'))
+          .map((key) => `${n}${key.slice(1)}`),
+      ].flatMap((specifier) => {
         try {
+          const entry = requireFromProject.resolve(specifier);
+          if (!isEsmDependencyEntry(entry)) return [];
           return [
             {
               find: new RegExp(
                 `^${specifier.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}$`,
               ),
-              replacement: requireFromProject.resolve(specifier),
+              replacement: entry,
             },
           ];
         } catch {
@@ -202,47 +238,11 @@ function stylingDependencyAliases() {
     });
 }
 
-/**
- * Resolves React entry points from the consumer when available and supplies the browser server renderer.
- * @returns Vite aliases that keep Docs UI and its consumer on one React runtime.
- */
-function sharedReactAliases() {
-  const specifiers = [
-    'react',
-    'react/compiler-runtime',
-    'react/jsx-dev-runtime',
-    'react/jsx-runtime',
-    'react-dom',
-    'react-dom/client',
-  ];
-  return [
-    ...specifiers.map((s) => {
-      // Prefer the consumer's React, with Docs supplying it to content-only hosts.
-      const replacement = resolveConsumerDependency(requireFromProject, requireFromPackage, s);
-      return {
-        find: new RegExp(`^${s.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}$`),
-        replacement,
-      };
-    }),
-    {
-      // The Docs editor imports `react-dom/server` for Markdown previews. Its
-      // Node entrypoint pulls `util.TextEncoder` into browser chunks, where
-      // `util` is externalized and the Docs workspace fails to hydrate. The
-      // browser server renderer also works during Node prerendering.
-      find: /^react-dom\/server$/,
-      replacement: resolveConsumerDependency(
-        requireFromProject,
-        requireFromPackage,
-        'react-dom/server.browser',
-      ),
-    },
-  ];
-}
 export default defineConfig({
   root: projectRoot,
   srcDir: resolve(packageRoot, 'site/src'),
-  publicDir,
-  outDir,
+  publicDir: resolve(projectRoot, 'dist/public'),
+  outDir: resolve(projectRoot, process.env.DOCS_OUT ?? 'dist/docs'),
   ...(site ? { site } : {}),
   base,
   devToolbar: { enabled: false },
@@ -259,16 +259,17 @@ export default defineConfig({
       alias: [
         ...packageExportAliases(),
         ...createProjectExportAliases(docsManifest, packageRoot),
-        ...sharedReactAliases(),
         ...astroPackageExportAliases(),
         ...astroDependencyAliases(),
         ...packageDependencyAliases(),
         ...stylingDependencyAliases(),
       ],
+      // Use the consumer's React installation once, while leaving `server`
+      // subpaths unaliased so Vite can select their environment-specific entry.
       dedupe: ['react', 'react-dom'],
     },
     ssr: {
-      // Bundle the shared UI packages while retaining their peer runtime.
+      optimizeDeps: { include: ['react', 'react-dom', 'react-dom/server'] },
       noExternal: ['@terra-symposium/styling', '@terra-symposium/standards-error-boundaries'],
     },
     server: { fs: { allow: [projectRoot, consumerRoot, packageRoot] } },

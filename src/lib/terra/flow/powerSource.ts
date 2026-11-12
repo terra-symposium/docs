@@ -15,7 +15,7 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Handles with power source positions.
+ * Assigns rows from question numbering and places the origin and terminal around content nodes.
  *
  * @param graph - Power Source graph whose content nodes need positions.
  * @param questions - Questions used to resolve node titles by document id.

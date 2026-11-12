@@ -10,6 +10,7 @@ IMPORTS
 // API
 import katex from 'katex';
 import { cn } from '../../../../lib/terra/runtime/runtime.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 import {
   createElement as __terraQualityCreateElement,
   useEffect,
@@ -77,12 +78,12 @@ export function renderMath({
     (ref.current as BlockTgt).__blockActions = [
       {
         text: 'Edit Formula',
-        icon: <EditIcon className="mr-2 size-4" aria-hidden="true" />,
+        icon: <EditIcon className={DOCS_LAYOUT_CLASSES.iconBeforeLabel} aria-hidden="true" />,
         onSelect: () => setOpen(true),
       },
       {
         text: `Set to ${inline ? 'Display' : 'Inline'}`,
-        icon: <MathIcon className="mr-2 size-4" aria-hidden="true" />,
+        icon: <MathIcon className={DOCS_LAYOUT_CLASSES.iconBeforeLabel} aria-hidden="true" />,
         onSelect: () => write(code, !inline),
       },
     ];
@@ -152,7 +153,7 @@ export function renderMath({
               className="h-32 font-mono text-xs"
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <div className={DOCS_LAYOUT_CLASSES.dialogActions}>
             <Button
               variant="ghost"
               size="sm"
@@ -217,15 +218,15 @@ export function renderMathBlock({
 }
 
 /**
- * Connects the math block's local controls to its Portable Text state.
+ * Connects an editable Portable Text math block to the current editor state.
  *
- * @param mathOptions DOM attributes, child content, math data, and the Portable Text update path.
- * @param mathOptions.attributes DOM attributes for the editable math block.
- * @param mathOptions.children Nested Portable Text editor content.
- * @param mathOptions.node Math block data whose source is edited.
- * @param mathOptions.path Portable Text path used for block updates.
+ * @param mathOptions Portable Text editor attributes, nested content, math block data, and its update path.
+ * @param mathOptions.attributes DOM attributes applied to the editable block container.
+ * @param mathOptions.children Nested editor content rendered after the math controls.
+ * @param mathOptions.node Math block whose source and display mode are edited.
+ * @param mathOptions.path Portable Text path used to apply math block updates.
  *
- * @return The editable math expression controls.
+ * @return Math expression controls and nested content connected to Portable Text updates.
  */
 function MathEditor(mathOptions: PortableTextBlockEditorProps<MathBlockData>): JSX.Element {
   return <MathEditorContent {...mathOptions} editor={useEditor()} />;

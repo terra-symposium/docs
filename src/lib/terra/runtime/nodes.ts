@@ -33,9 +33,7 @@ trace('module.loaded');
  */
 export const EMPTY_NODES = `\n\n<Nodes\n  node_data={[\n    { id: 'start', type: 'origin', data: { title: 'Start' } }\n  ]}\n  edges_data={[]}\n  direction="TB"\n  height={400}\n/>\n\n`;
 
-/**
- * Handles the nodes route.
- */
+/** Defines the editor defaults and field controls for the Docs Nodes block. */
 const NODES = {
   empty: EMPTY_NODES,
   jsx: EMPTY_NODES,
@@ -330,10 +328,9 @@ const NODES = {
 /**
  * Encodes node payload arrays into a serializer-safe string literal.
  *
- * @param val
- * @param value - Node or edge array to encode for safe serializer round-tripping.
+ * @param val - Node or edge array to encode for serializer round-tripping.
  *
- * @return
+ * @return Backtick-wrapped array literal with characters escaped for MDX attribute round-tripping; non-arrays encode as an empty array.
  *
  * @remarks
  * A template literal keeps the payload readable while preventing mdxeditor from compacting the
@@ -348,10 +345,9 @@ export const encodeNodesPayload = (val: unknown): string =>
 /**
  * Decodes a serializer-safe node payload back into arrays.
  *
- * @param val
- * @param value - Serialized node payload in array, JSON, or quoted literal form.
+ * @param val - Raw array or serialized node payload in JSON or quoted-literal form.
  *
- * @return
+ * @return Parsed array payload, or an empty array for blank, malformed, or non-array input.
  *
  * @remarks
  * Accepts raw arrays, JSON strings, backtick-wrapped literals, and the newer quoted payload.
@@ -409,14 +405,13 @@ const literal = (v: unknown): string => {
 };
 
 /**
- * Interprets a plain scalar string without forcing object or array parsing.
+ * Parses JavaScript-like scalar, array, and object literals while preserving ordinary text as a string.
  *
- * @param val
- * @param value - Scalar text to interpret.
+ * @param val - Source text containing a scalar literal or plain text.
  *
- * @return Scalar value, or the original string when it should remain a literal label.
+ * @return The parsed value, or the original input string if parsing fails.
  *
- * @remarks The scalar path preserves plain strings unless they clearly parse as another primitive.
+ * @remarks Bracketed and braced values use the loose-literal parser; quoted and reserved literals are parsed directly.
  */
 const scalar = (val: string): unknown => {
   const trimmed = val.trim();

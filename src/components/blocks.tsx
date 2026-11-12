@@ -247,6 +247,18 @@ function NestedContent({
     );
   const member = value as RichBlock;
   if (member._type === 'block') return <PortableTextBlockView block={member} />;
+  if (member._type === 'tabs' || member._type === 'accordion') {
+    // Existing Portable Text records live in consumer-owned stores. Convert those records at the
+    // ingestion boundary; all newly authored groups and all visible output use Markdown + DocsMarkdown.
+    return (
+      <DocsMarkdown
+        markdown={docsValueToMarkdown([member] as unknown as Parameters<
+          typeof docsValueToMarkdown
+        >[0])}
+        options={options}
+      />
+    );
+  }
   if (typeof member._type === 'string' && DOCS_BLOCK_TYPES.includes(member._type as DocsBlockType))
     return <DocsRichBlock block={member} options={options} />;
   if (Array.isArray(member.content) && member.content.length)
@@ -261,7 +273,7 @@ function NestedContent({
  *
  * @param block Rich block value to render, including its type-specific fields.
  * @param options Optional rich-block feature flags for nested content.
- * @returns The read-only React representation of the block; disabled tabs and accordions retain their Markdown source.
+ * @returns The read-only React representation of one structured Docs block.
  */
 export function DocsRichBlock({
   block,
@@ -270,14 +282,6 @@ export function DocsRichBlock({
   block: RichBlock;
   options?: DocsBlockOptions | undefined;
 }): JSX.Element {
-  if (block._type === 'tabs' || block._type === 'accordion') {
-    const markdown = docsValueToMarkdown([block] as unknown as Parameters<
-      typeof docsValueToMarkdown
-    >[0]);
-    if (options?.[block._type] === false)
-      return <pre data-docs-unsupported-block={block._type}>{markdown}</pre>;
-    return <DocsMarkdown markdown={markdown} options={options} />;
-  }
   switch (block._type) {
     case 'block':
       return <PortableTextBlockView block={block} />;

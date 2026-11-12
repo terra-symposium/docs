@@ -17,28 +17,26 @@ import type { Content } from '../../../../support/editor.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const XL_VIEWPORT_TEST = {
-  tag: '@viewport:xl',
-  annotation: {
-    type: 'viewport-reason',
-    description: 'Rich-block interactions use the standard desktop editor layout.',
-  },
-} as const;
-const embedFixture = [
-  {
-    _key: 'embed-under-test',
-    _type: 'embed',
-    src: 'about:blank',
-    title: 'Local example',
-    width: '320px',
-    height: '180px',
-  },
-] satisfies Content;
 test(
   'embed.spec: Render title and size without remote requests',
-  XL_VIEWPORT_TEST,
+  {
+    tag: '@viewport:xl',
+    annotation: {
+      type: 'viewport-reason',
+      description: 'Rich-block interactions use the standard desktop editor layout.',
+    },
+  } as const,
   async ({ page: p }) => {
-    await openEditor(p, embedFixture);
+    await openEditor(p, [
+      {
+        _key: 'embed-under-test',
+        _type: 'embed',
+        src: 'about:blank',
+        title: 'Local example',
+        width: '320px',
+        height: '180px',
+      },
+    ] satisfies Content);
     const frame = p.getByTitle('Local example');
     await expect(frame).toHaveAttribute('src', 'about:blank');
     await expect(frame).toHaveCSS('width', '320px');

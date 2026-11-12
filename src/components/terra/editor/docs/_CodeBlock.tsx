@@ -86,13 +86,9 @@ const light = [githubLight] satisfies Extension[];
 const dark = [oneDark] satisfies Extension[];
 const codeSrcCache = new Map<string, Promise<string>>();
 /**
- * Triggers a layout re-measure to fully expand codemirror instances.
+ * Expands CodeMirror to its measured content height after mount or visibility changes.
  *
- * @param v - The target CodeMirror view reference.
- *
- * @return Void
- *
- * @remarks Resolves constraints within un-mounted or obscured states.
+ * @param v CodeMirror view whose editor height needs to match its content.
  */
 const expand = (v: EditorView | null): void => {
   if (!v) return;
@@ -145,23 +141,23 @@ function langOf(v: string): string {
 /**
  * Renders a code block as a static preview or an editable CodeMirror surface and relays source changes to the host.
  *
- * @param blockOptions Source value, language, interaction mode, and optional editor controls for this block.
- * @param blockOptions.code Code value rendered in the editor or preview.
- * @param blockOptions.language Syntax language used for highlighting and language controls.
- * @param blockOptions.tone Selects read-only presentation or interactive editing behavior.
- * @param blockOptions.source Optional endpoint associated with received code.
- * @param blockOptions.className Additional class applied to the CodeMirror container.
- * @param blockOptions.placeholder Text shown while the code value is empty.
- * @param blockOptions.docsSource Whether the code block is authored Markdown shown in read-only mode.
- * @param blockOptions.expandAll Whether the editor should expand to fit all lines.
- * @param blockOptions.fullHeight Whether the editor should occupy its available vertical space.
- * @param blockOptions.languageEditable Whether users can change the language in edit mode.
- * @param blockOptions.readOnly Whether the edit-mode surface is locked against typing.
- * @param blockOptions.onCodeChange Callback for each source edit.
- * @param blockOptions.onCommit Callback for committing source and language together.
- * @param blockOptions.onLanguageChange Callback after a language selection changes.
+ * @param blockOptions Source text, language, display mode, and optional endpoint or editor controls.
+ * @param blockOptions.className Additional classes merged into the outer code surface.
+ * @param blockOptions.code Code value shown in the preview or loaded into CodeMirror.
+ * @param blockOptions.docsSource Marks code as Markdown-authored Docs source for preview normalization.
+ * @param blockOptions.language Language identifier used for syntax highlighting and, when enabled, language selection.
+ * @param blockOptions.source Optional endpoint whose response is displayed as received code.
+ * @param blockOptions.tone Selects a static preview or the interactive editor layout.
+ * @param blockOptions.placeholder Text shown in CodeMirror while the code value is empty.
+ * @param blockOptions.expandAll Expands the editor to fit the full code value.
+ * @param blockOptions.fullHeight Lets the edit-mode surface fill its available vertical space.
+ * @param blockOptions.languageEditable Allows language selection for a local editable block.
+ * @param blockOptions.readOnly Prevents typing and edit callbacks while retaining the edit-mode layout.
+ * @param blockOptions.onCodeChange Receives each code edit from CodeMirror.
+ * @param blockOptions.onCommit Receives the code and language when the editor commits them.
+ * @param blockOptions.onLanguageChange Receives the selected language and current code after a language change.
  *
- * @return A CodeMirror surface with syntax highlighting, copy controls, and optional editing callbacks.
+ * @return A syntax-highlighted code preview or a CodeMirror editor with the requested controls.
  *
  * @remarks View mode can resolve source-backed blocks through the host adapter; edit mode never commits without the caller's callback.
  */
@@ -230,10 +226,8 @@ export function CodeBlock(
   const received = useRef<HTMLElement>(null);
   const view = useRef<EditorView | null>(null);
   const theme = useRef(new Compartment());
-  /**
-   * Returns the displayed code.
-   *
-   * @return Current displayed code.
+  /** Returns the source code snapshot used to synchronize the editor view.
+   * @returns Current code value supplied to the editor.
    */
   const codeVal = (): string => viewCode;
   const codeRef = useRef(resCode);
@@ -592,18 +586,14 @@ export function CodeBlock(
   }, [expAll]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    /**
-     * Synchronises the editor theme with the system preference.
-     *
-     * @return Nothing.
-     */
-    const m = window.matchMedia('(prefers-color-scheme: dark)'),
-      sync = (): void => {
-        if (!view.current) return;
-        view.current.dispatch({
-          effects: theme.current.reconfigure(isDarkMode() ? dark : light),
-        });
-      };
+    const m = window.matchMedia('(prefers-color-scheme: dark)');
+    /** Applies the active system theme to the mounted CodeMirror editor. */
+    const sync = (): void => {
+      if (!view.current) return;
+      view.current.dispatch({
+        effects: theme.current.reconfigure(isDarkMode() ? dark : light),
+      });
+    };
     sync();
     m.addEventListener('change', sync);
     return () => {

@@ -23,13 +23,14 @@ const output = join(root, 'dist', 'lib', 'lib', 'terra');
 // website's cascade where its prose stylesheet loaded after global.css. Styling's
 // effect layer also contains authored @layer rules, so append it last.
 const workspaceStyles = await readFile(join(root, 'dist', 'lib', 'workspace.css'), 'utf8');
-const effects = await readFile(
-  join(root, 'node_modules', '@terra-symposium', 'styling', 'dist', 'effects.css'),
-  'utf8',
-);
 // Tailwind has already run. Leave the authored rules intact, but remove their
 // build-time layers so a consumer's Tailwind plugin can process this stylesheet.
-const effectCss = postcss.parse(effects);
+const effectCss = postcss.parse(
+  await readFile(
+    join(root, 'node_modules', '@terra-symposium', 'styling', 'dist', 'effects.css'),
+    'utf8',
+  ),
+);
 
 /*//////////////////////////////////////////////////
 HELPERS

@@ -31,25 +31,25 @@ export const document: Document =
     ? globalThis.document
     : (undefined as unknown as Document);
 /**
- * Handles sanitize name.
+ * Converts a Docs path segment into a lowercase node name, replacing unsupported characters with hyphens.
  *
- * @param name - Document name used to construct the canonical path.
+ * @param name - Source folder or page-title segment to normalize.
  *
- * @return
+ * @return Lowercase node name with unsupported characters replaced by hyphens.
  */
 export const sanitizeName = (name: string): string =>
   name.replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX(), '-').toLowerCase();
 /**
- * Handles is index file.
+ * Checks whether a Docs path names an index page.
  *
- * @param path - Docs path to normalize into a route-safe identifier.
+ * @param path - Docs path to inspect.
  *
- * @return
+ * @return Whether the path ends in `index.md` or `index.mdx`.
  */
 export const isIndexFile = (path: string): boolean =>
   TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
 
-/** Subscribes React to an external store and returns its latest snapshot. */
+/** Subscribes React to a Docs store and returns its latest snapshot. */
 export { useAtom } from './state.js';
 
 /** Runs a remote mutation behind the shared circuit breaker and transition lock. */
@@ -59,20 +59,15 @@ export { runMutation } from './mutations.js';
 TREE UTILS
 //////////////////////////////////////////////////*/
 
-/**
- * Handles get hue.
- *
- * @param title - Label displayed for the generated colour group.
- * @param hue - Base hue used to derive the colour group.
- */
+/** Re-exports the Styling hue resolver used by Docs navigation groups. */
 export { getHue };
 
 /**
- * Handles get stable key.
+ * Returns the identifier used as a key for a Docs tree node.
  *
- * @param node - Docs tree node whose route should be resolved.
+ * @param node - Tree node whose key is needed.
  *
- * @return
+ * @return The original name for a branch or leaf, or a random string for another node type.
  */
 export const getStableKey = (node: TreeType): string => {
   if (node.type === 'branch') return node.origName;
@@ -148,11 +143,10 @@ export async function uploadAssetChunked(
 }
 
 /**
- * Handles download.
- *
- * @param filename - Filename input supplied to download's operation.
- * @param content - Content input supplied to download's operation.
- * @param type - Type input supplied to download's operation.
+ * Creates a browser download and adds an `.mdx` suffix when Markdown output has no extension.
+ * @param filename Suggested download name before extension normalization.
+ * @param content Text, bytes, or an existing Blob to download.
+ * @param type MIME type used for the Blob and Markdown extension decision.
  */
 export function download(
   filename: string,
@@ -269,11 +263,11 @@ export function resolveLinearOffset(root: HTMLElement, i?: number): Range | null
 }
 
 /**
- * Handles paste md.
- *
- * @param insert - Insert input supplied to paste md's operation.
- * @param md - Md input supplied to paste md's operation.
- * @param selection - Selection input supplied to paste md's operation.
+ * Waits for the editor to settle across two animation frames before inserting Markdown in a browser.
+ * Outside a browser, insertion runs immediately.
+ * @param insert Editor operation that inserts the prepared Markdown.
+ * @param md Markdown source to insert.
+ * @param selection Saved editor selection to restore before insertion, when available.
  */
 export function pasteMd(
   insert: (md: string, rootEnd?: boolean, selection?: EditorSel | null) => void,
@@ -516,13 +510,11 @@ HELPERS
 
 // UTILITIES
 /**
- * Handles extract all node ids.
+ * Collects unique branch names, leaf names, and leaf paths in tree order.
  *
- * @param nodes - Graph nodes rendered and updated by extract all node ids.
+ * @param nodes Docs navigation tree whose stable IDs are required by the graph renderer.
  *
- * @return All unique ids discovered in the tree.
- *
- * @remarks Collects every node identifier from a tree of docs entries.
+ * @return Each discovered identifier once, preserving its first position in the traversal.
  */
 export function extractAllNodeIds(nodes: TreeType[]): string[] {
   const ids: string[] = [];
@@ -557,14 +549,12 @@ NAVIGATION
 //////////////////////////////////////////////////*/
 
 /**
- * Handles keep deep path.
+ * Preserves the current deeper route when a shorter parent route is proposed.
  *
- * @param curr
- * @param n
- * @param current - Current value before the update.
- * @param next - Proposed value to compare with the current value.
+ * @param curr - Current route that may include a nested suffix.
+ * @param n - Proposed route from navigation or URL synchronization.
  *
- * @return
+ * @return The current route when it is deeper and ends with all proposed route segments; otherwise, the proposed route.
  */
 export const keepDeepPath = (curr: string, n: string): string => {
   // prettier-ignore
@@ -578,22 +568,14 @@ export const keepDeepPath = (curr: string, n: string): string => {
 };
 
 /**
- * Handles is doc body.
+ * Checks whether a value has the shallow shape accepted for Docs body content.
  *
- * @param val
- * @param value - Value whose display label should be derived.
+ * @param val - Value to inspect.
  *
- * @return
+ * @return Whether the value is an array of truthy objects with a `_type` property; an empty array also passes.
  */
 export const isDocBody = (val: unknown): val is DocBody =>
   Array.isArray(val) && val.every((b) => b && typeof b === 'object' && '_type' in b);
-
-/**
- * Handles docs navigation state.
- *
- * @param prev - Previous state used as the base for the update.
- * @param detail - Change detail merged into the next state.
- */
 
 /*//////////////////////////////////////////////////
 TOOLBAR

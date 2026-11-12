@@ -23,12 +23,7 @@ export default withResponsivePlaywright(
     testDir: resolve(process.cwd(), 'test/browser'),
     workers: 1,
     outputDir: resolve(process.cwd(), 'tests/results/published-playwright-output'),
-    projects: [
-      {
-        name: 'chromium',
-        grep: publishedDocsSmokeTests,
-      },
-    ],
+    projects: [{ name: 'chromium', grep: publishedDocsSmokeTests }],
     use: { baseURL, browserName: 'chromium' },
     webServer: {
       command: `python3 -m http.server ${port} --bind 127.0.0.1 --directory ${resolve(process.cwd(), 'dist/docs')}`,

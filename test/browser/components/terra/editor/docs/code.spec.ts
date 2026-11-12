@@ -37,9 +37,11 @@ test('code.spec: Render source and emit edits', XL_VIEWPORT_TEST, async ({ page:
     await code.click();
     await p.keyboard.press('ControlOrMeta+A');
     await p.keyboard.type('const answer = 2;');
-    const output = p.getByTestId('editor-output');
     await expect
-      .poll(async () => JSON.parse((await output.textContent()) ?? '[]')[0]?.value)
+      .poll(
+        async () =>
+          JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]')[0]?.value,
+      )
       .toBe('const answer = 2;');
   });
 });
@@ -62,8 +64,7 @@ test('code.spec: Change language and copy source', XL_VIEWPORT_TEST, async ({ pa
 });
 test('code.spec: Preserve entered newlines', XL_VIEWPORT_TEST, async ({ page: p }) => {
   await openEditor(p, codeFixture);
-  const code = p.locator('[data-block="code"] .cm-content');
-  await code.click();
+  await p.locator('[data-block="code"] .cm-content').click();
   await p.keyboard.press('ControlOrMeta+End');
   await p.keyboard.press('Enter');
   await p.keyboard.type('const answer = 2;');

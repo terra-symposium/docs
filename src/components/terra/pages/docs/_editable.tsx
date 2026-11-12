@@ -52,11 +52,11 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the loader component.
+ * Shows Docs loading progress while expected editor blocks mount.
  *
  * @param className Optional classes added to the loading indicator.
  *
- * @return The accessible loading indicator used by Docs transitions.
+ * @return An accessible progress indicator with the host-provided illustration when available.
  */
 export function Loader({ className }: { className?: string }): React.JSX.Element {
   const mounts = useAtom($editorMounts);
@@ -95,15 +95,15 @@ export function Loader({ className }: { className?: string }): React.JSX.Element
 }
 
 /**
- * Orchestrates layout math and hydration visibility to prevent FOUC during navigation.
+ * Coordinates route transitions with editor and viewer readiness before revealing document content.
  *
- * @param children - Child content nested inside transition shell's rendered output.
- * @param className - Additional CSS classes merged into transition shell.
- * @param mode - Mode input supplied to transition shell's operation.
- * @param path - Source or route path resolved for transition shell.
- * @param staticContent Whether the body is already rendered and can skip editor-mount visibility gating.
+ * @param children Document surface rendered inside the transition shell.
+ * @param className Additional classes applied to the outer transition container.
+ * @param mode Current Docs surface mode used to match transitions to the mounted editor or viewer.
+ * @param path Optional document path used to match the transition with editor readiness signals.
+ * @param staticContent Whether already-rendered content should skip editor-mount readiness checks.
  *
- * @return A transition wrapper that keeps page visibility synchronized with route hydration.
+ * @return A transition provider and content wrapper with a loading overlay until the surface is ready.
  */
 export function TransitionShell({
   children,
@@ -195,10 +195,7 @@ export function TransitionShell({
     if (staticContent) return;
     const root = container.current;
     if (!root) return;
-    /**
-     * Handles check.
-     *
-     */
+    /** Reconciles the loading overlay with transition, hydration, and editor-mount readiness. */
     const check = () => {
       const tgt =
         typeof transition === 'string' && transition.startsWith('to-')
@@ -277,19 +274,18 @@ export function TransitionShell({
 }
 
 /**
- * Renders the editable component.
+ * Provides document draft state and save actions to the nested Docs editor surfaces.
  *
- * @param children - Child content nested inside editable's rendered output.
- * @param content - Content input supplied to editable's operation.
- * @param description - Supporting text shown in editable.
- * @param path - Source or route path resolved for editable.
- * @param permission - Permission input supplied to editable's operation.
- * @param pathname - Pathname input supplied to editable's operation.
- * @param title - Heading text shown in editable.
- * @param src Optional source identifier used by the host's document adapter.
- * @param source - Source node identifier for the connection drawn by editable.
+ * @param children Editor and viewer surfaces that consume the document state contexts.
+ * @param content Initial Portable Text body for the document draft.
+ * @param description Optional description stored with the document draft.
+ * @param path Optional canonical document path used for saving and attachment uploads.
+ * @param permission Access level that controls which editing and save actions are available.
+ * @param pathname Route path used to identify the current Docs document.
+ * @param title Document title stored with the draft and shown by its editor surface.
+ * @param src Optional host source identifier used to load content when no body is supplied.
  *
- * @return The document editor or read-only view configured for the supplied document and permission.
+ * @return Children rendered inside the Docs editor-state and surface providers.
  */
 export default function Editable({
   children,

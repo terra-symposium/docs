@@ -19,11 +19,11 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the raw component.
+ * Keeps unrecognized Markdown visible verbatim while turning horizontal-rule syntax into a divider.
  *
  * @param block Raw Markdown string rendered as a horizontal rule or a source-preserving code block.
  *
- * @return Rendered raw documentation content.
+ * @return A divider for Markdown rules, otherwise a source-preserving Markdown code block.
  */
 export function Raw({
   block,

@@ -18,11 +18,11 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the embed component.
+ * Converts recognized YouTube links to embed URLs and renders other sources in an iframe unchanged.
  *
  * @param block External source URL, title, and optional frame dimensions.
  *
- * @return Embedded content, or null when no source is available.
+ * @return The embedded frame, or `null` when the block has no source URL.
  */
 export function Embed({
   block,

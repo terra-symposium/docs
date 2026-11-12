@@ -240,10 +240,7 @@ export function clearTransition(): void {
 export function useTransitionState(): Transition {
   const [transition, setTransitionState] = useState(transitionStore.transition);
   useEffect(() => {
-    /**
-     * Handles update.
-     *
-     */
+    /** Refreshes the hook snapshot after the transition store notifies subscribers. */
     const update = (): void => {
       setTransitionState(transitionStore.transition);
     };
@@ -296,10 +293,9 @@ export const $editorMounts = atom<{ expected: string[]; mounted: string[]; path:
 const assignments = new Map<string, string>();
 
 /**
- * Handles reset editor mounts.
- *
- * @param path - Source or route path resolved for reset editor mounts.
- * @param expected - Expected input supplied to reset editor mounts's operation.
+ * Clears reporter associations and resets the expected and mounted block IDs for a new route.
+ * @param path Route path that owns the next editor surface, if known.
+ * @param expected Block IDs expected to report their mounted state on that route.
  */
 export function resetEditorMounts(path: string | undefined, expected: string[]): void {
   assignments.clear();
@@ -307,12 +303,11 @@ export function resetEditorMounts(path: string | undefined, expected: string[]):
 }
 
 /**
- * Handles set editor mount.
- *
- * @param path - Source or route path resolved for set editor mount.
- * @param reporter - Reporter input supplied to set editor mount's operation.
- * @param mounted - Mounted input supplied to set editor mount's operation.
- * @param kind - Content kind that selects set editor mount's renderer.
+ * Associates a mounted editor reporter with its expected block ID, then updates the route's mount state.
+ * @param path Route currently rendering the editor block.
+ * @param reporter Stable reporter ID emitted by the mounted editor block.
+ * @param mounted Whether the reporter is entering or leaving the mounted set.
+ * @param kind Optional block kind used to match an unassigned expected ID.
  */
 export function setEditorMount(
   path: string | undefined,

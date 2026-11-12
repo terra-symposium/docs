@@ -11,20 +11,20 @@ IMPORTS
 import * as TerraQualityRegex from '../../regex.mjs';
 
 /**
- * Serializes a string literal for embedded MDX and JSX attributes.
+ * JSON-quotes a string for use in an MDX or JSX attribute.
  *
- * @param value
+ * @param value - String value to encode.
  *
- * @return
+ * @return JSON-quoted string literal suitable for embedding in an attribute.
  */
 export const quote = (value: string): string => JSON.stringify(value);
 
 /**
- * Escapes HTML control characters before text is embedded in Docs markup.
+ * Escapes HTML metacharacters before text is emitted as Docs markup.
  *
- * @param value
+ * @param value - Text to escape.
  *
- * @return
+ * @return Text with ampersands, angle brackets, quotes, and apostrophes replaced by HTML entities.
  */
 const escHtml = (value: string): string =>
   value
@@ -41,10 +41,9 @@ CODE SYNTAX
 /**
  * Emits the optional language attribute used by serialized code fences.
  *
- * @param lang
- * @param language - Code fence language label.
+ * @param lang - Optional code-fence language label.
  *
- * @return `language` attribute when the fence declares one, otherwise an empty string.
+ * @return A quoted `language` attribute for a non-empty label, or an empty string.
  */
 const codeAttrs = (lang?: string): string =>
   lang?.trim() ? ` language=${JSON.stringify(lang.trim())}` : '';
@@ -101,12 +100,12 @@ ${val.replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQuality
 }
 
 /**
- * Handles code src jsx.
+ * Serializes source-backed code as a self-closing `Code` JSX element.
  *
- * @param lang - Code language label used for the generated code block.
- * @param src - Source code text to wrap in the code block.
+ * @param lang - Optional code-fence language label.
+ * @param src - Source value used by the `Code` component to load code content.
  *
- * @return
+ * @return Canonical self-closing `Code` JSX with `language` and `source` attributes.
  */
 export const codeSrcJsx = (lang: string | undefined, src: string): string =>
   `\n<Code${codeAttrs(lang)} source=${quote(src)} />\n`;
@@ -118,11 +117,10 @@ TABLE HTML
 /**
  * Removes the outer `|` characters from a pipe-table row while respecting escaped pipes.
  *
- * @param val
- * @param side - Side of the pipe to trim.
- * @param value - Pipe-delimited text to trim.
+ * @param val - Pipe-delimited table row.
+ * @param side - Boundary pipe to remove when present.
  *
- * @return Row fragment with the requested outer pipe removed.
+ * @return Row with the requested outer pipe removed when present; an escaped trailing pipe is retained.
  */
 const trimPipe = (val: string, side: 'start' | 'end'): string => {
   if (side === 'start' && val.startsWith('|')) return val.slice(1);
@@ -195,10 +193,9 @@ CONTENT SERIALIZATION
 /**
  * Converts plain markdown into HTML for the serializer's fallback path.
  *
- * @param val
- * @param value - Markdown source to parse.
+ * @param val - Markdown source to convert on the serializer fallback path.
  *
- * @return Rendered HTML string used when markdown does not map to richer docs blocks.
+ * @return HTML for supported code fences, inline code, links, emphasis, and line breaks; an empty string for blank input.
  */
 export const renderMd = (val: string): string => {
   const text = val.trim();
@@ -237,10 +234,9 @@ export const renderMd = (val: string): string => {
 /**
  * Formats raw table HTML with consistent indentation so docs tables round-trip cleanly.
  *
- * @param val
- * @param value - Table HTML to format.
+ * @param val - HTML markup to normalize when it contains a table.
  *
- * @return Formatted table HTML string with stable indentation.
+ * @return Line-normalized and indented table markup, or the original input when it contains no table.
  */
 export const fmtRawTable = (val: string): string => {
   if (!TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
@@ -269,11 +265,11 @@ export const fmtRawTable = (val: string): string => {
 export const TABLE_TAG = TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_B_I_REGEX();
 
 /**
- * Handles atomic table html.
+ * Removes style markup from a table source block and trims surrounding whitespace.
  *
  * @param val - Complete table markup captured from a Docs source block.
  *
- * @return
+ * @return Trimmed table markup without style elements or style attributes.
  */
 export const atomicTableHtml = (val: string): string => {
   return val

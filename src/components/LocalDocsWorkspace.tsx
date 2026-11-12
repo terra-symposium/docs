@@ -87,7 +87,7 @@ function norm(value: string, base = 'http://docs.local'): string {
 
 /**
  * Decodes a fragment identifier from a page route or browser URL.
- * @param value Route-like input supplied by the host or browser location.
+ * @param value URL, pathname, or fragment string whose hash should be decoded.
  * @returns The decoded fragment, or an empty string when the input has no valid fragment.
  */
 function routeId(value: string): string {
@@ -188,7 +188,7 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
 }
 
 /**
- * Renders repository-owned Markdown in the shared Docs workspace through a read-only host adapter.
+ * Maps local Markdown pages and browser routes into the shared read-only Docs workspace.
  *
  * @param workspaceOptions Host-owned route tree, Markdown page index, and optional presentation capabilities.
  * @param workspaceOptions.tree Navigation tree displayed by the workspace.
@@ -196,15 +196,15 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
  * @param workspaceOptions.pathname Current browser route used to select the document.
  * @param workspaceOptions.title Host title shown in the sidebar and document title.
  * @param workspaceOptions.description Optional site description shown below the title.
- * @param workspaceOptions.beforeContent Optional host-owned content placed before the page body.
- * @param workspaceOptions.hue Optional Styling hue for the workspace palette.
+ * @param workspaceOptions.beforeContent Optional host-owned content rendered before the page body.
+ * @param workspaceOptions.hue Optional Styling hue applied to the workspace palette.
  * @param workspaceOptions.rootPath Host Docs root used to build local routes.
  * @param workspaceOptions.homePath Optional destination for the site brand link.
  * @param workspaceOptions.afterContent Optional host-owned content appended after the page body.
  * @param workspaceOptions.customBlocks Optional host-specific rich block renderers.
  * @param workspaceOptions.blocks Optional switches controlling supported rich blocks.
  * @param workspaceOptions.quiz Optional quiz controls and host generation callback.
- * @return The shared Docs workspace configured for local, account-free content.
+ * @return The shared workspace displaying the selected Markdown page and any configured host content or quiz controls.
  */
 export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): JSX.Element {
   const {
@@ -374,21 +374,17 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             if (op === 'read.doc.list') return { data: tree as T };
             if (op === 'read.doc.get') {
               /**
-               * Builds the content payload expected by the editor's document reader.
-               * @returns The resolved page with source and parsed blocks, or `null` if missing.
+               * Resolves the indexed page once for the source and editor content in this response.
                */
-              const readDocument = (): unknown => {
-                const document = resolvePage(args);
-                return document
+              const document = resolvePage(args);
+              return {
+                data: (document
                   ? {
                       ...document,
                       source: document.markdown,
                       content: markdownToDocsValue(document.markdown),
                     }
-                  : null;
-              };
-              return {
-                data: readDocument() as T,
+                  : null) as T,
               };
             }
             if (op === 'read.doc.attachments') {

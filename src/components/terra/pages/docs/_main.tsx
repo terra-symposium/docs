@@ -36,17 +36,11 @@ import {
   htmlToMd,
   pasteMd,
 } from '../../../../lib/terra/docs/editor-dom.js';
-import { cn, notify, setDocumentTitle } from '../../../../lib/terra/runtime/runtime.js';
-import { components as customComponents } from '../../../../lib/terra/custom-components.js';
+import { cn, isRec, notify, setDocumentTitle } from '../../../../lib/terra/runtime/runtime.js';
 import { dirname, docsRootPath } from '../../../../lib/terra/runtime/shared.js';
 import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import { isDocBody } from '../../../../lib/terra/runtime/types.js';
 import { keepDeepPath } from '../../../../lib/terra/docs/tree.js';
-import { mdTableToHtml } from '../../../../lib/terra/runtime/content/markdown.js';
-import { toHeadingId } from '../../editor/docs/heading.js';
-import { toImgAlt, toImgMd } from './_blocks.js';
-import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
-import { toast } from 'sonner';
 import {
   lazy,
   useCallback,
@@ -57,6 +51,12 @@ import {
   useRef,
   useState,
 } from 'react';
+import { mdTableToHtml } from '../../../../lib/terra/runtime/content/markdown.js';
+import { components as repoComponents } from '../../../../lib/terra/custom-components.js';
+import { toHeadingId } from '../../editor/docs/heading.js';
+import { toImgAlt, toImgMd } from './_blocks.js';
+import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
+import { toast } from 'sonner';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
@@ -94,17 +94,40 @@ import { Suspense } from 'react';
 import { Toaster } from 'sonner';
 
 // DATA
-import { IMAGE_TYPES, MIME, trimTrailingSlashes } from '../../../../lib/terra/runtime/shared.js';
+import { IMAGE_TYPES, MIME } from '../../../../lib/terra/runtime/shared.js';
 
-const ContentEditor = lazy(() =>
-  import('../../editor/ContentEditor.js').then((module) => ({
-    default: module.ContentEditor,
-  })),
-);
+// TYPES
+import type {
+  Content as ContentData,
+  DocBody,
+  DocVer,
+  DocsPermissionLevel as Permission,
+  Draft,
+  EditorRefs,
+  Mode,
+  Tree as TreeType,
+} from '../../../../lib/terra/runtime/types.js';
+import type { DocsBlockOptions } from '../../../blocks.js';
+import type { DocsHostAttachment } from '../../../../lib/host.js';
+import type { JSX, ReactNode } from 'react';
+import type { PortableTextBlock } from '@portabletext/editor';
 
 /**
- * Finds the visible Docs shell matching the mode encoded in the current URL.
- * @returns Visible shell element, or `null` when no matching view is mounted.
+ * Loads the shared editor only when Docs mounts its hydrated client surface.
+ *
+ * @returns The lazily loaded content editor component.
+ */
+const ContentEditor = lazy(() =>
+  import('../../editor/ContentEditor.js').then((module) => ({ default: module.ContentEditor })),
+);
+
+/** Matches trailing separators when comparing route roots. */
+const SHARED_REGEX = TerraQualityRegex.REGEX_PATTERN_REGEX_3();
+
+/**
+ * Finds the visible Docs shell whose mode matches the current route query.
+ *
+ * @returns The mounted shell element, or `null` while no route shell is visible.
  */
 const docsShellOf = (): HTMLElement | null =>
   Array.from(document.querySelectorAll<HTMLElement>('[data-docs-shell]')).find((e) => {
@@ -119,11 +142,10 @@ const docsShellOf = (): HTMLElement | null =>
     );
   }) ?? null;
 
-/**
- * Scrolls to a matching page heading and records its fragment in browser history.
- * @param id Canonical heading fragment ID.
- * @param text Heading text used as a fallback when the ID differs between surfaces.
- * @returns Nothing; updates scroll position and the current history entry.
+/** Scrolls the active Docs content to a heading and adds its fragment to browser history.
+ *
+ * @param id - Heading fragment identifier to select.
+ * @param text - Heading text used if the rendered element has no matching identifier.
  */
 const navigateHeading = (id: string, text: string): void => {
   const shell = docsShellOf();
@@ -140,31 +162,16 @@ const navigateHeading = (id: string, text: string): void => {
   window.history.pushState(null, '', `#${id}`);
 };
 
-// TYPES
-import type {
-  Content as ContentData,
-  DocBody,
-  DocVer,
-  DocsPermissionLevel as Permission,
-  Draft,
-  EditorRefs,
-  Mode,
-  Tree as TreeType,
-} from '../../../../lib/terra/runtime/types.js';
-import type { DocsBlockOptions } from '../../../blocks.js';
-import type { DocsHostAttachment } from '../../../../lib/host.js';
-import type { JSX, ReactNode } from 'react';
-
 /*//////////////////////////////////////////////////
 HOOKS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the view component.
+ * Displays the document body in the read-only editor surface and signals when it is ready.
  *
- * @param body Portable Text body displayed by the read-only editor.
- * @param blocks Optional shared block renderers allowed for this document.
- * @param resetKey Optional document key that resets the editor's transition state.
+ * @param body Portable Text blocks that form the current document body.
+ * @param blocks Block renderer options used to limit which custom blocks can appear in the document.
+ * @param resetKey - Key used to reset Terra's editor state for a new document.
  *
  * @return The read-only editor view for the supplied document body.
  */
@@ -174,7 +181,7 @@ function View({
   resetKey,
 }: {
   body: DocBody;
-  blocks?: DocsBlockOptions;
+  blocks?: DocsBlockOptions | undefined;
   resetKey?: string;
 }): JSX.Element {
   useEffect(() => {
@@ -191,7 +198,7 @@ function View({
   return (
     <Suspense fallback={<div aria-hidden="true" data-docs-view-loading />}>
       <ContentEditor
-        content={body as unknown as import('@portabletext/editor').PortableTextBlock[]}
+        content={body as unknown as PortableTextBlock[]}
         readOnly
         {...(blocks ? { blocks } : {})}
         {...(resetKey !== undefined ? { resetKey } : {})}
@@ -200,20 +207,30 @@ function View({
   );
 }
 
+/**
+ * Collects the document's view, edit, and header surfaces around shared editor state.
+ *
+ * @param props - Optional wrapper classes for the editable Lexical editor surface.
+ * @param className - Additional CSS classes merged into edit.
+ *
+ * @return The interactive Docs editing surface with its configured toolbar.
+ */
 const EditorSurfaces = {
   /**
-   * Wraps the Lexical editor with loading, attachment, and toolbar lifecycle handling.
-   * @param blocks Optional shared block renderers enabled in the editable surface.
-   * @param className Additional classes applied to the editor container.
-   * @param editable Whether the document currently permits editor changes.
-   * @returns Interactive Docs editing surface with its configured toolbar.
+   * Renders the editable Portable Text surface and waits until its root editor mounts.
+   *
+   * @param blocks Enabled Docs block types available to the editor.
+   * @param className Additional layout classes applied to the editing surface.
+   * @param editable Whether the current permission allows document changes.
+   *
+   * @returns The mounted editable surface or the loading state while its editor initializes.
    */
   Edit({
     blocks,
     className,
     editable = false,
   }: {
-    blocks?: DocsBlockOptions;
+    blocks?: DocsBlockOptions | undefined;
     className?: string;
     editable?: boolean;
   }): JSX.Element {
@@ -244,7 +261,7 @@ const EditorSurfaces = {
       if (!body) return;
       let frame = 0;
       const mountObserver = {
-        /** Marks the root editor mount complete after its DOM appears. */
+        /** Checks whether the editor root has mounted and updates route readiness from the editor mount registry. */
         check(): void {
           const root = body.querySelector<HTMLElement>('[data-content-editor]');
           if (root) {
@@ -258,7 +275,7 @@ const EditorSurfaces = {
               mounts.expected.length === mounts.mounted.length,
           );
         },
-        /** Coalesces observer callbacks into one animation-frame DOM check. */
+        /** Schedules a readiness check after the next DOM mutation frame. */
         queue(): void {
           window.cancelAnimationFrame(frame);
           frame = window.requestAnimationFrame(mountObserver.check);
@@ -355,24 +372,20 @@ const EditorSurfaces = {
         '[tabindex]:not([tabindex="-1"])',
         '[data-tool-cell]',
       ].join(', ');
-      /**
-       * Returns the root.
-       *
-       * @return root.
+      /** Returns the document body managed by the mounted editor surface.
+       * @returns The editor root, or `null` before the surface is mounted.
        */
       const root = (): HTMLElement | null => editorRefsForRoot.current?.body ?? null;
-      /**
-       * Checks whether the value is editable.
-       *
-       * @return editable.
+      /** Returns the active `contenteditable` element inside the document body.
+       * @returns The mounted rich-text editor element, or `null` when unavailable.
        */
       const editable = (): HTMLElement | null =>
         root()?.querySelector<HTMLElement>('[contenteditable="true"]') ?? null;
 
       /**
-       * Gets active editable.
+       * Resolves the editable surface that owns the block cursor or current browser selection.
        *
-       * @return resolved value.
+       * @return The relevant editable element, falling back to the document editor when selection is outside it.
        */
       const getActiveEditable = (): HTMLElement | null => {
         if (bCursor.current)
@@ -391,12 +404,9 @@ const EditorSurfaces = {
         return editable();
       };
 
-      /**
-       * Checks whether local text.
-       *
-       * @param node - Value passed to the helper.
-       *
-       * @return True when the helper predicate succeeds.
+      /** Returns whether a DOM node belongs to the active editor outside a decorator block.
+       * @param node Selection node being checked against the current editor surface.
+       * @returns Whether the node is local text rather than content inside a decorator block.
        */
       const isLocalText = (node: Node | null): boolean => {
         const ce = getActiveEditable();
@@ -408,10 +418,8 @@ const EditorSurfaces = {
       };
 
       /**
-       * Sets block cursor active.
-       *
-       * @param a
-       * @param active - Value passed to the helper.
+       * Adds or clears the marker used to show the editor's block-cursor state.
+       * @param a Whether the current editor should show its block-cursor marker.
        */
       const setBlockCursorActive = (a: boolean): void => {
         if (!editorRefsForRoot.current?.body) return;
@@ -419,11 +427,7 @@ const EditorSurfaces = {
         else delete editorRefsForRoot.current.body.dataset.docsBlockCursorActive;
       };
 
-      /**
-       * Restores the restore Saved Selection.
-       *
-       * @param _reason - Value passed to the helper.
-       */
+      /** Restores the editor selection from the most recent saved cursor state. */
       const restoreSavedSelection = (): void => {
         const saved =
           editorRefsForRoot.current.selection ??
@@ -471,13 +475,10 @@ const EditorSurfaces = {
         if (!body) return;
         const sel = window.getSelection();
         if (!sel) return;
-        /**
-         * Returns the pick path.
-         *
-         * @param path - Path to process.
-         * @param offset - Value passed to the helper.
-         *
-         * @return pick Path.
+        /** Resolves a saved child-index path and character offset to a collapsed DOM range.
+         * @param path Child indexes from the editor body to the saved text node.
+         * @param offset Character position within the resolved text node.
+         * @returns A collapsed range at the saved location, or `null` when the path is stale.
          */
         const pickPath = (path?: number[], offset?: number): Range | null => {
           if (!path?.length) return null;
@@ -495,13 +496,10 @@ const EditorSurfaces = {
           range.collapse(true);
           return range;
         };
-        /**
-         * Returns the pick text.
-         *
-         * @param text - Text content to process.
-         * @param offset - Value passed to the helper.
-         *
-         * @return pick Text.
+        /** Finds the first text node containing the saved selection text and restores its offset.
+         * @param text Text captured around the saved selection.
+         * @param offset Character position within the matching text node.
+         * @returns A collapsed range at the saved text position, or `null` when no text matches.
          */
         const pickText = (text?: string, offset?: number): Range | null => {
           if (!text) return null;
@@ -620,23 +618,16 @@ const EditorSurfaces = {
         setBlockCursorActive(Boolean(bCursor.current));
       };
 
-      /**
-       * Checks whether toolbar target.
-       *
-       * @param tgt
-       * @param target - Value passed to the helper.
-       *
-       * @return True when the helper predicate succeeds.
+      /** Identifies controls whose pointer events must preserve the current editor selection.
+       * @param tgt Pointer target considered for selection preservation.
+       * @returns Whether the target is a toolbar, dialog, menu, or popover control.
        */
       const isToolbarTgt = (tgt: HTMLElement | null): boolean =>
         !!tgt?.closest(
           '[data-docs-main-toolbar], [data-docs-toolbar-frame], [data-toolbar="true"], [role="toolbar"], [role="dialog"], [role="menu"], [role="menuitem"], [data-radix-popper-content-wrapper]',
         );
 
-      /**
-       * Snapshot selection.
-       *
-       */
+      /** Saves the active CodeMirror or DOM selection so toolbar actions can restore it. */
       const snapshotSelection = (): void => {
         const sel = window.getSelection();
         const view = codeViewOf();
@@ -809,10 +800,7 @@ const EditorSurfaces = {
         }
       };
 
-      /**
-       * Returns the clear.
-       *
-       */
+      /** Cancels pending cursor work and removes the active block-cursor marker. */
       const clear = (): void => {
         window.cancelAnimationFrame(vCursor.current);
         vPending.current = null;
@@ -823,10 +811,8 @@ const EditorSurfaces = {
         }
       };
 
-      /**
-       * Returns the restore.
-       *
-       * @return True when the helper predicate succeeds.
+      /** Restores the block-cursor overlay to its matching editor block when it still exists.
+       * @returns Whether the previously selected block could be restored in the current editor.
        */
       const restore = (): boolean => {
         const { current: cur } = bCursor;
@@ -864,12 +850,9 @@ const EditorSurfaces = {
         return true;
       };
 
-      /**
-       * G dec.
-       *
-       * @param dec - Value passed to the helper.
-       *
-       * @return g Dec.
+      /** Resolves a focus-group member to its root decorator for block-level keyboard navigation.
+       * @param dec Decorator or focus-group member under the current cursor.
+       * @returns The group's root decorator, or the original element when no group is active.
        */
       const gDec = (dec: HTMLElement): HTMLElement => {
         const body = root();
@@ -885,11 +868,11 @@ const EditorSurfaces = {
       };
 
       /**
-       * G decs.
+       * Lists top-level editor decorators and standalone blocks in document order.
+       * Focus-group members resolve to their group root so keyboard navigation treats
+       * a grouped block as one target.
        *
-       * @param _vertical - Value passed to the helper.
-       *
-       * @return g Decs.
+       * @returns The unique navigable block elements in the active editor.
        */
       const gDecs = (): HTMLElement[] => {
         const ce = getActiveEditable();
@@ -924,13 +907,10 @@ const EditorSurfaces = {
           });
       };
 
-      /**
-       * Returns the focus target.
-       *
-       * @param tgt - Value passed to the helper.
-       * @param side - Value passed to the helper.
-       *
-       * @return True when the helper predicate succeeds.
+      /** Focuses an element and places the caret at the requested text edge when it is editable.
+       * @param tgt Element receiving focus and, when editable, the caret.
+       * @param side Text edge to select: `right` enters at the start and `left` at the end.
+       * @returns Whether focus or caret placement succeeded.
        */
       const focusTgt = (tgt: HTMLElement, side: 'left' | 'right'): boolean => {
         tgt.focus({ preventScroll: true });
@@ -960,13 +940,10 @@ const EditorSurfaces = {
         return true;
       };
 
-      /**
-       * Returns the focusables.
-       *
-       * @param wrapper - Value passed to the helper.
-       * @param pref - Value passed to the helper.
-       *
-       * @return focusables.
+      /** Collects connected focus targets, optionally using explicit group-entry markers.
+       * @param wrapper Decorator whose visible descendants are candidates.
+       * @param pref Whether to restrict candidates to explicit focus-entry markers.
+       * @returns Visible, enabled focus targets in document order without duplicates.
        */
       const focusables = (wrapper: HTMLElement, pref = false): HTMLElement[] => {
         const seen = new Set<HTMLElement>();
@@ -995,12 +972,11 @@ const EditorSurfaces = {
       };
 
       /**
-       * Nearest adjacent.
+       * Finds the first block beside the current collapsed text selection.
        *
-       * @param dir - Directory entry to read.
-       * @param vertical - Value passed to the helper.
+       * @param dir - Whether to search before or after the caret.
        *
-       * @return nearest Adjacent.
+       * @returns The adjacent navigable block, or `null` when none exists.
        */
       const nearestAdjacent = (dir: 'left' | 'right'): HTMLElement | null => {
         const range = getCollapsedRange();
@@ -1026,12 +1002,9 @@ const EditorSurfaces = {
         return null;
       };
 
-      /**
-       * Caret rect.
-       *
-       * @param dir - Directory entry to read.
-       *
-       * @return caret Rect.
+      /** Returns the visible caret's top and bottom edge nearest the requested direction.
+       * @param dir Direction of movement used to choose the caret edge.
+       * @returns Caret bounds, or `null` when the selection has no visible geometry.
        */
       const caretRect = (dir: 'left' | 'right'): { bottom: number; top: number } | null => {
         const range = getCollapsedRange();
@@ -1043,16 +1016,14 @@ const EditorSurfaces = {
       };
 
       /**
-       * Passed dec.
-       *
-       * @param dec - Value passed to the helper.
-       * @param dir - Directory entry to read.
-       * @param beforeAnchor - Value passed to the helper.
-       * @param beforeBlock - Value passed to the helper.
-       * @param before - Value passed to the helper.
-       * @param aRect - Value passed to the helper.
-       *
-       * @return True when the helper predicate succeeds.
+       * Compares the selection before and after native movement with the decorator's edge.
+       * @param dec Decorator boundary the caret may have crossed.
+       * @param dir Arrow-key direction of the native movement.
+       * @param beforeAnchor Selection anchor node before native movement.
+       * @param beforeBlock Text block containing the previous selection anchor.
+       * @param before Collapsed range captured before native movement.
+       * @param aRect Caret top and bottom captured before movement.
+       * @returns Whether the native caret crossed the decorator boundary in `dir`.
        */
       const passedDec = (
         dec: HTMLElement,
@@ -1088,11 +1059,9 @@ const EditorSurfaces = {
       };
 
       /**
-       * Selected dec.
+       * Resolves the decorator containing the caret to its focus-group root when needed.
        *
-       * @param _vertical - Value passed to the helper.
-       *
-       * @return selected Dec.
+       * @returns The selected navigable decorator, or `null` when the caret is elsewhere.
        */
       const selectedDec = (): HTMLElement | null => {
         const ce = getActiveEditable();
@@ -1109,11 +1078,9 @@ const EditorSurfaces = {
         return gDec(dec);
       };
 
-      /**
-       * Returns the focus block.
-       *
-       * @param dec - Value passed to the helper.
-       * @param dir - Directory entry to read.
+      /** Moves focus into the nearest editable table cell, or to the decorator when none exists.
+       * @param dec Decorator containing the table cells or other interactive content.
+       * @param dir Direction used to choose the first or last editable cell.
        */
       const focusBlock = (dec: HTMLElement, dir: 'left' | 'right'): void => {
         const cells = Array.from(dec.querySelectorAll<HTMLElement>('th, td')).filter(
@@ -1121,20 +1088,17 @@ const EditorSurfaces = {
         );
         if (cells.length) {
           clear();
-          focusTgt(
-            dir === 'right' ? cells[0]! : cells[cells.length - 1]!,
-            dir === 'right' ? 'right' : 'left',
-          );
+          const target = dir === 'right' ? cells[0] : cells.at(-1);
+          if (!target) return;
+          focusTgt(target, dir === 'right' ? 'right' : 'left');
           return;
         }
         focus(dec, dir === 'right' ? 'left' : 'right');
       };
 
-      /**
-       * Returns the focus.
-       *
-       * @param dec - Value passed to the helper.
-       * @param side - Value passed to the helper.
+      /** Places the editor caret immediately before or after a navigable decorator.
+       * @param dec Decorator that the caret should move beside.
+       * @param side Edge of the decorator where the caret should be placed.
        */
       const focus = (dec: HTMLElement, side: 'left' | 'right'): void => {
         const tgt = gDec(dec);
@@ -1173,8 +1137,9 @@ const EditorSurfaces = {
 
       const eHandlers = {
         /**
-         * Opens a focused block and transfers keyboard focus into its visible editor.
-         * @param e Keyboard event originating in the document viewer.
+         * Handles keyboard navigation and activation for custom blocks inside the editor.
+         *
+         * @param e Keyboard event received by the editor body.
          */
         onKeyDown(e: KeyboardEvent): void {
           try {
@@ -1260,7 +1225,6 @@ const EditorSurfaces = {
                   ? 'right'
                   : null;
             if (!dir) return;
-            const isVertical = key === 'ArrowUp' || key === 'ArrowDown';
             if (
               !bCursor.current &&
               (tgt?.closest(
@@ -1289,12 +1253,11 @@ const EditorSurfaces = {
               const cur = bCursor.current;
               if (!cur) return;
               const dir = key === 'ArrowLeft' || key === 'ArrowUp' ? 'left' : 'right';
-              const isVertical = key === 'ArrowUp' || key === 'ArrowDown';
               const decs = gDecs();
               const i = decs.indexOf(cur.dec);
               const adjacent = i === -1 ? null : (decs[i + (dir === 'right' ? 1 : -1)] ?? null);
               if (
-                isVertical &&
+                (key === 'ArrowUp' || key === 'ArrowDown') &&
                 adjacent &&
                 !(() => {
                   const body = getActiveEditable();
@@ -1444,7 +1407,7 @@ const EditorSurfaces = {
               }
               return null;
             })();
-            if (isVertical) {
+            if (key === 'ArrowUp' || key === 'ArrowDown') {
               if (dec) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1478,46 +1441,50 @@ const EditorSurfaces = {
               };
               window.cancelAnimationFrame(vCursor.current);
               vCursor.current = window.requestAnimationFrame(() => {
-                /**
-                 * Waits for the browser's vertical caret movement to settle inside the adjacent block.
-                 * @param attempt Number of animation-frame checks already performed.
-                 * @returns No value; focuses the adjacent block once the caret transition completes.
-                 */
-                const settle = (attempt = 0): void => {
-                  vCursor.current = 0;
-                  const pending = vPending.current;
-                  if (!pending?.dec || bCursor.current) return void (vPending.current = null);
-                  const selected = selectedDec();
-                  if (selected) {
-                    vPending.current = null;
-                    focusBlock(selected, pending.dir);
-                    return;
+                (
+                  /**
+                   * Retries caret placement after the editor has finished updating the selected block.
+                   *
+                   * @param attempt Number of scheduled layout checks already performed.
+                   */
+                  function settle(attempt = 0): void {
+                    vCursor.current = 0;
+                    const pending = vPending.current;
+                    if (!pending?.dec || bCursor.current) return void (vPending.current = null);
+                    const selected = selectedDec();
+                    if (selected) {
+                      vPending.current = null;
+                      focusBlock(selected, pending.dir);
+                      return;
+                    }
+                    const currSelection = window.getSelection();
+                    if (
+                      currSelection?.anchorNode &&
+                      pending.dec.contains(currSelection.anchorNode)
+                    ) {
+                      vPending.current = null;
+                      focusBlock(pending.dec, pending.dir);
+                      return;
+                    }
+                    if (
+                      pending.dec &&
+                      passedDec(
+                        pending.dec,
+                        pending.dir,
+                        pending.beforeAnchor,
+                        pending.beforeBlock,
+                        pending.before,
+                        pending.beforeRect,
+                      )
+                    ) {
+                      vPending.current = null;
+                      focusBlock(pending.dec, pending.dir);
+                      return;
+                    }
+                    if (attempt >= 5) return void (vPending.current = null);
+                    vCursor.current = window.requestAnimationFrame(() => settle(attempt + 1));
                   }
-                  const currSelection = window.getSelection();
-                  if (currSelection?.anchorNode && pending.dec.contains(currSelection.anchorNode)) {
-                    vPending.current = null;
-                    focusBlock(pending.dec, pending.dir);
-                    return;
-                  }
-                  if (
-                    pending.dec &&
-                    passedDec(
-                      pending.dec,
-                      pending.dir,
-                      pending.beforeAnchor,
-                      pending.beforeBlock,
-                      pending.before,
-                      pending.beforeRect,
-                    )
-                  ) {
-                    vPending.current = null;
-                    focusBlock(pending.dec, pending.dir);
-                    return;
-                  }
-                  if (attempt >= 5) return void (vPending.current = null);
-                  vCursor.current = window.requestAnimationFrame(() => settle(attempt + 1));
-                };
-                settle(0);
+                )(0);
               });
               const verticalSelection = window.getSelection() as Selection & {
                 modify?: (alter: 'move', dir: 'backward' | 'forward', granularity: 'line') => void;
@@ -1598,22 +1565,23 @@ const EditorSurfaces = {
               if (restore()) return;
               window.cancelAnimationFrame(restoreCursor.current);
               restoreCursor.current = window.requestAnimationFrame(() => {
-                /**
-                 * Retries selection restoration while the editor remounts its focused block.
-                 * @param attempt Number of restoration frames already attempted.
-                 * @returns No value; clears the pending cursor after success or the retry limit.
-                 */
-                const retryRestore = (attempt = 0): void => {
-                  if (restore()) return;
-                  if (attempt >= 12) {
-                    clear();
-                    return;
+                (
+                  /**
+                   * Retries restoring the previous selection when a block temporarily leaves the DOM.
+                   *
+                   * @param attempt Number of scheduled restore checks already performed.
+                   */
+                  function retryRestore(attempt = 0): void {
+                    if (restore()) return;
+                    if (attempt >= 12) {
+                      clear();
+                      return;
+                    }
+                    restoreCursor.current = window.requestAnimationFrame(() =>
+                      retryRestore(attempt + 1),
+                    );
                   }
-                  restoreCursor.current = window.requestAnimationFrame(() =>
-                    retryRestore(attempt + 1),
-                  );
-                };
-                retryRestore(0);
+                )(0);
               });
               return;
             }
@@ -1655,10 +1623,8 @@ const EditorSurfaces = {
           }
         },
 
-        /**
-         * On pointer down.
-         *
-         * @param e - Value passed to the helper.
+        /** Preserves toolbar selection or establishes block-cursor state for the pointer target.
+         * @param e Pointer event used to identify the target and its editor block.
          */
         onPointerDown(e: PointerEvent): void {
           try {
@@ -1767,10 +1733,8 @@ const EditorSurfaces = {
       if (!document) return;
 
       // DROP
-      /**
-       * Moves the move Drop Caret for the docs.
-       *
-       * @param e - Value passed to the helper.
+      /** Places the native insertion caret at the drag location when it falls inside the editor.
+       * @param e Drag event carrying the pointer coordinates and transferred payload.
        */
       const moveDropCaret = (e: DragEvent): void => {
         try {
@@ -1804,9 +1768,9 @@ const EditorSurfaces = {
         }
       };
       /**
-       * Handles on drop.
+       * Attaches supported files dropped onto the active editor surface.
        *
-       * @param e - Editor event carrying the changed Docs content.
+       * @param e - Browser drag event containing the dropped files.
        */
       const onDrop = (e: DragEvent): void => {
         try {
@@ -1840,11 +1804,9 @@ const EditorSurfaces = {
       };
 
       // PASTE
-      /**
-       * Handles clipboard.
-       *
-       * @param data - Source data to transform.
-       * @param e - Value passed to the helper.
+      /** Routes clipboard data to Docs paste and attachment handlers, cancelling browser defaults when handled.
+       * @param data Clipboard payload containing text, files, or serialized HTML.
+       * @param e Event methods used to cancel the browser's default paste behavior.
        */
       const handleClipboard = (
         data: DataTransfer,
@@ -1957,7 +1919,7 @@ const EditorSurfaces = {
         let plain = data.getData('text/plain');
         const types = Array.from(data.types ?? []);
         const richClipboard =
-          /<(?:AccordionGroup|AccordionItem|Code|Testimonials|TabsGroup|TabsItem|Leaf|DocsTable|TsDocs|Nodes)\b|<table\b|===|\|\|\||:::/i.test(
+          /<(?:Code|Testimonials|Leaf|DocsTable|TsDocs|Nodes)\b|<table\b|===|\|\|\||:::/i.test(
             `${html || ''}\n${plain || ''}`,
           );
         // CRITICAL BYPASS: Let Lexical handle pasting its own native blocks.
@@ -1984,9 +1946,7 @@ const EditorSurfaces = {
               if (!md) return '';
               return [
                 ...new Set([
-                  ...customComponents.map((component) => component.name),
-                  'AccordionGroup',
-                  'AccordionItem',
+                  ...repoComponents.map((component) => component.name),
                   'Aside',
                   'Code',
                   'DocsMath',
@@ -1994,8 +1954,6 @@ const EditorSurfaces = {
                   'Embed',
                   'Leaf',
                   'Nodes',
-                  'TabsGroup',
-                  'TabsItem',
                   'TsDocs',
                 ]),
               ]
@@ -2085,9 +2043,11 @@ const EditorSurfaces = {
         }
         const remote = (() => {
           /**
-           * Checks whether an image source is remote media or a recognized hosted image URL.
-           * @param val Candidate source URL or local media path from an image block.
-           * @returns `true` for API media and supported HTTP image sources.
+           * Classifies image source values that point to remote URLs or the media endpoint.
+           *
+           * @param val Source string from the Docs image block.
+           *
+           * @returns Whether the value must be loaded through the remote image path.
            */
           const isRemote = (val: string): boolean => {
             const trimmed = val.trim();
@@ -2146,10 +2106,8 @@ const EditorSurfaces = {
           editorRefsForRoot.current.norm.replay = true;
         }
       };
-      /**
-       * On paste.
-       *
-       * @param e - Value passed to the helper.
+      /** Handles clipboard paste events through the editor's shared paste router.
+       * @param e Clipboard event dispatched by the document.
        */
       const onPaste = (e: ClipboardEvent): void => {
         try {
@@ -2158,10 +2116,8 @@ const EditorSurfaces = {
           console.error('[docs:edit] Paste event failed', err);
         }
       };
-      /**
-       * On before input.
-       *
-       * @param e - Value passed to the helper.
+      /** Handles paste-like input events that provide clipboard data without a paste event.
+       * @param e Input event whose type and transfer data determine whether to route a paste.
        */
       const onBeforeInput = (e: InputEvent): void => {
         try {
@@ -2244,7 +2200,13 @@ const EditorSurfaces = {
                 />
               }
               onChange={(c) => {
-                surface.onBodyChange(toPortableBody(c));
+                surface.onBodyChange(
+                  toPortableBody(
+                    c.map((b) =>
+                      isRec(b) && b._type === 'terraBlock' ? { ...b, _type: 'block' } : b,
+                    ),
+                  ),
+                );
               }}
               resetKey={`${editor.draft.path}:${editor.version}`}
             />
@@ -2255,19 +2217,17 @@ const EditorSurfaces = {
   },
 
   /**
-   * Renders the head component.
+   * Displays or edits document title and description, with contributor and update metadata.
    *
-   * @param compact Uses the compact header layout when set.
-   * @param description - Supporting text shown in head.
+   * @param compact Uses the compact title and description spacing for the edit toolbar layout.
+   * @param description Initial document description used when no draft is active.
    * @param editable - Editability flag controlling whether head accepts changes.
-   * @param title - Heading text shown in head.
+   * @param title Initial document title used when no draft is active.
    * @param full - Whether the page is rendered in full mode.
-   * @param initContributors Contributors shown in the page metadata row.
-   * @param updatedAt Optional source update timestamp shown in the page metadata row.
+   * @param initContributors Names shown as document contributors beneath the title.
+   * @param updatedAt ISO timestamp displayed as the document's last-modified date.
    *
-   * @return The page head block.
-   *
-   * @remarks Renders the docs page head metadata and edit controls.
+   * @return The document heading with editable fields and metadata.
    */
 
   Head({
@@ -2280,12 +2240,12 @@ const EditorSurfaces = {
     updatedAt,
   }: {
     compact?: boolean;
-    description?: string;
+    description?: string | undefined;
     editable: boolean;
     title: string;
     full: boolean;
-    contributors?: string[] | null;
-    updatedAt?: string;
+    contributors?: string[] | null | undefined;
+    updatedAt?: string | undefined;
   }): JSX.Element {
     // STATES
     const edit = useContext(EditStateCtx);
@@ -2301,7 +2261,9 @@ const EditorSurfaces = {
       const context = window.document.createElement('canvas').getContext('2d');
       if (!input || !context) return;
       let a = true;
-      /** Shrinks an overlong title to fit while preserving its responsive base size. */
+      /**
+       *
+       */
       const fitTitle = (): void => {
         if (!a) return;
         // Restore the responsive Tailwind size first so repeated resizes never
@@ -2329,7 +2291,9 @@ const EditorSurfaces = {
       window.document.fonts.addEventListener('loadingdone', fitTitle);
       const parent = input.parentElement;
       let previousWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
-      /** Recomputes title fit only after its available width changes. */
+      /**
+       *
+       */
       const resize = (): void => {
         const nWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
         if (nWidth === previousWidth) return;
@@ -2350,7 +2314,9 @@ const EditorSurfaces = {
       const textarea = descriptionRef.current;
       if (!textarea) return;
       let a = true;
-      /** Grows the description field to its wrapped content after style and width changes. */
+      /**
+       *
+       */
       const resize = (): void => {
         if (!a) return;
         // The original shared Textarea variant fixes this field at h-10 (40px).
@@ -2439,28 +2405,28 @@ const EditorSurfaces = {
 };
 
 /**
- * Renders the scaffold component.
+ * Composes the Docs navigation, document surfaces, and controls from host-supplied route and permission state.
  *
- * @param tree Host navigation tree from which the current page and its ancestors are resolved.
- * @param initPathname Current browser path used to initialize Docs navigation.
- * @param permission Read or write permission for the current page.
- * @param userData Optional user record displayed by the host-aware sidebar.
- * @param initDesc Optional page description used in the header and metadata.
- * @param initContributors Optional authors displayed below the title.
- * @param initUpdatedAt Optional page update time displayed in metadata.
- * @param full Whether the Docs content uses the full-width workspace layout.
- * @param standalone Whether the scaffold is rendered without the host site's outer shell.
- * @param initPath Optional source path used by reads, writes, and attachment lookup.
- * @param initMdx Optional compiled Markdown/MDX source for the current leaf.
- * @param initTitle Current page title used in the header and document title.
- * @param initSrc Optional source identifier used by host integrations.
- * @param initContent Optional stored Portable Text or version data for the current page.
- * @param initialMode Optional initial view, edit, or attachment mode.
- * @param viewContent Optional host-rendered body for the read-only page surface.
- * @param staticContent Whether rendered content is static and can skip editor transition work.
- * @param beforeContent Optional host content placed before the page body.
- * @param afterContent Optional host content placed after the page body.
- * @param docsBlocks Optional switches for shared rich-block renderers.
+ * @param tree Navigation branches and leaves used to resolve the current document and sidebar.
+ * @param initPathname Browser pathname used to select the current document route.
+ * @param permission Read or write access granted by the host for the current Docs surface.
+ * @param userData Signed-in user metadata shown by the sidebar, or `null` when the viewer is signed out.
+ * @param initDesc Initial document description displayed or edited in the page header.
+ * @param initContributors Initial contributor names associated with the document.
+ * @param initUpdatedAt Last-modified timestamp displayed in the page header.
+ * @param full Whether the content area expands beyond its usual maximum width.
+ * @param standalone Whether to omit navigation and render only the document surface.
+ * @param initPath Canonical document path used for storage and route transitions.
+ * @param initMdx Precompiled Markdown content supplied by a static host.
+ * @param initTitle Initial document title shown in the page header.
+ * @param initSrc Initial Markdown source used to seed the editor draft.
+ * @param initContent Initial structured body used when a host supplies Portable Text content.
+ * @param initialMode Mode requested by the host before the workspace's stored mode is loaded.
+ * @param viewContent Optional host-rendered body that replaces the default read-only editor.
+ * @param staticContent Whether static content is already hydrated and may render without client setup.
+ * @param beforeContent Optional host-rendered content placed before the document body.
+ * @param afterContent Optional host-rendered content placed after the document body.
+ * @param docsBlocks Per-document enablement map for custom block renderers.
  *
  * @return The Docs scaffold with its navigation tree, content surface, and page controls.
  */
@@ -2494,30 +2460,31 @@ export default function Scaffold({
     _type?: string;
     [key: string]: unknown;
   } | null;
-  description?: string;
+  description?: string | undefined;
   full?: boolean;
   standalone?: boolean;
-  path?: string;
-  compiledMDX?: string;
+  path?: string | undefined;
+  compiledMDX?: string | undefined;
   title: string;
-  source?: string;
-  content?: string | DocVer[] | DocBody;
-  contributors?: string[];
-  updatedAt?: string;
-  mode?: Mode;
-  viewContent?: ReactNode;
-  staticContent?: boolean;
-  beforeContent?: ReactNode;
-  afterContent?: ReactNode;
-  blocks?: DocsBlockOptions;
+  source?: string | undefined;
+  content?: string | DocVer[] | DocBody | undefined;
+  contributors?: string[] | undefined;
+  updatedAt?: string | undefined;
+  mode?: Mode | undefined;
+  viewContent?: ReactNode | undefined;
+  staticContent?: boolean | undefined;
+  beforeContent?: ReactNode | undefined;
+  afterContent?: ReactNode | undefined;
+  blocks?: DocsBlockOptions | undefined;
 }): JSX.Element {
+  const host = getDocsHostAdapter();
+
   // STATES
   // Match the original Docs shell: only render the Portable Text editor after hydration.
   // Its external store is not SSR-safe, and rendering it in the initial HTML causes React #419.
   const [hydrated, setHydrated] = useState<boolean>(standalone || staticContent);
   const shellState = { hydrated, sidebarOpen: useAtom($sidebar) };
   const toolbar = useAtom($toolbar);
-  const host = getDocsHostAdapter();
   const stored = useAtom($mode);
   const writable = permission === 'write';
   const modeSynced = useRef(false);
@@ -2571,7 +2538,7 @@ export default function Scaffold({
       };
       destRes.current?.({
         path: `${destPath.base}/${destPath.slug}.mdx`,
-        ...(dest.newSection || !sel?.origName ? {} : { parentId: sel.origName }),
+        ...(!dest.newSection && sel?.origName ? { parentId: sel.origName } : {}),
         title: dest.title.trim() || 'Untitled',
       });
       destRes.current = null;
@@ -2593,28 +2560,31 @@ export default function Scaffold({
   useEffect(() => {
     if (standalone || staticContent) return;
     if (
-      (trimTrailingSlashes(initPathname || '') || '/') !==
-      (trimTrailingSlashes(docsRootPath()) || '/')
+      ((initPathname || '').replace(SHARED_REGEX, '') || '/') !==
+      (docsRootPath().replace(SHARED_REGEX, '') || '/')
     )
       return;
-    /**
-     * Finds the first linked page under a section for the shared index route.
-     * @param nodes Navigation nodes in their displayed order.
-     * @returns The first linked leaf, or `null` when the branch has no page.
-     */
-    const firstLinkedLeaf = (nodes: TreeType[]): Extract<TreeType, { type: 'leaf' }> | null => {
-      for (const node of nodes) {
-        if (node.type === 'leaf' && node.url) return node;
-        if (node.type === 'branch' && node.children?.length) {
-          const leaf = firstLinkedLeaf(node.children);
-          if (leaf) return leaf;
-        }
-      }
-      return null;
-    };
     for (const section of tree) {
       if (section.type !== 'branch') continue;
-      const leaf = firstLinkedLeaf(section.children ?? []);
+      const leaf = (
+        /**
+         * Finds the first routeable leaf beneath a section for the initial Docs navigation.
+         *
+         * @param nodes Navigation descendants searched in display order.
+         *
+         * @returns The first leaf with a URL, or `null` if the section contains no routeable page.
+         */
+        function firstLeaf(nodes: TreeType[]): Extract<TreeType, { type: 'leaf' }> | null {
+          for (const node of nodes) {
+            if (node.type === 'leaf' && node.url) return node;
+            if (node.type === 'branch' && node.children?.length) {
+              const leaf = firstLeaf(node.children);
+              if (leaf) return leaf;
+            }
+          }
+          return null;
+        }
+      )(section.children ?? []);
       if (leaf?.url && leaf.url !== initPathname) {
         window.location.replace(leaf.url);
         return;
@@ -2669,10 +2639,8 @@ export default function Scaffold({
     initMdx,
   ]);
   useEffect(() => {
-    /**
-     * Handles rename.
-     *
-     * @param e - Pointer event received from the editor control.
+    /** Updates the visible document title from the active rename event.
+     * @param e Custom rename event whose detail contains the active title.
      */
     const rename = (e: Event) => {
       if (
@@ -2695,10 +2663,7 @@ export default function Scaffold({
     setDocumentTitle(currDoc.title);
   }, [currDoc.path, currDoc.title]);
   useEffect(() => {
-    /**
-     * Handles update favicon.
-     *
-     */
+    /** Recolors the inline favicon with the active Docs theme and refreshes it on hue changes. */
     const updateFavicon = () => {
       const favicon = document.getElementById('favicon') as HTMLLinkElement | null;
       if (!favicon) return;
@@ -2728,11 +2693,11 @@ export default function Scaffold({
   // Only updates the state, letting React naturally handle side effects.
   useEffect(() => {
     /**
-     * Handles handle nav.
+     * Applies a navigation event to the current document while validating incoming content.
      *
-     * @param e - Keyboard or pointer event received from the editor control.
+     * @param e - Custom navigation event emitted by the Docs host or client-side router.
      *
-     * @return
+     * @returns Nothing; updates the current document from the event's validated route details.
      */
     const handleNav = (e: Event) => {
       setCurrDoc((previous) => {
@@ -2776,11 +2741,11 @@ export default function Scaffold({
 
     // Handle 403/404 Soft-Redirect Intercepts
     /**
-     * Handles handle err redirect.
+     * Removes permission and not-found query flags and routes missing documents to a fallback page.
      *
-     * @param e - Change event received from the active Docs input.
+     * @param e - Redirect event containing the `403` or `404` status to handle.
      *
-     * @return
+     * @returns Nothing; replaces the current history entry and emits navigation when needed.
      */
     const handleErrRedirect = (e: Event) => {
       const type = ((e as CustomEvent).detail || {}).type; // '403' or '404'
@@ -2796,22 +2761,28 @@ export default function Scaffold({
         return;
       }
       // find first leaf to fall back to securely
-      /**
-       * Finds the first leaf URL to recover from a missing document route.
-       * @param nodes Navigation nodes searched in display order.
-       * @returns The first leaf URL or `null` when the tree has no leaves.
-       */
-      const firstLeafPath = (nodes: TreeType[]): string | null => {
-        for (const node of nodes) {
-          if (node.type === 'leaf') return node.url || null;
-          if (node.type === 'branch' && node.children) {
-            const found = firstLeafPath(node.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-      const cFallback = (firstLeafPath(tree) || docsRootPath()).split('?')[0] ?? docsRootPath();
+      const cFallback =
+        (
+          (
+            /**
+             * Finds the first leaf route used when a requested route is missing.
+             *
+             * @param nodes Docs navigation descendants searched in display order.
+             *
+             * @returns The first leaf URL, or `null` when no leaf can be selected.
+             */
+            function firstLeaf(nodes: TreeType[]): string | null {
+              for (const n of nodes) {
+                if (n.type === 'leaf') return n.url || null;
+                if (n.type === 'branch' && n.children) {
+                  const found = firstLeaf(n.children);
+                  if (found) return found;
+                }
+              }
+              return null;
+            }
+          )(tree) || docsRootPath()
+        ).split('?')[0] ?? docsRootPath();
       const url = new URL(window.location.href);
       url.pathname = cFallback;
       url.searchParams.delete('403');
@@ -2911,21 +2882,24 @@ export default function Scaffold({
   const tocHeadings = tocState.path === currDoc.pathname ? tocState.headings : [];
   useEffect(() => {
     /**
-     * Avoids publishing identical TOC state when only unrelated editor state changes.
-     * @param update Full TOC state or updater based on the previous state.
+     * Updates the table of contents only when its path, active heading, or heading list changed.
+     *
+     * @param update Replacement TOC state or a function deriving it from the previous state.
+     *
+     * @returns Nothing; preserves the prior object when the TOC values are unchanged.
      */
     const setTocStateIfChanged = (
       update: typeof tocState | ((previous: typeof tocState) => typeof tocState),
     ): void => {
       setTocState((previous) => {
         const n = typeof update === 'function' ? update(previous) : update;
-        const sameHeadings =
+        return previous.active === n.active &&
+          previous.path === n.path &&
           previous.headings.length === n.headings.length &&
           previous.headings.every(
             (heading, index) =>
               heading.id === n.headings[index]?.id && heading.text === n.headings[index]?.text,
-          );
-        return previous.active === n.active && previous.path === n.path && sameHeadings
+          )
           ? previous
           : n;
       });

@@ -1,5 +1,12 @@
 ---
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// COMPONENTS
 import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
+
+// DATA
 import { pageForSlug, pageHref, siteNavigation, sitePages } from '../lib/catalog.js';
 
 const title = import.meta.env.PUBLIC_DOCS_TITLE ?? 'Documentation';
@@ -7,41 +14,46 @@ const description = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
 const base = import.meta.env.BASE_URL;
 
 export function getStaticPaths() {
-	return sitePages.filter((page) => page.slug !== '' && page.slug !== '404').map((page) => ({
-		params: { slug: page.slug || undefined },
-		props: { slug: page.slug },
+	return sitePages.filter((d) => d.slug !== '' && d.slug !== '404').map((d) => ({
+		params: { slug: d.slug || undefined },
+		props: { slug: d.slug },
 	}));
 }
 
 const { slug = '' } = Astro.props;
-const page = pageForSlug(slug);
-const Content = page?.file.endsWith('.mdx') ? (page.content as any) : undefined;
+const currentPage = pageForSlug(slug);
+const Content = currentPage?.file.endsWith('.mdx') ? (currentPage.content as any) : undefined;
 const currentPath = pageHref(slug, base);
+const layoutProps = {
+	title,
+	homeHref: pageHref('', base),
+	description,
+	pageTitle: currentPage?.title,
+	hue: currentPage?.hue,
+	nodes: siteNavigation,
+	currentPath,
+	rootPath: pageHref('', base),
+	markdown: currentPage?.markdown ?? '',
+	searchBase: base,
+};
 ---
 
-{page ? (
+{currentPage ? (
 	<html lang="en">
 		<head>
 			<meta charset="utf-8" />
 			<meta name="viewport" content="width=device-width, initial-scale=1" />
-			{page.description ? <meta name="description" content={page.description} /> : description ? <meta name="description" content={description} /> : null}
-			<title>{page.title} · {title}</title>
+			{currentPage.description ? <meta name="description" content={currentPage.description} /> : description ? <meta name="description" content={description} /> : null}
+			<title>{currentPage.title} · {title}</title>
 		</head>
 		<body>
-			<DocsSiteLayout
-				title={title}
-				homeHref={pageHref('', base)}
-				description={description}
-				pageTitle={page.title}
-				hue={page.hue}
-				nodes={siteNavigation}
-				currentPath={currentPath}
-				rootPath={pageHref('', base)}
-				markdown={page.markdown}
-				searchBase={base}
-			>
-				{Content ? <main class="docs-page-content"><Content /></main> : null}
-			</DocsSiteLayout>
+			{Content ? (
+				<DocsSiteLayout {...layoutProps}>
+					<main class="docs-page-content"><Content /></main>
+				</DocsSiteLayout>
+			) : (
+				<DocsSiteLayout {...layoutProps} />
+			)}
 		</body>
 	</html>
 ) : null}

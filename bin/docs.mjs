@@ -6,14 +6,14 @@ IMPORTS
 
 // API
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { createConsumerProject } from '../site/project-config.mjs';
 import { createRequire } from 'node:module';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
+import { parseDocsArguments } from './arguments.mjs';
 import { spawn } from 'node:child_process';
 import { watch } from 'node:fs';
-import { createConsumerProject } from '../site/project-config.mjs';
-import { parseDocsArguments } from './arguments.mjs';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../src/lib/terra/regex.mjs';
@@ -26,7 +26,8 @@ const MD_MDX_I_REGEX = TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2();
 const requestedMode = process.argv[2];
 const mode = requestedMode === 'docs' ? 'dev' : requestedMode;
 const root = resolve(process.cwd());
-const consumerProject = createConsumerProject(root, process.env.DOCS_PACKAGE_ROOT ?? '.');
+const docsConfig =
+  createConsumerProject(root, process.env.DOCS_PACKAGE_ROOT ?? '.').manifest.docs ?? {};
 const args = [
   resolve(dirname(createRequire(import.meta.url).resolve('astro/package.json')), 'bin/astro.mjs'),
   mode,
@@ -41,7 +42,6 @@ const args = [
 const docsRoot = resolve(root, 'docs');
 const publicRoot = resolve(root, 'dist/public');
 const publicAssetsRoot = resolve(publicRoot, '_docs/assets');
-const docsConfig = consumerProject.manifest.docs ?? {};
 let parsedArguments;
 try {
   parsedArguments = parseDocsArguments(process.argv.slice(3));
@@ -58,7 +58,6 @@ const requestedBase = (options.get('--base') ?? docsConfig.base ?? '/').trim();
 const base = requestedBase.endsWith('/') ? requestedBase : `${requestedBase}/`;
 const port = options.get('--port') ?? docsConfig.port;
 const host = options.get('--host') ?? docsConfig.host;
-
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/

@@ -22,11 +22,5 @@
     "demo/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "test/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "tests/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}"
-  ],
-  "ignoreDependencies": [
-    "postcss-import",
-    "@xstate/react",
-    "bezier-easing",
-    "use-sync-external-store"
   ]
 }

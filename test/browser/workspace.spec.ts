@@ -594,9 +594,11 @@ test.describe('Docs workspace browser contracts', () => {
         await p.keyboard.press('Escape');
         await leaf.hover();
         await expect(p.getByRole('button', { name: 'Reorder item' }).last()).toBeVisible();
-        const sourceRow = p.locator('[data-docs-drop]').filter({ hasText: 'Salesphere' });
-        const targetRow = p.locator('[data-docs-drop]').filter({ hasText: 'Runtime map' });
-        await sourceRow.getByRole('button', { name: 'Reorder item' }).dragTo(targetRow);
+        await p
+          .locator('[data-docs-drop]')
+          .filter({ hasText: 'Salesphere' })
+          .getByRole('button', { name: 'Reorder item' })
+          .dragTo(p.locator('[data-docs-drop]').filter({ hasText: 'Runtime map' }));
         await expect
           .poll(() =>
             p.evaluate(() =>
@@ -746,11 +748,16 @@ test.describe('Docs workspace browser contracts', () => {
         await expect(target).toBeVisible();
         await target.click();
         await expect(p).toHaveURL(/#find-the-implementation$/);
-        const targetHeading = p
-          .locator('[data-docs-view-root] h2')
-          .filter({ hasText: /^Find the implementation$/ });
         await expect
-          .poll(async () => (await targetHeading.boundingBox())?.y ?? Number.POSITIVE_INFINITY)
+          .poll(
+            async () =>
+              (
+                await p
+                  .locator('[data-docs-view-root] h2')
+                  .filter({ hasText: /^Find the implementation$/ })
+                  .boundingBox()
+              )?.y ?? Number.POSITIVE_INFINITY,
+          )
           .toBeLessThan(180);
       },
     );
@@ -761,8 +768,7 @@ test.describe('Docs workspace browser contracts', () => {
         await p.goto('/workspace-demo/');
         await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Salesphere');
         await expect(p.locator('[data-docs-shell]')).toHaveAttribute('data-docs-mode', 'view');
-        const leaf = p.getByRole('link', { name: 'Runtime map', exact: true });
-        await leaf.click({ button: 'right' });
+        await p.getByRole('link', { name: 'Runtime map', exact: true }).click({ button: 'right' });
         await expect(p.getByRole('menuitem', { name: 'Delete page' })).toBeVisible();
         await p.getByRole('menuitem', { name: 'Delete page' }).click();
         await expect(p.getByRole('dialog')).toContainText('Delete page?');
@@ -822,8 +828,9 @@ test.describe('Docs workspace browser contracts', () => {
         await expect(renameDialog).toBeVisible();
         await renameDialog.getByRole('textbox').fill('Regression page renamed');
         await renameDialog.getByRole('button', { name: 'Save', exact: true }).click();
-        const renamed = p.getByRole('link', { name: 'Regression page renamed', exact: true });
-        await expect(renamed).toBeVisible();
+        await expect(
+          p.getByRole('link', { name: 'Regression page renamed', exact: true }),
+        ).toBeVisible();
         const stored = await p.evaluate(() =>
           JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}'),
         );
@@ -843,8 +850,7 @@ test.describe('Docs workspace browser contracts', () => {
         await p.setViewportSize({ width: 1440, height: 1000 });
         await p.goto('/workspace-demo/', { waitUntil: 'domcontentloaded' });
         await waitForWorkspaceReady(p);
-        const source = p.getByRole('link', { name: 'Salesphere', exact: true });
-        await source.click({ button: 'right' });
+        await p.getByRole('link', { name: 'Salesphere', exact: true }).click({ button: 'right' });
         await p.getByRole('menuitem', { name: 'Duplicate page', exact: true }).hover();
         await p.getByRole('menuitem', { name: 'By content (Duplicate leaf)', exact: true }).click();
         const duplicateDialog = p.getByRole('dialog', { name: 'Duplicate by Content' });
@@ -864,8 +870,10 @@ test.describe('Docs workspace browser contracts', () => {
         expect((await download).suggestedFilename()).toMatch(/\.zip$/i);
         await duplicate.click({ button: 'right' });
         await p.getByRole('menuitem', { name: 'Delete page', exact: true }).click();
-        const deleteDialog = p.getByRole('dialog', { name: 'Delete page?' });
-        await deleteDialog.getByRole('button', { name: 'Delete', exact: true }).click();
+        await p
+          .getByRole('dialog', { name: 'Delete page?' })
+          .getByRole('button', { name: 'Delete', exact: true })
+          .click();
         await expect(duplicate).toHaveCount(0);
         const storedBeforeReload = await p.evaluate(() =>
           JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}'),
@@ -889,8 +897,7 @@ test.describe('Docs workspace browser contracts', () => {
         await waitForWorkspaceReady(p);
         await p.getByRole('combobox', { name: 'Mode' }).click();
         await p.getByRole('option', { name: 'Edit' }).click();
-        const sectionPicker = p.getByRole('combobox', { name: 'Section' });
-        await sectionPicker.click();
+        await p.getByRole('combobox', { name: 'Section' }).click();
         await p.getByRole('option', { name: 'Add section', exact: true }).click();
         const sectionDialog = p.getByRole('dialog', { name: 'Add Section' });
         await sectionDialog.getByRole('textbox', { name: 'Section name' }).fill('Group lifecycle');
@@ -898,8 +905,7 @@ test.describe('Docs workspace browser contracts', () => {
         await expect
           .poll(async () =>
             p.evaluate(() => {
-              const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-              return state.tree.some(
+              return JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}').tree.some(
                 (node: { title?: string }) => node.title === 'Group lifecycle',
               );
             }),
@@ -922,9 +928,9 @@ test.describe('Docs workspace browser contracts', () => {
         await createDialog.getByRole('textbox', { name: 'Group name' }).fill('Regression group');
         await createDialog.getByRole('button', { name: 'Save', exact: true }).click();
         const sectionId = await p.evaluate(() => {
-          const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-          return state.tree.find((node: { title?: string }) => node.title === 'Group lifecycle')
-            .origName;
+          return JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}').tree.find(
+            (node: { title?: string }) => node.title === 'Group lifecycle',
+          ).origName;
         });
         const group = p
           .locator(`[data-docs-drop^="branch:${sectionId}/"]`)
@@ -943,9 +949,8 @@ test.describe('Docs workspace browser contracts', () => {
           .filter({ hasText: 'Regression renamed' });
         await expect(renamedGroup).toBeVisible();
         const generalGroupId = await p.evaluate(() => {
-          const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-          return state.tree
-            .find((node: { title?: string }) => node.title === 'Group lifecycle')
+          return JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}')
+            .tree.find((node: { title?: string }) => node.title === 'Group lifecycle')
             .children.find((node: { title?: string }) => node.title === 'General').origName;
         });
         await renamedGroup
@@ -956,9 +961,8 @@ test.describe('Docs workspace browser contracts', () => {
         await expect
           .poll(async () =>
             p.evaluate(() => {
-              const value = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-              return value.tree
-                .find((node: { title?: string }) => node.title === 'Group lifecycle')
+              return JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}')
+                .tree.find((node: { title?: string }) => node.title === 'Group lifecycle')
                 .children.map((node: { title?: string }) => node.title);
             }),
           )
@@ -976,8 +980,9 @@ test.describe('Docs workspace browser contracts', () => {
         await p.getByRole('combobox', { name: 'Mode' }).click();
         await p.getByRole('option', { name: 'Edit' }).click();
         const sectionId = await p.evaluate(() => {
-          const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-          return state.tree.find((node: { title?: string }) => node.title === 'Overview').origName;
+          return JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}').tree.find(
+            (node: { title?: string }) => node.title === 'Overview',
+          ).origName;
         });
         const sidebarContent = p
           .locator('[data-sidebar="content"]')
@@ -997,12 +1002,15 @@ test.describe('Docs workspace browser contracts', () => {
         await expect(group).toBeVisible();
         await group.click({ button: 'right' });
         await p.getByRole('menuitem', { name: 'Delete group', exact: true }).click();
-        const deleteDialog = p.getByRole('dialog', { name: /Delete group\?/i });
-        await deleteDialog.getByRole('button', { name: 'Delete', exact: true }).click();
+        await p
+          .getByRole('dialog', { name: /Delete group\?/i })
+          .getByRole('button', { name: 'Delete', exact: true })
+          .click();
         await expect(group).toHaveCount(0);
         const remainingGroups = await p.evaluate((id) => {
-          const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-          return state.tree.find((node: { origName?: string }) => node.origName === id).children;
+          return JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}').tree.find(
+            (node: { origName?: string }) => node.origName === id,
+          ).children;
         }, sectionId);
         expect(remainingGroups.map((node: { title?: string }) => node.title)).toEqual([
           'Start here',
@@ -1020,23 +1028,26 @@ test.describe('Docs workspace browser contracts', () => {
         await p.setViewportSize({ width: 1440, height: 1000 });
         await p.goto('/workspace-demo/');
         await waitForWorkspaceReady(p);
-        const sourceRow = p.locator('[data-docs-drop]').filter({ hasText: 'Salesphere' });
-        const targetRow = p.locator('[data-docs-drop]').filter({ hasText: 'Runtime map' });
-        const reorderHandle = sourceRow.getByRole('button', { name: 'Reorder item' });
+        const reorderHandle = p
+          .locator('[data-docs-drop]')
+          .filter({ hasText: 'Salesphere' })
+          .getByRole('button', { name: 'Reorder item' });
         await expect(reorderHandle).toBeEnabled();
-        await reorderHandle.dragTo(targetRow, {
-          // A leaf row is only 24px tall in the shared sidebar. Drop near its bottom
-          // so this specifically tests insertion after the target leaf.
-          targetPosition: { x: 8, y: 23 },
-        });
+        await reorderHandle.dragTo(
+          p.locator('[data-docs-drop]').filter({ hasText: 'Runtime map' }),
+          {
+            // A leaf row is only 24px tall in the shared sidebar. Drop near its bottom
+            // so this specifically tests insertion after the target leaf.
+            targetPosition: { x: 8, y: 23 },
+          },
+        );
         await expect
           .poll(
             () =>
               p.evaluate(() => {
-                const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-                return state.tree[0].children[0].children.map(
-                  (node: { origName: string }) => node.origName,
-                );
+                return JSON.parse(
+                  localStorage.getItem('docs-workspace-demo-v1') ?? '{}',
+                ).tree[0].children[0].children.map((node: { origName: string }) => node.origName);
               }),
             { timeout: 5_000 },
           )
@@ -1075,9 +1086,10 @@ test.describe('Docs workspace browser contracts', () => {
         });
         await p.reload();
         await waitForWorkspaceReady(p);
-        const salesphere = p.getByRole('link', { name: 'Salesphere', exact: true });
         const runtimeMap = p.getByRole('link', { name: 'Runtime map', exact: true });
-        await salesphere.click({ modifiers: ['Meta'] });
+        await p
+          .getByRole('link', { name: 'Salesphere', exact: true })
+          .click({ modifiers: ['Meta'] });
         await runtimeMap.click({ modifiers: ['Meta'] });
         await runtimeMap.click({ button: 'right' });
         const merge = p.getByRole('menuitem', { name: 'Merge 2 pages', exact: true });
@@ -1133,11 +1145,9 @@ test.describe('Docs workspace browser contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
         await p.goto('/workspace-demo/');
-        const mode = p.getByRole('combobox', { name: 'Mode' });
-        await mode.click();
+        await p.getByRole('combobox', { name: 'Mode' }).click();
         await p.getByRole('option', { name: 'Attachments' }).click();
-        const attachments = p.locator('[data-docs-attachments]');
-        await expect(attachments).toHaveAttribute('data-loading', 'false');
+        await expect(p.locator('[data-docs-attachments]')).toHaveAttribute('data-loading', 'false');
         await expect(p.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
         const filename = 'workspace-fixture-attachment.bin';
         await p.getByTestId('docs-attachment-upload').setInputFiles({
@@ -1201,8 +1211,7 @@ test.describe('Docs workspace browser contracts', () => {
       async ({ page: p }) => {
         await p.goto('/workspace-demo/');
         await waitForWorkspaceReady(p);
-        const mode = p.getByRole('combobox', { name: 'Mode' });
-        await mode.click();
+        await p.getByRole('combobox', { name: 'Mode' }).click();
         await p.getByRole('option', { name: 'Edit' }).click();
         const editor = p.getByRole('textbox', { name: 'Document editor' });
         await editor.click();
@@ -1255,8 +1264,7 @@ test.describe('Docs workspace browser contracts', () => {
         await p.getByRole('button', { name: 'Version History' }).click();
         const history = p.getByRole('dialog', { name: 'Version History' });
         await expect(history).toBeVisible();
-        const versionSelect = history.getByRole('combobox', { name: 'Select a version' });
-        await versionSelect.click();
+        await history.getByRole('combobox', { name: 'Select a version' }).click();
         await p.getByRole('option', { name: /Salesphere \(/ }).click();
         await history.getByRole('button', { name: 'Restore', exact: true }).click();
         await expect(p.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue(
@@ -1302,8 +1310,7 @@ test.describe('Docs workspace browser contracts', () => {
         await p.setViewportSize({ width: 1280, height: 900 });
         await p.goto('/workspace-demo/');
         await waitForWorkspaceReady(p);
-        const mode = p.getByRole('combobox', { name: 'Mode' });
-        await mode.click();
+        await p.getByRole('combobox', { name: 'Mode' }).click();
         await expect(p.getByRole('option', { name: 'Edit' })).toBeVisible();
         await p.keyboard.press('Escape');
         const section = p.getByRole('combobox', { name: 'Section' });
@@ -1327,8 +1334,7 @@ test.describe('Docs workspace browser contracts', () => {
           )
           .toBe(true);
         await p.keyboard.press('Escape');
-        const keyboardLeaf = p.getByRole('link', { name: 'Salesphere', exact: true });
-        await keyboardLeaf.click({ button: 'right' });
+        await p.getByRole('link', { name: 'Salesphere', exact: true }).click({ button: 'right' });
         const contextMenu = p.getByRole('menu');
         await expect(contextMenu).toBeVisible();
         await expect(
@@ -1360,8 +1366,7 @@ test.describe('Docs workspace browser contracts', () => {
         await expect
           .poll(async () =>
             p.evaluate(() => {
-              const value = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-              return value.tree.some(
+              return JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}').tree.some(
                 (node: { title?: string }) => node.title === 'Created from browser',
               );
             }),
@@ -1380,19 +1385,17 @@ test.describe('Docs workspace browser contracts', () => {
       async ({ page: p }) => {
         await p.goto('/workspace-demo/', { waitUntil: 'domcontentloaded' });
         await waitForWorkspaceReady(p);
-        const sectionPicker = p.getByRole('combobox', { name: 'Section' });
-        await sectionPicker.click();
+        await p.getByRole('combobox', { name: 'Section' }).click();
         await p.getByRole('option', { name: 'Add section', exact: true }).click();
         const createDialog = p.getByRole('dialog', { name: 'Add Section' });
         await createDialog.getByRole('textbox', { name: 'Section name' }).fill('Section lifecycle');
         await createDialog.getByRole('button', { name: 'Save', exact: true }).click();
         await p.reload({ waitUntil: 'domcontentloaded' });
         await waitForWorkspaceReady(p);
-        await p.getByRole('combobox', { name: 'Section' }).click();
-        await p
-          .getByRole('option', { name: 'Section lifecycle', exact: true })
-          .getByText('Section lifecycle', { exact: true })
-          .click({ button: 'right' });
+        const sectionControl = p.getByRole('combobox', { name: 'Section' });
+        await sectionControl.click();
+        await p.getByRole('option', { name: 'Section lifecycle', exact: true }).click();
+        await sectionControl.click({ button: 'right' });
         await expect(p.getByRole('menu')).toBeVisible();
         await p.getByRole('menuitem', { name: 'Rename section', exact: true }).click();
         const renameDialog = p.getByRole('dialog', { name: 'Rename Section' });
@@ -1400,11 +1403,7 @@ test.describe('Docs workspace browser contracts', () => {
           .getByRole('textbox', { name: 'Section name' })
           .fill('Section lifecycle renamed');
         await renameDialog.getByRole('button', { name: 'Save', exact: true }).click();
-        await p.getByRole('combobox', { name: 'Section' }).click();
-        await p
-          .getByRole('option', { name: 'Section lifecycle renamed', exact: true })
-          .getByText('Section lifecycle renamed', { exact: true })
-          .click({ button: 'right' });
+        await sectionControl.click({ button: 'right' });
         await p.getByRole('menuitem', { name: 'Change color', exact: true }).click();
         const colorDialog = p.getByRole('dialog', { name: 'Section Color' });
         const hue = colorDialog.getByRole('slider', { name: 'Hue' });
@@ -1420,22 +1419,19 @@ test.describe('Docs workspace browser contracts', () => {
           .poll(
             async () =>
               p.evaluate(() => {
-                const state = JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}');
-                return state.tree.find((node: { title?: string }) =>
-                  node.title?.startsWith('Section lifecycle'),
+                return JSON.parse(localStorage.getItem('docs-workspace-demo-v1') ?? '{}').tree.find(
+                  (node: { title?: string }) => node.title?.startsWith('Section lifecycle'),
                 )?.hue;
               }),
             { intervals: [25, 75, 150], timeout: 1500 },
           )
           .toBe(hueValue);
-        await p.getByRole('combobox', { name: 'Section' }).click();
-        await p
-          .getByRole('option', { name: 'Section lifecycle renamed', exact: true })
-          .getByText('Section lifecycle renamed', { exact: true })
-          .click({ button: 'right' });
+        await sectionControl.click({ button: 'right' });
         await p.getByRole('menuitem', { name: 'Delete section', exact: true }).click();
-        const deleteDialog = p.getByRole('dialog', { name: /Delete section\?/i });
-        await deleteDialog.getByRole('button', { name: 'Delete', exact: true }).click();
+        await p
+          .getByRole('dialog', { name: /Delete section\?/i })
+          .getByRole('button', { name: 'Delete', exact: true })
+          .click();
         await expect(
           p.getByRole('option', { name: 'Section lifecycle renamed', exact: true }),
         ).toHaveCount(0);
@@ -1454,8 +1450,7 @@ test.describe('Docs workspace browser contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }, t) => {
         await p.goto('/workspace-demo/');
-        const mode = p.getByRole('combobox', { name: 'Mode' });
-        await mode.click();
+        await p.getByRole('combobox', { name: 'Mode' }).click();
         await expect(p.getByRole('option', { name: 'Edit' })).toBeVisible();
         await expect(p.getByRole('option', { name: 'Code', exact: true })).toHaveCount(0);
         await p.getByRole('option', { name: 'Edit' }).click();
@@ -1485,8 +1480,7 @@ test.describe('Docs workspace browser contracts', () => {
       async ({ page: p }, t) => {
         await p.setViewportSize({ width: 390, height: 844 });
         await p.goto('/workspace-readonly/');
-        const mode = p.getByRole('combobox', { name: 'Mode' });
-        await mode.click();
+        await p.getByRole('combobox', { name: 'Mode' }).click();
         await expect(p.getByRole('option', { name: 'Edit' })).toHaveCount(0);
         await expect(p.getByRole('option', { name: 'Code', exact: true })).toHaveCount(0);
         await p.getByRole('option', { name: 'Attachments' }).click();

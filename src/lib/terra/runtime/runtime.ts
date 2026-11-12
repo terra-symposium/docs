@@ -48,7 +48,7 @@ export const validateType = (types: readonly string[], value: unknown): boolean 
  * @param tag Subsystem label.
  * @param message Diagnostic text.
  * @param detail Optional structured context.
- * @returns Nothing.
+ * @returns No value; emits the diagnostic through `console.warn`.
  */
 export const warn = (tag: string, message: string, detail?: unknown): void =>
   console.warn(`[${tag}] ${message}`, detail ?? '');
@@ -57,7 +57,7 @@ export const warn = (tag: string, message: string, detail?: unknown): void =>
  * @param tag Subsystem label.
  * @param message Error text.
  * @param detail Optional structured context.
- * @returns Nothing.
+ * @returns No value; emits the diagnostic through `console.error`.
  */
 export const logErr = (tag: string, message: string, detail?: unknown): void =>
   console.error(`[${tag}] ${message}`, detail ?? '');

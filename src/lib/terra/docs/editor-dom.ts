@@ -92,11 +92,11 @@ export function captureLinearOffset(
 }
 
 /**
- * Handles paste md.
- *
- * @param insert - Insert input supplied to paste md's operation.
- * @param md - Md input supplied to paste md's operation.
- * @param selection - Selection input supplied to paste md's operation.
+ * Waits for the editor to settle across two animation frames before inserting Markdown in a browser.
+ * Outside a browser, insertion runs immediately.
+ * @param insert Editor operation that inserts the prepared Markdown.
+ * @param md Markdown source to insert.
+ * @param selection Saved editor selection to restore before insertion, when available.
  */
 export function pasteMd(
   insert: (md: string, rootEnd?: boolean, selection?: EditorSel | null) => void,

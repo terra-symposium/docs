@@ -43,7 +43,7 @@ pnpm run docs
 pnpm run build
 ```
 
-The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). Build output defaults to `dist/docs/`.
+The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested folders group navigation. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). Build output defaults to `dist/docs/`.
 
 The Docs content root is also the default package root for resolving the consumer's dependencies. If a repository keeps its package manifest and `node_modules` in a nested directory, set `DOCS_PACKAGE_ROOT` to that directory relative to the Docs content root (for example, `DOCS_PACKAGE_ROOT=config pnpm --dir config run build`). `DOCS_ROOT` continues to select the directory containing `docs/` and the build output.
 

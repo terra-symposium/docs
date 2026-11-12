@@ -135,11 +135,11 @@ function TsDocsRenderer({
 }
 
 /**
- * Renders the ts docs component.
+ * Selects the TypeScript API scope whose entries the reference renderer loads and displays.
  *
  * @param block TypeScript Docs block selecting the API scope to display.
  *
- * @return Rendered TypeScript documentation content.
+ * @return The selected API reference, or `null` when the block has no scope.
  */
 export function TsDocs({
   block,

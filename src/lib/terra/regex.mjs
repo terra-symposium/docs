@@ -464,13 +464,6 @@ export const REGEX_G_REGEX_22 = () => /<[^>]+>/g;
  */
 export const REGEX_G_REGEX_23 = () => /</g;
 
-// @terra-quality-regex-key "<Code\\b[\\s\\S]*?(?:\\/>|<\\/Code>)/g"
-/**
- * Extracts Code JSX blocks in either self-closing or paired form.
- * @returns A fresh global expression matching each Code component fragment.
- */
-export const REGEX_CODE_B_S_S_CODE_G_REGEX = () => /<Code\b[\s\S]*?(?:\/>|<\/Code>)/g;
-
 // @terra-quality-regex-key "<table\\b[\\s\\S]*?<\\/table>/gi"
 /**
  * Captures each complete HTML table for preservation during Markdown conversion.
@@ -907,14 +900,6 @@ export const REGEX_1_6_T_N_T_N_T_D_S_S_N_GM_REGEX = () =>
  */
 export const REGEX_1_6_S_REGEX = () => /^(#{1,6}\s+)(.+)$/;
 
-// @terra-quality-regex-key "^(===|\\|\\|\\|)\\s*\\[([^\\]\\n]+)\\]\\s*\\n([\\s\\S]*?)^\\1\\s*$/gm"
-/**
- * Parses a complete titled Markdown tab section bounded by matching delimiters.
- * @returns A fresh multiline expression capturing delimiter, title, and section body.
- */
-export const REGEX_S_N_S_N_S_S_1_S_GM_REGEX = () =>
-  /^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm;
-
 // @terra-quality-regex-key "^(===|\\|\\|\\||\\^\\^\\^|:::)"
 /**
  * Detects a supported block delimiter at the beginning of a line.
@@ -1147,3 +1132,11 @@ export const REGEX_STYLE_B_S_S_STYLE_S_GI_REGEX = () => /<style\b[^>]*>[\s\S]*?<
  * @returns A fresh global expression matching `${` when its dollar sign is unescaped.
  */
 export const REGEX_G_REGEX_19 = () => /(?<!\\)\$\{/g;
+
+// @terra-quality-regex-key "\\/+$"
+/**
+ * Removes query/hash data and trailing slashes before comparing Docs routes.
+ *
+ * @returns A fresh expression matching one or more trailing slashes.
+ */
+export const REGEX_PATTERN_REGEX_7 = () => /\/+$/;

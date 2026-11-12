@@ -101,8 +101,10 @@ test(
   XL_VIEWPORT_TEST,
   async ({ page: p }) => {
     await openEditor(p, textFixture, { toolbar: true });
-    const toolbar = p.getByRole('toolbar', { name: 'Editor controls' });
-    await toolbar.getByRole('button', { name: 'Insert content' }).click();
+    await p
+      .getByRole('toolbar', { name: 'Editor controls' })
+      .getByRole('button', { name: 'Insert content' })
+      .click();
     const blocks = p.getByRole('listbox').getByRole('group', { name: 'Block' });
     for (const type of ['Tabs', 'Accordion']) {
       await expect(blocks.getByRole('option', { name: type, exact: true })).toHaveCount(0);
@@ -111,10 +113,11 @@ test(
     await blocks.getByRole('option', { name: 'Table', exact: true }).click();
     await expect(p.locator('[data-block="table"]')).toBeVisible();
     await expect
-      .poll(async () => {
-        const content = JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]');
-        return content.some((block: { _type?: string }) => block._type === 'table');
-      })
+      .poll(async () =>
+        JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]').some(
+          (block: { _type?: string }) => block._type === 'table',
+        ),
+      )
       .toBe(true);
   },
 );
@@ -123,8 +126,10 @@ test(
   XL_VIEWPORT_TEST,
   async ({ page: p }) => {
     await openEditor(p, textFixture, { nested: true, toolbar: true });
-    const toolbar = p.getByRole('toolbar', { name: 'Editor controls' });
-    await toolbar.getByRole('button', { name: 'Insert content' }).click();
+    await p
+      .getByRole('toolbar', { name: 'Editor controls' })
+      .getByRole('button', { name: 'Insert content' })
+      .click();
     const blocks = p.getByRole('listbox').getByRole('group', { name: 'Block' });
     for (const type of ['Tabs', 'Accordion', 'Callout']) {
       await expect(blocks.getByRole('option', { name: type, exact: true })).toHaveCount(0);
@@ -137,8 +142,7 @@ test(
   XL_VIEWPORT_TEST,
   async ({ page: p }) => {
     await openEditor(p, migratedTableFixture, { persistKey: 'docs-migrated-table' });
-    const table = p.locator('[data-block="table"]');
-    await expect(table).toBeVisible();
+    await expect(p.locator('[data-block="table"]')).toBeVisible();
     await expect(p.getByText('Before table', { exact: true })).toBeVisible();
     await expect(p.getByText('After table', { exact: true })).toBeVisible();
     await expect(p.getByText('Original value', { exact: true })).toBeVisible();
@@ -185,12 +189,14 @@ test(
     } satisfies Content[number];
     await openEditor(p, [container]);
     await expect(p.locator('[data-block="accordion"]')).toHaveCount(0);
-    const raw = p.locator('[data-docs-editor-block="Raw Markdown"]');
-    await expect(raw).toContainText('===[Section]');
+    await expect(p.locator('[data-docs-editor-block="Raw Markdown"]')).toContainText(
+      '===[Section]',
+    );
     await p.getByRole('button', { name: 'Insert content' }).click();
-    const menu = p.getByRole('listbox');
     for (const label of ['Tabs', 'Accordion']) {
-      await expect(menu.getByRole('option', { name: label, exact: true })).toHaveCount(0);
+      await expect(
+        p.getByRole('listbox').getByRole('option', { name: label, exact: true }),
+      ).toHaveCount(0);
     }
   },
 );

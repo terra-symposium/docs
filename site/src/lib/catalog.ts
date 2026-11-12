@@ -27,7 +27,11 @@ CONFIG
  * @return A global regular expression for replacing route word separators.
  */
 const G_REGEX = () => TerraQualityRegex.REGEX_G_REGEX_8();
-/** Matches a numeric ordering prefix at the start of a route segment. */
+/**
+ * Matches a numeric ordering prefix at the start of a route segment.
+ *
+ * @return A regular expression for extracting the leading numeric order.
+ */
 const ORDER_PREFIX_REGEX = () => /^(\d+)[-_]+/;
 /**
  * Matches the first Unicode letter after a word boundary for title capitalization.
@@ -115,7 +119,7 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
           ?.trim() ||
           (slug.split('/').at(-1) || 'Overview')
             .replace(G_REGEX(), ' ')
-            .replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase())),
+            .replace(B_P_L_GU_REGEX(), (initial) => initial.toUpperCase())),
       ...((frontmatter.sidebar?.label ?? frontmatter.label)
         ? { sidebarLabel: frontmatter.sidebar?.label ?? frontmatter.label }
         : {}),
@@ -153,7 +157,7 @@ function label(value: string): string {
   return value
     .replace(ORDER_PREFIX_REGEX(), '')
     .replace(G_REGEX(), ' ')
-    .replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase());
+    .replace(B_P_L_GU_REGEX(), (l) => l.toUpperCase());
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   createProjectExportAliases,
   resolveConsumerDependency,
 } from '../site/project-config.mjs';
+import siteAstroConfig from '../site/config/astro.config.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
@@ -64,20 +65,26 @@ test('nested consumer metadata and modules resolve independently from the Docs s
       await realpath(join(dependencyRoot, 'index.cjs')),
     );
     const aliases = createProjectExportAliases(consumer.manifest, consumer.root);
-    const rootAlias = aliases.find(({ find }) => find.test('nested-consumer'));
-    const docsAlias = aliases.find(({ find }) => find.test('nested-consumer/docs/overview'));
-    assert.equal(rootAlias?.replacement, join(consumerRoot, 'src/index.js'));
-    assert.equal(docsAlias?.replacement, join(consumerRoot, 'src/docs/$1.js'));
-    const sharedServerRenderer = resolveConsumerDependency(
-      {
-        resolve: () => {
-          throw new Error('not installed by the consumer');
-        },
-      },
-      { resolve: (specifier) => `/docs/node_modules/${specifier}.js` },
-      'react-dom/server.browser',
+    assert.equal(
+      aliases.find(({ find }) => find.test('nested-consumer'))?.replacement,
+      join(consumerRoot, 'src/index.js'),
     );
-    assert.equal(sharedServerRenderer, '/docs/node_modules/react-dom/server.browser.js');
+    assert.equal(
+      aliases.find(({ find }) => find.test('nested-consumer/docs/overview'))?.replacement,
+      join(consumerRoot, 'src/docs/$1.js'),
+    );
+    assert.equal(
+      resolveConsumerDependency(
+        {
+          resolve: () => {
+            throw new Error('not installed by the consumer');
+          },
+        },
+        { resolve: (specifier) => `/docs/node_modules/${specifier}.js` },
+        'react-dom/server.browser',
+      ),
+      '/docs/node_modules/react-dom/server.browser.js',
+    );
   } finally {
     await rm(siteRoot, { recursive: true, force: true });
   }
@@ -99,30 +106,42 @@ test('Vite pre-optimizes every JavaScript entry in the public Docs export map', 
     assert.equal(alias.replacement.startsWith(packageRoot), true);
   }
 });
+test('Vite leaves CommonJS Astro dependencies external instead of aliasing require entries', () => {
+  const aliases = siteAstroConfig.vite.resolve.alias;
+  for (const dependency of ['picomatch', 'yaml'])
+    assert.equal(
+      aliases.some(({ find }) => find.test(dependency)),
+      false,
+      `${dependency} must resolve as a package import so SSR preserves CommonJS interop`,
+    );
+});
 test('published site plugins resolve the shared regex helper from the package root', async () => {
   const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  const manifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
-  const regexPath = resolve(packageRoot, 'src/lib/terra/regex.mjs');
-  assert.ok(manifest.files.includes('src/lib/terra/regex.mjs'));
+  assert.ok(
+    JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8')).files.includes(
+      'src/lib/terra/regex.mjs',
+    ),
+  );
   for (const file of ['site/base-path-remark-plugin.mjs', 'site/docs-content-plugin.mjs']) {
     const pluginPath = join(packageRoot, file);
-    const source = await readFile(pluginPath, 'utf8');
-    const match = source.match(/from ['"]([^'"]*terra\/regex\.mjs)['"]/);
+    const match = (await readFile(pluginPath, 'utf8')).match(
+      /from ['"]([^'"]*terra\/regex\.mjs)['"]/,
+    );
     assert.ok(match, `${file} must import the shared regex helper`);
     assert.equal(
       resolve(dirname(pluginPath), match[1]),
-      regexPath,
+      resolve(packageRoot, 'src/lib/terra/regex.mjs'),
       `${file} must resolve it in the packed layout`,
     );
   }
 });
 test('Docs CLI validates its mode before starting Astro with the resolved options', () => {
   const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  const cliPath = join(packageRoot, 'bin/docs.mjs');
-  const result = spawnSync(process.execPath, [cliPath, 'unsupported-mode'], {
-    cwd: packageRoot,
-    encoding: 'utf8',
-  });
+  const result = spawnSync(
+    process.execPath,
+    [join(packageRoot, 'bin/docs.mjs'), 'unsupported-mode'],
+    { cwd: packageRoot, encoding: 'utf8' },
+  );
   const output = `${result.stdout}${result.stderr}`;
   assert.equal(result.status, 2);
   assert.match(output, /Usage: docs/);

@@ -25,7 +25,7 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * The source-preserving shared Docs workspace used by host route adapters.
+ * Mounts the shared Docs workspace for a host adapter, synchronizing route state, theme, portals, and page content.
  *
  * @param workspaceOptions Host adapter, navigation, permission, current page, and optional render capabilities.
  * @param workspaceOptions.host Storage, routing, capability, and rendering boundary supplied by the consumer.
@@ -39,7 +39,7 @@ HELPERS
  * @param workspaceOptions.updatedAt Optional source update timestamp.
  * @param workspaceOptions.userData Optional signed-in user details shown by the sidebar.
  * @param workspaceOptions.source Optional Markdown source associated with the current document.
- * @param workspaceOptions.content Optional Portable Text value rendered by the editor.
+ * @param workspaceOptions.content Optional document value rendered by the editor.
  * @param workspaceOptions.renderContent Optional static React content for the canonical View surface.
  * @param workspaceOptions.staticContent Whether host content is static and can skip editor transition guards.
  * @param workspaceOptions.beforeContent Optional host content placed before the document body.
@@ -50,8 +50,7 @@ HELPERS
  * @param workspaceOptions.blocks Optional switches controlling shared rich block rendering.
  * @param workspaceOptions.customBlocks Optional host-specific rich block renderers.
  * @param workspaceOptions.quiz Optional host-owned quiz toolbar and generation callback.
- *
- * @return The workspace shell, current document, and host-aware Docs controls.
+ * @return The themed Docs workspace with host-aware navigation, document content, and view or editing controls.
  */
 export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element {
   configureDocsHost(workspaceOptions.host, workspaceOptions.customBlocks);

@@ -41,8 +41,9 @@ const reconciliation = JSON.parse(
 );
 const leaves = manifest.leaves;
 const manifestById = new Map(leaves.map((l) => [l.id, l]));
-const tocOverride = await readOptionalJson(join(uniRoot, 'content/toc.json'));
-const toc = tocOverride ?? (await discoverToc(uniRoot, manifestById));
+const toc =
+  (await readOptionalJson(join(uniRoot, 'content/toc.json'))) ??
+  (await discoverToc(uniRoot, manifestById));
 const failures = [];
 const pageErrs = [];
 const consoleErrs = [];
@@ -50,12 +51,9 @@ const pages = [];
 const screenshots = [];
 const sourceAnomalies = [];
 const familyTotals = {};
-const sanitySections = JSON.parse(
+const sanityLeaves = JSON.parse(
   await readFile(join(uniRoot, 'content/_archive/sanity-production-tree.json'), 'utf8'),
-);
-const sanityLeaves = sanitySections.flatMap((s) =>
-  (s.groups ?? []).flatMap((group) => group.leaves ?? []),
-);
+).flatMap((s) => (s.groups ?? []).flatMap((group) => group.leaves ?? []));
 const reconciliationPageById = new Map((reconciliation.pages ?? []).map((l) => [l.id, l]));
 const tocLeaves = toc.flatMap((s) =>
   (s.groups ?? []).flatMap((group) =>
@@ -99,7 +97,6 @@ const allPageScreenshotDirs = {
 const expectedTocRoutes = tocLeaves.map(({ leaf: l }) => ({ id: l.id, title: l.title }));
 const navigationAudit = { expectedPages: expectedTocRoutes.length, actualPages: 0, mismatches: [] };
 const actualTocRoutes = [];
-const sectionSelect = page.getByRole('combobox', { name: 'Section' });
 const expectedTocById = new Map(expectedTocRoutes.map((e) => [e.id, e]));
 const observedCounts = new Map();
 const attachmentRouteAudit = {
@@ -377,44 +374,44 @@ async function discoverToc(root, knownLeaves) {
   };
   const sections = [];
   for (const sectionDir of await dirs(contentRoot)) {
-    const sectionId = idFromDir(sectionDir);
-    const sectionTitle = await readTitle(
-      join(contentRoot, sectionDir, 'index.md'),
-      dirTitle(sectionDir),
-    );
-    const section = { id: sectionId, title: sectionTitle, groups: [] };
+    const section = {
+      id: idFromDir(sectionDir),
+      title: await readTitle(join(contentRoot, sectionDir, 'index.md'), dirTitle(sectionDir)),
+      groups: [],
+    };
     for (const groupDir of await dirs(join(contentRoot, sectionDir))) {
-      const groupId = idFromDir(groupDir);
-      const groupTitle = await readTitle(
-        join(contentRoot, sectionDir, groupDir, 'index.md'),
-        dirTitle(groupDir),
-      );
-      const group = { id: groupId, title: groupTitle, leaves: [] };
+      const group = {
+        id: idFromDir(groupDir),
+        title: await readTitle(
+          join(contentRoot, sectionDir, groupDir, 'index.md'),
+          dirTitle(groupDir),
+        ),
+        leaves: [],
+      };
       for (const leafDir of await dirs(join(contentRoot, sectionDir, groupDir))) {
         const leafPath = `content/${sectionDir}/${groupDir}/${leafDir}/index.md`;
         try {
           const source = await readFile(join(root, leafPath), 'utf8');
-          const id = idFromDir(leafDir, groupId);
-          const known = [...knownLeaves.values()].find((l) => l.path === leafPath);
           const attachments = [];
           for (const entry of await readdir(join(root, dirname(leafPath)), {
             withFileTypes: true,
           })) {
             if (!entry.isFile() || entry.name === 'index.md') continue;
-            const path = `./${entry.name}`;
             const bytes = await readFile(join(root, dirname(leafPath), entry.name));
             attachments.push({
               id: entry.name,
               name: entry.name,
-              path,
+              path: `./${entry.name}`,
               type: 'fileAttachment',
               size: bytes.length,
               sha256: createHash('sha256').update(bytes).digest('hex'),
             });
           }
           group.leaves.push({
-            id,
-            title: known?.title ?? markdownTitle(source, dirTitle(leafDir)),
+            id: idFromDir(leafDir, group.id),
+            title:
+              [...knownLeaves.values()].find((l) => l.path === leafPath)?.title ??
+              markdownTitle(source, dirTitle(leafDir)),
             path: leafPath,
             attachments,
           });
@@ -551,18 +548,17 @@ function expectedEmbedUrl(source) {
     const url = new URL(source);
     const host = url.hostname.toLowerCase().replace(TerraQualityRegex.REGEX_WWW_REGEX(), '');
     let videoId;
-    if (['youtube.com', 'm.youtube.com', 'youtube-nocookie.com'].includes(host)) {
-      const match = url.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/);
+    if (['youtube.com', 'm.youtube.com', 'youtube-nocookie.com'].includes(host))
       videoId =
-        match?.[1] ??
+        url.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/)?.[1] ??
         (url.pathname === '/watch' ? (url.searchParams.get('v') ?? undefined) : undefined);
-    } else if (host === 'youtu.be') {
+    else if (host === 'youtu.be') {
       videoId = url.pathname.split('/').filter(Boolean)[0];
     }
     if (!videoId || !TerraQualityRegex.REGEX_W_REGEX().test(videoId)) return source;
-    const playerHost =
-      host === 'youtube-nocookie.com' ? 'www.youtube-nocookie.com' : 'www.youtube.com';
-    const player = new URL(`https://${playerHost}/embed/${videoId}`);
+    const player = new URL(
+      `https://${host === 'youtube-nocookie.com' ? 'www.youtube-nocookie.com' : 'www.youtube.com'}/embed/${videoId}`,
+    );
     for (const key of ['list', 'index', 'playsinline', 'rel']) {
       const value = url.searchParams.get(key);
       if (value) player.searchParams.set(key, value);
@@ -594,8 +590,7 @@ function expectedEmbedUrl(source) {
 function canonicalHref(value, pagePath) {
   if (typeof value !== 'string' || !value) return null;
   try {
-    const pageUrl = pagePath ? new URL(`/${pagePath}`, baseUrl) : new URL(baseUrl);
-    const resolved = new URL(value, pageUrl);
+    const resolved = new URL(value, pagePath ? new URL(`/${pagePath}`, baseUrl) : new URL(baseUrl));
     if (resolved.pathname.startsWith('/files/'))
       resolved.pathname = `/content/${resolved.pathname.slice('/files/'.length)}`;
     return resolved.href;
@@ -722,16 +717,14 @@ async function openLeaf(leaf, parsed) {
   try {
     await page.waitForFunction(
       () => {
-        const shell = [...document.querySelectorAll('[data-docs-shell]')].find(
-          (element) => element.getAttribute('data-docs-mode') === 'view',
-        );
-        const loadFailure = [...document.querySelectorAll('[data-sonner-toast]')].some((toast) =>
-          toast.textContent?.includes('Document blocks did not finish loading'),
-        );
         return (
-          shell?.getAttribute('data-loading') === 'false' &&
+          [...document.querySelectorAll('[data-docs-shell]')]
+            .find((element) => element.getAttribute('data-docs-mode') === 'view')
+            ?.getAttribute('data-loading') === 'false' &&
           !document.querySelector('[data-docs-loading-overlay]') &&
-          !loadFailure
+          ![...document.querySelectorAll('[data-sonner-toast]')].some((toast) =>
+            toast.textContent?.includes('Document blocks did not finish loading'),
+          )
         );
       },
       undefined,
@@ -780,13 +773,15 @@ async function capturePageScreenshot(leaf, dir, label) {
     });
     await page.waitForFunction(
       () => {
-        const loading = [...document.querySelectorAll('[data-docs-shell]')].some(
-          (element) => element.getAttribute('data-loading') === 'true',
+        return (
+          ![...document.querySelectorAll('[data-docs-shell]')].some(
+            (element) => element.getAttribute('data-loading') === 'true',
+          ) &&
+          !document.querySelector('[data-docs-loading-overlay]') &&
+          ![...document.querySelectorAll('[data-sonner-toast]')].some((toast) =>
+            toast.textContent?.includes('Document blocks did not finish loading'),
+          )
         );
-        const loadFailure = [...document.querySelectorAll('[data-sonner-toast]')].some((toast) =>
-          toast.textContent?.includes('Document blocks did not finish loading'),
-        );
-        return !loading && !document.querySelector('[data-docs-loading-overlay]') && !loadFailure;
       },
       undefined,
       { timeout: 20000 },
@@ -821,8 +816,10 @@ for (const sourceLeaf of sanityLeaves) {
     continue;
   }
   sourceAudit.markdownLeaves++;
-  const markdown = await readFile(join(uniRoot, leaf.path), 'utf8');
-  const parsed = docsPkg.markdownToDocsValue(markdown);
+  const parsedImgs = ofType(
+    docsPkg.markdownToDocsValue(await readFile(join(uniRoot, leaf.path), 'utf8')),
+    'docImage',
+  );
   const reconciliationPage = reconciliationPageById.get(sourceLeaf._id);
   if (!reconciliationPage || !Array.isArray(reconciliationPage.canonicalRoundTrip?.comparisons))
     sourceAudit.differences.push({
@@ -832,14 +829,11 @@ for (const sourceLeaf of sanityLeaves) {
   else {
     sourceAudit.reconciledSanityLeaves++;
   }
-  const sourceContent = sourceLeaf.content ?? [];
-  const sourceImages = ofType(sourceContent, 'docImage');
-  const parsedImgs = ofType(parsed, 'docImage');
+  const sourceImages = ofType(sourceLeaf.content ?? [], 'docImage');
   const expectedAssets = imgManifest.filter((i) => i.leafId === sourceLeaf._id);
   let imgsMatch = expectedAssets.length === parsedImgs.length;
   for (const original of sourceImages) {
-    const asset = expectedAssets.find((i) => i.url === original.url);
-    if (!asset) {
+    if (!expectedAssets.some((i) => i.url === original.url)) {
       imgsMatch = false;
       sourceAudit.differences.push({
         id: sourceLeaf._id,
@@ -894,8 +888,9 @@ for (const sourceLeaf of sanityLeaves) {
   }
 }
 for (const leaf of leaves) {
-  const markdown = await readFile(join(uniRoot, leaf.path), 'utf8');
-  const actual = createHash('sha256').update(markdown).digest('hex');
+  const actual = createHash('sha256')
+    .update(await readFile(join(uniRoot, leaf.path), 'utf8'))
+    .digest('hex');
   if (actual === leaf.sha256) sourceAudit.markdownHashesVerified++;
   else
     sourceAudit.markdownHashFailures.push({
@@ -924,10 +919,7 @@ for (const asset of imgManifest) {
 }
 page.on('pageerror', (e) => pageErrs.push({ url: page.url(), message: e.message }));
 page.on('console', (m) => {
-  if (m.type() === 'error') {
-    const record = { url: page.url(), message: m.text() };
-    consoleErrs.push(record);
-  }
+  if (m.type() === 'error') consoleErrs.push({ url: page.url(), message: m.text() });
 });
 await mkdir(screenshotDir, { recursive: true });
 await Promise.all(Object.values(allPageScreenshotDirs).map((d) => mkdir(d, { recursive: true })));
@@ -944,7 +936,7 @@ await page
   .waitForSelector('[aria-label="Document viewer"]', { timeout: 20000 })
   .catch(() => undefined);
 for (const section of toc) {
-  await sectionSelect.click();
+  await page.getByRole('combobox', { name: 'Section' }).click();
   await page.getByRole('option', { name: section.title, exact: true }).click();
   await page.waitForTimeout(75);
   const sectionRoutes = await page.evaluate(() =>
@@ -952,8 +944,9 @@ for (const section of toc) {
       .filter((anchor) => anchor.parentElement?.classList.contains('peer/menu-button'))
       .map((anchor) => {
         try {
-          const url = new URL(anchor.getAttribute('href') ?? '', location.href);
-          const id = decodeURIComponent(url.hash.slice(1));
+          const id = decodeURIComponent(
+            new URL(anchor.getAttribute('href') ?? '', location.href).hash.slice(1),
+          );
           return id ? { id, title: (anchor.textContent ?? '').trim() } : null;
         } catch {
           return null;
@@ -1064,9 +1057,8 @@ for (const { leaf } of tocLeaves) {
   }
 }
 for (let start = 0; start < fileRouteEntries.length; start += 4) {
-  const batch = fileRouteEntries.slice(start, start + 4);
   await Promise.all(
-    batch.map(async (a) => {
+    fileRouteEntries.slice(start, start + 4).map(async (a) => {
       attachmentRouteAudit.routeChecks++;
       try {
         const response = await page.request.get(a.url, { timeout: 30000 });
@@ -1121,8 +1113,7 @@ for (let index = 0; index < leaves.length; index++) {
       tocPath: placement.leaf.path,
       manifestPath: leaf.path,
     });
-  const markdown = await readFile(join(uniRoot, leaf.path), 'utf8');
-  const parsed = docsPkg.markdownToDocsValue(markdown);
+  const parsed = docsPkg.markdownToDocsValue(await readFile(join(uniRoot, leaf.path), 'utf8'));
   const expectedSpans = ofType(parsed, 'span');
   const expectedCounts = {};
   walk(parsed, (i) => {
@@ -1134,27 +1125,29 @@ for (let index = 0; index < leaves.length; index++) {
   const headerData = await page.evaluate((i) => {
     const title = document.querySelector('input[placeholder="Page title"]');
     const description = document.querySelector('textarea[placeholder="Add a description..."]');
-    const section = document.querySelector('[role="combobox"][aria-label="Section"]');
-    const anchors = [...document.querySelectorAll('a[href]')];
-    const selected = anchors.find((anchor) => {
-      try {
-        return (
-          decodeURIComponent(
-            new URL(anchor.getAttribute('href') ?? '', location.href).hash.slice(1),
-          ) === i
-        );
-      } catch {
-        return false;
-      }
-    });
     return {
       documentTitle: document.title,
       title: title instanceof HTMLInputElement ? title.value : null,
       titleDisabled: title instanceof HTMLInputElement ? title.disabled : null,
       description: description instanceof HTMLTextAreaElement ? description.value : null,
       descriptionDisabled: description instanceof HTMLTextAreaElement ? description.disabled : null,
-      section: section?.textContent?.trim() ?? null,
-      selectedLeaf: selected?.textContent?.trim() ?? null,
+      section:
+        document.querySelector('[role="combobox"][aria-label="Section"]')?.textContent?.trim() ??
+        null,
+      selectedLeaf:
+        [...document.querySelectorAll('a[href]')]
+          .find((anchor) => {
+            try {
+              return (
+                decodeURIComponent(
+                  new URL(anchor.getAttribute('href') ?? '', location.href).hash.slice(1),
+                ) === i
+              );
+            } catch {
+              return false;
+            }
+          })
+          ?.textContent?.trim() ?? null,
     };
   }, leaf.id);
   if (headerData.title !== leaf.title || !headerData.documentTitle.startsWith(`${leaf.title} |`))
@@ -1201,7 +1194,6 @@ for (let index = 0; index < leaves.length; index++) {
     );
     const root = roots[0];
     if (!root) return { rootCount: roots.length };
-    const children = [...root.children];
     /**
      * Maps a rendered document element to the block category used by the audit report.
      * @param element Top-level rendered block or one of its descendants.
@@ -1249,14 +1241,14 @@ for (let index = 0; index < leaves.length; index++) {
     const readCode = (block) => {
       const lines = [...block.querySelectorAll('.cm-content .cm-line')];
       if (lines.length) return lines.map((line) => line.textContent ?? '').join('\n');
-      const fallback = [
+      return [
         ...block.querySelectorAll('[data-docs-code-fb] .docs-code-block-fallback-line > span'),
-      ];
-      return fallback.map((line) => line.textContent ?? '').join('\n');
+      ]
+        .map((line) => line.textContent ?? '')
+        .join('\n');
     };
     const tables = all('section[data-docs-editor-block="DocsTable"]').map((section) => {
       const table = section.querySelector(':scope > table');
-      const rows = table ? [...table.rows] : [];
       /**
        * Gets table-cell text without counting nested code or math presentation.
        * @param cell Table header or data cell cloned for text extraction.
@@ -1272,7 +1264,7 @@ for (let index = 0; index < leaves.length; index++) {
       };
       return {
         heading: section.querySelector(':scope > h3')?.textContent?.trim() ?? '',
-        rows: rows.map((row) => [...row.children].map(cellText)),
+        rows: table ? [...table.rows].map((row) => [...row.children].map(cellText)) : [],
       };
     });
     const codeBlocks = all('.docs-code-block[data-docs-code-block="view"]')
@@ -1302,10 +1294,14 @@ for (let index = 0; index < leaves.length; index++) {
               attributes: [...node.querySelectorAll('li')].map((item) => {
                 const spans = [...item.children].filter((child) => child.tagName === 'SPAN');
                 const value = spans[1];
-                const annotation = value?.querySelector('annotation[encoding="application/x-tex"]');
                 return {
                   name: spans[0]?.textContent?.trim() ?? '',
-                  value: annotation?.textContent?.trim() ?? value?.textContent?.trim() ?? '',
+                  value:
+                    value
+                      ?.querySelector('annotation[encoding="application/x-tex"]')
+                      ?.textContent?.trim() ??
+                    value?.textContent?.trim() ??
+                    '',
                 };
               }),
               math: [...node.querySelectorAll('annotation[encoding="application/x-tex"]')].map(
@@ -1334,7 +1330,6 @@ for (let index = 0; index < leaves.length; index++) {
     });
     const textBlocks = all('[data-pt-block="text"][data-pt-path]').map((element) => {
       const path = element.getAttribute('data-pt-path') ?? '';
-      const key = lastKey(path);
       const firstContent = element.firstElementChild;
       const listItem = element.querySelector(':scope > ol > li, :scope > ul > li');
       const inline = [...element.querySelectorAll('[data-pt-inline="span"][data-pt-path]')];
@@ -1346,7 +1341,7 @@ for (let index = 0; index < leaves.length; index++) {
         })
         .join('');
       return {
-        key,
+        key: lastKey(path),
         path,
         text,
         style: element.getAttribute('data-style') ?? 'normal',
@@ -1357,11 +1352,9 @@ for (let index = 0; index < leaves.length; index++) {
     });
     const inlineSpans = all('[data-pt-inline="span"][data-pt-path]').map((element) => {
       const path = element.getAttribute('data-pt-path') ?? '';
-      const key = lastKey(path);
-      const blockKey = path.match(/_key=="([^"]+)"/)?.[1] ?? '';
-      const value = element.querySelector('[data-pt-text="true"]');
       const text =
-        value?.textContent ?? (element.querySelector('[data-pt-line-break="true"]') ? '\n' : '');
+        element.querySelector('[data-pt-text="true"]')?.textContent ??
+        (element.querySelector('[data-pt-line-break="true"]') ? '\n' : '');
       const marksRoot = element.querySelector('[data-pt-marks="true"]') ?? element;
       const decorators = [
         ['strong', 'strong'],
@@ -1372,20 +1365,19 @@ for (let index = 0; index < leaves.length; index++) {
       ]
         .filter(([selector]) => marksRoot.querySelector(selector))
         .map(([, decorator]) => decorator);
-      const previous = element.previousElementSibling;
       return {
-        key,
-        blockKey,
+        key: lastKey(path),
+        blockKey: path.match(/_key=="([^"]+)"/)?.[1] ?? '',
         text,
         decorators,
         href: marksRoot.querySelector('a[href]')?.getAttribute('href') ?? null,
         unknownMarks: [],
-        canJoinPrevious: previous?.getAttribute('data-pt-inline') === 'span',
+        canJoinPrevious: element.previousElementSibling?.getAttribute('data-pt-inline') === 'span',
       };
     });
     return {
       rootCount: roots.length,
-      direct: children.map((element) => ({
+      direct: [...root.children].map((element) => ({
         type: classify(element),
         tag: element.tagName,
         path: element.getAttribute('data-pt-path') ?? '',
@@ -1640,9 +1632,8 @@ for (let index = 0; index < leaves.length; index++) {
     if (!normText((block.children ?? []).map(plainText).join(''))) continue;
     const key = String(block._key ?? '');
     const sourceRuns = sourceInlineRuns(block, leaf.path);
-    const renderedBlockKey = renderedTextBlockForSource[blockIndex]?.key ?? key;
     let actualRuns = renderedInlineRuns(
-      renderedSpansByBlock.get(renderedBlockKey) ?? [],
+      renderedSpansByBlock.get(renderedTextBlockForSource[blockIndex]?.key ?? key) ?? [],
       leaf.path,
     ).map((r) => ({ ...r, text: normPageAssetUrls(r.text, leaf.path) }));
     // The Markdown parser generates fresh keys for synthetic group overviews,
@@ -1932,8 +1923,13 @@ for (let index = 0; index < leaves.length; index++) {
         });
       const expectedAttrs = (node.data?.attributes ?? []).map((a) => {
         const rawValue = String(a.type ?? '').trim();
-        const math = rawValue.match(/^\$\$([\s\S]*)\$\$$/) ?? rawValue.match(/^\$([\s\S]*)\$$/);
-        return { name: normText(a.name), value: normText(math?.[1] ?? rawValue) };
+        return {
+          name: normText(a.name),
+          value: normText(
+            (rawValue.match(/^\$\$([\s\S]*)\$\$$/) ?? rawValue.match(/^\$([\s\S]*)\$$/))?.[1] ??
+              rawValue,
+          ),
+        };
       });
       const actualAttrs = (actual.attributes ?? []).map((a) => ({
         name: normText(a.name),
@@ -2082,8 +2078,7 @@ for (let index = 0; index < leaves.length; index++) {
         actual: actual.title,
       });
   }
-  const sourceAccordions = ofType(parsed, 'accordion');
-  const accordionLabels = sourceAccordions.flatMap((g) =>
+  const accordionLabels = ofType(parsed, 'accordion').flatMap((g) =>
     (g.items ?? []).map((item) => String(item.title ?? '')),
   );
   checkCount('accordion-items', accordionLabels.length, dom.accordionTriggers?.length ?? 0);
@@ -2212,8 +2207,7 @@ for (let index = 0; index < leaves.length; index++) {
       category: 'math-render-error',
       errors: dom.katexErrors,
     });
-  const sourceTsDocs = ofType(parsed, 'tsDocs');
-  checkCount('tsDocs', sourceTsDocs.length, dom.tsDocs ?? 0);
+  checkCount('tsDocs', ofType(parsed, 'tsDocs').length, dom.tsDocs ?? 0);
   if (dom.errors?.length)
     failures.push({
       page: leaf.id,
@@ -2258,16 +2252,18 @@ for (const { leaf } of tocLeaves) {
         });
     }
   }
-  const url = `${baseUrl}/?mode=attachments#${encodeURIComponent(leaf.id)}`;
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.goto(`${baseUrl}/?mode=attachments#${encodeURIComponent(leaf.id)}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
   try {
     await page.waitForFunction(
       ({ id: i, title: t }) => {
-        const mode = document.querySelector('[role="combobox"][aria-label="Mode"]');
         const pageTitle = document.querySelector('input[placeholder="Page title"]');
         return (
           location.hash === `#${encodeURIComponent(i)}` &&
-          mode?.textContent?.trim() === 'Attachments' &&
+          document.querySelector('[role="combobox"][aria-label="Mode"]')?.textContent?.trim() ===
+            'Attachments' &&
           pageTitle instanceof HTMLInputElement &&
           pageTitle.value === t
         );
@@ -2283,16 +2279,14 @@ for (const { leaf } of tocLeaves) {
     );
     await page.waitForFunction(
       () => {
-        const shell = [...document.querySelectorAll('[data-docs-shell]')].find(
-          (element) => element.getAttribute('data-docs-mode') === 'attachments',
-        );
-        const loadFailure = [...document.querySelectorAll('[data-sonner-toast]')].some((toast) =>
-          toast.textContent?.includes('Document blocks did not finish loading'),
-        );
         return (
-          shell?.getAttribute('data-loading') === 'false' &&
+          [...document.querySelectorAll('[data-docs-shell]')]
+            .find((element) => element.getAttribute('data-docs-mode') === 'attachments')
+            ?.getAttribute('data-loading') === 'false' &&
           !document.querySelector('[data-docs-loading-overlay]') &&
-          !loadFailure
+          ![...document.querySelectorAll('[data-sonner-toast]')].some((toast) =>
+            toast.textContent?.includes('Document blocks did not finish loading'),
+          )
         );
       },
       undefined,
@@ -2315,7 +2309,6 @@ for (const { leaf } of tocLeaves) {
     .locator('[role="button"][aria-label^="Attachment "]')
     .evaluateAll((c) => c.map((card) => card.getAttribute('aria-label') ?? ''));
   attachmentModeAudit.renderedItems += actualLabels.length;
-  const expectedLabels = expectedAttachments.map((a) => `Attachment ${a.name}`);
   /**
    * Builds a frequency map so attachment labels can be compared with duplicate entries preserved.
    * @param items Labels to count.
@@ -2326,7 +2319,7 @@ for (const { leaf } of tocLeaves) {
     for (const item of items) values.set(item, (values.get(item) ?? 0) + 1);
     return values;
   };
-  const expectedCounts = counts(expectedLabels);
+  const expectedCounts = counts(expectedAttachments.map((a) => `Attachment ${a.name}`));
   const actualCounts = counts(actualLabels);
   const diffs = [...new Set([...expectedCounts.keys(), ...actualCounts.keys()])]
     .map((l) => ({
@@ -2359,8 +2352,10 @@ if (attachmentModeAudit.references.failures.length)
   });
 if (textAttachmentEntry?.attachment) {
   const { leaf, attachment } = textAttachmentEntry;
-  const localPath = resolve(dirname(join(uniRoot, leaf.path)), attachment.path ?? attachment.name);
-  const expectedText = await readFile(localPath, 'utf8');
+  const expectedText = await readFile(
+    resolve(dirname(join(uniRoot, leaf.path)), attachment.path ?? attachment.name),
+    'utf8',
+  );
   await page.goto(`${baseUrl}/?mode=attachments#${encodeURIComponent(leaf.id)}`, {
     waitUntil: 'domcontentloaded',
     timeout: 30000,
@@ -2375,7 +2370,6 @@ if (textAttachmentEntry?.attachment) {
     await preview.waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForFunction(
       ({ selector: s, expected: e }) => {
-        const element = document.querySelector(s);
         /**
          * Normalizes whitespace before comparing rendered attachment previews with their source.
          * @param value DOM text or source text to compare.
@@ -2385,7 +2379,7 @@ if (textAttachmentEntry?.attachment) {
           String(value ?? '')
             .replace(TerraQualityRegex.REGEX_S_G_REGEX(), ' ')
             .trim();
-        return norm(element?.textContent).includes(norm(e).slice(0, 120));
+        return norm(document.querySelector(s)?.textContent).includes(norm(e).slice(0, 120));
       },
       { selector: '[role="dialog"] .docs-code-block', expected: expectedText },
       { timeout: 10000 },
@@ -2417,8 +2411,7 @@ if (textAttachmentEntry?.attachment) {
   failures.push({ category: 'attachment-text-preview', issue: 'no-text-attachment-fixture-found' });
 }
 for (const leaf of leaves) {
-  const markdown = await readFile(join(uniRoot, leaf.path), 'utf8');
-  const parsed = docsPkg.markdownToDocsValue(markdown);
+  const parsed = docsPkg.markdownToDocsValue(await readFile(join(uniRoot, leaf.path), 'utf8'));
   if (!ofType(parsed, 'accordion').length && !ofType(parsed, 'tabs').length) continue;
   if (!(await openLeaf(leaf, parsed))) continue;
   const root = page.locator('[aria-label="Document viewer"]').first();
@@ -2489,16 +2482,18 @@ for (const leaf of leaves) {
       if (!(await trigger.isVisible())) continue;
       const label = (await trigger.getAttribute('aria-label')) ?? '';
       const association = await trigger.evaluate((e) => {
-        const targetId = e.getAttribute('aria-controls');
         const triggerId = e.id;
-        const labelledRegion = [
-          ...document.querySelectorAll('[role="region"][aria-labelledby]'),
-        ].find((region) =>
-          (region.getAttribute('aria-labelledby') ?? '')
-            .split(TerraQualityRegex.REGEX_S_REGEX())
-            .includes(triggerId),
-        );
-        return { targetId: targetId || labelledRegion?.id || '', triggerId };
+        return {
+          targetId:
+            e.getAttribute('aria-controls') ||
+            [...document.querySelectorAll('[role="region"][aria-labelledby]')].find((region) =>
+              (region.getAttribute('aria-labelledby') ?? '')
+                .split(TerraQualityRegex.REGEX_S_REGEX())
+                .includes(triggerId),
+            )?.id ||
+            '',
+          triggerId,
+        };
       });
       const panelId = association.targetId;
       const identity = association.triggerId || `${label}:${triggerIndex}`;
@@ -2574,8 +2569,7 @@ for (const leaf of leaves) {
 for (const sample of screenshotSamples) {
   const leaf = manifestById.get(sample.id);
   if (!leaf) continue;
-  const markdown = await readFile(join(uniRoot, leaf.path), 'utf8');
-  const parsed = docsPkg.markdownToDocsValue(markdown);
+  const parsed = docsPkg.markdownToDocsValue(await readFile(join(uniRoot, leaf.path), 'utf8'));
   if (!(await openLeaf(leaf, parsed))) continue;
   const root = page.locator('[aria-label="Document viewer"]').first();
   await root.waitFor({ timeout: 15000 });
@@ -2624,9 +2618,8 @@ for (const sample of screenshotSamples) {
       }
     }
   }
-  const locator = page.locator(sample.selector).first();
   try {
-    await locator.scrollIntoViewIfNeeded({ timeout: 10000 });
+    await page.locator(sample.selector).first().scrollIntoViewIfNeeded({ timeout: 10000 });
     const file = join(screenshotDir, `${sample.family}.png`);
     if (sample.family === 'user-page-dark' || sample.family === 'compound-diagram')
       await page.screenshot({ path: file, fullPage: true, animations: 'disabled', timeout: 30000 });

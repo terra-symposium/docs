@@ -8,6 +8,7 @@ IMPORTS
 
 // API
 import { createContext, useContext, useState } from 'react';
+import { DOCS_LAYOUT_CLASSES } from '../lib/terra/layout-classes.js';
 
 // TYPES
 import type { JSX, ReactNode } from 'react';
@@ -15,6 +16,12 @@ import type { JSX, ReactNode } from 'react';
 /*//////////////////////////////////////////////////
 CONFIG
 //////////////////////////////////////////////////*/
+const TEXT_SM_TEXT_PRIMARY_10_CLASS = 'text-sm text-primary-10';
+const ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS =
+  'rounded-md border border-primary-6 bg-background px-3 py-2';
+const FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS = 'flex flex-col gap-1 text-sm';
+const ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS =
+  'rounded-md bg-primary-9 px-4 py-2 text-primary-1';
 
 /** Question formats understood by the Docs quiz generator and answer checker. */
 export type DocsQuizQuestionType = 'multipleChoice' | 'keyword';
@@ -247,13 +254,13 @@ export function DocsQuizGenerator({
       )}
       {stage === 'setup' && (
         <div className="space-y-4">
-          <p className="text-sm text-primary-10">
+          <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
             Generate a quiz from this leaf. Your quiz is kept in this page session only.
           </p>
           <label className="flex max-w-xs flex-col gap-1 text-sm">
             Number of questions
             <input
-              className="rounded-md border border-primary-6 bg-background px-3 py-2"
+              className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
               type="number"
               min={1}
               max={20}
@@ -324,16 +331,18 @@ export function DocsQuizGenerator({
       )}
       {stage === 'review' && quiz && (
         <div className="space-y-4">
-          <p className="text-sm text-primary-10">Review and edit the questions before starting.</p>
+          <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
+            Review and edit the questions before starting.
+          </p>
           {quiz.questions.map((v, i) => (
             <fieldset key={i} className="space-y-2 rounded-lg border border-primary-6 p-4">
               <legend className="px-1 font-medium">
                 Question {i + 1} · {v.type === 'multipleChoice' ? 'Multiple choice' : 'Keyword'}
               </legend>
-              <label className="flex flex-col gap-1 text-sm">
+              <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                 Prompt
                 <input
-                  className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                  className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                   value={v.prompt}
                   onChange={(event) =>
                     updateQuestion(i, (q) => ({
@@ -345,10 +354,10 @@ export function DocsQuizGenerator({
               </label>
               {v.type === 'multipleChoice' ? (
                 <>
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                     Options (one per line)
                     <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                      className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                       value={v.opts.join('\n')}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
@@ -359,10 +368,10 @@ export function DocsQuizGenerator({
                       }
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                     Correct answer
                     <input
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                      className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                       value={v.answer}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
@@ -374,10 +383,10 @@ export function DocsQuizGenerator({
                 </>
               ) : (
                 <div className="space-y-2">
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                     Accepted answers (one per line)
                     <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                      className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                       value={v.answers.join('\n')}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
@@ -388,10 +397,10 @@ export function DocsQuizGenerator({
                       }
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                     Hint keywords (one per line)
                     <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                      className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                       value={v.keywords?.join('\n') ?? ''}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
@@ -404,10 +413,10 @@ export function DocsQuizGenerator({
                   </label>
                 </div>
               )}
-              <label className="flex flex-col gap-1 text-sm">
+              <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                 Explanation
                 <input
-                  className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                  className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                   value={v.explanation ?? ''}
                   onChange={(event) =>
                     updateQuestion(i, (q) => ({
@@ -419,7 +428,7 @@ export function DocsQuizGenerator({
               </label>
             </fieldset>
           ))}
-          <div className="flex gap-2">
+          <div className={DOCS_LAYOUT_CLASSES.controlRow}>
             <button
               type="button"
               onClick={() => setStage('setup')}
@@ -454,7 +463,7 @@ export function DocsQuizGenerator({
       )}
       {stage === 'quiz' && question && (
         <div className="space-y-4">
-          <p className="text-sm text-primary-10">
+          <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
             Question {index + 1} of {quiz?.questions.length}
           </p>
           <h3 className="text-lg font-medium">{question.prompt}</h3>
@@ -511,7 +520,7 @@ export function DocsQuizGenerator({
                 }
               />
               {question.keywords?.length ? (
-                <p className="text-sm text-primary-10">
+                <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
                   Hint: include {question.keywords.join(', ')}.
                 </p>
               ) : null}
@@ -531,7 +540,7 @@ export function DocsQuizGenerator({
               {question.explanation && <p className="mt-1 text-sm">{question.explanation}</p>}
             </div>
           )}
-          <div className="flex gap-2">
+          <div className={DOCS_LAYOUT_CLASSES.controlRow}>
             <button
               type="button"
               disabled={index === 0}
@@ -550,7 +559,7 @@ export function DocsQuizGenerator({
                     return n;
                   })
                 }
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
+                className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}
               >
                 Check answer
               </button>
@@ -558,7 +567,7 @@ export function DocsQuizGenerator({
               <button
                 type="button"
                 onClick={() => setIndex((i) => i + 1)}
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
+                className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}
               >
                 Next
               </button>
@@ -566,7 +575,7 @@ export function DocsQuizGenerator({
               <button
                 type="button"
                 onClick={() => setStage('results')}
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
+                className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}
               >
                 Finish quiz
               </button>

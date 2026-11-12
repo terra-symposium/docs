@@ -29,10 +29,7 @@ class CircuitBreaker {
   private readonly MAX_FAILURES = 5;
   private readonly RESET_TIMEOUT_MS = 10000; // 10 seconds
   private readonly MAX_REQS_PER_SEC = 20;
-  /**
-   * Checks check.
-   *
-   */
+  /** Enforces the request-rate limit and waits for the cooldown after the breaker opens. */
   public check(): void {
     const now = Date.now();
     // reset the volume counter every second
@@ -52,30 +49,22 @@ class CircuitBreaker {
       throw new Error('Circuit breaker tripped: Rate limit exceeded.');
     }
   }
-  /**
-   * Returns the trip.
-   *
-   * @param now - Timestamp consulted before trip mutates time-sensitive records.
+  /** Opens the breaker until the cooldown expires and records the rejection boundary.
+   * @param now Current timestamp used to calculate the cooldown deadline.
    */
   private trip(now: number): void {
     this.state = 'OPEN';
     this.nextAttempt = now + this.RESET_TIMEOUT_MS;
     warn('CircuitBreaker', 'Tripped OPEN. Network requests blocked.');
   }
-  /**
-   * Record success.
-   *
-   */
+  /** Closes a half-open breaker after a successful request and clears its failure count. */
   public recordSuccess(): void {
     if (this.state === 'HALF_OPEN') {
       this.state = 'CLOSED';
       this.failures = 0;
     }
   }
-  /**
-   * Record failure.
-   *
-   */
+  /** Opens the breaker after the configured number of consecutive mutation failures. */
   public recordFailure(): void {
     this.failures++;
     if (this.failures >= this.MAX_FAILURES) this.trip(Date.now());

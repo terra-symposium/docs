@@ -46,6 +46,9 @@ import { navigateDocs as navigate } from '../../../../lib/terra/docs/navigation.
 import { runMutation } from '../../../../lib/terra/docs/mutations.js';
 import { toast } from 'sonner';
 import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
+import type { JSX } from 'react';
+import type { DocsHostUser } from '../../../../lib/host.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // COMPONENTS
@@ -114,9 +117,9 @@ import type {
   AttchType,
   Branch,
   DelTgt,
-  DocsExportOpts as ExportOptions,
   DocsTreeMenuAction as MenuAction,
   DragState,
+  DocsExportOpts as ExportOptions,
   Leaf as LeafNode,
   Md,
   PromptState,
@@ -124,7 +127,6 @@ import type {
   Sister,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
-import type { DocsHostUser } from '../../../../lib/host.js';
 import type { PDFDocument, PDFImage } from 'pdf-lib';
 
 // prettier-ignore
@@ -164,22 +166,14 @@ const SidebarComponents = {} as {
     state: PromptState;
     setState: (v: PromptState) => void;
     disabled: boolean;
-  }) => React.JSX.Element | null;
+  }) => JSX.Element | null;
   DeleteDialog: (props: {
     tgt: DelTgt;
     setTgt: (v: DelTgt) => void;
     onConfirm: () => void;
     disabled: boolean;
-  }) => React.JSX.Element | null;
+  }) => JSX.Element | null;
 };
-
-/*
- * RENDER TRIPWIRE
- * A diagnostic tool to catch and analyze React infinite loops.
- *
- * @param componentName - Component name input supplied to use render tripwire's operation.
- * @param trackedVars - Tracked vars input supplied to use render tripwire's operation.
- */
 
 /*//////////////////////////////////////////////////
 COMPONENTS
@@ -189,9 +183,9 @@ SidebarComponents.PromptDialog =
   /**
    * Prompts for a new sidebar operation and reports the user's choice to the owning component.
    *
-   * @param s Prompt payload containing the requested title, value, and callbacks.
-   * @param setS State setter that closes or replaces the active prompt.
-   * @param disabled Whether the host is currently preventing sidebar mutations.
+   * @param s Current prompt details, or `null` when no prompt should be shown.
+   * @param setS Updates the prompt state after a save or cancel action.
+   * @param disabled Whether the enclosing sidebar operation currently blocks dialog actions.
    *
    * @return The prompt dialog while a prompt is active, or `null` when no prompt is open.
    */
@@ -203,7 +197,7 @@ SidebarComponents.PromptDialog =
     state: PromptState;
     setState: (v: PromptState) => void;
     disabled: boolean;
-  }): React.JSX.Element | null {
+  }): JSX.Element | null {
     if (!s) return null;
     return (
       <Dialog
@@ -264,10 +258,10 @@ SidebarComponents.DeleteDialog =
   /**
    * Confirms deletion of the selected page, group, or section before invoking the caller's action.
    *
-   * @param tgt Selected page, group, or section awaiting deletion.
-   * @param setTgt State setter that clears the pending deletion target.
-   * @param onConfirm Callback that performs deletion after confirmation.
-   * @param disabled Whether the host is currently preventing sidebar mutations.
+   * @param tgt Page, group, or section selected for deletion, or `null` when the dialog is closed.
+   * @param setTgt Clears the selected target when the user cancels the dialog.
+   * @param onConfirm Performs the deletion after the user confirms.
+   * @param disabled Whether the enclosing operation currently blocks deletion.
    *
    * @return The confirmation dialog while a target is selected, or `null` otherwise.
    */
@@ -281,7 +275,7 @@ SidebarComponents.DeleteDialog =
     setTgt: (v: DelTgt) => void;
     onConfirm: () => void;
     disabled: boolean;
-  }): React.JSX.Element | null {
+  }): JSX.Element | null {
     if (!tgt) return null;
     return (
       <Dialog
@@ -318,14 +312,14 @@ SidebarComponents.DeleteDialog =
 /**
  * Coordinates the Docs sidebar's route selection, navigation tree, dialogs, and user actions.
  *
- * @param items Navigation tree shown in the sidebar.
- * @param pathname Browser path used to identify the active section and leaf.
- * @param permission Whether the current Docs host route is read-only or editable.
- * @param userData Optional account details shown in the sidebar footer.
- * @param siteTitle Host title shown beside the brand link.
- * @param siteDescription Supporting text shown below the site title.
- * @param homePath Destination of the sidebar brand link.
- * @param sidebarAttrs Remaining root attributes forwarded to the shared sidebar component.
+ * @param items Navigation tree supplied by the Docs host.
+ * @param pathname Browser path used to determine the active section and document.
+ * @param permission Read or write capability granted to the current viewer.
+ * @param userData Signed-in user details displayed in the sidebar, or `null` if signed out.
+ * @param siteTitle Optional site name shown above sidebar navigation.
+ * @param siteDescription Optional short description shown below the site name.
+ * @param homePath Host route used for links back to the site's root.
+ * @param sidebarAttrs Additional sidebar attributes and focus handlers forwarded to the root component.
  *
  * @return The Docs sidebar and its navigation controls for the active host route.
  */
@@ -342,11 +336,11 @@ function Nav({
   docs: TreeType[];
   pathname: string;
   permission: import('../../../../lib/terra/runtime/types.js').DocsPermissionLevel;
-  userData?: DocsHostUser | null;
-  siteTitle?: string;
-  siteDescription?: string;
-  homePath?: string;
-}): React.JSX.Element {
+  userData?: DocsHostUser | null | undefined;
+  siteTitle?: string | undefined;
+  siteDescription?: string | undefined;
+  homePath?: string | undefined;
+}): JSX.Element {
   // STATES
   const leafTitle = useAtom($leafTitle);
   const curMode = useAtom($mode);
@@ -400,11 +394,10 @@ function Nav({
     hue: number;
     section: TreeType;
   } | null>(null);
-  const [sectionMenuTarget, setSectionMenuTarget] = useState<TreeType | null>(null);
   const [inputDlg, setInputDlg] = useState<{
     open: boolean;
     title: string;
-    description?: string;
+    description?: string | undefined;
     label: string;
     value: string;
     onSave: (val: string) => void;
@@ -454,9 +447,9 @@ function Nav({
   navTripwireRenders.current++;
   if (navTripwireRenders.current > 50) {
     const navTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
-    for (const key of Object.keys(navTripwireTrackedVars) as Array<
-      keyof typeof navTripwireTrackedVars
-    >)
+    for (const key of Object.keys(
+      navTripwireTrackedVars,
+    ) as (keyof typeof navTripwireTrackedVars)[])
       if (navTripwireTrackedVars[key] !== navTripwirePrevVars.current[key])
         navTripwireDiff[key] = {
           old: navTripwirePrevVars.current[key],
@@ -570,13 +563,7 @@ function Nav({
     }
   }, []);
   useEffect(() => {
-    /*
-     * Handles update sidebar node title.
-     *
-     * @param nodes - Sidebar nodes containing the document to rename.
-     * @param targetPath - Path of the document whose title should change.
-     * @param newTitle - New title assigned to the matching document.
-     */
+    // Match normalized paths first, then use a unique basename to sync the saved leaf title.
     if (leafTitle?.path)
       setTree((nodes) => {
         /**
@@ -651,11 +638,6 @@ function Nav({
       });
   }, [leafTitle]);
   useEffect(() => {
-    /**
-     * Handles rename event.
-     *
-     * @param e - Rename event carrying the updated document path.
-     */
     const ES = [
       {
         handler: (e: Event): void => {
@@ -765,11 +747,6 @@ function Nav({
           const anchor = lastSel || findActiveLeaf(tree, cPathname)?.path;
           if (anchor) {
             const allLeaves: string[] = [];
-            /*
-             * Handles walk.
-             *
-             * @param nodes - Sidebar nodes traversed while collecting leaf paths.
-             */
             (
               /**
                * Collects leaf paths in the same order they appear in the navigation tree.
@@ -851,43 +828,13 @@ function Nav({
 								const [firstPath, ...restPaths] = orderedPaths;
 								if (!firstPath) throw new Error('Not enough valid documents to merge');
 								setTree(v => {
-														/*
-                   * Handles prune.
-                                     *
-                                                       * @param items - Sidebar items being pruned from the tree.
+                  /**
+                   * Removes merged pages and empty branches from the optimistic sidebar tree.
+                   *
+                   * @param items - Navigation nodes to retain or prune recursively.
+                   * @returns The tree with merged leaf paths removed.
                    */
-									return (/**
-									return ( * return ( * return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * return ( * return ( * @param items
-									return ( * return ( * return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * return ( * return ( * @return
-									return ( * return ( * return ( * return ( * return ( * return (
-									return ( * return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * return ( * @param items
-									return ( * return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * return ( * @return
-									return ( * return ( * return ( * return ( * return (
-									return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * @param items
-									return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * @return
-									return ( * return ( * return ( * return (
-									return ( * return ( * return ( *
-									return ( * return ( * return ( * @param items
-									return ( * return ( * return ( *
-									return ( * return ( * return ( * @return
-									return ( * return ( * return (
-									return ( * return ( *
-									return ( * return ( * @param items
-									return ( * return ( *
-									return ( * return ( * @return
-									return ( * return (
-									return ( *
-									return ( * @param items
-									return ( *
-									return ( * @return
-									return ( */
-function prune(items: TreeType[]): TreeType[] {
+                  const prune = (items: TreeType[]): TreeType[] => {
 						const n: TreeType[] = [];
 						for (const node of items) {
 							if (node.type === 'leaf') {
@@ -903,7 +850,8 @@ function prune(items: TreeType[]): TreeType[] {
 							if (children.length > 0) n.push({ ...node, children });
 						}
 						return n;
-					})(v);
+					};
+					return prune(v);
 								});
 				const pages = (await Promise.all(orderedPaths.map(p => actions.read.doc.get({ path: p }))))
 					.map((r, i) => ({ path: orderedPaths[i]!, doc: r?.data as Md | undefined }))
@@ -964,7 +912,7 @@ function prune(items: TreeType[]): TreeType[] {
       setInputDlg({
         open: true,
         title: o?.title || 'Add Section',
-        ...(o?.description === undefined ? {} : { description: o.description }),
+        description: o?.description,
         label: 'Section name',
         value: 'Untitled Section',
         onCancel: () => {},
@@ -1239,7 +1187,7 @@ function prune(items: TreeType[]): TreeType[] {
             try {
 							const { data: res, error: resErr } = await actions.read.doc.resolvePath({ path: p, title: name });
 							if (resErr || !res) throw resErr || new Error('Failed to resolve path');
-							const dPath = (res).path;
+							const dPath = res.path;
 							const tLeafId = `temp_l_${Date.now()}`;
 							const sectId = urlIds.sectionId;
 							let url = '';
@@ -1257,44 +1205,14 @@ function prune(items: TreeType[]): TreeType[] {
 							url = aParentId === sectId ? buildRoute(sectId, undefined, tLeafId) : buildRoute(sectId, aParentId, tLeafId);
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
-								(/**
-								( * ( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * ( * @return
-								( * ( * ( * ( * ( * (
-								( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * @return
-								( * ( * ( * ( * (
-								( * ( * ( * ( *
-								( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( *
-								( * ( * ( * ( * @return
-								( * ( * ( * (
-								( * ( * ( *
-								( * ( * ( * @param nodes
-								( * ( * ( * @param tgtId
-								( * ( * ( *
-								( * ( * ( * @return
-								( * ( * (
-								( * ( *
-								( * ( * @param nodes
-								( * ( * @param tgtId
-								( * ( *
-								( * ( * @return
-								( * (
-								( *
-								( * @param nodes
-								( * @param tgtId
-								( *
-								( * @return
-								( */
-function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
+                /**
+                 * Inserts a new temporary page under its target branch if it is not already present.
+                 *
+                 * @param nodes - Navigation nodes searched for the target branch.
+                 * @param tgtId - Branch identifier that should receive the new page.
+                 * @returns Whether the target branch was found and updated.
+                 */
+                const insertLeaf = (nodes: TreeType[], tgtId: string): boolean => {
 									for (const n of nodes) {
 										if (n.type === 'branch') {
 											if (n.origName === tgtId) {
@@ -1308,7 +1226,8 @@ function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
 										}
 									}
 									return false;
-								})(nTree, aParentId);
+								};
+					insertLeaf(nTree, aParentId);
 								return nTree;
 							});
 							memoryDrafts.set(url, { source: '', draft: { content: [], description: '', path: dPath, title: name }, metadata: { path: dPath, title: name, description: '', pathname: url } });
@@ -1360,44 +1279,14 @@ function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
 							const gUrl = buildRoute(rootId, tGrpId);
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
-								(/**
-								( * ( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * ( * @return
-								( * ( * ( * ( * ( * (
-								( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * @return
-								( * ( * ( * ( * (
-								( * ( * ( * ( *
-								( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( *
-								( * ( * ( * ( * @return
-								( * ( * ( * (
-								( * ( * ( *
-								( * ( * ( * @param nodes
-								( * ( * ( * @param tgtId
-								( * ( * ( *
-								( * ( * ( * @return
-								( * ( * (
-								( * ( *
-								( * ( * @param nodes
-								( * ( * @param tgtId
-								( * ( *
-								( * ( * @return
-								( * (
-								( *
-								( * @param nodes
-								( * @param tgtId
-								( *
-								( * @return
-								( */
-function insertGroup(nodes: TreeType[], tgtId: string): boolean {
+                /**
+                 * Adds a temporary group and its index page beneath the target branch.
+                 *
+                 * @param nodes - Navigation nodes searched for the target branch.
+                 * @param tgtId - Branch identifier that should receive the group.
+                 * @returns Whether the target branch was found and updated.
+                 */
+                const insertGroup = (nodes: TreeType[], tgtId: string): boolean => {
 									for (const n of nodes) {
 										if (n.type === 'branch') {
 											if (n.origName === tgtId) {
@@ -1413,7 +1302,8 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
 										}
 									}
 									return false;
-								})(nTree, rootId);
+								};
+					insertGroup(nTree, rootId);
 								return nTree;
 							});
 							memoryDrafts.set(url, { source: '', draft: { content: [], description: '', path: dPath, title: 'Untitled' }, metadata: { path: dPath, title: 'Untitled', description: '', pathname: url } });
@@ -1463,13 +1353,6 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
       const prevTree = JSON.parse(JSON.stringify(tree)) as TreeType[];
       let _nPath = p;
       try {
-        /**
-         * Handles find parent path.
-         *
-         * @param nodes - Sidebar nodes searched for the target document.
-         * @param tgtPath - Target document path being resolved.
-         * @param currPath - Current traversal path accumulated during the search.
-         */
         const pPath =
           (
             /**
@@ -1885,9 +1768,9 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   attachmentTripwireRenders.current++;
   if (attachmentTripwireRenders.current > 50) {
     const attachmentTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
-    for (const key of Object.keys(attachmentTripwireTrackedVars) as Array<
-      keyof typeof attachmentTripwireTrackedVars
-    >)
+    for (const key of Object.keys(
+      attachmentTripwireTrackedVars,
+    ) as (keyof typeof attachmentTripwireTrackedVars)[])
       if (attachmentTripwireTrackedVars[key] !== attachmentTripwirePrevVars.current[key])
         attachmentTripwireDiff[key] = {
           old: attachmentTripwirePrevVars.current[key],
@@ -1991,7 +1874,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           groups.push({ groupTitle: gTitle, nodes: gNodes });
         } else if (c.type === 'leaf') {
           const lTitle = cTitle(toNodeLabel(c.title || c.origName));
-          groups[0]!.nodes.push({
+          groups[0]?.nodes.push({
             title: lTitle,
             fullTitle: `${sectTitle} / ${lTitle}`,
             id: c.origName,
@@ -2010,31 +1893,34 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     if (!trimmedQuery) return [];
     const lowerQuery = trimmedQuery.toLowerCase();
     const leaves: { path: string; title: string; breadcrumb: string }[] = [];
-    /**
-     * Collects matching leaf pages while carrying their displayed breadcrumb.
-     * @param nodes Navigation siblings to search in their rendered order.
-     * @param pathStr Breadcrumb prefix accumulated from parent branches.
-     * @returns No value; matches are appended to the enclosing search result.
-     */
-    const walk = (nodes: TreeType[], pathStr: string): void => {
-      nodes.forEach((n) => {
-        const currTitle = n.title || n.origName;
-        if (n.type === 'leaf') {
-          if (
-            currTitle.toLowerCase().includes(lowerQuery) ||
-            (n.path ? n.path.toLowerCase() : '').includes(lowerQuery)
-          ) {
-            leaves.push({
-              path: n.path!,
-              title: currTitle,
-              breadcrumb: pathStr,
-            });
-          }
-        } else if (n.type === 'branch' && n.children)
-          walk(n.children, pathStr ? `${pathStr} / ${currTitle}` : currTitle);
-      });
-    };
-    walk(tree, '');
+    (
+      /**
+       * Collects document leaves whose title or path matches the current sidebar search.
+       *
+       * @param nodes Tree nodes searched at the current hierarchy level.
+       * @param pathStr Ancestor route prefix used when constructing each matching leaf path.
+       *
+       * @returns Nothing; appends matching leaf metadata to the enclosing search result list.
+       */
+      function walk(nodes: TreeType[], pathStr: string): void {
+        nodes.forEach((n) => {
+          const currTitle = n.title || n.origName;
+          if (n.type === 'leaf') {
+            if (
+              currTitle.toLowerCase().includes(lowerQuery) ||
+              (n.path ? n.path.toLowerCase() : '').includes(lowerQuery)
+            ) {
+              leaves.push({
+                path: n.path!,
+                title: currTitle,
+                breadcrumb: pathStr,
+              });
+            }
+          } else if (n.type === 'branch' && n.children)
+            walk(n.children, pathStr ? `${pathStr} / ${currTitle}` : currTitle);
+        });
+      }
+    )(tree, '');
     return leaves;
   }, [query, tree]);
   useEffect(() => {
@@ -2056,20 +1942,35 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   const fetchAtts = useCallback(async () => {
     if (!manageAttTgt) return;
     setAttachmentDialogLoading(true);
-    const paths = [
-      ...new Set(
-        (a ? [a.id] : nodeGroups.flatMap((g) => g.nodes.map((n) => n.id))).filter(
-          (path): path is string => typeof path === 'string' && path.length > 0,
+    setAtts(
+      Object.fromEntries(
+        await Promise.all(
+          [
+            ...new Set(
+              (a
+                ? [a.id]
+                : nodeGroups.flatMap((group) => group.nodes.map((node) => node.id))
+              ).filter((path): path is string => typeof path === 'string' && path.length > 0),
+            ),
+          ].map(async (path) => {
+            const { data, error: err } = await actions.read.doc.attachments({ path });
+            const attachments = Array.isArray(data)
+              ? data.map((attachment): Sister => {
+                  const sister = attachment as Sister;
+                  return {
+                    ...attachment,
+                    isMd:
+                      typeof sister.isMd === 'boolean'
+                        ? sister.isMd
+                        : TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(attachment.path),
+                  };
+                })
+              : [];
+            return [path, err ? [] : attachments] as const;
+          }),
         ),
       ),
-    ];
-    const entries = await Promise.all(
-      paths.map(async (path) => {
-        const { data, error: err } = await actions.read.doc.attachments({ path });
-        return [path, err || !data ? [] : data] as const;
-      }),
     );
-    setAtts(Object.fromEntries(entries));
     setAttachmentDialogLoading(false);
   }, [manageAttTgt, a, nodeGroups]);
   useEffect(() => {
@@ -2077,22 +1978,14 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   }, [fetchAtts]);
 
   // DRAG AND DROP
-  /**
-   * Handles on drop.
-   *
-   * @param e - Pointer event received from the sidebar item.
-   * @param tgtPath - Destination path associated with the selected item.
-   */
-
   // SELECTION
-  /**
-   * Handles toggle sel.
+  /** Toggles an attachment in the multi-selection, or replaces selection without a modifier key.
    *
-   * @param e - Pointer event received from the document action.
-   * @param docPath - Document path targeted by the action.
-   * @param a - Action metadata used to perform the document operation.
+   * @param e Mouse event whose modifier keys determine additive selection.
+   * @param docPath Document path that owns the attachment.
+   * @param a Attachment record to add or remove from the selection.
    *
-   * @return
+   * @returns Nothing; updates the selected attachment set and stops its click from navigating.
    */
   const toggleSel = (e: React.MouseEvent, docPath: string, a: Sister) => {
     e.stopPropagation();
@@ -2154,9 +2047,9 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   useEffect(() => {
     if (!manageAttTgt) return;
     /**
-     * Handles handle key down.
+     * Deletes the selected attachments when the user presses Backspace or Delete.
      *
-     * @param e - Pointer event received from the sidebar control.
+     * @param e - Keyboard event received by the attachment manager.
      */
     const handleKeyDown = (e: KeyboardEvent) => {
       if (attachmentDialogLoading || disabled || selAtts.length === 0) return;
@@ -2174,18 +2067,12 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   }, [manageAttTgt, attachmentDialogLoading, disabled, selAtts, handleKeyboardDelete]);
 
   /**
-   * Handles upload.
+   * Adds remote URLs, package references, or an internal Docs page as attachments.
    *
-   * @param files - Files available to the sidebar resolver.
-   * @param tgtPath - Target path used to select the matching file.
-   */
-  /**
-   * Handles add remote.
-   *
-   * @param v - Sidebar value being normalized.
-   * @param type - Sidebar node type used to select the renderer.
-   * @param tgtPath - Target path associated with the node.
-   * @param titleOverride - Optional title replacing the node's default title.
+   * @param v - One or more newline-separated URLs or route references.
+   * @param type - Attachment category chosen by the user.
+   * @param tgtPath - Document path receiving the new attachments.
+   * @param titleOverride - Optional title for a newly created Docs page.
    */
   const addRemote = async (
     v: string,
@@ -2263,14 +2150,13 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     );
   };
 
-  /**
-   * Handles attach page.
+  /** Creates a temporary leaf or refreshes an existing leaf after the host saves a page.
    *
    * @param path - Document path being created or edited.
    * @param isNew - Whether the path represents a new document.
    * @param customTitle - Optional title supplied by the editor.
    *
-   * @return
+   * @returns Nothing; creates or updates the sidebar leaf for the saved document.
    */
   const attachPage = async (path: string, isNew = false, customTitle?: string) => {
     if (!a) return;
@@ -2296,29 +2182,32 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           }
           // 2. Secondary Fallback: Tree Search (for established documents)
           if (!groupId) {
-            /**
-             * Finds the target leaf and records its nearest containing branch as the group.
-             * @param nodes Navigation nodes in the active sidebar tree.
-             * @param tgtLeafId Leaf ID or path being moved or selected.
-             * @param currGroupId Nearest branch identifier inherited by the recursive call.
-             * @returns `true` after a matching leaf updates `groupId`, otherwise `false`.
-             */
-            const findGroup = (
-              nodes: TreeType[],
-              tgtLeafId: string,
-              currGroupId?: string,
-            ): boolean => {
-              for (const n of nodes) {
-                if (n.type === 'leaf' && (n.origName === tgtLeafId || n.path === tgtLeafId)) {
-                  groupId = currGroupId;
-                  return true;
+            (
+              /**
+               * Finds the containing group for a selected leaf in the navigation tree.
+               *
+               * @param nodes Tree nodes searched at this level.
+               * @param tgtLeafId Leaf ID or path being resolved.
+               * @param currGroupId Group ID inherited from the current branch.
+               *
+               * @returns `true` when the leaf is found and its parent group is assigned.
+               */
+              function findGroup(
+                nodes: TreeType[],
+                tgtLeafId: string,
+                currGroupId?: string,
+              ): boolean {
+                for (const n of nodes) {
+                  if (n.type === 'leaf' && (n.origName === tgtLeafId || n.path === tgtLeafId)) {
+                    groupId = currGroupId;
+                    return true;
+                  }
+                  if (n.type === 'branch' && n.children)
+                    if (findGroup(n.children, tgtLeafId, n.origName)) return true;
                 }
-                if (n.type === 'branch' && n.children)
-                  if (findGroup(n.children, tgtLeafId, n.origName)) return true;
+                return false;
               }
-              return false;
-            };
-            findGroup(tree, a.id);
+            )(tree, a.id);
           }
           if (groupId) parentId = groupId;
         }
@@ -2355,7 +2244,6 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     setAddMode(null);
     setQuery('');
   };
-
   // RENDERS
   return (
     <ErrorBoundary
@@ -2495,13 +2383,10 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
             const failures: { filename: string; path: string; reason: string }[] = [];
 
             // Helper to accurately identify file types, prioritizing Sanity's explicit filename when available
-            /**
-             * Checks whether ext match.
-             *
-             * @param p - Value passed to the helper.
-             * @param regex - Value passed to the helper.
-             *
-             * @return
+            /** Matches an extension against the path or Sanity's mapped asset filename.
+             * @param p Asset URL or path being classified.
+             * @param regex Extension pattern to test against the URL or mapped filename.
+             * @returns Whether either available name matches the requested extension.
              */
             const isExtMatch = (p: string, regex: RegExp) => {
               if (regex.test(p.split('?')[0] || p)) return true;
@@ -2593,12 +2478,12 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
             };
 
             /**
-             * Resolves the Path.
+             * Converts a source path or URL into a safe local filename.
              *
-             * @param p - Value passed to the helper.
-             * @param forceExt - Value passed to the helper.
+             * @param p - Source path or URL being normalized.
+             * @param forceExt - Optional file extension to apply to the result.
              *
-             * @return
+             * @returns A normalized relative filename, falling back to `untitled-file` when needed.
              */
             const resolvePath = (p: string, forceExt?: string) => {
               let rel = p;
@@ -2636,11 +2521,11 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
             };
 
             /**
-             * Fetches the fetch Asset Data.
+             * Loads an asset's bytes and content type from the local host or a remote URL.
              *
-             * @param p - Value passed to the helper.
+             * @param p - Local asset path or remote URL to fetch.
              *
-             * @return fetch Asset Data.
+             * @returns The asset bytes and response content type, or `null` when loading fails.
              */
             const fetchAssetData = async (
               p: string,
@@ -3124,6 +3009,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                           </h4>
                         )}
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {/* Dropping a chip on a card moves it to that card's document. */}
                           {g.nodes.map((n) => (
                             <Card
                               key={n.id}
@@ -3298,7 +3184,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                           </>
                         ) : addMode === 'page' ? (
                           <div
-                            className="flex flex-col gap-4"
+                            className={DOCS_LAYOUT_CLASSES.spacedStack}
                             onClick={(e) => {
                               e.stopPropagation();
                             }}
@@ -3339,7 +3225,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                                     disabled={isCreating}
                                   >
                                     <div className="flex flex-col">
-                                      <span className="text-sm font-medium">
+                                      <span className={DOCS_LAYOUT_CLASSES.controlTitle}>
                                         {isCreating ? 'Creating...' : `Create "${query}"`}
                                       </span>
                                       <span className="text-xs opacity-70">
@@ -3356,7 +3242,9 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                                         onClick={() => void attachPage(r.path, false, r.title)}
                                       >
                                         <div className="flex flex-col">
-                                          <span className="text-sm font-medium">{r.title}</span>
+                                          <span className={DOCS_LAYOUT_CLASSES.controlTitle}>
+                                            {r.title}
+                                          </span>
                                           <span className="text-xs text-primary-11 opacity-70">
                                             {r.breadcrumb ? `${r.breadcrumb} / ${r.path}` : r.path}
                                           </span>
@@ -3369,7 +3257,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                           </div>
                         ) : (
                           <div
-                            className="flex flex-col gap-4"
+                            className={DOCS_LAYOUT_CLASSES.spacedStack}
                             onClick={(e) => {
                               e.stopPropagation();
                             }}
@@ -3482,10 +3370,12 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                         </div>
                       </>
                     )}
+                    {/* Uploads the selected local files as attachments to the active document. */}
                     <input
                       ref={fileRef}
                       type="file"
                       className="hidden"
+                      aria-label={`Select files to attach to ${a.title}`}
                       multiple
                       onChange={(e) => {
                         const files = e.currentTarget.files;
@@ -3521,7 +3411,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
               {/* FOOTER */}
               {/* prettier-ignore */}
               <DialogFooter className='flex shrink-0 items-center justify-end gap-2 pt-4'>
-					{a && !addMode && <Button onClick={() => { setAddMode('select'); }}><AddIcon className='mr-2 size-4' aria-hidden='true' /> Add Attachment</Button>}
+					{a && !addMode && <Button onClick={() => { setAddMode('select'); }}><AddIcon className={DOCS_LAYOUT_CLASSES.iconBeforeLabel} aria-hidden='true' /> Add Attachment</Button>}
 					{a && addMode === 'select' && <Button variant='ghost' onClick={() => { setAddMode(null); }}>Cancel</Button>}
 					{a && addMode === 'page' && <Button variant='ghost' onClick={() => { setAddMode('select'); setQuery(''); }}>Back</Button>}
 					{a && addMode && addMode !== 'select' && addMode !== 'page' && (
@@ -3682,55 +3572,44 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           {(sects.length > 1 || permission === 'write') && (
             <div className="mt-2 flex items-center">
               <div className={cn('block min-w-0 flex-1 rounded-md transition-opacity')}>
-                <ContextMenu onOpenChange={(o) => o && setSectionOpen(false)}>
-                  <Select
-                    disabled={transitioning}
-                    open={sectionOpen}
-                    onOpenChange={setSectionOpen}
-                    value={aViewed ? aViewed.origName : ''}
-                    onValueChange={async (v) => {
-                      if (v === '__add_section__') {
-                        setTimeout(() => {
-                          addSection();
-                        }, 0);
-                        return;
-                      }
-                      if (aViewed?.origName === v) return;
-                      setViewedSecId(v);
-                    }}
-                  >
-                    <SelectTrigger
-                      className="w-full"
-                      aria-label="Section"
-                      data-docs-navigation="true"
-                      onPointerDown={(e) => {
-                        if (e.button === 0) setSectionOpen(true);
-                      }}
-                    >
-                      <SelectValue placeholder="Section" />
-                    </SelectTrigger>
-                    <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
-                      {sects.map((s) => {
-                        if (s.simulated) {
-                          return (
-                            <SelectItem
-                              key={s.origName}
-                              value={s.origName}
-                              icon={
-                                <span
-                                  aria-hidden="true"
-                                  className="size-3.5 rounded-[3px]"
-                                  style={{
-                                    backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
-                                  }}
-                                />
-                              }
-                              className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
-                            >
-                              {s.title || 'New Section'}
-                            </SelectItem>
-                          );
-                        }
+                <Select
+                  disabled={transitioning}
+                  open={sectionOpen}
+                  onOpenChange={setSectionOpen}
+                  value={aViewed ? aViewed.origName : ''}
+                  onValueChange={async (v) => {
+                    if (v === '__add_section__') {
+                      setTimeout(() => {
+                        addSection();
+                      }, 0);
+                      return;
+                    }
+                    if (aViewed?.origName === v) return;
+                    setViewedSecId(v);
+                  }}
+                >
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <SelectTrigger
+                        className="w-full"
+                        aria-label="Section"
+                        data-docs-navigation="true"
+                        onPointerDown={(e) => {
+                          if (e.button === 0) setSectionOpen(true);
+                        }}
+                      >
+                        <SelectValue placeholder="Section" />
+                      </SelectTrigger>
+                    </ContextMenuTrigger>
+                    {aViewed && (
+                      <ContextMenuContent>
+                        <Menu actions={SidebarActions.renderSects!(aViewed)} />
+                      </ContextMenuContent>
+                    )}
+                  </ContextMenu>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
+                    {sects.map((s) => {
+                      if (s.simulated) {
                         return (
                           <SelectItem
                             key={s.origName}
@@ -3740,45 +3619,49 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                                 aria-hidden="true"
                                 className="size-3.5 rounded-[3px]"
                                 style={{
-                                  backgroundColor: `hsl(${hueDlg?.open && hueDlg.section.origName === s.origName ? hueDlg.hue : getHue(s.title || s.origName, s.hue)} 65% 55%)`,
+                                  backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
                                 }}
                               />
                             }
                             className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
                           >
-                            <ContextMenuTrigger
-                              className="flex w-full items-center justify-between"
-                              onContextMenuCapture={() => setSectionMenuTarget(s)}
-                            >
-                              <span className="line-clamp-1">
-                                {cTitle(toNodeLabel(s.title || s.origName))}
-                              </span>
-                            </ContextMenuTrigger>
+                            {s.title || 'New Section'}
                           </SelectItem>
                         );
-                      })}
-                      {permission === 'write' && (
-                        <>
-                          {sects.length > 0 && !sects[0]?.simulated && (
-                            <Separator className="my-1" />
-                          )}
-                          <SelectItem
-                            value="__add_section__"
-                            icon={<AddIcon className="size-4" />}
-                            className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
-                          >
-                            <span>Add section</span>
-                          </SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <ContextMenuContent>
-                    {sectionMenuTarget && (
-                      <Menu actions={SidebarActions.renderSects!(sectionMenuTarget)} />
+                      }
+                      return (
+                        <SelectItem
+                          key={s.origName}
+                          value={s.origName}
+                          icon={
+                            <span
+                              aria-hidden="true"
+                              className="size-3.5 rounded-[3px]"
+                              style={{
+                                backgroundColor: `hsl(${hueDlg?.open && hueDlg.section.origName === s.origName ? hueDlg.hue : getHue(s.title || s.origName, s.hue)} 65% 55%)`,
+                              }}
+                            />
+                          }
+                          className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                        >
+                          {cTitle(toNodeLabel(s.title || s.origName))}
+                        </SelectItem>
+                      );
+                    })}
+                    {permission === 'write' && (
+                      <>
+                        {sects.length > 0 && !sects[0]?.simulated && <Separator className="my-1" />}
+                        <SelectItem
+                          value="__add_section__"
+                          icon={<AddIcon className="size-4" />}
+                          className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                        >
+                          <span>Add section</span>
+                        </SelectItem>
+                      </>
                     )}
-                  </ContextMenuContent>
-                </ContextMenu>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}
@@ -3786,7 +3669,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
         {/* TOC */}
         <ContextMenu>
           <ContextMenuTrigger className="flex min-h-0 flex-1 flex-col outline-none">
-            <SidebarContent className="min-h-0 flex-1 overflow-y-auto">
+            <SidebarContent className={DOCS_LAYOUT_CLASSES.flexScrollArea}>
               <SidebarMenu>
                 {children.map((n) => (
                   <Tree

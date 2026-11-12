@@ -40,7 +40,7 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Controlled editor surface backed by the canonical Docs editor.
+ * Renders a controlled Docs editor with lazy-loaded content in edit or read-only mode.
  *
  * @param editorOptions Controlled value, rendering mode, and optional block capabilities for one editor surface.
  * @param editorOptions.value Controlled Portable Text document value.
@@ -49,7 +49,7 @@ HELPERS
  * @param editorOptions.mode Selects editable controls or read-only rendering.
  * @param editorOptions.onChange Required callback in edit mode for updated content.
  *
- * @return The Docs editor surface in editable or read-only mode.
+ * @return The Docs editor surface configured for editing or read-only rendering.
  */
 export function Docs(editorOptions: DocsProps): JSX.Element {
   return (

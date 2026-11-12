@@ -418,7 +418,7 @@ CANVAS
  * @param d - Whether nodes rank top-to-bottom (`TB`) or left-to-right (`LR`).
  * @param p - Connection rule that lets nearby graph nodes link automatically in sync graph.
  * @param c - Editability flag controlling whether sync graph accepts changes.
- * @param a - Arc controls input supplied to sync graph's operation.
+ * @param a - Whether nodes use named Arc handles instead of positional handles.
  * @param o - Callback fired after a group node resize is committed.
  *
  * @return Node and edge arrays after layout, handle assignment, and grouping metadata are applied.
@@ -553,47 +553,42 @@ function syncGraph(
 const FLOW_COMPONENTS = {
   nodeTypes: NODE_TYPES,
   /**
-   * Renders the interactive flow canvas and context menus for n editing, grouping, and layout.
+   * Renders the React Flow canvas and forwards graph events to the supplied handlers.
    *
-   * @param flow - Flow graph data rendered into canvas's canvas.
-   * @param nodeTypes - Node renderer map that draws graph nodes in canvas.
-   * @param edgeTypes - Edge renderer map that draws graph connections in canvas.
-   * @param nodeLabels - Node label map shown alongside canvas's graph nodes.
-   * @param onNodeClick - Callback invoked when a user selects a node in canvas.
-   * @param onNodesChange - Callback invoked with the updated node changes from canvas.
-   * @param onEdgesChange - Callback invoked with the updated edge changes from canvas.
-   * @param onConnect - Callback invoked with a new connection created in canvas.
-   * @param onEdgeDoubleClick - Callback invoked for edge double click.
-   * @param onAddNode - Callback invoked for add node.
-   * @param onAddContent - Callback invoked for add content.
-   * @param lockedTypes - Node types that canvas must keep read-only.
-   * @param allowedTypes - Node types that canvas permits users to create.
-   * @param onGroupNodes - Callback invoked for group nodes.
-   * @param onUngroupNodes - Callback invoked for ungroup nodes.
-   * @param onDeleteSelected - Callback invoked for delete selected.
-   * @param onAlignNodes - Callback invoked for align nodes.
-   * @param onDistributeNodes - Callback invoked for distribute nodes.
-   * @param onRenameNode - Callback invoked for rename node.
-   * @param onChangeNodeType - Callback invoked for change node type.
-   * @param onChangeEdgeStyle - Callback invoked for change edge style.
-   * @param onDeleteEdge - Callback invoked for delete edge.
-   * @param onAutoLayout - Callback invoked for auto layout.
-   * @param onReady - Callback invoked when canvas finishes initialising its graph surface.
-   * @param interactive - Interaction flag that controls whether canvas accepts graph input.
-   * @param editable - Editability flag controlling whether canvas accepts changes.
-   * @param isFocused - Boolean flag controlling canvas's is focused behaviour.
-   * @param height - Viewport height reserved for canvas's graph surface.
-   * @param showBg - Visibility flag for canvas's graph background.
-   * @param showCtrls - Visibility flag for canvas's graph controls.
-   * @param arcControls - Arc controls input supplied to canvas's operation.
-   * @param readyWhenEmpty - Readiness rule that lets canvas finish with no graph nodes.
-   * @param _onEdgeDoubleClick - Edge double-click handler.
+   * @param flow Graph nodes and edges displayed by the canvas.
+   * @param nodeTypes React Flow node renderer map, including the built-in node types.
+   * @param edgeTypes Optional React Flow edge renderer map.
+   * @param nodeLabels Labels displayed for node types in the canvas controls.
+   * @param onNodeClick Optional callback receiving a clicked graph node.
+   * @param onNodesChange Callback receiving React Flow node changes.
+   * @param onEdgesChange Callback receiving React Flow edge changes.
+   * @param onConnect Callback receiving a new edge connection.
+   * @param onEdgeDoubleClick Callback invoked when a graph edge is double-clicked.
+   * @param onAddNode Callback that creates a node of the selected type at the supplied position.
+   * @param onAddContent Optional callback that adds Docs content at a canvas position.
+   * @param lockedTypes Node types whose nodes cannot be edited.
+   * @param allowedTypes Node types available for creation in the canvas controls.
+   * @param onGroupNodes Callback receiving the group node, its selected children, and its position.
+   * @param onUngroupNodes Callback receiving the nodes to remove from a group.
+   * @param onDeleteSelected Callback receiving the selected nodes to delete.
+   * @param onAlignNodes Callback receiving the selected nodes and alignment direction.
+   * @param onDistributeNodes Callback receiving the selected nodes and distribution direction.
+   * @param onRenameNode Callback receiving the identifier of the node to rename.
+   * @param onChangeNodeType Callback receiving a node identifier and its replacement type.
+   * @param onChangeEdgeStyle Callback receiving an edge identifier and its replacement style.
+   * @param onDeleteEdge Callback receiving the identifier of the edge to delete.
+   * @param onAutoLayout Callback that requests automatic layout of the graph.
+   * @param onReady Optional callback invoked when the canvas is ready to use.
+   * @param interactive Whether the canvas allows interactive graph gestures such as node dragging.
+   * @param editable Whether graph operations may update and commit the graph data.
+   * @param isFocused Whether the canvas currently owns keyboard focus.
+   * @param height Height of the React Flow viewport in pixels.
+   * @param showBg Whether to render the canvas background grid.
+   * @param showCtrls Whether to render the React Flow controls.
+   * @param arcControls Whether the controls include the graph's edge-editing actions.
+   * @param readyWhenEmpty Whether an empty graph can be reported as ready.
    *
-   * @return Interactive React Flow canvas and its context-menu actions.
-   *
-   * @remarks
-   * This component stays intentionally thin and delegates all graph mutation logic to the helper
-   * functions above.
+   * @return The React Flow canvas configured with this graph and its interaction handlers.
    */
   Canvas({
     flow,
@@ -733,12 +728,9 @@ const FLOW_COMPONENTS = {
       [nodesMap, menuCtx.type, menuCtx.id],
     );
 
-    /**
-     * Checks whether the n is locked.
-     *
-     * @param n - Value passed to the helper.
-     *
-     * @return True when the n is missing or its type is blocked from editing.
+    /** Returns `true` for a missing node or a node type that cannot be edited.
+     * @param n Node resolved from the current flow menu, if it still exists.
+     * @returns Whether editing actions should be blocked for this node.
      */
     const locked = (n: FlowNode | undefined): boolean => {
       if (!n) {
@@ -1283,40 +1275,37 @@ COMPONENT
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the Docs flow canvas and coordinates graph layout, editing, selection, and toolbar actions.
+ * Renders a Docs flow diagram and coordinates its graph state, layout, selection, and editing controls.
  *
- * @param className - Extra classes applied to the outer flow wrapper.
- * @param onCommit - Callback that receives the fully normalised flow after each change.
- * @param initialNodes Initial node records used before the first graph synchronization.
- * @param initialEdges Initial edge records connected to those nodes.
- * @param nodeSep - Horizontal gap between graph nodes in nodes.
- * @param rankSep - Vertical gap between graph ranks in nodes.
- * @param height - Viewport height reserved for nodes's graph surface.
- * @param onAddContent - Callback invoked for add content.
- * @param onNodeClick - Callback invoked when a user selects a node in nodes.
- * @param customNodeTypes Additional renderers that override or extend the built-in node types.
- * @param nodeLabels - Node label map shown alongside nodes's graph nodes.
- * @param lockedTypes - Node types that nodes must keep read-only.
- * @param allowedTypes - Node types that nodes permits users to create.
- * @param disabled - Disabled state controlling whether nodes accepts interaction.
- * @param clipboardKey - Clipboard key that enables graph copy and paste in nodes.
- * @param arcControls - Arc controls input supplied to nodes's operation.
- * @param edgeTypes - Edge renderer map that draws graph connections in nodes.
- * @param readyWhenEmpty - Readiness rule that lets nodes finish with no graph nodes.
- * @param onReady - Callback invoked when nodes finishes initialising its graph surface.
- * @param style - Inline style values merged into nodes.
- * @param rest - Rest input supplied to nodes's operation.
- * @param dir Dagre layout direction, either top-to-bottom or left-to-right.
- * @param interactive - Interaction flag that controls whether nodes accepts graph input.
- * @param editable - Editability flag controlling whether nodes accepts changes.
- * @param proximityConnect - Connection rule that lets nearby graph nodes link automatically in nodes.
- * @param showBg - Visibility flag for nodes's graph background.
- * @param showCtrls - Visibility flag for nodes's graph controls.
+ * @param initialNodes Nodes used to initialize the graph and synchronize it when the input changes.
+ * @param initialEdges Edges used to initialize the graph and synchronize it when the input changes.
+ * @param className Additional classes applied to the outer canvas container.
+ * @param dir Dagre layout direction: top-to-bottom (`TB`) or left-to-right (`LR`).
+ * @param nodeSep Separation between sibling nodes in automatic layout.
+ * @param rankSep Separation between ranks in automatic layout.
+ * @param proximityConnect Whether automatic layout may connect eligible nearby nodes.
+ * @param interactive Whether users can interact with the canvas, including dragging nodes.
+ * @param height Optional canvas height in pixels; the measured height is used when omitted.
+ * @param onCommit Callback receiving the normalized node and edge arrays after a graph edit.
+ * @param onAddContent Optional callback that inserts Docs content at a canvas position.
+ * @param onNodeClick Optional callback receiving the clicked graph node.
+ * @param customNodeTypes Custom node renderers that extend or override the built-in node types.
+ * @param nodeLabels Labels shown for node types in the canvas controls.
+ * @param lockedTypes Node types whose nodes cannot be edited.
+ * @param allowedTypes Node types available for creation in the canvas controls.
+ * @param editable Whether graph edits can be committed.
+ * @param disabled Whether to disable editing controls even when editing is enabled.
+ * @param clipboardKey Local storage key used to save and load copied graph data.
+ * @param showBg Whether to render the graph background grid.
+ * @param showCtrls Whether to render the React Flow controls.
+ * @param arcControls Whether the controls include the graph's edge-editing actions.
+ * @param edgeTypes Optional custom React Flow edge renderers.
+ * @param readyWhenEmpty Whether an empty graph can be reported as ready.
+ * @param onReady Optional callback invoked when the canvas is ready to use.
+ * @param style Inline styles merged into the outer canvas container.
+ * @param rest Other React Flow properties; the wrapper uses `tabIndex`, `onFocus`, and `onBlur`.
  *
- * @return Docs flow editor wrapper with derived height, toolbar controls, and drag state.
- *
- * @remarks
- * This is the public entrypoint; the rest of the file exists to keep the canvas state manageable.
+ * @return The Docs flow canvas with layout, selection, and editing controls configured by these props.
  */
 export default function Nodes({
   nodes: initialNodes = [],
@@ -1362,7 +1351,6 @@ export default function Nodes({
   const flowRef = useRef(flow);
   const permitted = editable && !disabled;
   const normLockedTypes = lockedTypes.filter((t): t is FlowNodeType => t in NODE_TYPES);
-  const normAllowedTypes = allowedTypes.filter((t): t is FlowNodeType => t in NODE_TYPES);
   const fns = useRef({ onCommit, onAddContent });
   fns.current = { onCommit, onAddContent };
 
@@ -1963,7 +1951,7 @@ export default function Nodes({
               [writeGraph],
             )}
             lockedTypes={normLockedTypes}
-            allowedTypes={normAllowedTypes}
+            allowedTypes={allowedTypes.filter((t): t is FlowNodeType => t in NODE_TYPES)}
             {...(fns.current.onAddContent === undefined
               ? {}
               : { onAddContent: fns.current.onAddContent })}
@@ -2088,12 +2076,9 @@ export default function Nodes({
                   const isHoriz = t.startsWith('horizontal');
                   const sizeKey = isHoriz ? 'w' : 'h';
 
-                  /**
-                   * Handles get edge.
-                   *
-                   * @param p - Graph node whose position should be rendered.
-                   *
-                   * @return
+                  /** Returns the node's leading, center, or trailing edge on the selected axis.
+                   * @param p Node and absolute position being measured.
+                   * @returns The requested edge coordinate for the active axis.
                    */
                   const getEdge = (p: { n: FlowNode; abs: { x: number; y: number } }) => {
                     const basePos = p.abs[isHoriz ? 'x' : 'y'];

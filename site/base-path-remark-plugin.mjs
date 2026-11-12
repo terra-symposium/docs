@@ -14,29 +14,29 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Prefixes a site-local absolute URL with the configured deployment base, leaving external and already-prefixed paths alone.
+ * Prefixes a root-relative URL with the deployed site base while preserving external and fragment URLs.
  *
- * @param value Markdown or JSX URL value to adjust.
- * @param base Astro deployment base such as `/docs/`.
+ * @param value - URL from a Markdown link, image, or HTML attribute.
+ * @param base - Astro base path used by the current deployment.
  *
- * @return The base-prefixed URL, or the original value when it is not eligible for rewriting.
+ * @return The base-prefixed URL, or the original value when no rewrite applies.
  */
 function addBasePath(value, base) {
   if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || base === '/')
     return value;
-  const basePath = `/${base.replace(TerraQualityRegex.REGEX_G_REGEX_6(), '')}`;
+  const basePath = `/${base.replace(TerraQualityRegex.REGEX_G_REGEX_35(), '')}`;
   if (value === basePath) return `${basePath}/`;
   if (value.startsWith(`${basePath}/`)) return value;
   return `${basePath}${value}`;
 }
 
 /**
- * Adds the deployment prefix to root-relative `href` and `src` attributes in raw HTML.
+ * Rewrites root-relative `href` and `src` attributes embedded in raw HTML.
  *
- * @param source HTML fragment from a Markdown node.
- * @param base Astro deployment base passed to the remark plugin.
+ * @param source - Raw HTML string from a Markdown node.
+ * @param base - Astro base path used by the current deployment.
  *
- * @return The HTML source with eligible attribute URLs prefixed.
+ * @return HTML with eligible attribute URLs routed through the deployed base path.
  */
 function addBaseToHtml(source, base) {
   return source.replace(
@@ -46,20 +46,18 @@ function addBaseToHtml(source, base) {
 }
 
 /**
- * Creates a remark transformer that prefixes local links, images, and JSX URL attributes.
+ * Creates a remark transformer that applies Astro's deployment base to authored resource links.
  *
- * @param base Astro deployment base supplied by the site configuration.
+ * @param base - Astro base path used to serve the site.
  *
- * @return A unified plugin that mutates matching URLs in each Markdown syntax tree.
+ * @return Transformer that updates root-relative Markdown, HTML, and MDX JSX URLs in place.
  */
 export function basePathRemarkPlugin({ base }) {
   return (tree) => {
     /**
-     * Prefixes eligible local URLs throughout a Markdown AST subtree.
+     * Walks a Markdown/MDX node tree and rewrites URL-bearing nodes recursively.
      *
-     * @param node Current syntax-tree node; descendants are visited recursively.
-     *
-     * @return Nothing; matching URL fields are updated in place.
+     * @param node - Current syntax-tree node and any nested children.
      */
     const visit = (node) => {
       if (['link', 'image', 'definition'].includes(node.type) && typeof node.url === 'string')

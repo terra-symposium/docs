@@ -54,7 +54,7 @@ HELPERS
 /**
  * Renders the loader component.
  *
- * @param className Optional classes added to the loading indicator.
+ * @param className - Additional classes merged into the loading indicator.
  *
  * @return The accessible loading indicator used by Docs transitions.
  */
@@ -101,7 +101,7 @@ export function Loader({ className }: { className?: string }): React.JSX.Element
  * @param className - Additional CSS classes merged into transition shell.
  * @param mode - Mode input supplied to transition shell's operation.
  * @param path - Source or route path resolved for transition shell.
- * @param staticContent Whether the body is already rendered and can skip editor-mount visibility gating.
+ * @param staticContent Whether the page is static and can skip client editor-mount visibility gating.
  *
  * @return A transition wrapper that keeps page visibility synchronized with route hydration.
  */
@@ -225,7 +225,9 @@ export function TransitionShell({
       $hydrating.listen(check),
     ];
     check();
-    return (): void => stop.forEach((unsubscribe) => unsubscribe());
+    return (): void => {
+      for (let i = 0; i < stop.length; i++) stop[i]?.();
+    };
   }, [mode, path, staticContent, transition]);
 
   // restores cursor or scroll position globally once shell unlocks
@@ -286,8 +288,7 @@ export function TransitionShell({
  * @param permission - Permission input supplied to editable's operation.
  * @param pathname - Pathname input supplied to editable's operation.
  * @param title - Heading text shown in editable.
- * @param src Optional source identifier used by the host's document adapter.
- * @param source - Source node identifier for the connection drawn by editable.
+ * @param src Markdown source associated with the editor draft.
  *
  * @return The document editor or read-only view configured for the supplied document and permission.
  */

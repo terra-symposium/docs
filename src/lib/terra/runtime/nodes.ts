@@ -330,10 +330,9 @@ const NODES = {
 /**
  * Encodes node payload arrays into a serializer-safe string literal.
  *
- * @param val
- * @param value - Node or edge array to encode for safe serializer round-tripping.
+ * @param val Node or edge array to encode for safe serializer round-tripping.
  *
- * @return
+ * @return A backtick-wrapped array literal whose delimiters are escaped for Docs source.
  *
  * @remarks
  * A template literal keeps the payload readable while preventing mdxeditor from compacting the
@@ -348,10 +347,9 @@ export const encodeNodesPayload = (val: unknown): string =>
 /**
  * Decodes a serializer-safe node payload back into arrays.
  *
- * @param val
- * @param value - Serialized node payload in array, JSON, or quoted literal form.
+ * @param val Serialized node payload in array, JSON, or quoted literal form.
  *
- * @return
+ * @return Decoded array, or an empty array when the input cannot be parsed as an array.
  *
  * @remarks
  * Accepts raw arrays, JSON strings, backtick-wrapped literals, and the newer quoted payload.
@@ -411,8 +409,7 @@ const literal = (v: unknown): string => {
 /**
  * Interprets a plain scalar string without forcing object or array parsing.
  *
- * @param val
- * @param value - Scalar text to interpret.
+ * @param val Scalar text to interpret.
  *
  * @return Scalar value, or the original string when it should remain a literal label.
  *

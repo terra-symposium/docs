@@ -23,24 +23,28 @@ REGEX
 //////////////////////////////////////////////////*/
 
 /**
- * Provides the matcher used to escape backslashes in generated Markdown or JSX.
- * @returns A fresh global regular expression for literal backslashes.
+ * Matches literal backslashes when restoring escaped Markdown punctuation.
+ *
+ * @return A fresh global matcher so replacement state cannot leak between calls.
  */
 const G_REGEX = () => /\\/g;
 /**
- * Provides the matcher for hexadecimal inline-math placeholders produced by this module.
- * @returns A fresh case-insensitive expression matching `DOCSMATH…END` placeholders.
+ * Finds encoded inline-math placeholders after Markdown tokenization.
+ *
+ * @return A fresh case-insensitive matcher for complete math placeholders.
  */
 const DOCSMATH_0_9A_F_END_GI_REGEX = () => /DOCSMATH[0-9a-f]+END/gi;
 /**
- * Provides the matcher for unescaped dollar-delimited inline-math source.
- * @returns A fresh global expression capturing non-empty math text without newline characters.
+ * Captures unescaped single-dollar spans that represent inline math.
+ *
+ * @return A fresh global matcher with the math body in capture group one.
  */
 const N_G_REGEX = () => /(?<!\\)\$([^$\n]+)\$/g;
 const BR_S_I_REGEX = /^<br\s*\/?>$/i;
 /**
- * Provides the matcher that separates dollar-delimited math from surrounding token text.
- * @returns A fresh global expression capturing a complete single-line `$...$` span.
+ * Finds inline-math spans before Markdown tokenization.
+ *
+ * @return A fresh global matcher that keeps each dollar-delimited span intact.
  */
 const N_G_CLASS_2 = () => /(\$[^$\n]+\$)/g;
 const N_REGEX = /^\$[^$\n]+\$$/;
@@ -49,48 +53,54 @@ const SHARED_REGEX = /^`+/;
 const S_REGEX = /\s/;
 const S_CLASS_2 = /\/\s*$/;
 /**
- * Provides the shared ampersand matcher used when escaping embedded HTML.
- * @returns A fresh global expression matching ampersands.
+ * Matches raw ampersands before inserting source into an HTML code element.
+ *
+ * @return A fresh global matcher for ampersand escaping.
  */
 const G_CLASS_2 = () => TerraQualityRegex.REGEX_G_REGEX_17();
 const DOCSBLOCK_D_PLACEHOLDER_REGEX = /DOCSBLOCK\d+PLACEHOLDER/;
 /**
- * Provides the shared double-quote matcher used when generating JSX attributes.
- * @returns A fresh global expression matching double quotes.
+ * Matches quotes escaped while preserving a code block's literal HTML.
+ *
+ * @return A fresh global matcher for double-quote escaping.
  */
 const G_CLASS_2_3 = () => TerraQualityRegex.REGEX_G_REGEX_5();
 /**
- * Provides the matcher used to reduce runs of three or more newlines to paragraph spacing.
- * @returns A fresh global expression matching newline runs of at least three characters.
+ * Matches long blank-line runs before converting them to Markdown spacing.
+ *
+ * @return A fresh global matcher for runs of three or more line feeds.
  */
 const N_3_G_REGEX = () => /\n{3,}/g;
 const R_N_CLASS_2 = /[$\r\n]/;
 const R_N_CLASS_2_3 = /(?:\r?\n)+$/;
 /**
- * Provides the matcher used to normalize CRLF and LF line endings.
- * @returns A fresh global expression matching either line-ending form.
+ * Normalizes CRLF and LF line endings when analyzing source lines.
+ *
+ * @return A fresh global matcher for either newline sequence.
  */
 const R_N_G_REGEX = () => /\r?\n/g;
 /**
- * Provides the shared newline matcher used to split rendered content.
- * @returns A fresh global expression matching newline characters.
+ * Matches line breaks that delimit placeholder-aware Markdown spans.
+ *
+ * @return A fresh global matcher for line-feed boundaries.
  */
 const N_G_CLASS_2_3 = () => TerraQualityRegex.REGEX_N_G_REGEX_3();
-const N_CLASS_2 = /\n+$/;
+const N_CLASS_2 = TerraQualityRegex.REGEX_N_REGEX();
 /**
- * Provides the matcher used to unescape closing square brackets in generated Markdown.
- * @returns A fresh global expression matching `\]`.
+ * Escapes closing brackets in link text before writing Markdown.
+ *
+ * @return A fresh global matcher for literal closing brackets.
  */
 const G_CLASS_2_3_4 = () => /\]/g;
+
 /**
- * Creates the unique key stored on a Portable Text node or mark definition.
- * @returns A UUID suitable for identifying one parsed value object.
+ * Creates collision-resistant keys for blocks synthesized during parsing.
+ *
+ * @return A fresh UUID suitable for Portable Text's `_key` field.
  */
 const key = () => crypto.randomUUID();
 
-/**
- * Marked token fields used while translating Markdown into the Docs value model.
- */
+/** Structural subset of marked tokens consumed by the Portable Text converter. */
 type Token = {
   type: string;
   raw: string;
@@ -108,20 +118,26 @@ type Token = {
   checked?: boolean;
   [name: string]: unknown;
 };
+
 /**
- * Encodes inline math as hexadecimal text so Marked can tokenize surrounding Markdown safely.
- * @param code Math source without its dollar delimiters.
- * @returns A placeholder containing six hexadecimal digits for each Unicode code point.
+ * Encodes math as plain text so Markdown parsing cannot reinterpret its delimiters.
+ *
+ * @param code Math source without its surrounding dollar delimiters.
+ *
+ * @return A reversible placeholder made from the code points in the source.
  */
 function encodeInlineMathPlaceholder(code: string): string {
   return `DOCSMATH${Array.from(code, (c) =>
     (c.codePointAt(0) ?? 0).toString(16).padStart(6, '0'),
   ).join('')}END`;
 }
+
 /**
- * Decodes a math placeholder, rejecting malformed lengths and invalid Unicode code points.
- * @param value Candidate placeholder text.
- * @returns Decoded math source, or `undefined` when the value is not a valid placeholder.
+ * Decodes an inline-math placeholder, rejecting invalid or surrogate code points.
+ *
+ * @param value Candidate placeholder emitted by the Markdown shielding pass.
+ *
+ * @return The original math source, or undefined when the placeholder is malformed.
  */
 function decodeInlineMathPlaceholder(value: string): string | undefined {
   const match = value.match(/^DOCSMATH([0-9a-f]+)END$/i);
@@ -134,10 +150,13 @@ function decodeInlineMathPlaceholder(value: string): string | undefined {
   }
   return String.fromCodePoint(...codepoints);
 }
+
 /**
- * Replaces valid encoded math placeholders with their original `$...$` Markdown form.
- * @param value Markdown string that may contain encoded inline math.
- * @returns The string with valid placeholders restored and invalid placeholders preserved.
+ * Replaces valid math placeholders with their original dollar-delimited source.
+ *
+ * @param value Markdown that passed through the marked lexer.
+ *
+ * @return The text with decodable placeholders restored and invalid ones preserved.
  */
 function restoreInlineMathPlaceholders(value: string): string {
   return value.replace(DOCSMATH_0_9A_F_END_GI_REGEX(), (p) => {
@@ -145,22 +164,28 @@ function restoreInlineMathPlaceholders(value: string): string {
     return code === undefined ? p : `$${code}$`;
   });
 }
+
 /**
- * Creates a keyed Portable Text span carrying text and its inline formatting marks.
- * @param text Span content.
- * @param marks Formatting marks or link keys attached to the span.
- * @returns A span object suitable for a Docs text block's children.
+ * Creates a Portable Text span with a fresh key and its active annotations.
+ *
+ * @param text Visible text represented by the span.
+ * @param marks Portable Text mark keys active for this span.
+ *
+ * @return A span block ready to insert into a text block's children.
  */
 function span(text: string, marks: string[] = []) {
   return { _type: 'span', _key: key(), text, marks };
 }
+
 /**
- * Converts Marked inline tokens into Portable Text spans and inline math blocks.
- * @param tokens Marked tokens to translate.
- * @param markDefs Link definitions collected while visiting the tokens.
- * @param inlineMath Whether dollar-delimited math should become math blocks.
- * @param inheritedMarks Marks applied by a parent emphasis or link token.
- * @returns Ordered text and math nodes preserving supported formatting and links.
+ * Converts marked inline tokens into Portable Text spans, links, and inline math.
+ *
+ * @param tokens Inline tokens produced by marked.
+ * @param markDefs Link definitions populated while walking the tokens.
+ * @param inlineMath Whether single-dollar math should become typed inline blocks.
+ * @param inheritedMarks Annotations already active around a nested token group.
+ *
+ * @return Ordered text and inline-math nodes preserving token marks.
  */
 function inline(
   tokens: Token[] | undefined,
@@ -174,10 +199,12 @@ function inline(
     ReturnType<typeof span> | { _type: 'math'; _key: string; code: string; inline: true }
   )[] = [];
   /**
-   * Adds one inline mark to spans while leaving math nodes untouched.
-   * @param items Parsed text and inline-math nodes to update.
-   * @param mark Portable Text mark name to append to each text span.
-   * @returns A new node list with the mark added to each span's mark array.
+   * Applies one annotation mark to every text span while leaving math nodes unchanged.
+   *
+   * @param items Parsed inline nodes that may contain text spans or math.
+   * @param mark Portable Text mark key to add to each span.
+   *
+   * @return New inline nodes with the mark appended to span annotations.
    */
   const addMark = (items: typeof result, mark: string) =>
     items.map((i) => (i._type === 'span' ? { ...i, marks: [...i.marks, mark] } : i));
@@ -243,9 +270,10 @@ function inline(
         continue;
       }
       /**
-       * Copies the portion of a source range while preserving token metadata at split boundaries.
-       * @param start Inclusive character offset in the concatenated text run.
-       * @param end Exclusive character offset in the concatenated text run.
+       * Appends the portion of a token run that lies within a source interval.
+       *
+       * @param start Inclusive start offset in the concatenated token source.
+       * @param end Exclusive end offset in the concatenated token source.
        */
       const appendSourceRange = (start: number, end: number) => {
         let offset = 0;
@@ -377,12 +405,14 @@ function inline(
   return result;
 }
 /**
- * Builds a Portable Text paragraph with inline marks and a fallback span for empty content.
- * @param style Portable Text block style, such as `normal` or a heading style.
- * @param tokens Inline Marked tokens that supply the block's child spans.
- * @param fallback Text retained when token conversion produces no children.
- * @param inlineMath Whether math spans should be parsed inside the block.
- * @returns A keyed Portable Text block with collected link definitions and child spans.
+ * Builds a Portable Text paragraph from a run of Markdown inline tokens.
+ *
+ * @param style Paragraph style such as `normal`, `blockquote`, or `h2`.
+ * @param tokens Marked tokens to convert, when parsing produced inline tokens.
+ * @param fallback Source text used when the token list has no visible children.
+ * @param inlineMath Whether dollar-delimited spans become inline math blocks.
+ *
+ * @return A keyed paragraph with link definitions and at least one child span.
  */
 function textBlock(
   style: string,
@@ -400,53 +430,66 @@ function textBlock(
     children: children.length ? children : [span(fallback)],
   };
 }
+
 /**
- * Determines whether a block type is retained as a structured Docs block under the selected options.
- * @param options Feature flags controlling supported rich blocks.
- * @param type Portable Text or rich-block type being considered.
- * @returns `true` for core text blocks and enabled optional block types.
+ * Checks whether the caller allows a rich Markdown construct to be parsed.
+ *
+ * @param options Per-block feature switches supplied by the host.
+ * @param type Docs block discriminator or Portable Text paragraph type.
+ *
+ * @return Whether parsing should produce a structured block for this type.
  */
 function enabled(options: DocsBlockOptions, type: string): boolean {
   // Imported Portable Text paragraphs are part of the document model itself,
   // not optional rich blocks. Canonical JSON directives let local hosts retain
   // their marks and inline objects without a lossy Markdown round trip.
-  if (type === 'block') return true;
+  if (type === 'block' || type === 'terraBlock') return true;
   // Tabs and accordions are Markdown syntax, not structured editor blocks.
   if (type === 'accordion' || type === 'tabs') return options[type] !== false;
   return enabledDocsBlocks(options).includes(type as never);
 }
+
 /**
- * Stores a rich block for later restoration and emits its indexed Markdown placeholder.
- * @param blocks Collection used by the parser to restore opaque block payloads.
- * @param block Rich block to preserve.
- * @returns A blank-line-delimited placeholder referring to the appended block.
+ * Registers a rich block and returns the parser-only marker that refers to it.
+ *
+ * @param blocks Registry shared by the current Markdown parse.
+ * @param block Rich block to preserve outside the token stream.
+ *
+ * @return A separated placeholder that marked parses as ordinary text.
  */
 function richPlaceholder(blocks: RichBlock[], block: RichBlock): string {
   blocks.push({ ...block, _key: block._key ?? key() });
   return `\n\nDOCSBLOCK${blocks.length - 1}PLACEHOLDER\n\n`;
 }
+
 /**
- * Preserves unsupported Markdown syntax as a raw block through the placeholder mechanism.
- * @param blocks Collection used by the parser to restore opaque block payloads.
- * @param markdown Original Markdown fragment that cannot be represented safely.
- * @returns The placeholder for the appended raw block.
+ * Keeps unsupported Markdown opaque so its source can be restored verbatim.
+ *
+ * @param blocks Registry shared by the current Markdown parse.
+ * @param markdown Source that has no lossless structured representation.
+ *
+ * @return A parser placeholder backed by a raw Docs block.
  */
 function rawPlaceholder(blocks: RichBlock[], markdown: string): string {
   return richPlaceholder(blocks, { _type: 'raw', markdown });
 }
-/** Source offsets delimiting a fenced Markdown or JSX component range. */
+
+/** Half-open source offsets for a fenced Markdown region. */
 type SourceRange = { start: number; end: number };
-/** Parsed attributes and source boundary for a component's JSX opening tag. */
+/** Parsed opening tag fields needed to scan legacy component source. */
 type JsxOpeningTag = {
   name: string;
   attributes: Record<string, unknown>;
   end: number;
   selfClosing: boolean;
 };
+
 /**
- * Finds fenced-code ranges while treating Code components and inline code as opaque source.
- * @param source Markdown or MDX source to scan.
- * @returns Half-open source ranges for each fenced block, including an unmatched opening fence.
+ * Finds fenced Markdown spans while skipping inline code and Code components.
+ *
+ * @param source Markdown or legacy JSX source to scan.
+ *
+ * @return Half-open source ranges, including the remainder for an unclosed fence.
  */
 function codeFenceRanges(source: string): SourceRange[] {
   const ranges: SourceRange[] = [];
@@ -509,11 +552,12 @@ function codeFenceRanges(source: string): SourceRange[] {
   return ranges;
 }
 
-// Line directives must skip fenced Markdown examples, including nested ones.
 /**
- * Replaces fenced examples with placeholders so later line directives cannot rewrite their contents.
- * @param source Markdown source containing code fences.
- * @returns Shielded source and a restore function that reinstates each original fence.
+ * Replaces fenced examples with markers while directives are parsed, then restores them.
+ *
+ * @param source Markdown containing code fences.
+ *
+ * @return The shielded source and a restoration function for its opaque fence bodies.
  */
 function shieldCodeFences(source: string) {
   const ranges = codeFenceRanges(source);
@@ -532,11 +576,14 @@ function shieldCodeFences(source: string) {
       ),
   };
 }
+
 /**
- * Reads a balanced JSX expression while ignoring braces inside quoted strings and template literals.
- * @param source Source containing the expression.
- * @param start Offset where the opening brace is expected.
- * @returns Expression contents and the offset after its closing brace, or `undefined` if unmatched.
+ * Reads one balanced JSX brace expression without interpreting its contents.
+ *
+ * @param source Full source string containing the expression.
+ * @param start Offset of the opening brace.
+ *
+ * @return The inner source and offset after the closing brace, or undefined if malformed.
  */
 function readBracedExpr(source: string, start: number): { value: string; end: number } | undefined {
   if (source[start] !== '{') return undefined;
@@ -564,10 +611,13 @@ function readBracedExpr(source: string, start: number): { value: string; end: nu
   }
   return undefined;
 }
+
 /**
- * Parses the literal forms supported in a canonical JSX attribute without evaluating expressions.
- * @param source Raw attribute value or braced literal expression.
- * @returns Decoded string, number, boolean, null, JSON value, or `undefined` for unsupported syntax.
+ * Parses the literal subset accepted for attributes in exported Docs JSX.
+ *
+ * @param source Attribute value, including optional quote or brace delimiters.
+ *
+ * @return A decoded string, number, boolean, null, JSON value, or undefined if invalid.
  */
 function parseJsxLiteral(source: string): unknown {
   const value = source.trim();
@@ -591,11 +641,14 @@ function parseJsxLiteral(source: string): unknown {
     return undefined;
   }
 }
+
 /**
- * Reads a capitalized JSX opening tag and parses its literal attributes.
- * @param source JSX or MDX source to scan.
- * @param start Offset of the opening `<` character.
- * @returns Parsed tag name, attributes, end offset, and self-closing state; `undefined` if invalid.
+ * Reads a capitalized JSX opening tag and the literal attributes it can safely decode.
+ *
+ * @param source Full source string containing the tag.
+ * @param start Offset of the opening angle bracket.
+ *
+ * @return Tag name, decoded attributes, and end offset, or undefined for incomplete syntax.
  */
 function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undefined {
   if (source[start] !== '<') return undefined;
@@ -680,11 +733,14 @@ function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undef
   }
   return { name, attributes: attrs, end, selfClosing: S_CLASS_2.test(shell) };
 }
+
 /**
- * Finds a Code component's braced template-literal body at the end of its opening tag.
- * @param source JSX source containing the Code component.
- * @param start Offset immediately after the opening tag.
- * @returns Parsed body expression offsets, or `undefined` when the body is not a template literal.
+ * Locates the template-literal expression used as the body of an exported Code component.
+ *
+ * @param source Full source string containing a component body.
+ * @param start Offset immediately after the Code opening tag.
+ *
+ * @return The balanced body expression, or undefined when the body is not a template literal.
  */
 function codeBodyExpr(source: string, start: number): { value: string; end: number } | undefined {
   const first = source.slice(start).match(/^\s*\{/);
@@ -692,11 +748,14 @@ function codeBodyExpr(source: string, start: number): { value: string; end: numb
   const exprStart = start + first[0].length - 1;
   return source.slice(exprStart + 1).match(/^\s*`/) ? readBracedExpr(source, exprStart) : undefined;
 }
+
 /**
- * Finds the end of a JSX component, accounting for embedded Code bodies and legacy missing closers.
- * @param source JSX or MDX source containing the component.
- * @param opening Parsed opening-tag data.
- * @returns Body end and full component end offsets, or `undefined` when no closing boundary exists.
+ * Finds the body and full source range of a recognized JSX component.
+ *
+ * @param source Full source string containing the component.
+ * @param opening Parsed opening tag for the component.
+ *
+ * @return Body and closing offsets, or undefined when a non-self-closing tag is incomplete.
  */
 function jsxComponentRange(
   source: string,
@@ -716,10 +775,13 @@ function jsxComponentRange(
   }
   return close ? { bodyEnd: close.index, end: close.index + close[0].length } : undefined;
 }
+
 /**
- * Accepts an array-valued JSX attribute directly or parses a JSON-encoded array string.
- * @param value Parsed attribute value.
- * @returns An array value, or `undefined` for non-arrays and invalid JSON.
+ * Decodes an array attribute supplied directly or as JSON text.
+ *
+ * @param value Attribute value decoded from the JSX source.
+ *
+ * @return The array value, or undefined when the input is not an array.
  */
 function parseArrayAttr(value: unknown): unknown[] | undefined {
   if (Array.isArray(value)) return value;
@@ -733,10 +795,12 @@ function parseArrayAttr(value: unknown): unknown[] | undefined {
 }
 
 /**
- * Replaces supported JSX component fragments while leaving code fences and structured blocks untouched.
- * @param source Markdown or MDX source to scan.
- * @param replace Callback that converts a parsed block or raw component string.
- * @returns Source with supported components replaced; returns the original source when no match exists.
+ * Replaces supported components outside code and structured Markdown blocks.
+ *
+ * @param source Markdown that may contain the legacy component syntax.
+ * @param replace Converts each supported component or returns its source unchanged.
+ *
+ * @return Source with recognized component spans replaced by the callback output.
  */
 export function replaceCanonicalComponents(
   source: string,
@@ -868,10 +932,13 @@ export function replaceCanonicalComponents(
   }
   return output ? output + source.slice(copiedUntil) : source;
 }
+
 /**
- * Decodes the numeric and named HTML entities supported by the Docs importer.
- * @param value Text containing encoded HTML entities.
- * @returns Text with recognized entities decoded and invalid numeric references preserved.
+ * Decodes numeric references and the named HTML entities Docs preserves.
+ *
+ * @param value Text that may contain encoded characters.
+ *
+ * @return Text with supported entities decoded and invalid numeric references unchanged.
  */
 function decodeHtml(value: string): string {
   return value
@@ -907,10 +974,13 @@ function decodeHtml(value: string): string {
       }
     });
 }
+
 /**
- * Repeats HTML entity decoding until the value stops changing or reaches the eight-pass limit.
- * @param value Text that may contain nested entity encoding.
- * @returns The repeatedly decoded string.
+ * Decodes repeated entity layers without looping on malformed recursive input.
+ *
+ * @param value Text to decode.
+ *
+ * @return Text after at most eight decoding passes or until it stops changing.
  */
 function decodeHtmlRepeated(value: string): string {
   let current = value;
@@ -921,11 +991,14 @@ function decodeHtmlRepeated(value: string): string {
   }
   return current;
 }
+
 /**
- * Reads and entity-decodes one quoted or unquoted attribute from an HTML attribute string.
- * @param attrs Raw attributes between a tag name and its closing bracket.
- * @param name Attribute name to find, matched without regard to case.
- * @returns Decoded attribute value, or `undefined` when the attribute is absent.
+ * Reads and decodes one quoted or unquoted HTML attribute from an opening tag.
+ *
+ * @param attrs Attribute source without the tag name.
+ * @param name Attribute name to find, matched without case sensitivity.
+ *
+ * @return Decoded attribute content, or undefined when the attribute is absent.
  */
 function htmlAttr(attrs: string, name: string): string | undefined {
   const match = attrs.match(
@@ -934,10 +1007,13 @@ function htmlAttr(attrs: string, name: string): string | undefined {
   const value = match?.[1] ?? match?.[2] ?? match?.[3];
   return value === undefined ? undefined : decodeHtml(value);
 }
+
 /**
- * Escapes Markdown syntax in decoded text while leaving inline-math spans intact.
- * @param value Text to represent literally in Markdown.
- * @returns Markdown source with syntax characters escaped.
+ * Escapes Markdown punctuation while preserving dollar-delimited math source.
+ *
+ * @param value Text to emit outside code spans.
+ *
+ * @return Markdown text that parses back to the same visible characters.
  */
 function escapeMarkdownText(value: string): string {
   return decodeHtmlRepeated(value).replace(
@@ -945,20 +1021,26 @@ function escapeMarkdownText(value: string): string {
     (_match, m: string | undefined, c: string | undefined) => m ?? `\\${c}`,
   );
 }
+
 /**
- * Encodes text as a Markdown code span using a backtick fence absent from the content.
+ * Wraps inline code with a delimiter longer than any run inside the value.
+ *
  * @param value Literal code text.
- * @returns A code span with a safe delimiter and required edge padding.
+ *
+ * @return A Markdown code span that preserves embedded backticks and edge spaces.
  */
 function markdownCodeSpan(value: string): string {
   const fence = '`'.repeat(1 + Math.max(0, ...[...value.matchAll(/`+/g)].map(([t]) => t.length)));
   const padding = value.startsWith('`') || value.endsWith('`') ? ' ' : '';
   return `${fence}${padding}${value}${padding}${fence}`;
 }
+
 /**
- * Encodes a link destination and wraps values containing Markdown delimiters in angle brackets.
- * @param value Raw URL or link destination.
- * @returns A Markdown-safe destination with spaces and closing angles percent-encoded.
+ * Encodes unsafe destination characters and brackets complex Markdown URLs.
+ *
+ * @param value HTML-encoded URL or link destination.
+ *
+ * @return A Markdown destination safe to place after a link's closing parenthesis.
  */
 function markdownDestination(value: string): string {
   const destination = decodeHtmlRepeated(value).replace(/[>\s]/g, (c) =>
@@ -968,10 +1050,12 @@ function markdownDestination(value: string): string {
 }
 
 /**
- * Escapes HTML table-cell text while protecting math spans from Markdown emphasis parsing.
- * @param value Raw HTML cell text.
- * @param inlineMath Whether dollar-delimited math should remain unescaped for later parsing.
- * @returns Markdown-safe cell text with any inline math represented by opaque placeholders.
+ * Converts HTML cell text while protecting math and ordinary underscores from emphasis.
+ *
+ * @param value Decoded table-cell source text.
+ * @param inlineMath Whether dollar spans should be shielded as inline math.
+ *
+ * @return Escaped Markdown suitable for one table cell.
  */
 function escapeHtmlTableText(value: string, inlineMath: boolean): string {
   const decoded = decodeHtmlRepeated(value);
@@ -989,13 +1073,16 @@ function escapeHtmlTableText(value: string, inlineMath: boolean): string {
   }
   return output + escapeMarkdownText(decoded.slice(cursor));
 }
+
 /**
- * Converts a Marked table token into the Docs table, row, cell, and nested-content model.
- * @param rows Header and body rows returned by Marked.
- * @param markdown Original table source retained for faithful round trips.
- * @param options Rich-block and math feature flags for nested cell content.
- * @param header Human-readable label assigned to the table block.
- * @returns A keyed table block, or `undefined` when there are no rows.
+ * Builds a rich table while retaining its Markdown and inline cell structure.
+ *
+ * @param rows Header and body token rows produced by marked.
+ * @param markdown Original table source used for faithful serialization.
+ * @param options Feature switches applied to images and inline math inside cells.
+ * @param header Optional table caption.
+ *
+ * @return A keyed table block, or undefined when no rows were parsed.
  */
 function tableBlock(
   rows: Token[][],
@@ -1024,7 +1111,7 @@ function tableBlock(
         cellBlock.content = contentTokens.flatMap((part) => {
           const result: RichBlock[] = [];
           let pending: Token[] = [];
-          /** Converts the pending text run to one paragraph before a non-text block is emitted. */
+          /** Converts a pending text run to a paragraph before a non-text block is emitted. */
           const flush = () => {
             if (!pending.length) return;
             result.push(
@@ -1073,20 +1160,25 @@ function tableBlock(
 }
 
 /**
- * Parses Markdown into Docs blocks while preserving unsupported syntax as raw blocks.
- * @param markdown Markdown source to parse.
- * @param options Feature flags for rich blocks, images, and inline math.
- * @returns Docs value blocks with supported Markdown and opaque rich content retained.
+ * Decodes Markdown without dropping unsupported syntax; opaque tokens become raw blocks.
+ *
+ * @param markdown Source text to decode.
+ * @param options Optional rich-block feature switches for this conversion.
+ *
+ * @return Portable Text and rich Docs blocks representing the source.
  */
 export function markdownToDocsValue(markdown: string, options: DocsBlockOptions = {}): DocsValue {
   return parseMarkdown(markdown, options, []);
 }
+
 /**
- * Parses Markdown recursively, restoring protected JSX blocks, table cells, and delimiter groups.
- * @param markdown Markdown fragment at the current nesting level.
- * @param options Feature flags shared with nested content parsing.
- * @param blocks Registry of rich blocks referenced by temporary placeholders.
- * @returns Parsed Docs blocks for this fragment.
+ * Parses Markdown after shielding JSX, groups, tables, and unsupported syntax.
+ *
+ * @param markdown Source being parsed, including nested container bodies.
+ * @param options Feature switches inherited by recursively parsed content.
+ * @param blocks Registry for rich blocks replaced with temporary placeholders.
+ *
+ * @return Ordered Docs blocks represented by the parsed source.
  */
 function parseMarkdown(
   markdown: string,
@@ -1173,7 +1265,7 @@ function parseMarkdown(
       ),
   );
   let calloutSource = fencedAccordions.restore(fencedAccordions.source);
-  /** Source offsets and label for one open `|||` tab or `===` accordion section. */
+  /** One complete top-level tab or accordion item found in the Markdown source. */
   type MarkdownGroup = {
     delimiter: '===' | '|||';
     title: string;
@@ -1233,7 +1325,7 @@ function parseMarkdown(
         : rawPlaceholder(blocks, calloutSource.slice(range.start, range.end))) +
       calloutSource.slice(range.end);
   }
-  /** Opening state retained while scanning a fenced callout or legacy block. */
+  /** State retained while scanning for a balanced callout fence. */
   type OpenCallout = {
     start: number;
     bodyStart: number;
@@ -1689,19 +1781,25 @@ function parseMarkdown(
   }
   return grouped as DocsValue;
 }
+
 /**
- * Checks that an object contains no keys outside the canonical field list for its Markdown form.
+ * Verifies that serialization would not discard fields outside the known schema.
+ *
  * @param value Object to validate.
- * @param fields Allowed own-property names.
- * @returns `true` when every own key is in the allowed list.
+ * @param fields Field names supported by the Markdown representation.
+ *
+ * @return Whether every own key is explicitly represented by the serializer.
  */
 function onlyOwnFields(value: Record<string, unknown>, fields: string[]): boolean {
   return Object.keys(value).every((n) => fields.includes(n));
 }
+
 /**
- * Determines whether a Portable Text block uses only fields and marks that Markdown can preserve.
- * @param block Rich block being considered for readable Markdown serialization.
- * @returns `true` when its structure is representable by the supported inline syntax.
+ * Checks whether a Portable Text paragraph can be expressed losslessly as Markdown.
+ *
+ * @param block Candidate paragraph.
+ *
+ * @return Whether its fields, annotations, children, and inline math are supported.
  */
 function markdownInlineBlock(block: RichBlock): boolean {
   if (
@@ -1757,11 +1855,13 @@ function markdownInlineBlock(block: RichBlock): boolean {
     );
   });
 }
+
 /**
- * Serializes a text block's spans, math, links, and decorators without changing their grouping.
- * @param block Portable Text block with children, marks, and link definitions.
- * @returns Readable Markdown or HTML-backed Markdown when ordinary syntax would alter the structure.
- * @throws Error when no supported inline representation round-trips faithfully.
+ * Serializes one Portable Text paragraph and rejects any lossy mark conversion.
+ *
+ * @param block Paragraph block with children, marks, and link definitions.
+ *
+ * @return Markdown text whose parsed structure preserves the paragraph semantics.
  */
 function blockContentToMarkdown(block: RichBlock): string {
   const markDefs = new Map(
@@ -1857,12 +1957,15 @@ function blockContentToMarkdown(block: RichBlock): string {
     );
   return preserved;
 }
+
 /**
- * Verifies that parsing a Markdown candidate reconstructs the same inline text, math, and marks.
- * @param children Source child spans or inline math nodes.
- * @param markdown Candidate Markdown representation.
- * @param sourceMarkDefs Source link keys mapped to their destinations.
- * @returns `true` when parsed and source inline signatures are identical.
+ * Compares inline marks before and after parsing a candidate Markdown serialization.
+ *
+ * @param children Original Portable Text children.
+ * @param markdown Candidate Markdown body.
+ * @param sourceMarkDefs Link targets resolved from the original mark definitions.
+ *
+ * @return Whether parsed children and link targets retain the original structure.
  */
 function inlineMarkdownRoundTrips(
   children: { _type?: string; text?: string; marks?: string[]; code?: string }[],
@@ -1893,10 +1996,12 @@ function inlineMarkdownRoundTrips(
   if (remainingText) sentinelChild.text = remainingText;
   else parsed.splice(sentinelIndex, 1);
   /**
-   * Creates a stable comparison form for inline children and their link definitions.
-   * @param values Parsed child nodes whose rendering behavior is being compared.
-   * @param definitions Link-key map used to compare actual destinations instead of IDs.
-   * @returns JSON for supported text/math sequences, or `undefined` for unsupported nodes.
+   * Builds a comparable inline signature, resolving link marks to their destinations.
+   *
+   * @param values Parsed inline children to normalize for comparison.
+   * @param definitions Link-mark keys and their destination URLs.
+   *
+   * @return A normalized text/math sequence, or undefined for unsupported child types.
    */
   const signature = (
     values: { _type?: string; text?: string; marks?: string[]; code?: string }[],
@@ -1947,10 +2052,13 @@ function inlineMarkdownRoundTrips(
     )
   );
 }
+
 /**
- * Serializes a rich table as a fenced YAML directive with a fence longer than any payload fence.
- * @param block Table block to encode.
- * @returns A Markdown directive that preserves the table's structured fields.
+ * Writes a typed Docs table block inside a collision-safe YAML directive fence.
+ *
+ * @param block Table data that cannot use readable Markdown cells without loss.
+ *
+ * @return A Docs table directive with serialized block data.
  */
 function tableDirective(block: RichBlock): string {
   const payload = stringifyYaml(block, { lineWidth: 0 }).replace(R_N_REGEX, '');
@@ -1962,23 +2070,29 @@ function tableDirective(block: RichBlock): string {
   );
   return fence + 'docs table\n' + payload + '\n' + fence;
 }
+
 /**
- * Checks whether a block is a supported Portable Text list item.
- * @param block Candidate rich block.
- * @returns `true` for a normal-style bullet or numbered block that can round-trip as Markdown.
+ * Identifies Portable Text list paragraphs supported by the Markdown serializer.
+ *
+ * @param block Candidate Portable Text block.
+ *
+ * @return Whether the block is a serializable bullet or numbered list item.
  */
 function isListBlock(block: RichBlock): boolean {
   return (
-    block._type === 'block' &&
+    (block._type === 'block' || block._type === 'terraBlock') &&
     (block.listItem === 'bullet' || block.listItem === 'number') &&
     (block.style === undefined || block.style === 'normal') &&
     markdownInlineBlock(block)
   );
 }
+
 /**
- * Returns a nested block's original Markdown or rebuilds it from structured content when placeholders remain.
- * @param block Callout, tab, or accordion item with optional Markdown and content fields.
- * @returns Markdown source safe to serialize outside the parser's temporary placeholder registry.
+ * Recovers a container item's source, rebuilding it when parsing left placeholders.
+ *
+ * @param block Nested rich item with optional Markdown and structured content.
+ *
+ * @return Markdown body suitable for a parent callout, tab, or accordion.
  */
 function nestedMarkdown(block: Record<string, unknown>): string {
   // Component parsing replaces JSX blocks with placeholders before parsing nested
@@ -1996,15 +2110,18 @@ function nestedMarkdown(block: Record<string, unknown>): string {
     ? docsValueToMarkdown(block.content as DocsValue).trimEnd()
     : '';
 }
+
 /**
- * Identifies an empty default Portable Text paragraph that Markdown cannot visibly represent.
- * @param value Candidate block or arbitrary nested value.
- * @returns `true` only for a metadata-free normal paragraph containing no marked text.
+ * Detects visually empty paragraphs whose metadata has no Markdown representation.
+ *
+ * @param value Unknown nested content to inspect.
+ *
+ * @return Whether the value is a blank, unmarked paragraph that can be ignored semantically.
  */
 function emptyPortableTextParagraph(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const block = value as Record<string, unknown>;
-  if (block._type !== 'block') return false;
+  if (block._type !== 'block' && block._type !== 'terraBlock') return false;
   if (
     Object.keys(block).some((n) => !['_type', '_key', 'style', 'markDefs', 'children'].includes(n))
   )
@@ -2023,10 +2140,13 @@ function emptyPortableTextParagraph(value: unknown): boolean {
     );
   });
 }
+
 /**
- * Canonicalizes a Docs value for round-trip comparison by removing generated metadata and normalizing text blocks.
- * @param v Value or nested array to canonicalize.
- * @returns A semantic representation that ignores generated keys and equivalent empty paragraphs.
+ * Normalizes content to the fields Markdown can preserve for round-trip comparison.
+ *
+ * @param v Docs blocks, arrays, or primitive content to normalize.
+ *
+ * @return A semantic representation with transient keys and invisible empty paragraphs removed.
  */
 function semanticMarkdownValue(v: unknown): unknown {
   if (Array.isArray(v))
@@ -2034,7 +2154,7 @@ function semanticMarkdownValue(v: unknown): unknown {
   if (!v || typeof v !== 'object') return v;
   const block = v as Record<string, unknown>;
   const type = block._type;
-  if (type === 'block') {
+  if (type === 'block' || type === 'terraBlock') {
     const definitions = new Map(
       (Array.isArray(block.markDefs) ? block.markDefs : [])
         .filter((i): i is Record<string, unknown> => Boolean(i) && typeof i === 'object')
@@ -2125,11 +2245,14 @@ function semanticMarkdownValue(v: unknown): unknown {
         .map(([n, i]) => [n, semanticMarkdownValue(i)]),
     ))(Array.isArray(block.content) ? block.content : undefined);
 }
+
 /**
- * Checks whether Markdown parsing reconstructs the semantic structure of a rich value.
- * @param value Source block or nested rich value.
+ * Checks whether converting a rich block to candidate Markdown preserves its meaning.
+ *
+ * @param value Original block or value.
  * @param markdown Candidate Markdown serialization.
- * @returns `true` when both normalized structures match; `false` when parsing fails or differs.
+ *
+ * @return Whether normalized original and reparsed values are structurally equivalent.
  */
 function markdownPreservesValue(value: unknown, markdown: string): boolean {
   try {
@@ -2141,11 +2264,15 @@ function markdownPreservesValue(value: unknown, markdown: string): boolean {
     return false;
   }
 }
+
 /**
- * Serializes a rich block as a canonical DocsBlock JSX node carrying its JSON data.
- * @param block Rich block to preserve in Markdown.
- * @returns A self-closing DocsBlock component with its type and data attributes.
- * @throws Error when the block type is not a valid component identifier.
+ * Serializes a rich block as a canonical DocsBlock JSX directive.
+ *
+ * @param block Block whose fields cannot be represented faithfully as Markdown.
+ *
+ * @return A self-closing directive with its full data payload.
+ *
+ * @throws Error when the block discriminator is not a valid identifier.
  */
 function richBlockDirective(block: RichBlock): string {
   const type = String(block._type ?? '');
@@ -2153,11 +2280,14 @@ function richBlockDirective(block: RichBlock): string {
     throw new Error('Cannot serialize Docs block with an invalid type.');
   return '<DocsBlock type="' + type + '" data={' + JSON.stringify(block) + '} />';
 }
+
 /**
- * Wraps code in a Markdown fence longer than every backtick run in the code body.
- * @param code Code contents to preserve verbatim.
- * @param lang Optional language label for the opening fence.
- * @returns A fenced code block with a safe delimiter and normalized trailing newline.
+ * Wraps a code body in a Markdown fence that cannot collide with its contents.
+ *
+ * @param code Literal source to preserve in a fenced block.
+ * @param lang Optional fence language identifier.
+ *
+ * @return A Markdown code fence with a longer delimiter than any body backtick run.
  */
 function codeFence(code: string, lang: string): string {
   const tick = String.fromCharCode(96);
@@ -2171,9 +2301,11 @@ function codeFence(code: string, lang: string): string {
 }
 
 /**
- * Serializes Docs values as readable Markdown when faithful, using typed source for richer structures.
- * @param value Docs blocks to serialize.
- * @returns Markdown that preserves representable text and encodes other supported blocks explicitly.
+ * Serializes readable Markdown where it is faithful and typed source where it is not.
+ *
+ * @param value Docs block content to encode.
+ *
+ * @return Markdown containing readable syntax or canonical DocsBlock directives as needed.
  */
 export function docsValueToMarkdown(value: DocsValue): string {
   const blocks = value as unknown as RichBlock[];
@@ -2211,7 +2343,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
       continue;
     }
     index += 1;
-    if (item._type === 'block') {
+    if (item._type === 'block' || item._type === 'terraBlock') {
       if (!markdownInlineBlock(item) || item.listItem !== undefined) {
         result.push(richBlockDirective(item));
         continue;
@@ -2345,7 +2477,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
                               'markdown',
                             ]) &&
                             typeof paragraph.url === 'string') ||
-                          (paragraph._type === 'block' &&
+                          ((paragraph._type === 'block' || paragraph._type === 'terraBlock') &&
                             markdownInlineBlock(paragraph) &&
                             !paragraph.listItem &&
                             (paragraph.style === undefined || paragraph.style === 'normal'))
@@ -2399,9 +2531,11 @@ export function docsValueToMarkdown(value: DocsValue): string {
                 cell && typeof cell === 'object' ? (cell as Record<string, unknown>) : {};
               const protectedParts: string[] = [];
               /**
-               * Stores Markdown fragments that table escaping must leave intact.
-               * @param source Original link or code fragment from the table cell.
-               * @returns A unique placeholder that can be restored after GFM escaping.
+               * Saves Markdown syntax that must remain literal inside a table cell.
+               *
+               * @param source Link or code syntax to protect during cell normalization.
+               *
+               * @return A placeholder that can be restored after escaping the cell text.
                */
               const protect = (source: string) => {
                 protectedParts.push(source);

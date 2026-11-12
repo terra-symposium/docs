@@ -28,15 +28,16 @@ REGEX
 
 const MD_MDX_I_REGEX = /\.(?:md|mdx)$/i;
 /**
- * Removes leading and trailing separators before constructing demo document routes.
- * @returns Global expression matching those route separators.
+ * Returns a fresh global matcher for leading or trailing slashes in fixture paths.
+ *
+ * @return A regular expression that strips path-boundary slashes with `replace`.
  */
 const G_REGEX = () => /^\/+|\/+$/g;
 const WORKSPACE_DEMO_STORAGE_KEY = 'docs-workspace-demo-v1';
 export const WORKSPACE_DEMO_PATH = '/workspace-demo/';
-/** Saved demo attachment bytes plus the document that owns the attachment. */
+/** Browser-stored attachment data; `bytes` supports the fixture's asset-read action. */
 type WorkspaceDemoAsset = DocsHostAttachment & { bytes: number[]; docId: string };
-/** Complete demo document record persisted in browser storage. */
+/** Content and route metadata for one document in the workspace demo's local store. */
 type WorkspaceDemoDocument = {
   id: string;
   path: string;
@@ -50,7 +51,7 @@ type WorkspaceDemoDocument = {
   attachments: DocsHostAttachment[];
   versions: DocVer[];
 };
-/** Versioned workspace fixture state containing navigation, documents, and local assets. */
+/** Versioned browser-local state shared by the editable demo and its host adapter. */
 export type WorkspaceDemoState = {
   schema: 1;
   tree: DocsHostTreeNode[];
@@ -183,13 +184,15 @@ const initialWorkspaceDemoState: { content: unknown[]; tree: DocsHostTreeNode[] 
   ],
 };
 /**
- * Creates one demo document and derives its route and Markdown source from Portable Text.
- * @param id Stable ID used in routes and the document map.
- * @param path Source-relative path stored on the document.
- * @param title Display title shown by the workspace.
- * @param description Supporting text shown with the page metadata.
- * @param content Portable Text body to store and serialize as Markdown.
- * @returns Complete demo document with an empty attachment/version list.
+ * Creates a document record and derives its initial Markdown source and browser route.
+ *
+ * @param id Stable key used by the fixture document map and navigation tree.
+ * @param path Repository-style path displayed by editor and file actions.
+ * @param title Initial title shown for the document.
+ * @param description Supporting text stored with the document.
+ * @param content Portable Text blocks used to initialize the editor model.
+ *
+ * @return A fixture document whose initial route selects its section, group, and id.
  */
 function makeDocument(
   id: string,
@@ -213,8 +216,9 @@ function makeDocument(
   };
 }
 /**
- * Returns the pristine navigation tree and sample documents shown by the workspace demo.
- * @returns Fresh version-one state with sample pages and a small local PDF fixture.
+ * Builds the sample Salesphere pages, navigation tree, and PDF attachment for demos.
+ *
+ * @return Seed state with the overview, runtime-map, and local-files documents.
  */
 export function createWorkspaceDemoSeed(): WorkspaceDemoState {
   const salesphere = makeDocument(
@@ -265,15 +269,20 @@ export function createWorkspaceDemoSeed(): WorkspaceDemoState {
   };
 }
 /**
- * Makes an independent fixture snapshot using the same JSON-safe values stored in browser state.
+ * Deep-clones JSON-compatible fixture data so host operations can return independent values.
  *
- * @param value Serializable fixture data to copy before a demo mutation.
- * @returns A deep copy with no shared object references to the input.
+ * @param value Serializable data to copy before a fixture mutation.
+ *
+ * @return A structurally independent copy with the same JSON representation.
  */
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 /**
- * Loads a valid browser-saved demo state or restores the built-in seed when it is absent or invalid.
- * @returns Valid saved state, or the seed after an absent, malformed, or unsupported value.
+ * Loads browser-persisted demo state or restores the sample when storage is absent or invalid.
+ *
+ * Server rendering always receives the seed; browser reads replace malformed JSON or an unsupported
+ * schema with a persisted seed and notify listeners through the writer.
+ *
+ * @return The current workspace demo state, or the seed during server rendering.
  */
 export function readWorkspaceDemoState(): WorkspaceDemoState {
   const seed = createWorkspaceDemoSeed();
@@ -303,9 +312,13 @@ export function readWorkspaceDemoState(): WorkspaceDemoState {
   }
 }
 /**
- * Saves demo state and announces the update to other mounted demo surfaces.
- * @param state Complete workspace fixture state to persist.
- * @returns Nothing; server-side calls leave storage untouched.
+ * Persists demo state and notifies mounted workspace previews that it changed.
+ *
+ * The server-side call is a no-op because the fixture store belongs to the browser.
+ *
+ * @param state Complete fixture state to serialize into local storage.
+ *
+ * @return Nothing; browser listeners are notified after the state is saved.
  */
 function writeWorkspaceDemoState(state: WorkspaceDemoState): void {
   if (typeof window === 'undefined') return;
@@ -313,11 +326,13 @@ function writeWorkspaceDemoState(state: WorkspaceDemoState): void {
   window.dispatchEvent(new CustomEvent('docs-fixture-updated'));
 }
 /**
- * Encodes section, group, and leaf identifiers as the demo's query-based route.
- * @param sectionId Top-level navigation identifier.
- * @param groupId Optional nested branch identifier.
- * @param leafId Optional page identifier.
- * @returns Demo path with selected identifiers in its query string.
+ * Builds a demo URL whose query parameters select a section, group, and optional document.
+ *
+ * @param sectionId Top-level navigation node; omitted to return the demo root.
+ * @param groupId Nested navigation node to select within the section.
+ * @param leafId Document id to select within the section and group.
+ *
+ * @return The demo base path or that path with the supplied selection encoded as a query.
  */
 function buildWorkspaceRoute(sectionId?: string, groupId?: string, leafId?: string): string {
   if (!sectionId) return WORKSPACE_DEMO_PATH;
@@ -327,11 +342,13 @@ function buildWorkspaceRoute(sectionId?: string, groupId?: string, leafId?: stri
   return `${WORKSPACE_DEMO_PATH}?${query.toString()}`;
 }
 /**
- * Finds a navigation node by ID or source path and returns its ancestor chain.
- * @param nodes Current navigation subtree to search.
- * @param id Node ID or path to match.
- * @param ancestors Parent nodes accumulated before this recursive call.
- * @returns Matching node and its ancestors, or `undefined` if it is absent.
+ * Finds a navigation node by its stable id or path and records its parent chain.
+ *
+ * @param nodes Navigation subtree to search in display order.
+ * @param id Node id or path to match.
+ * @param ancestors Parent nodes leading to the current subtree.
+ *
+ * @return The matching node and its ancestors, or `undefined` when the subtree has no match.
  */
 function findNode(
   nodes: DocsHostTreeNode[],
@@ -346,10 +363,15 @@ function findNode(
   return undefined;
 }
 /**
- * Resolves a demo document by ID, source path, route, or extensionless leaf path.
- * @param state Current workspace state containing demo documents.
- * @param value Candidate ID, path, or URL from a host action.
- * @returns Matching document, or `undefined` when the input is not a known document.
+ * Resolves an id, repository path, pathname, or route-like string to a demo document.
+ *
+ * The query and hash are removed before path and final-segment matches are tried, allowing
+ * workspace navigation values to share this lookup.
+ *
+ * @param state Demo store containing documents to search.
+ * @param value Candidate document id, path, pathname, or route value.
+ *
+ * @return The first matching document, or `undefined` for a non-string or unknown value.
  */
 function findDocument(
   state: WorkspaceDemoState,
@@ -370,9 +392,11 @@ function findDocument(
   );
 }
 /**
- * Converts a proposed document label into a lowercase route-safe identifier.
- * @param value Human-readable title or proposed route segment.
- * @returns Lowercase hyphenated slug, using `untitled` when no characters remain.
+ * Converts a title or path segment to the lowercase hyphenated form used for fixture ids.
+ *
+ * @param value Text to normalize into a segment.
+ *
+ * @return A slug with punctuation collapsed to hyphens, or `untitled` when it is empty.
  */
 function slug(value: string): string {
   return (
@@ -384,10 +408,12 @@ function slug(value: string): string {
   );
 }
 /**
- * Adds a numeric suffix until the proposed ID is unique across documents and navigation nodes.
- * @param state Current tree and document map to check for collisions.
- * @param proposed New title or ID to normalize.
- * @returns Unique route-safe identifier.
+ * Chooses a slug that is unused by both documents and navigation nodes.
+ *
+ * @param state Current fixture tree and document map.
+ * @param proposed Title or id to turn into the initial slug.
+ *
+ * @return The slug, adding a numeric suffix when the proposed id is already in use.
  */
 function uniqueId(state: WorkspaceDemoState, proposed: string): string {
   let candidate = slug(proposed);
@@ -399,12 +425,15 @@ function uniqueId(state: WorkspaceDemoState, proposed: string): string {
   return candidate;
 }
 /**
- * Clones the navigation tree with mode-aware permissions and URLs on every branch and leaf.
- * @param nodes Navigation subtree to enrich.
- * @param readOnly Whether generated nodes should be read-only.
- * @param sectionId Current top-level section for nested route construction.
- * @param groupId Current group for leaf routes.
- * @returns A new tree with resolved URLs and permissions on each node.
+ * Copies a navigation subtree and assigns each node its read or write permission and route.
+ * Branches carry section and group selections; leaves also select their document.
+ *
+ * @param nodes Navigation nodes to copy.
+ * @param readOnly Whether copied nodes should advertise read-only permission.
+ * @param sectionId Section selected by the current branch ancestry.
+ * @param groupId Group selected by the current branch ancestry for leaf routes.
+ *
+ * @return A new navigation subtree with fixture routes and permissions added.
  */
 function withRoutes(
   nodes: DocsHostTreeNode[],
@@ -435,10 +464,12 @@ function withRoutes(
   });
 }
 /**
- * Finds the top-level section and optional group containing a leaf ID.
- * @param state Current navigation tree.
- * @param leafId Leaf identifier to locate.
- * @returns Section and optional group IDs, falling back to the first section when absent.
+ * Finds the section and immediate group that contain a document leaf.
+ *
+ * @param state Navigation tree used to locate the document.
+ * @param leafId Document id or path identifying the leaf.
+ *
+ * @return Its section and optional group ids, falling back to the first section or `overview`.
  */
 function sectionForLeaf(
   state: WorkspaceDemoState,
@@ -453,10 +484,12 @@ function sectionForLeaf(
   };
 }
 /**
- * Removes the first matching node from a mutable navigation subtree.
- * @param nodes Mutable sibling list to search and update.
- * @param id Node ID or path to remove.
- * @returns Whether a matching node was removed.
+ * Removes the first matching node from a navigation tree, searching branches recursively.
+ *
+ * @param nodes Mutable navigation nodes to search and update.
+ * @param id Node id or path to remove.
+ *
+ * @return Whether a matching node was found and removed.
  */
 function removeNodeById(nodes: DocsHostTreeNode[], id: string): boolean {
   const index = nodes.findIndex((n) => n.origName === id || n.path === id);
@@ -470,11 +503,12 @@ function removeNodeById(nodes: DocsHostTreeNode[], id: string): boolean {
   return false;
 }
 /**
- * Replaces the first matching node with an updated value while preserving tree structure.
- * @param nodes Mutable sibling list to search.
- * @param id Node ID or path to update.
+ * Replaces the first matching node in a navigation tree with the callback's result.
+ *
+ * @param nodes Mutable navigation nodes to search and update.
+ * @param id Node id or path to match.
  * @param update Transformation applied to the matching node.
- * @returns Whether a matching node was updated.
+ * @return Whether a matching node was found and replaced.
  */
 function updateNodeById(
   nodes: DocsHostTreeNode[],
@@ -493,9 +527,14 @@ function updateNodeById(
   return false;
 }
 /**
- * Creates the localStorage-backed host adapter used by editable and read-only demos.
- * @param readOnly Whether the adapter should reject writes, reorder, and history controls.
- * @returns Host implementation for the demo's routes, navigation, documents, and assets.
+ * Creates the browser-local host adapter used by the editable Salesphere workspace demo.
+ *
+ * The adapter exposes the Docs action contract over local storage and disables mutation
+ * capabilities when `readOnly` is true.
+ *
+ * @param readOnly Whether the host should advertise write, reorder, attachment, and history access.
+ *
+ * @return A host adapter that resolves demo routes and reads or mutates the browser fixture.
  */
 export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
   return {
@@ -514,9 +553,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
     siteDescription: 'Product and engineering documentation.',
     assetUrl: () => undefined,
     /**
-     * Resolves query-selected demo pages while preserving the selected section and group.
-     * @param value Route or URL whose query parameters select the demo destination.
-     * @returns Section, group, leaf, and pathname state for the selected page.
+     * Resolves demo query parameters to a document or the first page in the selected branch.
+     *
+     * @param value Browser path, query, and fragment supplied by the Docs workspace.
+     *
+     * @return The selected section, optional group and leaf, target id, and original pathname.
      */
     resolveRoute(value) {
       const url = new URL(value, 'http://localhost');
@@ -530,9 +571,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         : undefined;
       const requestedGroupMatch = requestedGroup ? findNode(state.tree, requestedGroup) : undefined;
       /**
-       * Selects the first document nested beneath a requested section or group.
-       * @param node Navigation branch or leaf whose first document should be resolved.
-       * @returns The matching document, or `undefined` when the branch has no page.
+       * Selects the first document leaf beneath a navigation node, preserving tree order.
+       *
+       * @param node Branch or leaf whose subtree should be searched.
+       *
+       * @return The first matching fixture document, or `undefined` when the subtree is empty.
        */
       const firstLeaf = (node: DocsHostTreeNode | undefined): WorkspaceDemoDocument | undefined => {
         if (!node) return undefined;
@@ -573,9 +616,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
     },
     buildRoute: buildWorkspaceRoute,
     /**
-     * Maps a document ID, source path, or branch to its demo route.
-     * @param value Document path, page ID, branch ID, or generated route.
-     * @returns The matched document or branch route, with the demo root as fallback.
+     * Resolves a document path or branch id to its demo URL, falling back to the demo root.
+     *
+     * @param value Repository path, route, or navigation node id to resolve.
+     *
+     * @return The selected document or branch route, or the workspace demo root when unmatched.
      */
     routePath(value) {
       const state = readWorkspaceDemoState();
@@ -595,10 +640,13 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
     },
     isDevelopmentOrigin: (o) => /^(?:https?:\/\/)?(?:localhost|127\.0\.0\.1)(?::\d+)?$/u.test(o),
     /**
-     * Handles browser fixture actions against the per-tab demo state.
-     * @param op Docs operation issued by the workspace.
-     * @param input Optional operation fields describing the document or asset.
-     * @returns The fixture-backed action result.
+     * Implements Docs host actions against the local demo document and asset store.
+     * Reads return fixture data; writes update the in-memory state and persist it when changed.
+     *
+     * @param op Host action name identifying a read or write operation.
+     * @param input Operation-specific payload or uploaded `FormData`.
+     *
+     * @return Fixture action data, or an error for an invalid source merge.
      */
     async invoke<T = unknown>(
       op: DocsActionOperation,
@@ -620,7 +668,13 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       else if (op === 'read.doc.get') {
         data = clone(findDocument(state, request.path ?? request.id) ?? null);
       } else if (op === 'read.doc.attachments') {
-        data = clone(findDocument(state, request.path)?.attachments ?? []);
+        if (Array.isArray(request.paths)) {
+          data = Object.fromEntries(
+            request.paths
+              .filter((path): path is string => typeof path === 'string')
+              .map((path) => [path, clone(findDocument(state, path)?.attachments ?? [])]),
+          );
+        } else data = clone(findDocument(state, request.path)?.attachments ?? []);
       } else if (op === 'read.asset.get') {
         data = new Uint8Array(state.assets[String(request.path ?? '')]?.bytes ?? []).buffer;
       } else if (op === 'read.doc.resolvePath') {
@@ -831,9 +885,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           return { error: new Error('The merge target or source pages could not be found.') };
         }
         /**
-         * Gives copied attachments a stable identity when the host ID is absent.
-         * @param attachment Attachment whose duplicate identity is being checked.
-         * @returns Host ID when present, otherwise a path/name composite key.
+         * Produces a stable key for detecting attachments already on the merge target.
+         *
+         * @param attachment Attachment whose identity should be compared.
+         *
+         * @return Its host id when available, otherwise a path/name composite key.
          */
         const attachmentKey = (attachment: DocsHostAttachment): string =>
           attachment.id || `${attachment.path}\u0000${attachment.name}`;
@@ -872,8 +928,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           }
           if (found) {
             /**
-             * Removes every stored page nested beneath the branch being deleted.
-             * @param node Leaf or branch whose associated documents should be removed.
+             * Deletes document records for every leaf beneath a branch before removing it.
+             *
+             * @param node Leaf or branch whose descendant document records should be deleted.
+             *
+             * @return Nothing; matching entries are removed from the current fixture state.
              */
             const removeDocumentsForNode = (node: DocsHostTreeNode): void => {
               if (node.type === 'leaf') {
@@ -983,11 +1042,13 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
   };
 }
 /**
- * Builds the demo URL for a document using its current navigation section and group.
- * @param state Current tree and document records.
- * @param value Document ID, path, or already resolved demo document.
- * @param routeBuilder Host-specific route function, defaulting to the demo query route.
- * @returns Document route, or the demo root if the document is not in the state.
+ * Builds the demo URL for a document after finding its section and group.
+ *
+ * @param state Current demo state containing navigation and document records.
+ * @param value Document id, path, or document record to route to.
+ * @param routeBuilder Host route builder, defaulting to the demo query format.
+ *
+ * @return A document URL, or the workspace demo root when the document cannot be resolved.
  */
 export function routeForWorkspaceDocument(
   state: WorkspaceDemoState,
@@ -1000,10 +1061,12 @@ export function routeForWorkspaceDocument(
   return (routeBuilder ?? buildWorkspaceRoute)(position.sectionId, position.groupId, document.id);
 }
 /**
- * Returns the demo navigation tree annotated with current routes and edit permissions.
- * @param state Current demo tree and documents.
- * @param readOnly Whether node permissions should disable editing.
- * @returns Routed copy of the navigation tree.
+ * Returns a copied navigation tree with URLs and read/write permissions for the demo host.
+ *
+ * @param state Current demo state whose tree should be routed.
+ * @param readOnly Whether each copied node should be marked read-only.
+ *
+ * @return The recursively copied tree with demo routes and permissions applied.
  */
 export function routedWorkspaceTree(
   state: WorkspaceDemoState,

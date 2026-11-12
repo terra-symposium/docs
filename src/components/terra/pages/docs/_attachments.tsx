@@ -98,7 +98,7 @@ HELPERS
  *
  * @param content - Docs content whose attachment references should be collected.
  *
- * @return
+ * @return The current leaf's Markdown source, or an empty string when it has no text content.
  */
 const latestContent = (content: unknown): string => {
   try {
@@ -130,8 +130,8 @@ COMPONENTS
 /**
  * Renders the document attachment manager for filtering, selecting, uploading, and organizing assets.
  *
- * @param dPath Source path of the document whose attachment list is being managed.
- * @param tree Navigation tree used to resolve document and ancestor attachment scopes.
+ * @param dPath Source path of the document whose attachments are being managed.
+ * @param tree Navigation tree used to find sibling documents and related attachment scopes.
  *
  * @return The attachment manager and its upload, selection, and organization controls.
  */
@@ -877,6 +877,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
           )}
         </div>
         <input
+          aria-label="Upload attachments"
           data-testid="docs-attachment-upload"
           ref={fileRef}
           type="file"
@@ -1285,6 +1286,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                     const { PDFDocument } = await import('pdf-lib');
                     const mergedPdf = await PDFDocument.create();
                     for (const pdf of mergePdfState.pdfs) {
+                      if (!pdf) continue;
                       const pdfDoc = await PDFDocument.load(await pdf.arrayBuffer());
                       (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach((p) =>
                         mergedPdf.addPage(p),
@@ -1370,10 +1372,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                           if (!viewDlg) return;
                           try {
                             if (viewDlg.type === 'tsdocs') {
-                              const scopeMatch = viewDlg.path.match(
-                                TerraQualityRegex.REGEX_DOCS_TSDOCS_REGEX(),
-                              );
-                              const scope = scopeMatch ? scopeMatch[1] : viewDlg.path;
+                              const scope =
+                                viewDlg.path.match(
+                                  TerraQualityRegex.REGEX_DOCS_TSDOCS_REGEX(),
+                                )?.[1] ?? viewDlg.path;
                               const { data, error } = await actions.read.tsdocs({ scope });
                               if (!error && data?.docs) {
                                 const url = URL.createObjectURL(

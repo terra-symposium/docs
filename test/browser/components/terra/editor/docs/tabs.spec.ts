@@ -81,18 +81,22 @@ test.describe('Docs editor tab contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
         await openEditor(p, tabsFixture, { readOnly: true });
-        const tabs = p.getByRole('tablist');
-        const firstTab = p.getByRole('tab', { name: 'First topic' });
         const secondTab = p.getByRole('tab', { name: 'Second topic' });
         const firstPanel = p.getByRole('tabpanel', { name: 'First topic' });
-        const secondPanel = p.getByRole('tabpanel', { name: 'Second topic' });
-        await expect(firstTab).toHaveAttribute('aria-selected', 'true');
+        await expect(p.getByRole('tab', { name: 'First topic' })).toHaveAttribute(
+          'aria-selected',
+          'true',
+        );
         await expect(firstPanel.getByText('First explanation', { exact: true })).toBeVisible();
         await secondTab.click();
         await expect(secondTab).toHaveAttribute('aria-selected', 'true');
-        await expect(secondPanel.getByText('Second explanation', { exact: true })).toBeVisible();
+        await expect(
+          p
+            .getByRole('tabpanel', { name: 'Second topic' })
+            .getByText('Second explanation', { exact: true }),
+        ).toBeVisible();
         await expect(firstPanel.getByText('First explanation', { exact: true })).toBeHidden();
-        await expect(tabs).toBeVisible();
+        await expect(p.getByRole('tablist')).toBeVisible();
       },
     );
   });
@@ -187,9 +191,10 @@ test.describe('Docs editor tab contracts', () => {
           },
         ] satisfies Content;
         await openEditor(p, content, { readOnly: true });
-        const tabs = p.getByRole('tablist').last();
-        const overview = p.getByRole('tab', { name: 'Overview' });
-        await expect(overview).toHaveAttribute('aria-selected', 'true');
+        await expect(p.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+          'aria-selected',
+          'true',
+        );
         await expect(p.getByRole('table').getByText('Voice', { exact: true })).toBeVisible();
         await expect(
           p.getByRole('table').getByText('Professional and evidence-based.', { exact: true }),
@@ -199,7 +204,7 @@ test.describe('Docs editor tab contracts', () => {
         await expect(
           p.getByRole('table').getByText('Engineering trust and confidence.', { exact: true }),
         ).toBeVisible();
-        await expect(tabs).toBeVisible();
+        await expect(p.getByRole('tablist').last()).toBeVisible();
       },
     );
     test(
@@ -278,8 +283,10 @@ test.describe('Docs editor tab contracts', () => {
           },
         ] satisfies Content;
         await openEditor(p, content, { readOnly: true });
-        const table = p.getByRole('tabpanel', { name: 'Overview' }).getByRole('table');
-        const cells = table.getByRole('cell');
+        const cells = p
+          .getByRole('tabpanel', { name: 'Overview' })
+          .getByRole('table')
+          .getByRole('cell');
         await expect(p.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
           'aria-selected',
           'true',

@@ -1,5 +1,6 @@
 /**
  * src/lib/terra/runtime/content.ts
+ * Formerly astro/src/actions/docs/content.ts.
  * Shared helpers for normalizing and serializing docs content versions, syntax, and tables.
  */
 
@@ -72,11 +73,11 @@ const ptText = (
 } => isRec(val) && val._type === 'span';
 
 /**
- * Narrows persisted mark definitions before the Markdown serializer reads link fields.
+ * Keeps only persisted link marks that satisfy the serializer's expected field types.
  *
- * @param val
+ * @param val Untrusted mark-definition data from stored Portable Text.
  *
- * @return
+ * @return Link definitions with a valid type and optional string key and URL.
  */
 const ptMarkDefs = (val: unknown): PtMarkDef[] =>
   Array.isArray(val)
@@ -120,8 +121,7 @@ const listKind = (val: unknown): string =>
 /**
  * Serializes a string literal so it can be embedded safely in JSX attributes.
  *
- * @param val
- * @param value - String literal to quote.
+ * @param val - String literal to quote.
  *
  * @return A quoted string literal that can survive MDX parsing unchanged.
  */
@@ -130,8 +130,7 @@ const quote = (val: string): string => JSON.stringify(val);
 /**
  * Escapes HTML control characters before text is embedded in serialized docs markup.
  *
- * @param val
- * @param value - HTML text to escape.
+ * @param val - HTML text to escape.
  *
  * @return Text with HTML metacharacters escaped for serialization.
  */
@@ -186,12 +185,11 @@ const BLOCKS = [
 ] as const;
 
 /**
- * Handles docs editor mount ids.
+ * Finds editor-block ids in document source while ignoring text inside code and math.
  *
- * @param src
- * @param source - Source text containing the Docs blocks to parse.
+ * @param src Source text containing the Docs blocks to parse.
  *
- * @return
+ * @return Unique editor block identifiers in the order they first appear.
  */
 export const docsEditorMountIds = (src: string): string[] => {
   const code = new Map<string, string>();
@@ -436,10 +434,9 @@ CODE SYNTAX
 /**
  * Emits the optional language attribute used by serialized code fences.
  *
- * @param lang
- * @param language - Code fence language label.
+ * @param lang Code fence language label.
  *
- * @return `language` attribute when the fence declares one, otherwise an empty string.
+ * @return A quoted `language` attribute for a non-empty label, otherwise an empty string.
  */
 const codeAttrs = (lang?: string): string =>
   lang?.trim() ? ` language=${JSON.stringify(lang.trim())}` : '';
@@ -462,12 +459,12 @@ ${val.replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQuality
 }
 
 /**
- * Handles code src jsx.
+ * Emits a self-closing Code component for a code block loaded from a source endpoint.
  *
  * @param lang - Code language label used for the generated code block.
  * @param src - Source code text to wrap in the code block.
  *
- * @return
+ * @return Canonical `Code` JSX with its source URL encoded as an attribute.
  */
 export const codeSrcJsx = (lang: string | undefined, src: string): string =>
   `\n<Code${codeAttrs(lang)} source=${quote(src)} />\n`;
@@ -533,11 +530,10 @@ TABLE HTML
 /**
  * Removes the outer `|` characters from a pipe-table row while respecting escaped pipes.
  *
- * @param val
+ * @param val Pipe-delimited text to trim.
  * @param side - Side of the pipe to trim.
- * @param value - Pipe-delimited text to trim.
  *
- * @return Row fragment with the requested outer pipe removed.
+ * @return Row fragment with the requested unescaped outer pipe removed.
  */
 const trimPipe = (val: string, side: 'start' | 'end'): string => {
   if (side === 'start' && val.startsWith('|')) return val.slice(1);
@@ -615,10 +611,9 @@ CONTENT SERIALIZATION
 /**
  * Converts plain markdown into HTML for the serializer's fallback path.
  *
- * @param val
- * @param value - Markdown source to parse.
+ * @param val Markdown source to parse.
  *
- * @return Rendered HTML string used when markdown does not map to richer docs blocks.
+ * @return HTML for code, links, emphasis, and paragraph breaks in the fallback path.
  */
 const renderMd = (val: string): string => {
   const text = val.trim();
@@ -652,11 +647,11 @@ const renderMd = (val: string): string => {
 };
 
 /**
- * Handles sanitize table html.
+ * Removes inline style attributes that are not part of serialized table content.
  *
  * @param val - Table markup whose inline styles should be removed.
  *
- * @return
+ * @return The same table markup without editor-only style attributes.
  */
 export const sanitizeTableHtml = (val: string): string =>
   val
@@ -666,10 +661,9 @@ export const sanitizeTableHtml = (val: string): string =>
 /**
  * Formats raw table HTML with consistent indentation so docs tables round-trip cleanly.
  *
- * @param val
- * @param value - Table HTML to format.
+ * @param val Table HTML to format.
  *
- * @return Formatted table HTML string with stable indentation.
+ * @return The input when it is not a table, or normalized indentation for table markup.
  */
 const fmtRawTable = (val: string): string => {
   if (!TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
@@ -698,21 +692,17 @@ const fmtRawTable = (val: string): string => {
 export const TABLE_TAG = TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_B_I_REGEX();
 
 /**
- * Handles atomic table html.
+ * Removes editor-only styles and surrounding whitespace from a table source block.
  *
  * @param val - Complete table markup captured from a Docs source block.
  *
- * @return
+ * @return Trimmed markup without style attributes.
  */
 const atomicTableHtml = (val: string): string => {
   return sanitizeTableHtml(val).trim();
 };
 
 /**
- * Handles fmt raw tables.
- *
- * @param source - Source text containing markup blocks to protect during normalization.
- */
 /**
  * Replaces complete literal markup blocks without scanning past an unclosed legacy tag.
  *
@@ -1052,12 +1042,11 @@ const blockMd = (b: DocBlock, number = 1): string => {
 };
 
 /**
- * Prefers editor-formatted body content, then falls back to markdown restored from custom blocks.
+ * Protects raw table HTML by converting Docs table blocks to canonical JSX.
  *
- * @param md - Markdown source to parse.
- * @param body - Body content to process.
+ * @param md - Markdown source containing Docs table blocks.
  *
- * @return Editor Markdown source, using canonical JSX wrappers for nested blocks.
+ * @return Markdown source with raw table blocks represented by `DocsTable` components.
  */
 const escDocsTableTemplates = (md: string): string =>
   md.replace(
@@ -1067,12 +1056,12 @@ const escDocsTableTemplates = (md: string): string =>
   );
 
 /**
- * Handles editor nested md.
+ * Serializes nested editor content while restoring protected table and rich-block markup.
  *
- * @param body - Structured body used as the serialization source.
+ * @param body - Structured Portable Text blocks to serialize.
  * @param markdown - Markdown fallback used when structured content is unavailable.
  *
- * @return
+ * @return Nested source reconstructed from the body, or the supplied Markdown fallback.
  */
 const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string => {
   const tables: string[] = [];
@@ -1281,11 +1270,11 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
 };
 
 /**
- * Handles stringify problem editor content body.
+ * Serializes a problem editor body using the platform's Markdown list and block conventions.
  *
  * @param body - Problem editor body to serialize into Markdown source.
  *
- * @return
+ * @return Markdown source for the ordered editor blocks, or an empty string for an empty body.
  */
 export const stringifyProblemEditorContentBody = (body: DocBody | null | undefined): string => {
   if (!Array.isArray(body) || body.length === 0) return '';

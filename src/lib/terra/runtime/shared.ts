@@ -20,6 +20,7 @@ REGEX
 //////////////////////////////////////////////////*/
 
 const SHARED_REGEX = /^\/+/;
+const SHARED_CLASS_2 = TerraQualityRegex.REGEX_PATTERN_REGEX_7();
 export const REORDER = {
   active: 'bg-primary-3 text-primary-12 ring-1 ring-primary-7',
   after:
@@ -47,26 +48,29 @@ export const MIME: Record<string, string> = {
 };
 export const TESTIMONIALS_EXPORT = '';
 /**
- * Returns the active host's Docs root, defaulting to the original Terra route.
- * @returns The configured root pathname.
+ * Returns the root route for this Docs host.
+ *
+ * @return Host-configured root path or the `/docs` fallback.
  */
 export function docsRootPath(): string {
   return getDocsHostAdapter()?.rootPath ?? '/docs';
 }
 /**
- * Removes trailing slashes from a Docs path.
+ * Removes trailing slash runs from a Docs or repository path.
  *
- * @param path - Path whose trailing separators should be removed.
+ * @param path Path to normalize.
  *
- * @returns The path without trailing slashes, or an empty string for slash-only input.
+ * @return The path without trailing slashes.
  */
 export function trimTrailingSlashes(path: string): string {
-  return path.replace(/\/+$/, '');
+  return path.replace(SHARED_CLASS_2, '');
 }
 /**
- * Joins a relative path to the host Docs root without duplicating an existing root prefix.
- * @param path Relative path or already rooted host route.
- * @returns The route joined to the active host's Docs root.
+ * Builds a Docs route through the host adapter or the default root path.
+ *
+ * @param path Optional path beneath the Docs root.
+ *
+ * @return A route that contains the root exactly once.
  */
 export function docsPath(path = ''): string {
   const host = getDocsHostAdapter();
@@ -78,18 +82,22 @@ export function docsPath(path = ''): string {
   return `${root}/${c}`;
 }
 /**
- * Checks whether a pathname belongs to the active host's Docs root.
- * @param path Browser pathname to check.
- * @returns Whether the path equals or descends from the configured root.
+ * Checks whether a pathname belongs to the active Docs route tree.
+ *
+ * @param path Browser pathname or host route to check.
+ *
+ * @return Whether the path is the Docs root or a descendant route.
  */
 export function isDocsPath(path: string): boolean {
   const root = trimTrailingSlashes(docsRootPath()) || '/';
   return root === '/' ? path.startsWith('/') : path === root || path.startsWith(`${root}/`);
 }
 /**
- * Collects leaf paths from a nested navigation tree while ignoring branches without paths.
+ * Collects leaf routes from a nested section and group tree.
+ *
  * @param nodes Navigation nodes to traverse.
- * @returns Paths of leaves, in tree order.
+ *
+ * @return Paths for leaves with a defined path, in tree order.
  */
 export function toPaths(nodes: Tree[]): string[] {
   return Array.isArray(nodes)
@@ -99,25 +107,31 @@ export function toPaths(nodes: Tree[]): string[] {
     : [];
 }
 /**
- * Recognizes API and absolute web URLs that should remain external to Docs routing.
- * @param value Candidate endpoint string.
- * @returns Whether it begins with `/api/`, `http://`, or `https://`.
+ * Recognizes API paths and absolute HTTP(S) URLs used by node content.
+ *
+ * @param value Candidate endpoint value.
+ *
+ * @return Whether the trimmed value begins with `/api/`, `http://`, or `https://`.
  */
 export function isEndpointVal(value: string): boolean {
   return /^(?:\/api\/|https?:\/\/)/i.test(value.trim());
 }
 /**
- * Removes the leading underscore convention used to hide internal labels from navigation.
- * @param title Navigation title that may use the internal-name prefix.
- * @returns Title without leading underscores, or an empty string for a missing title.
+ * Removes leading underscores from a navigation title for display.
+ *
+ * @param title Source title from a Docs tree node.
+ *
+ * @return Display label with leading underscores omitted.
  */
 export function toNodeLabel(title: string): string {
   return title?.replace(/^_+/, '') ?? '';
 }
 /**
- * Returns the parent directory portion of a slash-separated repository path.
- * @param path Repository-relative or absolute path.
- * @returns Parent path, `.` for a bare filename, or `/` for a root child.
+ * Returns the parent path while preserving the root for top-level paths.
+ *
+ * @param path Path whose containing directory is needed.
+ *
+ * @return Parent pathname or `.` when the input has no directory separator.
  */
 export function dirname(path: string): string {
   const value = trimTrailingSlashes(path);
@@ -125,10 +139,12 @@ export function dirname(path: string): string {
   return index < 0 ? '.' : value.slice(0, index) || '/';
 }
 /**
- * Returns the last path segment and optionally removes its known file extension.
- * @param path Repository or URL path.
- * @param ext Known suffix to remove only when it ends the basename.
- * @returns Basename without the optional matching suffix.
+ * Extracts the final path segment and optionally removes its known extension.
+ *
+ * @param path Path or URL-like pathname.
+ * @param ext Exact extension suffix to strip when present.
+ *
+ * @return Final path segment without the requested suffix.
  */
 export function bName(path: string, ext?: string): string {
   let name = trimTrailingSlashes(path).split('/').pop() || '';
@@ -136,17 +152,21 @@ export function bName(path: string, ext?: string): string {
   return name;
 }
 /**
- * Trims whitespace from a host-provided title, using an empty string when no title exists.
- * @param title Optional title supplied by the host.
- * @returns Trimmed title or an empty string.
+ * Trims whitespace around an optional section title.
+ *
+ * @param title Title text to normalize.
+ *
+ * @return Trimmed title or an empty string when no title was supplied.
  */
 export const cTitle = (title?: string): string => (title || '').trim();
 /**
- * Builds a host-aware route from section, group, and leaf identifiers.
- * @param sectionId Section identifier, or `index` for the Docs root.
- * @param groupId Optional nested group identifier.
- * @param leafId Optional leaf identifier.
- * @returns Route supplied by the host or assembled beneath the configured root.
+ * Builds a route through the host adapter or the default section/group/leaf scheme.
+ *
+ * @param sectionId Section identifier, with `index` representing the root.
+ * @param groupId Optional group identifier within the section.
+ * @param leafId Optional leaf identifier within the group or section.
+ *
+ * @return The host's canonical route for those identifiers.
  */
 export function buildRoute(sectionId: string, groupId?: string, leafId?: string): string {
   const hostBuilder = getDocsHostAdapter()?.buildRoute;
@@ -156,9 +176,11 @@ export function buildRoute(sectionId: string, groupId?: string, leafId?: string)
     : docsRootPath();
 }
 /**
- * Parses a Docs URL into its section/group/leaf IDs, delegating to the host when available.
- * @param value URL or pathname selected in the browser.
- * @returns Resolved identifiers and the canonical pathname.
+ * Resolves a URL or pathname to Docs navigation identifiers.
+ *
+ * @param value Route or URL entered by the caller.
+ *
+ * @return Section, optional group and leaf, target id, and canonical pathname.
  */
 export function parseRoute(value: string): {
   sectionId: string;

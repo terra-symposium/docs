@@ -17,16 +17,20 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 /**
- * Accepts Portable Text arrays and maps malformed or absent bodies to an empty document.
- * @param value Value read from the host's leaf content field.
- * @returns Portable Text body, or an empty array for non-array input.
+ * Narrows a host value to the ordered block array used by the editor.
+ *
+ * @param value Parsed content, which may already be a block array or another host shape.
+ *
+ * @return The original array when present, otherwise an empty document body.
  */
 export const toPortableBody = (value: unknown): DocBody =>
   Array.isArray(value) ? (value as DocBody) : [];
 /**
- * Reads a leaf's Markdown source or serializes its `main`/`content` Portable Text body.
- * @param value Leaf source or record containing a Portable Text body.
- * @returns Existing Markdown or serialized Portable Text.
+ * Produces the editable source for a leaf from Markdown or serialized block content.
+ *
+ * @param value Current leaf content from the host.
+ *
+ * @return Original Markdown text or a Markdown serialization of its Portable Text body.
  */
 export const currLeafSrc = (value: unknown): string =>
   typeof value === 'string'

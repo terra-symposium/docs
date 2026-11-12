@@ -90,7 +90,7 @@ import type { JSX, MouseEvent, MouseEventHandler, ReactNode } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** A typed Docs value member with an optional stable key and preserved custom fields. */
+/** A serialized Portable Text object with a string discriminator and preserved custom fields. */
 type ContentMember = Record<string, unknown> & { _key?: string; _type: string };
 /** Portable Text block array after Docs-specific blocks have been adapted for the editor. */
 type EditorValue = PortableTextBlock[];
@@ -651,25 +651,25 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Determines whether an attachment should use the image or embed block type.
+ * Determines whether the document allows an attachment to use its image or embed block type.
  *
- * @param attachment - Attachment whose filename determines its visual block type.
- * @param blocks - Enabled block configuration for the current document.
+ * @param attachment - Attachment whose filename determines whether it uses an image or embed block.
+ * @param blocks - Per-document enabled block configuration.
  *
- * @returns `true` when the matching image or embed block is enabled.
+ * @returns `true` when the document enables the matching visual renderer.
  */
 function canEmbedAttachment(attachment: DocsHostAttachment, blocks: DocsBlockOptions): boolean {
   return imgFile.test(attachment.name) ? blocks.docImage !== false : blocks.embed !== false;
 }
 
 /**
- * Renders an icon button that keeps toolbar focus while forwarding its mouse action.
+ * Renders a compact toolbar control that preserves editor focus and exposes an accessible label.
  *
- * @param children - Icon or other content displayed inside the button.
- * @param label - Accessible name and tooltip text for the button.
+ * @param children - Icon or other visual content inside the control.
+ * @param label - Accessible action name used for the button label and tooltip.
  * @param onMouseDown - Handler invoked before the button changes editor focus.
  *
- * @returns The labeled toolbar button.
+ * @returns The shared Styling button configured for this editor action.
  */
 function ToolbarButton({
   children,
@@ -695,9 +695,9 @@ function ToolbarButton({
 }
 
 /**
- * Checks whether a value is a structured Docs content member.
+ * Narrows an unknown value to a Portable Text object with a string discriminator.
  *
- * @param v - Value to inspect.
+ * @param v - Value read from stored or editor-produced content.
  *
  * @returns `true` when the value is a non-array object with a string `_type`.
  */
@@ -711,9 +711,9 @@ function isMember(v: unknown): v is ContentMember {
 }
 
 /**
- * Checks whether a Docs content member has the key required for preservation.
+ * Narrows a wrapped Portable Text member that can be restored to its original source.
  *
- * @param value - Value to inspect.
+ * @param value - Candidate member produced by the Portable Text editor.
  *
  * @returns `true` when the member has a string `_key`.
  */
@@ -722,9 +722,9 @@ function isPreservedMember(value: unknown): value is ContentMember {
 }
 
 /**
- * Converts nested Docs content arrays to the editor's Portable Text shape.
+ * Converts nested Docs content arrays to Portable Text while passing scalar values through.
  *
- * @param value - Stored nested content or another preserved value.
+ * @param value - Nested content stored in a Docs component, or another preserved value.
  * @param options - Block options applied while normalizing nested content.
  *
  * @returns Editor-ready content for arrays, or the original value otherwise.
@@ -734,10 +734,12 @@ function normNestedContent(value: unknown, options: DocsBlockOptions): unknown {
 }
 
 /**
- * Adapts stored text children and custom inline objects to editor-safe members.
+ * Converts legacy strings and inline objects to editor-safe children while preserving unsupported source.
+ *
  * @param value Stored child value, including legacy strings or Portable Text members.
  * @param options Enabled block capabilities used to retain supported inline math.
  * @param blockKey Optional parent key used to create a stable child key for legacy text.
+ *
  * @returns Child members with unsupported source preserved behind editor aliases.
  */
 function normTextChildren(value: unknown, options: DocsBlockOptions, blockKey?: string): unknown[] {
@@ -774,7 +776,8 @@ function normTextChildren(value: unknown, options: DocsBlockOptions, blockKey?: 
 }
 
 /**
- * Restores preserved inline source and the stored spelling of Docs marks.
+ * Restores source wrappers and the stored spelling of Docs marks for edited text children.
+ *
  * @param value Editor child value after user edits.
  * @returns Original preserved children, with temporary aliases removed.
  */
@@ -793,10 +796,10 @@ function restoreTextChildren(value: unknown): unknown {
 }
 
 /**
- * Translate the stored Terra text-block alias into Portable Text's editor member.
+ * Translates stored Docs text blocks and nested aliases into Portable Text editor members.
  *
  * @param value - Stored Docs content to convert into editor blocks.
- * @param options - Block options that control nested content conversion.
+ * @param options - Per-document block options that control nested content conversion.
  *
  * @returns Portable Text members ready for the Docs editor.
  */
@@ -808,7 +811,7 @@ function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): Editor
         _type: 'raw',
         markdown: docsValueToMarkdown([m] as unknown as Parameters<typeof docsValueToMarkdown>[0]),
       } as unknown as PortableTextBlock;
-    if (m._type === 'block' || m._type === 'block') {
+    if (m._type === 'block' || m._type === 'terraBlock') {
       const { c, children, ...rest } = m;
       return {
         ...rest,
@@ -871,7 +874,8 @@ function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): Editor
 }
 
 /**
- * Restores editor aliases and recursively returns preserved nested Portable Text source to the host model.
+ * Restores editor aliases and nested source wrappers to the Docs content model.
+ *
  * @param value Editor block array after user edits.
  * @returns Docs content with temporary aliases removed and nested callout/table content restored.
  */
@@ -922,10 +926,12 @@ function toContentValue(value: EditorValue): unknown[] {
 }
 
 /**
- * Renders a Portable Text style as its semantic HTML element or Docs heading component.
+ * Selects the semantic HTML or Docs heading element for one Portable Text style.
+ *
  * @param style Stored block style such as `normal`, `blockquote`, or `h2`.
  * @param children Rendered inline children for the block.
  * @param readOnly Whether viewer-mode heading anchors should be added.
+ *
  * @returns The selected heading, blockquote, or paragraph element.
  */
 function renderTextStyle(style: unknown, children: ReactNode, readOnly: boolean): JSX.Element {
@@ -938,7 +944,7 @@ function renderTextStyle(style: unknown, children: ReactNode, readOnly: boolean)
 }
 
 /**
- * Renders a Portable Text paragraph with Docs heading, list, and blockquote semantics.
+ * Renders a Portable Text paragraph or list item with Docs heading, list, and blockquote semantics.
  * @param attrs Portable Text attributes that must remain on the editable root.
  * @param children Rendered inline content for the paragraph.
  * @param node Text block fields controlling style, list marker, and nesting level.
@@ -1102,18 +1108,18 @@ function OrderedListItem({
 }
 
 /**
- * Portable Docs editor profile extracted from the shared content editor.
+ * Edits a Docs Portable Text body with enabled rich-text and custom block controls.
  *
  * @param content Initial or replacement Docs content to edit.
- * @param onChange Callback receiving the preserved Docs value after editor changes.
+ * @param onChange Receives preserved Docs content after editor changes.
  * @param readOnly Whether the editor should render in viewer mode.
- * @param resetKey Key that resets the editor when the host switches documents.
- * @param nested Whether nested content should use compact editing behavior.
+ * @param resetKey Key that resets the editor when the host switches documents or versions.
+ * @param nested Whether this editor is already inside a nestable Docs block.
  * @param toolbar Whether to show Docs insertion and formatting controls.
  * @param docsAttachments Attachments available to the insertion and preview controls.
  * @param toolbarActions Additional host-provided controls displayed with the toolbar.
- * @param blocks Feature flags controlling the rich block types available to this editor.
- * @returns The configured Portable Text editor with Docs block adapters and optional toolbar.
+ * @param blocks Per-document switches controlling supported Docs block types.
+ * @returns The configured Portable Text editor with block adapters and optional toolbar controls.
  */
 export function ContentEditor({
   content = [],

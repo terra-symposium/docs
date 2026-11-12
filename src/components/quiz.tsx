@@ -15,17 +15,23 @@ import type { JSX, ReactNode } from 'react';
 /*//////////////////////////////////////////////////
 CONFIG
 //////////////////////////////////////////////////*/
+const TEXT_SM_TEXT_PRIMARY_10_CLASS = 'text-sm text-primary-10';
+const ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS =
+  'rounded-md border border-primary-6 bg-background px-3 py-2';
+const FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS = 'flex flex-col gap-1 text-sm';
+const ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS =
+  'rounded-md bg-primary-9 px-4 py-2 text-primary-1';
 
-/** Question formats understood by the Docs quiz generator and answer checker. */
+/** Question formats supported by the shared quiz runner. */
 export type DocsQuizQuestionType = 'multipleChoice' | 'keyword';
-/** Input sent to a host's quiz-generation service for one source page. */
+/** Source and constraints sent to a host when it generates a page quiz. */
 export type DocsQuizGenerationInput = {
   title: string;
   markdown: string;
   count: number;
   types: DocsQuizQuestionType[];
 };
-/** Validated question data rendered by the quiz review and play stages. */
+/** Validated question data consumed by the Docs quiz review and answer screens. */
 export type DocsQuizQuestion =
   | {
       type: 'multipleChoice';
@@ -43,14 +49,14 @@ export type DocsQuizQuestion =
       explanation?: string;
       section?: string;
     };
-/** Quiz title and validated questions returned by a host generation endpoint. */
+/** A generated quiz title and its validated questions. */
 export type DocsQuizDocument = { title: string; questions: DocsQuizQuestion[] };
-/** Host options for displaying the quiz toolbar and generating questions from page Markdown. */
+/** Host options for showing quiz controls and requesting generated question data. */
 export type DocsQuizConfig = {
   toolbar?: boolean;
   generate?: (input: DocsQuizGenerationInput) => Promise<unknown>;
 };
-/** Current page context shared with the Markdown quiz block. */
+/** Current document and generation settings shared with Markdown quiz blocks. */
 type DocsQuizContextValue = {
   config: DocsQuizConfig;
   title: string;
@@ -62,13 +68,13 @@ const DocsQuizContext = createContext<DocsQuizContextValue | null>(null);
 HELPERS
 //////////////////////////////////////////////////*/
 
-/**
- * Provides the current page's quiz generator and source to Docs quiz controls below it.
- * @param children Page content wrapped by the quiz context.
- * @param config Host-provided toolbar and generation settings.
- * @param title Current page title used in the generated quiz.
- * @param markdown Current page Markdown source supplied to the generator.
- * @returns The provider containing its children.
+/** Provides the current page and its host-supplied quiz generator to nested blocks.
+ *
+ * @param children - Descendant content that can request the page's quiz context.
+ * @param config - Host controls for toolbar visibility and server-backed generation.
+ * @param title - Page title used in quiz labels and as a generation fallback.
+ * @param markdown - Page source from which a host may generate questions.
+ * @returns The provider subtree with quiz context available to descendants.
  */
 export function DocsQuizProvider({
   children,
@@ -83,19 +89,20 @@ export function DocsQuizProvider({
   );
 }
 
-/**
- * Reads the current Docs quiz provider value for a quiz block.
- * @returns Page context when rendered below a provider, otherwise `null`.
+/** Returns the active page quiz context, or `null` outside a quiz provider.
+ *
+ * @returns The current page title, Markdown, and generation settings.
  */
 export function useDocsQuizContext(): DocsQuizContextValue | null {
   return useContext(DocsQuizContext);
 }
 
 /**
- * Validates an unknown generation response and narrows it to supported question shapes.
- * @param v Untrusted value returned by the host's quiz endpoint.
- * @returns Quiz document with valid prompts, choices or accepted answers, and optional explanations.
- * @throws Error when the title, question count, prompt, options, answer, or question type is invalid.
+ * Validates and normalizes the untrusted response returned by a quiz endpoint.
+ *
+ * @param v - Endpoint response expected to contain a title and one to twenty questions.
+ * @returns A quiz document with supported question fields copied into the public shape.
+ * @throws When the response, question prompts, answer options, or accepted answers are invalid.
  */
 export function parseDocsQuiz(v: unknown): DocsQuizDocument {
   if (!v || typeof v !== 'object') throw new Error('The quiz endpoint returned invalid quiz data.');
@@ -166,10 +173,11 @@ export function parseDocsQuiz(v: unknown): DocsQuizDocument {
 }
 
 /**
- * Checks a submitted response using exact choice matching or normalized keyword-answer rules.
- * @param question Validated quiz question.
- * @param response User-entered answer or selected multiple-choice text.
- * @returns `true` for the exact correct option or an accepted answer/keyword combination.
+ * Checks an answer using exact option matching or case-insensitive accepted keywords.
+ *
+ * @param question - Validated question whose answer rules should be applied.
+ * @param response - User-entered response to compare with those rules.
+ * @returns Whether the response satisfies the question's accepted-answer rules.
  */
 function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean {
   const norm = response.trim().toLowerCase();
@@ -185,12 +193,12 @@ function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean 
 }
 
 /**
- * Shared quiz setup, generation, review, and runner UI for Docs hosts.
+ * Renders quiz setup, host-backed generation, question review, and answer results.
  *
- * @param title Source page title displayed during setup and as the fallback quiz heading.
- * @param markdown Markdown sent to the host's quiz-generation callback.
- * @param gen Optional host callback that generates quiz questions from the selected settings.
- * @returns Interactive setup, review, question, and results UI held in the page session.
+ * @param title - Page title shown in the quiz heading and generation request.
+ * @param markdown - Page source supplied to the host's quiz-generation callback.
+ * @param gen - Optional host callback that returns questions for validation and review.
+ * @returns The quiz UI for the current page and generation settings.
  */
 export function DocsQuizGenerator({
   title,
@@ -211,9 +219,10 @@ export function DocsQuizGenerator({
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   /**
-   * Replaces one draft question while retaining the rest of the generated quiz.
-   * @param questionIndex Position of the question being revised.
-   * @param update Pure transformation applied to the selected question.
+   * Replaces one generated question while preserving the rest of the quiz.
+   *
+   * @param questionIndex - Position of the question to replace.
+   * @param update - Function that returns the revised question data.
    */
   const updateQuestion = (
     questionIndex: number,
@@ -247,13 +256,13 @@ export function DocsQuizGenerator({
       )}
       {stage === 'setup' && (
         <div className="space-y-4">
-          <p className="text-sm text-primary-10">
+          <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
             Generate a quiz from this leaf. Your quiz is kept in this page session only.
           </p>
           <label className="flex max-w-xs flex-col gap-1 text-sm">
             Number of questions
             <input
-              className="rounded-md border border-primary-6 bg-background px-3 py-2"
+              className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
               type="number"
               min={1}
               max={20}
@@ -324,16 +333,18 @@ export function DocsQuizGenerator({
       )}
       {stage === 'review' && quiz && (
         <div className="space-y-4">
-          <p className="text-sm text-primary-10">Review and edit the questions before starting.</p>
+          <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
+            Review and edit the questions before starting.
+          </p>
           {quiz.questions.map((v, i) => (
             <fieldset key={i} className="space-y-2 rounded-lg border border-primary-6 p-4">
               <legend className="px-1 font-medium">
                 Question {i + 1} · {v.type === 'multipleChoice' ? 'Multiple choice' : 'Keyword'}
               </legend>
-              <label className="flex flex-col gap-1 text-sm">
+              <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                 Prompt
                 <input
-                  className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                  className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                   value={v.prompt}
                   onChange={(event) =>
                     updateQuestion(i, (q) => ({
@@ -345,10 +356,10 @@ export function DocsQuizGenerator({
               </label>
               {v.type === 'multipleChoice' ? (
                 <>
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                     Options (one per line)
                     <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                      className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                       value={v.opts.join('\n')}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
@@ -359,10 +370,10 @@ export function DocsQuizGenerator({
                       }
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                     Correct answer
                     <input
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                      className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                       value={v.answer}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
@@ -374,10 +385,10 @@ export function DocsQuizGenerator({
                 </>
               ) : (
                 <div className="space-y-2">
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                     Accepted answers (one per line)
                     <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                      className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                       value={v.answers.join('\n')}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
@@ -388,10 +399,10 @@ export function DocsQuizGenerator({
                       }
                     />
                   </label>
-                  <label className="flex flex-col gap-1 text-sm">
+                  <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                     Hint keywords (one per line)
                     <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                      className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                       value={v.keywords?.join('\n') ?? ''}
                       onChange={(event) =>
                         updateQuestion(i, (q) =>
@@ -404,10 +415,10 @@ export function DocsQuizGenerator({
                   </label>
                 </div>
               )}
-              <label className="flex flex-col gap-1 text-sm">
+              <label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
                 Explanation
                 <input
-                  className="rounded-md border border-primary-6 bg-background px-3 py-2"
+                  className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
                   value={v.explanation ?? ''}
                   onChange={(event) =>
                     updateQuestion(i, (q) => ({
@@ -454,7 +465,7 @@ export function DocsQuizGenerator({
       )}
       {stage === 'quiz' && question && (
         <div className="space-y-4">
-          <p className="text-sm text-primary-10">
+          <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
             Question {index + 1} of {quiz?.questions.length}
           </p>
           <h3 className="text-lg font-medium">{question.prompt}</h3>
@@ -511,7 +522,7 @@ export function DocsQuizGenerator({
                 }
               />
               {question.keywords?.length ? (
-                <p className="text-sm text-primary-10">
+                <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
                   Hint: include {question.keywords.join(', ')}.
                 </p>
               ) : null}
@@ -550,7 +561,7 @@ export function DocsQuizGenerator({
                     return n;
                   })
                 }
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
+                className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}
               >
                 Check answer
               </button>
@@ -558,7 +569,7 @@ export function DocsQuizGenerator({
               <button
                 type="button"
                 onClick={() => setIndex((i) => i + 1)}
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
+                className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}
               >
                 Next
               </button>
@@ -566,7 +577,7 @@ export function DocsQuizGenerator({
               <button
                 type="button"
                 onClick={() => setStage('results')}
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
+                className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}
               >
                 Finish quiz
               </button>
@@ -615,7 +626,7 @@ export function DocsQuizGenerator({
 /**
  * Renders the Markdown opt-in directive using the active host configuration.
  *
- * @returns The configured quiz generator, or an explanatory message when no host provider exists.
+ * @returns The configured quiz generator, or an explanation when no host context exists.
  */
 export function DocsQuizBlock(): JSX.Element {
   const context = useDocsQuizContext();

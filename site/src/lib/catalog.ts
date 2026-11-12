@@ -27,7 +27,11 @@ CONFIG
  * @return A global regular expression for replacing route word separators.
  */
 const G_REGEX = () => TerraQualityRegex.REGEX_G_REGEX_8();
-/** Matches a numeric ordering prefix at the start of a route segment. */
+/**
+ * Matches a numeric ordering prefix at the start of a route segment.
+ *
+ * @returns The numeric prefix and separator used to order a catalog entry.
+ */
 const ORDER_PREFIX_REGEX = () => /^(\d+)[-_]+/;
 /**
  * Matches the first Unicode letter after a word boundary for title capitalization.
@@ -129,7 +133,9 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
     };
   })
   .sort((l, r) => l.order - r.order || l.file.localeCompare(r.file));
-/** In-progress navigation node whose children are indexed by route segment. */
+/**
+ * Mutable route node whose children are indexed by segment while the navigation tree is assembled.
+ */
 type MutableNode = Omit<DocsNavNode, 'children'> & { children: Map<string, MutableNode> };
 const rootNodes = new Map<string, MutableNode>();
 /** Navigation tree built from the visible pages after their routes are registered. */
@@ -153,7 +159,7 @@ function label(value: string): string {
   return value
     .replace(ORDER_PREFIX_REGEX(), '')
     .replace(G_REGEX(), ' ')
-    .replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase());
+    .replace(B_P_L_GU_REGEX(), (l) => l.toUpperCase());
 }
 
 /**

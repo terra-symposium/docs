@@ -1,6 +1,6 @@
 # Terra Docs
 
-Terra Docs is a reusable React document editor and viewer, Markdown site generator, and documentation workspace. Repositories can use the package for a complete Docs site or embed its React components in another application. This repository includes a Vite consumer demo, Astro integration, interface documentation, and unit and browser coverage.
+Terra Docs is a reusable React document editor and viewer, Markdown site generator, and documentation workspace. Repositories can use the package for a complete Docs site or embed its React components in another application. This repository uses its Astro Docs site as the development host and includes interface documentation and unit and browser coverage.
 
 ## Getting started
 
@@ -12,13 +12,13 @@ pnpm run dev
 pnpm run docs
 ```
 
-`pnpm run dev` starts the Vite component playground. `pnpm run docs` starts the package-owned Astro Docs site using this repository's `docs/` folder. The shared launcher delegates port acquisition to Terra Quality, then starts the dev server with strict port handling. Host apps use this launcher; set `DOCS_DEV_PORT` to override their preferred port.
+`pnpm dev` (or `pnpm run docs:dev`) builds the package and starts its Astro Docs site from this repository's `docs/` folder. The site renders checked-out Markdown as a read-only workspace, refreshes its search index when Markdown changes, and hot-reloads Docs UI source changes such as toolbar edits. `pnpm run docs` builds the package and a static copy of its Docs site. The development command prefers port `2020`; the shared launcher delegates port acquisition to Terra Quality and uses a free port when needed. Host apps use this launcher too; set `DOCS_DEV_PORT` to override their preferred port.
 
-Build the library with `pnpm run build`, run package checks with `pnpm run check`, and build the demo directly with `pnpm exec vite build`.
+Build the library with `pnpm run build` and run package checks with `pnpm run check`.
 
 ### Commands
 
-Run `pnpm test`, `pnpm test:browser`, and `pnpm test:consumer` as applicable. The repository checks its library, consumer demo, Astro integration, and documentation site.
+Run `pnpm test`, `pnpm test:browser`, and `pnpm test:consumer` as applicable. The repository checks its library, Astro integration, and documentation site.
 
 ## Security and Limitations
 
@@ -43,7 +43,7 @@ pnpm run docs
 pnpm run build
 ```
 
-The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested directories group navigation. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). Build output defaults to `dist/docs/`.
+The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested folders group navigation. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). Build output defaults to `dist/docs/`.
 
 The Docs content root is also the default package root for resolving the consumer's dependencies. If a repository keeps its package manifest and `node_modules` in a nested directory, set `DOCS_PACKAGE_ROOT` to that directory relative to the Docs content root (for example, `DOCS_PACKAGE_ROOT=config pnpm --dir config run build`). `DOCS_ROOT` continues to select the directory containing `docs/` and the build output.
 
@@ -120,7 +120,7 @@ Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, gener
 
 ## Contributing
 
-Document interface changes and keep consumer examples aligned with package exports. To work on the package itself, clone this repository and run the component playground and Docs site.
+Document interface changes and keep consumer examples aligned with package exports. To work on the package itself, clone this repository and use `pnpm dev`; the Docs site is the development host for both Markdown and package UI changes.
 
 ## Credits and license
 

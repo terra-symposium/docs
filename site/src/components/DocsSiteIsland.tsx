@@ -20,7 +20,7 @@ CONFIG
 const { Suspense } = React;
 const DOCS_SITE_COMPONENTS = {
   Workspace: React.lazy(() =>
-    import('../../../dist/lib/components/StaticWorkspace.js').then(({ DocsStaticWorkspace }) => ({
+    import('#docs-site-workspace').then(({ DocsStaticWorkspace }) => ({
       default: DocsStaticWorkspace,
     })),
   ),
@@ -36,8 +36,8 @@ COMPONENTS
 /**
  * Keeps Docs workspace and search rendering failures inside a visible, recoverable page boundary.
  *
- * @param searchBase Base URL used to fetch the generated search index.
- * @param workspaceProps Props forwarded to the static documentation workspace.
+ * @param searchBase - Public base path used to locate the search index.
+ * @param workspaceProps - Props passed through to the lazy static Docs workspace.
  *
  * @return The lazy Docs workspace and search dialog inside a recoverable error boundary.
  */

@@ -47,10 +47,10 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Loads a fixture leaf with a deterministic quiz response or injected generation failure.
+ * Opens the local quiz workspace harness with a fixture and requested quiz response behavior.
  *
- * @param page Browser page that hosts the local Docs workspace harness.
- * @param config Optional response override, failure message, and toolbar visibility for this scenario.
+ * @param page Playwright page to initialize and navigate to the quiz harness.
+ * @param config Optional failure, response, or toolbar settings for the quiz test.
  */
 async function openQuizWorkspace(
   page: import('@playwright/test').Page,

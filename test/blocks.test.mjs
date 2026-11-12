@@ -96,6 +96,32 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.match(result, /===\[Item\]\nOriginal \*\*content\*\*\n===/);
       assert.match(result, /<custom-widget value="1"><\/custom-widget>/);
     });
+    test('legacy Terra Portable Text paragraphs remain readable and normalize on import', () => {
+      const legacy = {
+        _type: 'terraBlock',
+        style: 'normal',
+        markDefs: [],
+        children: [{ _type: 'span', marks: [], text: 'Legacy paragraph' }],
+      };
+      const markdown = docsValueToMarkdown([legacy]);
+      assert.equal(markdown, 'Legacy paragraph\n');
+      assert.equal(markdownToDocsValue(markdown)[0]._type, 'block');
+      assert.equal(
+        docsValueToMarkdown([
+          {
+            _type: 'callout',
+            kind: 'note',
+            title: 'Imported content',
+            content: [legacy, { ...legacy, children: [{ _type: 'span', marks: [], text: ' ' }] }],
+          },
+        ]).startsWith(':::note[Imported content]'),
+        true,
+      );
+      const directive = `<DocsBlock type="terraBlock" data={${JSON.stringify(legacy)}} />`;
+      const importedDirective = markdownToDocsValue(directive);
+      assert.equal(importedDirective[0]?._type, 'terraBlock');
+      assert.equal(importedDirective[0]?.children[0]?.text, 'Legacy paragraph');
+    });
     test('legacy structured groups render with the shared Styling controls', () => {
       const tabBlock = {
         _type: 'tabs',
@@ -165,17 +191,13 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.equal(
         tabs,
         renderToStaticMarkup(
-          createElement(DocsMarkdown, {
-            markdown: '|||[Overview]\nShared tab body\n|||',
-          }),
+          createElement(DocsMarkdown, { markdown: '|||[Overview]\nShared tab body\n|||' }),
         ),
       );
       assert.equal(
         accordion,
         renderToStaticMarkup(
-          createElement(DocsMarkdown, {
-            markdown: '===[Details]\nShared accordion body\n===',
-          }),
+          createElement(DocsMarkdown, { markdown: '===[Details]\nShared accordion body\n===' }),
         ),
       );
     });
@@ -306,8 +328,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
         '',
         ':::',
       ].join('\n');
-      const parsed = markdownToDocsValue(source);
-      const callout = parsed.find((block) => block._type === 'callout');
+      const callout = markdownToDocsValue(source).find((block) => block._type === 'callout');
       assert.ok(callout);
       assert.ok(callout.content.some((block) => block._type === 'nodes'));
       assert.equal(callout.markdown, undefined);
@@ -930,8 +951,9 @@ Identify suitable companies and provide:
       assert.equal(roundTrip.find((block) => block._type === 'tsDocs').scope, tsDocs.scope);
     });
     test('legacy adjacent Code tags do not swallow the following code samples', () => {
-      const source = `<Code language="c">\nint first(void) { return 1; }\n\n<Code language="c">\n#include <stdio.h>\n\n<Code language="c">\nstruct player { int age; };\n</Code>`;
-      const code = markdownToDocsValue(source).filter((block) => block._type === 'code');
+      const code = markdownToDocsValue(
+        `<Code language="c">\nint first(void) { return 1; }\n\n<Code language="c">\n#include <stdio.h>\n\n<Code language="c">\nstruct player { int age; };\n</Code>`,
+      ).filter((block) => block._type === 'code');
       assert.deepEqual(
         code.map(({ language, value }) => [language, value.trim()]),
         [
@@ -1045,7 +1067,7 @@ Identify suitable companies and provide:
       assert.doesNotMatch(rendered, /_type: (?:block|block|span)/);
     });
     test('visually empty Portable Text paragraphs do not force nested callouts into YAML', () => {
-      const source = [
+      const markdown = docsValueToMarkdown([
         {
           _type: 'callout',
           kind: 'note',
@@ -1060,8 +1082,7 @@ Identify suitable companies and provide:
             { _type: 'block', style: 'normal', markDefs: [], children: [] },
           ],
         },
-      ];
-      const markdown = docsValueToMarkdown(source);
+      ]);
       assert.match(markdown, /^:::note\[Notation Standard\]/m);
       assert.doesNotMatch(markdown, /_type: (?:block|block|span)/);
       const restored = markdownToDocsValue(markdown);
@@ -1115,15 +1136,14 @@ Identify suitable companies and provide:
       assert.match(renderMarkdown(source), /katex/);
     });
     test('math delimiters embedded in a Portable Text span remain supported inline math', () => {
-      const value = [
+      const markdown = docsValueToMarkdown([
         {
           _type: 'block',
           style: 'normal',
           markDefs: [],
           children: [{ _type: 'span', text: 'The program $P$ is modified.', marks: [] }],
         },
-      ];
-      const markdown = docsValueToMarkdown(value);
+      ]);
       const restored = markdownToDocsValue(markdown);
       assert.equal(restored[0].children.find((child) => child._type === 'math')?.code, 'P');
       assert.match(renderMarkdown(markdown), /katex/);
@@ -1461,9 +1481,9 @@ Identify suitable companies and provide:
       assert.equal(docsValueToMarkdown(restored), markdown);
     });
     test('native HTML tables become editable table blocks without losing cell formatting', () => {
-      const source =
-        '<table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td><strong>Terra</strong></td><td>One &amp; two</td></tr></tbody></table>';
-      const value = markdownToDocsValue(source);
+      const value = markdownToDocsValue(
+        '<table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td><strong>Terra</strong></td><td>One &amp; two</td></tr></tbody></table>',
+      );
       const table = value.find((block) => block._type === 'table');
       assert.ok(table);
       assert.equal(table.rows.length, 2);
@@ -1619,9 +1639,9 @@ Identify suitable companies and provide:
         1,
       );
       assert.equal(restoredMarkdownTable.rows[1].cells[1].content[0].url, './axes.svg');
-      const htmlSource =
-        '<table><tbody><tr><td>Before <img src="./inline.png" alt="Inline diagram" title="Inline title"/> after</td></tr></tbody></table>';
-      const htmlTable = markdownToDocsValue(htmlSource).find((block) => block._type === 'table');
+      const htmlTable = markdownToDocsValue(
+        '<table><tbody><tr><td>Before <img src="./inline.png" alt="Inline diagram" title="Inline title"/> after</td></tr></tbody></table>',
+      ).find((block) => block._type === 'table');
       assert.ok(htmlTable);
       const htmlCell = htmlTable.rows[0].cells[0].content;
       assert.deepEqual(
@@ -1686,7 +1706,7 @@ Identify suitable companies and provide:
       assert.equal(roundTrip.find((block) => block._type === 'math').code, 'x^2 + 1');
     });
     test('ordinary Portable Text stays readable and mixed nested list kinds keep their depth', () => {
-      const source = [
+      const markdown = docsValueToMarkdown([
         {
           _type: 'block',
           style: 'h3',
@@ -1729,8 +1749,7 @@ Identify suitable companies and provide:
           markDefs: [],
           children: [{ _type: 'span', text: 'Verify the install', marks: [] }],
         },
-      ];
-      const markdown = docsValueToMarkdown(source);
+      ]);
       assert.match(markdown, /^### Preparation/m);
       assert.match(markdown, /\[\*\*the guide\*\*\]\(https:\/\/example\.test\/guide\)/);
       assert.match(

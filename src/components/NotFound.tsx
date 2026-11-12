@@ -26,13 +26,12 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Shows the shared 404 card with a return link to the embedding application's Docs home.
+ * Shows a themed 404 card that returns visitors to the host application's home page.
  *
- * @param appName Application label used in the return-link text.
- * @param homeHref Public Docs home URL for the current host.
- * @param description Explanation shown below the not-found heading.
- *
- * @return The styled not-found page with a link back to the host.
+ * @param appName - Product name used in the return-link label.
+ * @param homeHref - Destination for the return link.
+ * @param description - Explanation shown below the not-found heading.
+ * @returns The styled 404 page with the host-specific return link.
  */
 export function DocsNotFound({
   appName = 'Docs',

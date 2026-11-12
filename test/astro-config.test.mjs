@@ -106,8 +106,9 @@ test('published site plugins resolve the shared regex helper from the package ro
   assert.ok(manifest.files.includes('src/lib/terra/regex.mjs'));
   for (const file of ['site/base-path-remark-plugin.mjs', 'site/docs-content-plugin.mjs']) {
     const pluginPath = join(packageRoot, file);
-    const source = await readFile(pluginPath, 'utf8');
-    const match = source.match(/from ['"]([^'"]*terra\/regex\.mjs)['"]/);
+    const match = (await readFile(pluginPath, 'utf8')).match(
+      /from ['"]([^'"]*terra\/regex\.mjs)['"]/,
+    );
     assert.ok(match, `${file} must import the shared regex helper`);
     assert.equal(
       resolve(dirname(pluginPath), match[1]),

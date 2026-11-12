@@ -113,7 +113,7 @@ MENU COMPONENTS
 /**
  * Renders a standard ContextMenu with support for nested sub-actions and separators.
  *
- * @param actions Ordered menu actions, including labels, optional icons, disabled state, separators, and nested sub-actions.
+ * @param actions Ordered menu actions with labels, optional icons, disabled state, separators, callbacks, and nested submenus.
  *
  * @return The context menu with the supplied actions and any nested menus.
  */
@@ -133,16 +133,16 @@ export function Menu({ actions }: { actions: MenuAction[] }): React.JSX.Element 
 }
 
 /**
- * Renders the link component.
+ * Renders a sidebar link and handles client-side document navigation when appropriate.
  *
- * @param a Whether the row is the current page.
- * @param contexting - Contexting input supplied to link's operation.
- * @param dragging - Dragging input supplied to link's operation.
- * @param renaming - Renaming input supplied to link's operation.
- * @param node - Node input supplied to link's operation.
- * @param trailing - Trailing input supplied to link's operation.
- * @param mode - Mode input supplied to link's operation.
- * @param transitioning - Transitioning input supplied to link's operation.
+ * @param a Whether this document is the active navigation item.
+ * @param contexting Whether its context menu is open.
+ * @param dragging Whether dragging suppresses pointer interaction on the link.
+ * @param renaming Whether the item is being renamed in place.
+ * @param node Document or group metadata used for the route and displayed label.
+ * @param trailing Optional control rendered after the link, such as its reorder handle.
+ * @param mode Current Docs display mode, preserved in the destination URL when needed.
+ * @param transitioning Whether route navigation is already in progress.
  *
  * @return The interactive sidebar link with its current selection and drag/rename states.
  */
@@ -338,13 +338,13 @@ LEAF COMPONENTS
 //////////////////////////////////////////////////*/
 
   /**
-   * Renders the leaf component.
+   * Renders one document leaf with navigation and the actions permitted by its context.
    *
-   * @param a Whether this leaf is selected as the current route.
-   * @param bPath - B path input supplied to leaf's operation.
-   * @param node - Node input supplied to leaf's operation.
-   * @param ctx - Ctx input supplied to leaf's operation.
-   * @param siblings - Siblings input supplied to leaf's operation.
+   * @param a Whether this leaf represents the active document.
+   * @param bPath Path of the containing branch, used to resolve sibling files and relative actions.
+   * @param node Leaf metadata used to render the row and perform document actions.
+   * @param ctx Shared route, permission, selection, and mutation handlers for the sidebar tree.
+   * @param siblings Other nodes in the containing branch, used to locate related assets.
    *
    * @return The document row with its navigation, selection, rename, attachment, export, and reorder controls.
    */
@@ -947,6 +947,7 @@ LEAF COMPONENTS
         {!!node.path && !isSimulated ? (
           <ContextMenu onOpenChange={setContexting}>
             <input
+              aria-label="Upload files to this section"
               ref={fileRef}
               type="file"
               className="hidden"
@@ -1224,12 +1225,12 @@ TREE COMPONENTS
 //////////////////////////////////////////////////*/
 
   /**
-   * Main recursive tree mapping structural layers evaluating context dependencies natively.
+   * Renders a branch and recursively maps its children using shared sidebar state.
    *
-   * @param bPath - B path input supplied to tree's operation.
-   * @param node - Node input supplied to tree's operation.
-   * @param ctx - Ctx input supplied to tree's operation.
-   * @param sibs Sibling nodes at the current branch level, when already available to the caller.
+   * @param bPath Parent branch path used to build each child's full path.
+   * @param node Branch or section metadata that determines the group and its descendants.
+   * @param ctx Shared route, permission, selection, and mutation handlers for the sidebar tree.
+   * @param sibs Nodes at the same tree level, used for selection and reorder operations.
    *
    * @return {React.JSX.Element} The rendered SidebarGroup bounding nested leaves and child trees.
    */

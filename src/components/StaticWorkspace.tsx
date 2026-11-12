@@ -94,7 +94,13 @@ const routeKey = (value: string): string => {
   }
 };
 
-/** Returns whether a Docs leaf owns the requested route, including nested subpages. */
+/**
+ * Returns whether a Docs leaf owns the requested route, including nested subpages.
+ *
+ * @param leafRoute - Leaf route whose page or subpages may own the request.
+ * @param requestedRoute - Current route selected by the browser or host.
+ * @returns Whether the request is the leaf route or a nested route beneath it.
+ */
 const routeOwnsPath = (leafRoute: string, requestedRoute: string): boolean => {
   const leaf = routeKey(leafRoute).split('#', 1)[0] ?? '';
   const requested = routeKey(requestedRoute).split('#', 1)[0] ?? '';
@@ -143,8 +149,8 @@ function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
           ...(node.attachments ? { attachments: node.attachments } : {}),
         }
       : null;
-  return nodes.map((section) => {
-    const children = section.children ?? [];
+  return nodes.map((s) => {
+    const children = s.children ?? [];
     const groups = children.length
       ? children.map((group) => ({
           ...(group.id ? { id: group.id } : {}),
@@ -157,15 +163,15 @@ function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
         }))
       : [
           {
-            title: section.title,
-            leaves: [section].map(toLeaf).filter((leaf): leaf is DocsLeaf => leaf !== null),
+            title: s.title,
+            leaves: [s].map(toLeaf).filter((leaf): leaf is DocsLeaf => leaf !== null),
           },
         ];
     return {
-      ...(section.id ? { id: section.id } : {}),
-      ...(section.path ? { path: section.path } : {}),
-      ...(section.hue !== undefined ? { hue: section.hue } : {}),
-      title: section.title,
+      ...(s.id ? { id: s.id } : {}),
+      ...(s.path ? { path: s.path } : {}),
+      ...(s.hue !== undefined ? { hue: s.hue } : {}),
+      title: s.title,
       groups,
     };
   });
@@ -178,8 +184,7 @@ COMPONENTS
 /**
  * Signals that static content is visible after the workspace transition completes.
  *
- * @param props Component props containing the host-rendered content.
- * @param props.children Markdown or MDX content to reveal when the workspace is ready.
+ * @param children - Host-rendered content that appears once the view transition completes.
  *
  * @return The content fragment after marking the view surface as ready.
  */
@@ -195,7 +200,24 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
 /**
  * Adapts a host's local Markdown pages to the original, read-only Docs workspace.
  *
- * @param props Page content, navigation, attachment metadata, and optional host render slots.
+ * @param title - Site name displayed in the workspace navigation.
+ * @param homeHref - Destination of the site brand link.
+ * @param description - Optional site-level supporting text.
+ * @param pageTitle - Optional title override for the active page.
+ * @param pageDescription - Optional description override for the active page.
+ * @param hue - Optional base hue used to derive the workspace palette.
+ * @param nodes - Flat navigation nodes used when prebuilt sections are not supplied.
+ * @param sections - Structured section, group, and page navigation for the workspace.
+ * @param currentPath - Current URL used to select the active navigation leaf.
+ * @param rootPath - Base route used for root navigation and fallback page links.
+ * @param markdown - Markdown source for the active page when parsed content is absent.
+ * @param content - Parsed content blocks for the active page.
+ * @param attachments - Attachment metadata associated with the active page.
+ * @param updatedAt - Fallback update timestamp shown when the page lacks one.
+ * @param renderContent - Optional host-rendered page body that replaces Markdown rendering.
+ * @param children - Alternate host-rendered page body.
+ * @param staticContent - Marks even an empty host slot as ready after the view transition.
+ * @param quiz - Optional server-backed quiz configuration for the active page.
  *
  * @return The Docs workspace configured for read-only navigation and page viewing.
  */
@@ -222,13 +244,13 @@ export function DocsStaticWorkspace({
   const workspaceSections: DocsSection[] = sections ?? sectionsFromNavigation(nodes);
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
   const currentKey = routeKey(currentPath);
-  const allLeaves = workspaceSections.flatMap((section, sectionIndex) =>
-    section.groups.flatMap((group, groupIndex) =>
+  const allLeaves = workspaceSections.flatMap((s, v) =>
+    s.groups.flatMap((group, groupIndex) =>
       group.leaves.map((leaf, leafIndex) => ({
-        section,
+        section: s,
         group,
         leaf,
-        sectionIndex,
+        sectionIndex: v,
         groupIndex,
         leafIndex,
       })),
@@ -238,9 +260,7 @@ export function DocsStaticWorkspace({
     allLeaves.find((i) => routeKey(i.leaf.href) === currentKey) ??
     allLeaves
       .filter((i) => routeOwnsPath(i.leaf.href, currentPath))
-      .sort(
-        (left, right) => routeKey(right.leaf.href).length - routeKey(left.leaf.href).length,
-      )[0] ??
+      .sort((l, r) => routeKey(r.leaf.href).length - routeKey(l.leaf.href).length)[0] ??
     allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(rootPath)) ??
     allLeaves[0];
   const currentAttachments = a?.leaf.attachments ?? attachments;
@@ -260,17 +280,17 @@ export function DocsStaticWorkspace({
     contentSlot !== undefined || staticContent ? (
       <StaticContentSlot key={currentPath}>{contentSlot ?? null}</StaticContentSlot>
     ) : undefined;
-  const tree: DocsHostTreeNode[] = workspaceSections.map((section) => {
-    const sectionId = section.id ?? slug(section.title);
+  const tree: DocsHostTreeNode[] = workspaceSections.map((s) => {
+    const sectionId = s.id ?? slug(s.title);
     return {
       type: 'branch',
       origName: sectionId,
-      title: section.title,
-      path: section.path ?? sectionId,
-      ...(section.hue !== undefined ? { hue: section.hue } : {}),
-      url: section.groups[0]?.leaves[0]?.href ?? rootPath,
+      title: s.title,
+      path: s.path ?? sectionId,
+      ...(s.hue !== undefined ? { hue: s.hue } : {}),
+      url: s.groups[0]?.leaves[0]?.href ?? rootPath,
       permission: 'read',
-      children: section.groups.map((group) => {
+      children: s.groups.map((group) => {
         const groupId = group.id ?? slug(group.title);
         const groupKey = `${sectionId}/${groupId}`;
         return {
@@ -314,9 +334,7 @@ export function DocsStaticWorkspace({
       )?.leaf ??
       allLeaves
         .filter((i) => routeOwnsPath(i.leaf.href, path))
-        .sort(
-          (left, right) => routeKey(right.leaf.href).length - routeKey(left.leaf.href).length,
-        )[0]?.leaf
+        .sort((l, r) => routeKey(r.leaf.href).length - routeKey(l.leaf.href).length)[0]?.leaf
     );
   };
   const hostAttachments: DocsHostAttachment[] = currentAttachments.map((i, v) => ({
@@ -371,9 +389,7 @@ export function DocsStaticWorkspace({
         allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(value)) ??
         allLeaves
           .filter((i) => routeOwnsPath(i.leaf.href, value))
-          .sort(
-            (left, right) => routeKey(right.leaf.href).length - routeKey(left.leaf.href).length,
-          )[0] ??
+          .sort((l, r) => routeKey(r.leaf.href).length - routeKey(l.leaf.href).length)[0] ??
         a;
       return {
         sectionId: match?.section.id ?? slug(match?.section.title ?? 'index'),
@@ -442,7 +458,16 @@ export function DocsStaticWorkspace({
             }
           : null;
       } else if (op === 'read.doc.attachments') {
-        data = hostAttachments;
+        const request = input as { path?: string; paths?: string[] } | undefined;
+        /** Returns the static page's attachment list only for paths it can resolve locally. */
+        const attachmentsForPath = (path?: string): DocsHostAttachment[] => {
+          return (path ? (path === a?.leaf.id ? a?.leaf : leafForPath(path)) : a?.leaf) === a?.leaf
+            ? hostAttachments
+            : [];
+        };
+        data = Array.isArray(request?.paths)
+          ? Object.fromEntries(request.paths.map((path) => [path, attachmentsForPath(path)]))
+          : attachmentsForPath(request?.path);
       } else if (op === 'read.util.pathname') {
         data = currentPath;
       } else if (op === 'read.util.node') {
@@ -465,10 +490,8 @@ export function DocsStaticWorkspace({
       <ErrorBoundary
         name="Docs workspace"
         resetKey={currentPath}
-        onError={(error, context) =>
-          console.error(`[${context.name}]`, error, context.componentStack)
-        }
-        fallback={(error) => (
+        onError={(e, c) => console.error(`[${c.name}]`, e, c.componentStack)}
+        fallback={(e) => (
           <section
             aria-labelledby="docs-workspace-error-title"
             className="mx-auto my-12 max-w-2xl rounded-xl border border-primary-7 bg-primary-2 p-6 text-primary-12"
@@ -479,7 +502,7 @@ export function DocsStaticWorkspace({
             </h1>
             <p className="mb-4">The Docs workspace could not render this page.</p>
             <pre className="mb-4 overflow-auto whitespace-pre-wrap break-words rounded-md bg-primary-3 p-3 text-sm">
-              {error.message}
+              {e.message}
             </pre>
             <Button onClick={() => window.location.reload()} variant="primary-tonal">
               Reload page

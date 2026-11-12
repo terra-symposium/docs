@@ -17,18 +17,23 @@ export const DOCS_BLOCK_TYPES = [
   'raw',
   'tsDocs',
 ] as const;
-/** Every structured Docs block type, including groups that remain Markdown-authored. */
+/** Discriminator union for every serialized block understood by Docs. */
 export type DocsBlockType = (typeof DOCS_BLOCK_TYPES)[number];
 /** Structured editor blocks; tabs and accordions are authored only as Markdown syntax. */
 export type DocsEditorBlockType = Exclude<DocsBlockType, 'accordion' | 'tabs'>;
-/** Per-block switches controlling which optional renderers an embedding host enables. */
+
+/** Per-block switches used by renderers to keep unsupported source intact but hidden. */
 export type DocsBlockOptions = Partial<Record<DocsBlockType | 'inlineMath', boolean>>;
-/** Open record shape used while converting host blocks to and from Portable Text. */
+
+/** Open serialized block shape shared by the Markdown parser and component renderer. */
 export type RichBlock = { _type: string; _key?: string; markdown?: string; [key: string]: unknown };
+
 /**
- * Returns enabled editor block types while excluding Markdown-only tabs and accordions.
- * @param options Per-block switches supplied by the embedding host.
- * @returns Enabled structured block types in their canonical registration order.
+ * Lists enabled structured editor blocks, excluding groups authored as Markdown delimiters.
+ *
+ * @param options Per-block visibility switches; omitted entries stay enabled.
+ *
+ * @return Enabled editor block types in the package's canonical order.
  */
 export function enabledDocsBlocks(options: DocsBlockOptions = {}): DocsEditorBlockType[] {
   // Groups are parsed Markdown syntax, not structured editor blocks.

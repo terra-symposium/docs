@@ -25,22 +25,22 @@ HELPERS
  * All navigation, page chrome, modes, and document rendering are delegated to
  * the same DocsWorkspace used by the local and remote host adapters.
  *
- * @param title Site title shown in the shared Docs sidebar.
- * @param homeHref Destination for the site brand link.
- * @param description Optional site summary displayed below the title.
- * @param pageTitle Current page title used by the workspace.
- * @param nodes Navigation tree displayed by the shared sidebar.
- * @param currentPath Current browser path used to select the active page.
- * @param hue Styling hue applied to the shared Docs surface.
- * @param children Optional page body rendered in the shared workspace.
- * @param sections Optional pre-resolved Docs navigation sections.
- * @param attachments Attachments available to the current page.
- * @param rootPath Host Docs root used for fallback route construction.
- * @param markdown Markdown source converted when structured content is absent.
- * @param content Optional pre-parsed content passed to the workspace.
- * @param quiz Optional host-owned quiz toolbar and generation callback.
+ * @param title - Product name used by the shared Docs chrome.
+ * @param homeHref - Host home route used by the navigation and not-found page.
+ * @param description - Optional product description for the shared page chrome.
+ * @param pageTitle - Optional title for the selected document page.
+ * @param nodes - Host-provided navigation tree.
+ * @param currentPath - Current route used to select the active navigation entry.
+ * @param hue - Palette hue applied to the workspace.
+ * @param children - Optional already-rendered page body.
+ * @param sections - Legacy section data passed to the static workspace adapter.
+ * @param attachments - Attachments available to the rendered page.
+ * @param rootPath - Base route used to build local document links.
+ * @param markdown - Markdown source rendered when supplied.
+ * @param content - Structured document value used when no Markdown body is supplied.
+ * @param quiz - Optional quiz configuration for the current page.
  *
- * @return Static Docs layout backed by the shared read-only workspace.
+ * @returns The shared static workspace configured for the supplied host page.
  */
 export function DocsSiteLayout({
   title,

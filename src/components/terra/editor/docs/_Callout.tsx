@@ -43,13 +43,15 @@ HELPERS
  * @return The rendered callout block.
  */
 function Callout({ block }: { block: CalloutBlock }): JSX.Element {
+  const kind = typeof block.kind === 'string' ? block.kind : 'note';
+  const title = typeof block.title === 'string' ? block.title : kind === 'note' ? 'Note' : kind;
   return (
     <ErrorBoundary name="CalloutBlock">
       <aside
         className="docs-block [&>:first-child]:!mt-0 [&>:last-child]:!mb-0"
-        data-docs-aside={block.kind ?? 'note'}
+        data-docs-aside={kind}
       >
-        <h4 className="title">{block.title ?? block.kind ?? 'Note'}</h4>
+        <h4 className="title">{title}</h4>
         <TerraContentEditor
           content={(block.content ?? []) as unknown as ContentData}
           docsAttachments={[]}
@@ -76,9 +78,11 @@ function CalloutEditor({
   children,
   node,
   path,
-}: PortableTextBlockEditorProps<CalloutBlock>): React.JSX.Element {
+}: PortableTextBlockEditorProps<CalloutBlock>): JSX.Element {
   const editor = useEditor();
   const block = node;
+  const kind = typeof block.kind === 'string' ? block.kind : 'note';
+  const title = typeof block.title === 'string' ? block.title : kind === 'note' ? 'Note' : kind;
   return (
     <ErrorBoundary name="CalloutEditor">
       <aside
@@ -86,12 +90,12 @@ function CalloutEditor({
         contentEditable={false}
         className="docs-block rounded-md border border-primary-5 p-4"
         data-block="callout"
-        data-docs-aside={block.kind ?? 'note'}
+        data-docs-aside={kind}
       >
         <Input
           aria-label="Callout title"
           className="mb-3 border-0 bg-transparent px-0 text-lg font-bold shadow-none"
-          value={block.title ?? block.kind ?? 'Note'}
+          value={title}
           onChange={(e) =>
             editor.send({
               type: 'block.set',

@@ -23,9 +23,9 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Returns the host adapter currently used by shared Docs components.
+ * Returns the host adapter configured for the current Docs surface, if one is installed.
  *
- * @returns The adapter installed by `configureDocsHost`, or `undefined` before the host mounts Docs.
+ * @return The configured adapter, or `undefined` before a host installs one.
  */
 export function getDocsHostAdapter(): DocsHostAdapter | undefined {
   return aHost;
@@ -34,10 +34,8 @@ export function getDocsHostAdapter(): DocsHostAdapter | undefined {
 /**
  * Install host-owned storage and capability checks before mounting the Docs surface.
  *
- * @param host Storage, authorization, route, and capability implementation supplied by the consumer.
- * @param customBlocks Optional host-specific block renderers registered alongside shared blocks.
- *
- * @returns No value; replaces the active host adapter and custom component registry.
+ * @param host - Host adapter that owns Docs operations and capability checks.
+ * @param customBlocks - Host-provided block renderers registered for this Docs surface.
  */
 export function configureDocsHost(
   host: DocsHostAdapter,

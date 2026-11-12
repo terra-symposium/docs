@@ -21,32 +21,38 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 /**
- * Parses a host route into the section, group, and leaf IDs used by Docs navigation.
- * @param pathname Browser pathname or URL from the host.
- * @returns Parsed route IDs and canonical pathname.
+ * Parses a Docs route, treating an empty pathname as the configured Docs root.
+ *
+ * @param pathname Browser pathname to parse, or an empty string for the configured root.
+ *
+ * @return The normalized Docs route segments.
  */
 export const parseDocsRoute = (pathname: string): ReturnType<typeof parseRoute> =>
   parseRoute(pathname || docsRootPath());
 /**
- * Converts a path segment to a lowercase Docs node name using hyphens for unsupported characters.
- * @param name Source segment from a folder or page title.
- * @returns Sanitized lowercase node name.
+ * Converts a display name to a lowercase route segment, replacing non-alphanumeric runs with hyphens.
+ *
+ * @param name Display name used to construct the route segment.
+ *
+ * @return Lowercase route text with each non-alphanumeric run replaced by a hyphen.
  */
 export const sanitizeName = (name: string): string =>
   name.replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX(), '-').toLowerCase();
 /**
- * Checks whether a Docs path names an index page.
+ * Checks whether a path points to an `index.md` or `index.mdx` page.
  *
- * @param path - Docs path to normalize into a route-safe identifier.
+ * @param path - Docs-relative or absolute path to inspect.
  *
- * @return Whether the path ends in `index.md` or `index.mdx`.
+ * @return `true` when the path ends with a supported index-file name.
  */
 export const isIndexFile = (path: string): boolean =>
   TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
 /**
- * Returns the original name used to identify a branch or leaf in the Docs tree.
- * @param node Branch or leaf whose stable ID is requested.
- * @returns Its original name, or a fallback random key for an unknown node type.
+ * Returns a node's stored source identity, using a generated fallback for unnamed nodes.
+ *
+ * @param node Navigation node whose original source name identifies it.
+ *
+ * @return The original name for a branch or leaf, or a generated key for other node types.
  */
 export const getStableKey = (node: TreeType): string => {
   if (node.type === 'branch') return node.origName;
@@ -54,10 +60,12 @@ export const getStableKey = (node: TreeType): string => {
   return Math.random().toString();
 };
 /**
- * Keeps the current deeper route when a shorter parent route is proposed.
- * @param curr Current route whose nested suffix may need to be retained.
- * @param n Proposed route from a parent-level navigation update.
- * @returns The current route when it is a deeper form of `n`; otherwise the proposed route.
+ * Keeps a deeper existing route when the next route is only a suffix of it.
+ *
+ * @param curr - Current route whose deeper branch should be preserved when it matches.
+ * @param n - Newly requested route to compare with the current route.
+ *
+ * @return The current route when it extends the new route by complete segments; otherwise the new route.
  */
 export const keepDeepPath = (curr: string, n: string): string => {
   // prettier-ignore
@@ -75,9 +83,11 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Collects each node's identifier and leaf path once, preserving navigation order.
- * @param nodes Root nodes to traverse recursively.
- * @return Unique identifiers and leaf paths in depth-first order.
+ * Collects every source node identifier and leaf path once, in navigation-tree order.
+ *
+ * @param nodes - Root nodes from which the identifiers should be collected.
+ *
+ * @return Unique original names and leaf paths in depth-first order.
  */
 export function extractAllNodeIds(nodes: TreeType[]): string[] {
   const ids: string[] = [];
@@ -97,10 +107,12 @@ export function extractAllNodeIds(nodes: TreeType[]): string[] {
 }
 
 /**
- * Resolves a branch path to the list of nodes that share its parent.
- * @param nodes Root navigation list.
- * @param targetPath Slash-separated branch IDs leading to the requested sibling list.
- * @return Siblings below the path, the root list for an empty path, or an empty list if a branch is missing.
+ * Returns the children at the branch addressed by a slash-separated path.
+ *
+ * @param nodes - Root nodes of the Docs navigation tree.
+ * @param targetPath - Original-name path of the branch whose children are requested.
+ *
+ * @return Matching siblings, or an empty list when any path segment is absent.
  */
 export function getSiblings(nodes: TreeType[], targetPath: string): TreeType[] {
   if (!targetPath || targetPath === '.') return nodes;

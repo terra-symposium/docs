@@ -105,6 +105,7 @@ import type {
   NodesProps,
   Pos,
 } from '../../../lib/terra/runtime/types.js';
+import type { FlowMenuContext } from './menuContext.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -183,6 +184,20 @@ const MENU_CLASS = {
   subContent: 'min-w-64 !border-primary-6 p-1',
 } as const;
 
+/** Node and edge snapshots exchanged between the flow editor and graph block. */
+type FlowGraph = { nodes: FlowNode[]; edges: Edge[] };
+/** Optional host extensions for validating, creating, or laying out graph data. */
+type FlowEditorAdapter = {
+  clipboardKey?: string;
+  cloneNode?: (node: FlowNode, id: string) => FlowNode;
+  createEdge?: (connection: Connection, graph: FlowGraph) => Edge | null | undefined;
+  editableNode?: (node: FlowNode) => boolean;
+  layout?: (graph: FlowGraph) => FlowGraph;
+  read: FlowGraph;
+  validConnection?: (connection: Connection, graph: FlowGraph) => boolean;
+  write: (graph: FlowGraph) => void;
+};
+
 /*//////////////////////////////////////////////////
 NODE TYPES
 //////////////////////////////////////////////////*/
@@ -201,7 +216,8 @@ function createNode(
 ): (props: NodeProps<XyNode<NodeData>>) => React.JSX.Element {
   /**
    * Renders a flow node as a link, action button, or inert container from its data.
-   * @param nodeProps React Flow selection state and node data for this diagram item.
+   *
+   * @param nodeProps React Flow node fields used to choose the element, label its content, and show selection.
    * @returns The styled node shell with its title and configured connection handles.
    */
   const NodeCard = (nodeProps: NodeProps<XyNode<NodeData>>): React.JSX.Element => {
@@ -233,7 +249,7 @@ function createNode(
 export const NODE_TYPES = {
   erd:
     /**
-     * Renders an entity-relationship node with its typed attribute rows and positional handles.
+     * Renders an entity-relationship node with typed attributes, math typesetting, and handles.
      *
      * @param d Entity name, fields, compact-view preference, and optional navigation action.
      * @param s Whether React Flow currently marks this node as selected.
@@ -317,9 +333,9 @@ export const NODE_TYPES = {
     /**
      * Renders a resizable sticky note and forwards its final size to the graph owner.
      *
-     * @param i Unique React Flow node ID used to scope the note's clipped paper shape.
-     * @param v Note text, editability, handles, and optional resize callback.
-     * @param s Whether the node is selected and should expose its resize affordance.
+     * @param i Unique React Flow node id used to scope the note's clipped paper shape.
+     * @param v Note title, editability, handles, and optional resize callback.
+     * @param s Whether the canvas selects the note and should expose its resize affordance.
      * @returns The note surface, resize control, and connection handles.
      */
     function NoteNode({
@@ -368,10 +384,10 @@ export const NODE_TYPES = {
     },
   group:
     /**
-     * Renders a group boundary that can receive child nodes and be resized while selected.
+     * Renders a resizable group container with its title and connector handles.
      *
      * @param d Group title, drag-target state, editability, and resize callback.
-     * @param s Whether the group is selected and may show its resize affordance.
+     * @param s Whether the canvas selects the group and may show its resize affordance.
      * @returns The group container and its connection handles.
      */
     function GroupNode({
@@ -517,8 +533,10 @@ function syncGraph(
     nodes: sNodes.map((n) => {
       const handles = handlesByNodeId.get(n.id);
       const resGroupId = getGroupId(n);
+      const flatNode = { ...n };
+      delete flatNode.parentId;
       return {
-        ...n,
+        ...flatNode,
         className: cn(
           validateType(['string'], n.className) || Array.isArray(n.className)
             ? n.className
@@ -587,7 +605,6 @@ const FLOW_COMPONENTS = {
    * @param showCtrls - Visibility flag for canvas's graph controls.
    * @param arcControls - Arc controls input supplied to canvas's operation.
    * @param readyWhenEmpty - Readiness rule that lets canvas finish with no graph nodes.
-   * @param _onEdgeDoubleClick - Edge double-click handler.
    *
    * @return Interactive React Flow canvas and its context-menu actions.
    *
@@ -633,7 +650,7 @@ const FLOW_COMPONENTS = {
     nodeTypes: Record<string, React.ComponentType<NodeProps<FlowNode>>>;
     edgeTypes?: NodesProps['edgeTypes'];
     nodeLabels: Partial<Record<keyof typeof NODE_TYPES, string>>;
-    onNodeClick?: (n: FlowNode) => void;
+    onNodeClick?: ((n: FlowNode) => void) | undefined;
     onNodesChange: (changes: NodeChange<FlowNode>[]) => void;
     onEdgesChange: (changes: EdgeChange<Edge>[]) => void;
     onConnect: (params: Connection) => void;
@@ -686,10 +703,7 @@ const FLOW_COMPONENTS = {
     const [ready, setReady] = useState(readyWhenEmpty && flow.nodes.length === 0);
     const [isExporting, setIsExporting] = useState(false);
     const notified = useRef(false);
-    const [menuCtx, setMenuCtx] = useState<{
-      type: 'pane' | '_node' | 'e';
-      id: string | null;
-    }>({
+    const [menuCtx, setMenuCtx] = useState<FlowMenuContext>({
       type: 'pane',
       id: null,
     });
@@ -1287,31 +1301,31 @@ COMPONENT
  *
  * @param className - Extra classes applied to the outer flow wrapper.
  * @param onCommit - Callback that receives the fully normalised flow after each change.
- * @param initialNodes Initial node records used before the first graph synchronization.
- * @param initialEdges Initial edge records connected to those nodes.
- * @param nodeSep - Horizontal gap between graph nodes in nodes.
- * @param rankSep - Vertical gap between graph ranks in nodes.
- * @param height - Viewport height reserved for nodes's graph surface.
- * @param onAddContent - Callback invoked for add content.
- * @param onNodeClick - Callback invoked when a user selects a node in nodes.
+ * @param initialNodes Nodes loaded into the wrapper's initial committed graph state.
+ * @param initialEdges Connections loaded into the wrapper's initial committed graph state.
+ * @param nodeSep - Horizontal gap between graph nodes, in pixels.
+ * @param rankSep - Vertical gap between graph ranks, in pixels.
+ * @param height - Viewport height reserved for the flow graph.
+ * @param onAddContent - Callback invoked when the user adds content from the graph.
+ * @param onNodeClick - Callback invoked when the user selects a node.
  * @param customNodeTypes Additional renderers that override or extend the built-in node types.
  * @param nodeLabels - Node label map shown alongside nodes's graph nodes.
  * @param lockedTypes - Node types that nodes must keep read-only.
  * @param allowedTypes - Node types that nodes permits users to create.
  * @param disabled - Disabled state controlling whether nodes accepts interaction.
  * @param clipboardKey - Clipboard key that enables graph copy and paste in nodes.
- * @param arcControls - Arc controls input supplied to nodes's operation.
+ * @param arcControls - Whether the canvas shows arc layout controls.
  * @param edgeTypes - Edge renderer map that draws graph connections in nodes.
  * @param readyWhenEmpty - Readiness rule that lets nodes finish with no graph nodes.
- * @param onReady - Callback invoked when nodes finishes initialising its graph surface.
+ * @param onReady - Callback invoked after the graph surface finishes initializing.
  * @param style - Inline style values merged into nodes.
- * @param rest - Rest input supplied to nodes's operation.
- * @param dir Dagre layout direction, either top-to-bottom or left-to-right.
- * @param interactive - Interaction flag that controls whether nodes accepts graph input.
- * @param editable - Editability flag controlling whether nodes accepts changes.
- * @param proximityConnect - Connection rule that lets nearby graph nodes link automatically in nodes.
- * @param showBg - Visibility flag for nodes's graph background.
- * @param showCtrls - Visibility flag for nodes's graph controls.
+ * @param rest - Remaining DOM attributes and focus handlers forwarded to the flow viewport.
+ * @param dir - Layout direction used when the graph is arranged automatically.
+ * @param interactive - Whether the canvas accepts graph navigation and selection input.
+ * @param editable - Whether the canvas accepts graph mutations.
+ * @param proximityConnect - Whether nearby graph nodes may be connected automatically.
+ * @param showBg - Whether to display the graph background.
+ * @param showCtrls - Whether to display the graph controls.
  *
  * @return Docs flow editor wrapper with derived height, toolbar controls, and drag state.
  *
@@ -1392,7 +1406,7 @@ export default function Nodes({
     },
     [],
   );
-  const editorAdapter = {
+  const editorAdapter: FlowEditorAdapter = {
     ...(clipboardKey ? { clipboardKey } : {}),
     cloneNode: (n: FlowNode, i: string) => ({
       ...n,
@@ -1428,7 +1442,7 @@ export default function Nodes({
               return {
                 ...(currEntities.nodes.get(n.id) ?? {}),
                 id: n.id,
-                ...(n.type === undefined ? {} : { type: n.type }),
+                type: n.type,
                 position: n.position,
                 ...(n.style === undefined ? {} : { style: n.style }),
                 data,

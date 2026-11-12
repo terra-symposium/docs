@@ -8,7 +8,6 @@
     "config/tailwind*.{mjs,cjs}",
     "src/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "site/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
-    "demo/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "test/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "tests/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}"
   ],
@@ -19,14 +18,7 @@
     "scripts/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "src/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "site/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
-    "demo/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "test/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}",
     "tests/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,astro}"
-  ],
-  "ignoreDependencies": [
-    "postcss-import",
-    "@xstate/react",
-    "bezier-easing",
-    "use-sync-external-store"
   ]
 }

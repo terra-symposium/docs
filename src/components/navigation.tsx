@@ -8,6 +8,7 @@ IMPORTS
 
 // API
 import { colors } from '@terra-symposium/styling';
+import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 
 // TYPES
 import type { CSSProperties, JSX } from 'react';
@@ -18,10 +19,7 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 /**
- * One entry in the Docs sidebar tree.
- *
- * A section or group can supply `children` without a destination; a leaf supplies `href` or `path`.
- * Optional description, update time, attachments, and hue carry the metadata shown for that entry.
+ * One entry in the Docs sidebar tree. Sections and groups may nest children; leaves may supply a destination.
  */
 export type DocsNavNode = {
   id?: string;
@@ -40,28 +38,36 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Removes query/hash data and trailing slashes before comparing Docs routes.
+ * Reduces a URL or route string to the pathname used by active-link matching.
+ * Query strings and fragments do not affect which navigation entry is selected.
  *
- * @param value URL or path supplied by the site or current browser route.
+ * @param value - Relative or absolute link being compared.
  *
- * @return A normalized pathname suitable for exact and parent-route matching.
+ * @returns The normalized pathname, or `/` when the input contains no path.
  */
 const pathKey = (value: string): string => {
   try {
-    const url = new URL(value, 'http://docs.local');
-    return url.pathname.replace(/\/+$/, '') || '/';
+    return (
+      new URL(value, 'http://docs.local').pathname.replace(
+        TerraQualityRegex.REGEX_PATTERN_REGEX_7(),
+        '',
+      ) || '/'
+    );
   } catch {
-    return (value.split('#', 1)[0] ?? '').replace(/\/+$/, '') || '/';
+    return (
+      (value.split('#', 1)[0] ?? '').replace(TerraQualityRegex.REGEX_PATTERN_REGEX_7(), '') || '/'
+    );
   }
 };
 
 /**
- * Marks a leaf active when the current route is that page or one of its descendants.
+ * Checks whether a navigation link names the current page or one of its ancestors.
+ * A parent remains active for routes nested below its path.
  *
- * @param href Navigation destination to compare with the current route.
- * @param currentPath Current browser or public-site path.
+ * @param href - Navigation destination to compare with the current route.
+ * @param currentPath - Current browser or public-site path.
  *
- * @return Whether the destination owns the current path.
+ * @returns Whether the current route is the link target or a descendant route.
  */
 const isActivePath = (href: string, currentPath: string): boolean => {
   const target = pathKey(href);
@@ -70,13 +76,14 @@ const isActivePath = (href: string, currentPath: string): boolean => {
 };
 
 /**
- * Renders the documentation tree as nested links and non-clickable section labels.
+ * Renders nested documentation links while marking the current route and its ancestors.
+ * Parent links without destinations remain labels and cannot claim the current-page state.
  *
- * @param nodes Navigation nodes to display in their supplied order.
- * @param currentPath Current public URL used to mark the active leaf.
- * @param hue Primary Styling hue used for the navigation accent.
+ * @param nodes - Ordered navigation tree supplied by the host.
+ * @param currentPath - Current URL or route used to compute active links.
+ * @param hue - Styling palette hue used for the navigation accent.
  *
- * @return An accessible navigation landmark containing the nested page tree.
+ * @returns An accessible navigation landmark with a nested list of links and labels.
  */
 export function DocsNavigation({
   nodes,

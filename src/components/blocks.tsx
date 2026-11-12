@@ -95,9 +95,10 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Creates a fresh default payload for one supported Docs editor block type.
- * @param type Editor block type to initialize.
- * @returns A cloned rich block with its required fields and empty editable content.
+ * Creates the initial editable fields for a selected reusable Docs block.
+ *
+ * @param type - Docs block kind whose editable initial fields should be created.
+ * @returns A detached block object that callers can safely customize and save.
  */
 export function defaultDocsBlock(type: DocsEditorBlockType): RichBlock {
   return structuredClone(
@@ -117,9 +118,10 @@ export function defaultDocsBlock(type: DocsEditorBlockType): RichBlock {
 }
 
 /**
- * Extracts display text recursively from strings, arrays, and common rich-content fields.
- * @param v Value, nested content, or rich block to read.
- * @returns Human-readable text, with array entries separated by spaces.
+ * Joins text from strings, child blocks, and nested content fields in document order.
+ *
+ * @param v - Value that may contain plain text, child blocks, or nested content.
+ * @returns The text content joined in document order, or an empty string when absent.
  */
 function text(v: unknown): string {
   if (typeof v === 'string') return v;
@@ -132,9 +134,10 @@ function text(v: unknown): string {
 }
 
 /**
- * Accepts HTTP, HTTPS, and mailto destinations while rejecting other protocols.
- * @param value Candidate URL, including a permitted relative URL.
- * @returns The original non-empty URL string when its resolved protocol is allowed, otherwise `undefined`.
+ * Restricts rendered rich-text links to web, email, and relative destinations.
+ *
+ * @param value - Untrusted href value from a stored mark definition.
+ * @returns The original URL when its protocol is permitted; otherwise `undefined`.
  */
 function sUrl(value: unknown): string | undefined {
   if (typeof value !== 'string' || !value.trim()) return undefined;
@@ -148,9 +151,10 @@ function sUrl(value: unknown): string | undefined {
 }
 
 /**
- * Renders a Portable Text block with its style, decorators, links, lists, and inline math.
- * @param block Text block and its optional children, marks, and link definitions.
- * @returns A semantic heading, paragraph, list, blockquote, or inline-content element.
+ * Renders a Portable Text text block with its supported marks and semantic block style.
+ *
+ * @param block - Text block containing inline spans, marks, and optional list metadata.
+ * @returns The semantic HTML element corresponding to the block's style.
  */
 function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
   const children =
@@ -166,10 +170,11 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
       ? 'blockquote'
       : 'p';
   /**
-   * Renders one Portable Text span or inline math child with its marks and link definitions.
-   * @param child Portable Text child value supplied by the host document.
-   * @param key Stable React key derived from the parent block position.
-   * @returns The supported inline element, plain text, or `null` for unsupported child types.
+   * Renders one text span or inline math child with supported marks and links.
+   *
+   * @param child - Child value to validate and render as inline content.
+   * @param key - Stable React key assigned to this child in the parent block.
+   * @returns A rendered inline element, plain text, or `null` for unsupported values.
    */
   const renderPortableTextChild = (child: unknown, key: string): JSX.Element | string | null => {
     if (!child || typeof child !== 'object') return null;
@@ -219,10 +224,11 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
 }
 
 /**
- * Recursively renders nested rich content, falling back to Markdown or readable text for unknown shapes.
- * @param value Nested Docs value, block, Markdown string, or scalar content.
- * @param options Optional feature flags passed into nested Markdown and block rendering.
- * @returns Rendered child nodes for the nested value.
+ * Recursively renders rich blocks, nested content, Markdown, and text fallbacks.
+ *
+ * @param value - Nested Docs value, block, Markdown string, or scalar content.
+ * @param options - Feature flags passed into nested Markdown and block rendering.
+ * @returns Rendered content without discarding unknown source values.
  */
 function NestedContent({
   value,
@@ -259,8 +265,8 @@ function NestedContent({
 /**
  * Read-only rendering for every reusable Docs member. Unknown data stays in the value.
  *
- * @param block Rich block value to render, including its type-specific fields.
- * @param options Optional rich-block feature flags for nested content.
+ * @param block - Rich block value to render, including its type-specific fields.
+ * @param options - Optional rich-block feature flags for nested content.
  * @returns The read-only React representation of the block; disabled tabs and accordions retain their Markdown source.
  */
 export function DocsRichBlock({

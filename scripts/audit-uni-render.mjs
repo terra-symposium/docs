@@ -14,10 +14,10 @@ import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { normalizeCodeForAudit } from './render-audit-utils.mjs';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../src/lib/terra/regex.mjs';
+import * as TerraQualityRegex from '../src/lib/terra/regex.mjs';
+import { normalizeCodeForAudit } from './render-audit-utils.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -41,8 +41,9 @@ const reconciliation = JSON.parse(
 );
 const leaves = manifest.leaves;
 const manifestById = new Map(leaves.map((l) => [l.id, l]));
-const tocOverride = await readOptionalJson(join(uniRoot, 'content/toc.json'));
-const toc = tocOverride ?? (await discoverToc(uniRoot, manifestById));
+const toc =
+  (await readOptionalJson(join(uniRoot, 'content/toc.json'))) ??
+  (await discoverToc(uniRoot, manifestById));
 const failures = [];
 const pageErrs = [];
 const consoleErrs = [];
@@ -50,12 +51,9 @@ const pages = [];
 const screenshots = [];
 const sourceAnomalies = [];
 const familyTotals = {};
-const sanitySections = JSON.parse(
+const sanityLeaves = JSON.parse(
   await readFile(join(uniRoot, 'content/_archive/sanity-production-tree.json'), 'utf8'),
-);
-const sanityLeaves = sanitySections.flatMap((s) =>
-  (s.groups ?? []).flatMap((group) => group.leaves ?? []),
-);
+).flatMap((s) => (s.groups ?? []).flatMap((group) => group.leaves ?? []));
 const reconciliationPageById = new Map((reconciliation.pages ?? []).map((l) => [l.id, l]));
 const tocLeaves = toc.flatMap((s) =>
   (s.groups ?? []).flatMap((group) =>
@@ -99,7 +97,6 @@ const allPageScreenshotDirs = {
 const expectedTocRoutes = tocLeaves.map(({ leaf: l }) => ({ id: l.id, title: l.title }));
 const navigationAudit = { expectedPages: expectedTocRoutes.length, actualPages: 0, mismatches: [] };
 const actualTocRoutes = [];
-const sectionSelect = page.getByRole('combobox', { name: 'Section' });
 const expectedTocById = new Map(expectedTocRoutes.map((e) => [e.id, e]));
 const observedCounts = new Map();
 const attachmentRouteAudit = {
@@ -291,9 +288,11 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Reads an optional JSON file, treating a missing path as absent while preserving parse and I/O errors.
- * @param path Filesystem path to the JSON document.
- * @returns The parsed value, or `undefined` only when the file does not exist.
+ * Reads optional JSON input while treating an absent file as an unconfigured source.
+ *
+ * @param path - File to parse as JSON.
+ *
+ * @return The decoded JSON value, or `undefined` when the file does not exist.
  */
 async function readOptionalJson(path) {
   try {
@@ -305,10 +304,12 @@ async function readOptionalJson(path) {
 }
 
 /**
- * Derives the stable ID suffix from a numbered directory name, scoping overview pages to their group.
- * @param name Directory name whose trailing `--` segment carries the ID.
- * @param groupId Parent group ID used to distinguish an overview page from its parent.
- * @returns The final directory segment or a group-qualified overview ID.
+ * Removes the ordering prefix from a Docs directory name to recover its stable route identifier.
+ *
+ * @param name - Directory name, including an optional double-hyphen route prefix.
+ * @param groupId - Group identifier used to make an `overview` leaf unique within its group.
+ *
+ * @return The route identifier used by the source inventory.
  */
 function idFromDir(name, groupId) {
   if (name === 'overview' && groupId) return `group-overview:${groupId}`;
@@ -316,9 +317,11 @@ function idFromDir(name, groupId) {
 }
 
 /**
- * Converts a kebab-case directory label into a readable title while preserving common acronyms.
- * @param name Directory name with any leading numbered prefix and ID suffix.
- * @returns A title-cased label with recognized technical acronyms uppercased.
+ * Converts a numbered, hyphenated directory segment into its human-readable sidebar title.
+ *
+ * @param name - Directory segment to display.
+ *
+ * @return Capitalized words with recognized technical abbreviations kept uppercase.
  */
 function dirTitle(name) {
   return (name.split('--')[0] ?? name)
@@ -332,10 +335,12 @@ function dirTitle(name) {
 }
 
 /**
- * Selects a page title from its frontmatter, falling back when the source has no title field.
- * @param source Markdown source that may begin with YAML frontmatter.
- * @param fallback Title to use when neither `title` nor `label` is present.
- * @returns The trimmed frontmatter title or the trimmed fallback.
+ * Reads a Markdown page's `title` or `label` frontmatter value for the source inventory.
+ *
+ * @param source - Markdown document, including optional YAML frontmatter.
+ * @param fallback - Title to use when neither supported frontmatter key is present.
+ *
+ * @return The selected title with surrounding whitespace removed.
  */
 function markdownTitle(source, fallback) {
   const frontmatter = /^---\s*\n([\s\S]*?)\n---(?:\n|$)/.exec(source)?.[1] ?? '';
@@ -344,17 +349,21 @@ function markdownTitle(source, fallback) {
 }
 
 /**
- * Builds the rendered table of contents by reading section, group, and leaf directories under content.
- * @param root Root folder containing the content tree.
- * @param knownLeaves Existing leaf metadata used to preserve known titles and attachment data.
- * @returns Sorted sections with their groups and discovered leaf pages.
+ * Reconstructs the Docs table of contents from grouped content directories and their leaf files.
+ *
+ * @param root - Repository root containing the `content/` tree.
+ * @param knownLeaves - Existing leaf records used to preserve known titles and attachment metadata.
+ *
+ * @return Sorted section, group, and leaf records for manifest comparison.
  */
 async function discoverToc(root, knownLeaves) {
   const contentRoot = join(root, 'content');
   /**
-   * Lists navigable child directories in stable display order.
-   * @param path Directory whose immediate children form one navigation level.
-   * @returns Names of visible child directories, sorted using the user's locale.
+   * Lists visible directories in stable alphabetical order, omitting private underscore folders.
+   *
+   * @param path - Directory whose visible child directories should be enumerated.
+   *
+   * @return Child directory names in locale-aware alphabetical order.
    */
   const dirs = async (path) =>
     (await readdir(path, { withFileTypes: true }))
@@ -362,10 +371,12 @@ async function discoverToc(root, knownLeaves) {
       .map((e) => e.name)
       .sort((a, b) => a.localeCompare(b));
   /**
-   * Reads a Markdown page title while tolerating a missing index page.
-   * @param path Candidate page index file.
-   * @param fallback Label derived from the directory when the file is absent or untitled.
-   * @returns The resolved frontmatter title or the supplied fallback.
+   * Reads a page title from frontmatter, using its directory-derived name when the file is absent.
+   *
+   * @param path - Markdown file that may contain a title or label in its frontmatter.
+   * @param fallback - Directory-derived title to use when the Markdown file is missing or untitled.
+   *
+   * @return The authored title or its supplied fallback.
    */
   const readTitle = async (path, fallback) => {
     try {
@@ -432,9 +443,10 @@ async function discoverToc(root, knownLeaves) {
 }
 
 /**
- * Visits each nested Portable Text object once while skipping its type and key metadata.
- * @param value Portable Text node or array to traverse.
- * @param visit Callback run for each non-array object node.
+ * Visits nested Portable Text objects while excluding their key and type metadata fields.
+ *
+ * @param value - Array, object, or primitive from the document's portable content tree.
+ * @param visit - Callback invoked once for each non-array object encountered.
  */
 function walk(value, visit) {
   if (Array.isArray(value)) {
@@ -449,10 +461,12 @@ function walk(value, visit) {
 }
 
 /**
- * Collects all nested Portable Text objects whose `_type` matches the requested type.
- * @param value Root node or array to inspect recursively.
- * @param type Portable Text `_type` value to select.
- * @returns Matching nodes in traversal order.
+ * Collects every nested Portable Text object whose `_type` matches the requested block type.
+ *
+ * @param value - Content tree to traverse.
+ * @param type - Portable Text type name to collect.
+ *
+ * @return Matching block objects in document traversal order.
  */
 function ofType(value, type) {
   const items = [];
@@ -463,9 +477,11 @@ function ofType(value, type) {
 }
 
 /**
- * Flattens supported Portable Text fields into a readable string for comparisons.
- * @param v Node, array, or scalar from the source document.
- * @returns Span text and nested content joined with spaces at block and table boundaries.
+ * Extracts readable text recursively from supported Portable Text blocks and table structures.
+ *
+ * @param v - Span, block, cell, row, or nested array whose text should be collected.
+ *
+ * @return Text in document order, with spaces between independent child collections.
  */
 function plainText(v) {
   if (Array.isArray(v)) return v.map(plainText).join(' ');
@@ -479,9 +495,11 @@ function plainText(v) {
 }
 
 /**
- * Extracts visible text from a table cell while excluding code, math, and diagram blocks.
- * @param v Cell value, nested span, or array of Portable Text values.
- * @returns Cell text with inline children joined directly and nested rows separated by spaces.
+ * Extracts text from a table cell while ignoring code, math, and diagram payloads.
+ *
+ * @param v - Table cell content or a nested child value.
+ *
+ * @return Cell text in reading order, preserving adjacency inside a cell.
  */
 function tableCellPlainText(v) {
   if (Array.isArray(v)) return v.map(tableCellPlainText).join('');
@@ -497,9 +515,11 @@ function tableCellPlainText(v) {
 }
 
 /**
- * Normalizes visible text for parity comparisons by applying NFKC and removing invisible spacing.
- * @param value Text-like value from the source model or rendered page.
- * @returns A trimmed string with whitespace runs collapsed to one space.
+ * Normalizes rendered prose for a source-to-viewer text comparison.
+ *
+ * @param value - Value extracted from the Markdown source or rendered DOM.
+ *
+ * @return Unicode-normalized text with zero-width characters removed and whitespace collapsed.
  */
 function normText(value) {
   return String(value ?? '')
@@ -510,9 +530,11 @@ function normText(value) {
 }
 
 /**
- * Checks whether normalized Markdown contains only a thematic-break marker.
- * @param value Raw Markdown text from a block.
- * @returns `true` when the trimmed value is a valid horizontal rule.
+ * Recognizes Markdown thematic-break syntax after line-ending and surrounding-space normalization.
+ *
+ * @param value - Source string to test.
+ *
+ * @return Whether the normalized value consists of a valid thematic break.
  */
 function isMarkdownThematicBreak(value) {
   const source = String(value ?? '')
@@ -522,10 +544,12 @@ function isMarkdownThematicBreak(value) {
 }
 
 /**
- * Converts attachment URLs rooted under the current page's files directory to portable content paths.
- * @param value URL or content string that may reference a local attachment.
- * @param pagePath Content-relative path used to derive the page directory.
- * @returns The rewritten URL string, or the input string when no page directory applies.
+ * Rewrites page-local file URLs into the relative asset paths used by published Docs Markdown.
+ *
+ * @param value - Markdown or HTML value containing Docs file URLs.
+ * @param pagePath - Source page path used to resolve its asset directory.
+ *
+ * @return The value with Docs `/files/` references converted to stable content-relative URLs.
  */
 function normPageAssetUrls(value, pagePath) {
   const routeDir = dirname(String(pagePath ?? ''))
@@ -542,9 +566,11 @@ function normPageAssetUrls(value, pagePath) {
 }
 
 /**
- * Converts supported YouTube watch, short, and share URLs to their canonical embed URL.
- * @param source Candidate embed or watch URL.
- * @returns The canonical player URL with supported playlist and start-time settings, or the original source.
+ * Converts supported YouTube watch, short, and embed URLs to their canonical player URL.
+ *
+ * @param source - Authored embed URL.
+ *
+ * @return Canonical embed URL, or the original value for unsupported or invalid URLs.
  */
 function expectedEmbedUrl(source) {
   try {
@@ -586,10 +612,12 @@ function expectedEmbedUrl(source) {
 }
 
 /**
- * Resolves a link against its page route and maps legacy local file URLs into content URLs.
- * @param value Link value from a source mark or rendered span.
- * @param pagePath Content-relative page route used as the relative URL base.
- * @returns The resolved absolute URL, `null` for a missing or non-string link, or the raw value if parsing fails.
+ * Resolves a source link against its Docs page and maps legacy file routes to published content.
+ *
+ * @param value - Link target authored in the source document.
+ * @param pagePath - Source page path used as the relative URL base.
+ *
+ * @return Resolved absolute URL, or the original target when it cannot be resolved.
  */
 function canonicalHref(value, pagePath) {
   if (typeof value !== 'string' || !value) return null;
@@ -605,10 +633,12 @@ function canonicalHref(value, pagePath) {
 }
 
 /**
- * Builds comparable inline-text runs from a Portable Text block's spans and marks.
- * @param block Source Portable Text block with children and optional mark definitions.
- * @param pagePath Page path used to resolve linked marks.
- * @returns Adjacent spans with identical decorators, links, and unsupported marks coalesced.
+ * Builds comparable inline-text runs from source spans and their decorator/link definitions.
+ *
+ * @param block - Portable Text block whose inline children and marks are being audited.
+ * @param pagePath - Source route used to resolve relative mark links.
+ *
+ * @return Adjacent source spans merged when their decorators and canonical links match.
  */
 function sourceInlineRuns(block, pagePath) {
   const linkByKey = new Map(
@@ -645,10 +675,12 @@ function sourceInlineRuns(block, pagePath) {
 }
 
 /**
- * Builds comparable text runs from inline spans collected from the rendered viewer.
- * @param spans Rendered span records containing text, marks, and join hints.
- * @param pagePath Page path used to canonicalize each rendered link.
- * @returns Adjacent spans coalesced only when the renderer marks them joinable and their marks match.
+ * Groups rendered inline spans by marks and links, honoring the renderer's join-boundary flag.
+ *
+ * @param spans - Inline spans extracted from the rendered document viewer.
+ * @param pagePath - Source route used to canonicalize the rendered link targets.
+ *
+ * @return Comparable runs whose text and marks can be checked against source spans.
  */
 function renderedInlineRuns(spans, pagePath) {
   const runs = [];
@@ -675,9 +707,11 @@ function renderedInlineRuns(spans, pagePath) {
 }
 
 /**
- * Maps a source Portable Text block type to the viewer's top-level semantic category.
- * @param type Source block `_type` value.
- * @returns `text` for ordinary Portable Text blocks, otherwise the original type.
+ * Maps Portable Text's generic block type to the text family used by the Docs renderer.
+ *
+ * @param type - Source block type identifier.
+ *
+ * @return Expected rendered block family.
  */
 function expectedTopType(type) {
   if (type === 'block' || type === 'block') return 'text';
@@ -685,10 +719,12 @@ function expectedTopType(type) {
 }
 
 /**
- * Opens a leaf route and waits for its viewer blocks and view-mode transition to finish loading.
- * @param leaf Table-of-contents leaf whose ID and title identify the page.
- * @param parsed Parsed source blocks whose count must match the rendered viewer.
- * @returns `true` when the page is ready; otherwise records the failure and returns `false`.
+ * Opens a Docs page and waits for its viewer and transition shell to finish loading.
+ *
+ * @param leaf - Manifest leaf whose route, title, and expected block count identify the page.
+ * @param parsed - Parsed Markdown blocks expected to appear in the top-level viewer.
+ *
+ * @return Whether the page reached its ready view state; failures are recorded for the report.
  */
 async function openLeaf(leaf, parsed) {
   await page.goto(`${baseUrl}/#${encodeURIComponent(leaf.id)}`, {
@@ -750,9 +786,11 @@ async function openLeaf(leaf, parsed) {
 }
 
 /**
- * Creates a stable screenshot filename from a leaf title and route ID.
- * @param leaf Page metadata containing the display title and route identifier.
- * @returns A lowercase PNG filename with punctuation normalized to hyphens.
+ * Creates a stable PNG filename from a leaf's title and identifier.
+ *
+ * @param leaf - Docs leaf represented by the screenshot.
+ *
+ * @return A filesystem-safe filename ending in `.png`.
  */
 function leafScreenshotName(leaf) {
   return `${String(leaf.title ?? 'page')
@@ -765,11 +803,13 @@ function leafScreenshotName(leaf) {
 }
 
 /**
- * Captures a full-page screenshot after fonts, images, and viewer transitions have settled.
- * @param leaf Page metadata used for the screenshot record and output name.
- * @param dir Directory where the image file should be written.
- * @param label Screenshot family or theme recorded with the artifact.
- * @returns `true` on capture; otherwise records the browser error and returns `false`.
+ * Captures a full-page image after fonts, images, and Docs loading overlays settle.
+ *
+ * @param leaf - Page whose title and id determine the screenshot filename.
+ * @param dir - Output directory for this screenshot set.
+ * @param label - Screenshot-set label retained for call-site readability.
+ *
+ * @return Whether the screenshot was captured after the page reached a stable state.
  */
 async function capturePageScreenshot(leaf, dir, label) {
   const file = join(dir, leafScreenshotName(leaf));
@@ -849,9 +889,11 @@ for (const sourceLeaf of sanityLeaves) {
     }
   }
   /**
-   * Resolves an image URL against its page and returns the decoded path without its filename extension.
-   * @param img Parsed inline-image record with its original URL.
-   * @returns The normalized local pathname, or the input URL when it cannot be parsed.
+   * Converts a Markdown image URL into the local content path stored in the asset manifest.
+   *
+   * @param img - Parsed image block containing its original URL.
+   *
+   * @return Decoded path relative to the page route, or the original URL if parsing fails.
    */
   const localImgPath = (img) => {
     try {
@@ -944,7 +986,7 @@ await page
   .waitForSelector('[aria-label="Document viewer"]', { timeout: 20000 })
   .catch(() => undefined);
 for (const section of toc) {
-  await sectionSelect.click();
+  await page.getByRole('combobox', { name: 'Section' }).click();
   await page.getByRole('option', { name: section.title, exact: true }).click();
   await page.waitForTimeout(75);
   const sectionRoutes = await page.evaluate(() =>
@@ -1203,9 +1245,11 @@ for (let index = 0; index < leaves.length; index++) {
     if (!root) return { rootCount: roots.length };
     const children = [...root.children];
     /**
-     * Maps a rendered document element to the block category used by the audit report.
-     * @param element Top-level rendered block or one of its descendants.
-     * @returns The recognized editor block name, or `unknown` when no supported marker matches.
+     * Classifies a top-level viewer element by the marker used by its Docs block renderer.
+     *
+     * @param element - Rendered element whose block family should be identified.
+     *
+     * @return The corresponding Docs block family, or `unknown` when no marker matches.
      */
     const classify = (element) => {
       const kind = element.getAttribute('data-docs-editor-block');
@@ -1229,22 +1273,28 @@ for (let index = 0; index < leaves.length; index++) {
       return 'unknown';
     };
     /**
-     * Finds matching descendants under the selected document root.
-     * @param selector CSS selector for rendered block elements.
-     * @returns Matching elements in document order.
+     * Queries descendants of the active document viewer for a selector.
+     *
+     * @param selector - CSS selector for rendered viewer elements.
+     *
+     * @return Matching descendant elements in document order.
      */
     const all = (selector) => [...root.querySelectorAll(selector)];
     /**
-     * Extracts the final Sanity key embedded in a Portable Text path.
-     * @param path Path string returned for a nested content field.
-     * @returns The last `_key` value, or an empty string when the path has none.
+     * Extracts the last Portable Text key from a serialized path string.
+     *
+     * @param path - Serialized block path containing zero or more `_key` predicates.
+     *
+     * @return The final key value, or an empty string when the path has none.
      */
     const lastKey = (path) =>
       [...String(path ?? '').matchAll(/_key=="([^"]+)"/g)].at(-1)?.[1] ?? '';
     /**
-     * Reads code from an interactive CodeMirror block or its server-rendered fallback.
-     * @param block Rendered code block container.
-     * @returns Visible code lines joined with newline separators.
+     * Reads code text from the visible CodeMirror surface or the accessible line fallback.
+     *
+     * @param block - Rendered code block containing the editor or fallback lines.
+     *
+     * @return Code text joined with newlines in displayed order.
      */
     const readCode = (block) => {
       const lines = [...block.querySelectorAll('.cm-content .cm-line')];
@@ -1258,9 +1308,11 @@ for (let index = 0; index < leaves.length; index++) {
       const table = section.querySelector(':scope > table');
       const rows = table ? [...table.rows] : [];
       /**
-       * Gets table-cell text without counting nested code or math presentation.
-       * @param cell Table header or data cell cloned for text extraction.
-       * @returns The cell's remaining textual content.
+       * Extracts table-cell text without including rendered code or math previews.
+       *
+       * @param cell - Rendered table cell to read.
+       *
+       * @return Text remaining after non-table code and math elements are removed from a clone.
        */
       const cellText = (cell) => {
         const clone = cell.cloneNode(true);
@@ -1359,9 +1411,9 @@ for (let index = 0; index < leaves.length; index++) {
       const path = element.getAttribute('data-pt-path') ?? '';
       const key = lastKey(path);
       const blockKey = path.match(/_key=="([^"]+)"/)?.[1] ?? '';
-      const value = element.querySelector('[data-pt-text="true"]');
       const text =
-        value?.textContent ?? (element.querySelector('[data-pt-line-break="true"]') ? '\n' : '');
+        element.querySelector('[data-pt-text="true"]')?.textContent ??
+        (element.querySelector('[data-pt-line-break="true"]') ? '\n' : '');
       const marksRoot = element.querySelector('[data-pt-marks="true"]') ?? element;
       const decorators = [
         ['strong', 'strong'],
@@ -1694,10 +1746,11 @@ for (let index = 0; index < leaves.length; index++) {
       sample: record.inlineSpans.runMismatch.slice(0, 8),
     });
   /**
-   * Records a custom-block count and reports a source-to-viewer mismatch for the current page.
-   * @param type Block family name used as the report key.
-   * @param expected Number of blocks parsed from the source document.
-   * @param actual Number of corresponding blocks found in the rendered viewer.
+   * Records a block-family count and reports a failure when the source and viewer differ.
+   *
+   * @param type - Block family being checked.
+   * @param expected - Number of blocks parsed from the Markdown source.
+   * @param actual - Number of matching blocks collected from the rendered viewer.
    */
   const checkCount = (type, expected, actual) => {
     record.customBlocks[type] = { expected, rendered: actual };
@@ -2082,8 +2135,7 @@ for (let index = 0; index < leaves.length; index++) {
         actual: actual.title,
       });
   }
-  const sourceAccordions = ofType(parsed, 'accordion');
-  const accordionLabels = sourceAccordions.flatMap((g) =>
+  const accordionLabels = ofType(parsed, 'accordion').flatMap((g) =>
     (g.items ?? []).map((item) => String(item.title ?? '')),
   );
   checkCount('accordion-items', accordionLabels.length, dom.accordionTriggers?.length ?? 0);
@@ -2317,9 +2369,11 @@ for (const { leaf } of tocLeaves) {
   attachmentModeAudit.renderedItems += actualLabels.length;
   const expectedLabels = expectedAttachments.map((a) => `Attachment ${a.name}`);
   /**
-   * Builds a frequency map so attachment labels can be compared with duplicate entries preserved.
-   * @param items Labels to count.
-   * @returns A map from each label to its occurrence count.
+   * Counts repeated attachment labels so duplicate names are compared accurately.
+   *
+   * @param items - Attachment labels collected from source or rendered cards.
+   *
+   * @return A map from each label to its number of occurrences.
    */
   const counts = (items) => {
     const values = new Map();
@@ -2377,9 +2431,11 @@ if (textAttachmentEntry?.attachment) {
       ({ selector: s, expected: e }) => {
         const element = document.querySelector(s);
         /**
-         * Normalizes whitespace before comparing rendered attachment previews with their source.
-         * @param value DOM text or source text to compare.
-         * @returns The text with runs of whitespace collapsed to one space.
+         * Normalizes text for a prefix comparison between the source attachment and preview.
+         *
+         * @param value - Text extracted from the source or rendered attachment.
+         *
+         * @return String text with repeated whitespace collapsed and edges trimmed.
          */
         const norm = (value) =>
           String(value ?? '')
@@ -2427,16 +2483,20 @@ for (const leaf of leaves) {
   const visitedAccordions = new Set();
   let interactions = 0;
   /**
-   * Creates a locator for a panel ID while escaping characters significant inside a quoted CSS selector.
-   * @param id ID referenced by a tab or accordion trigger.
-   * @returns A Playwright locator for the element with that exact ID.
+   * Locates a tab panel by the DOM id exposed through the tab's `aria-controls` attribute.
+   *
+   * @param id - Panel id returned by the associated tab.
+   *
+   * @return Playwright locator for the element with that exact id.
    */
   const panelLocator = (id) =>
     page.locator(`[id="${id.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"]`);
   /**
-   * Exercises visible tabs and accordions in a container, then recursively visits their opened panels.
-   * @param container Viewer root or panel whose interactive controls should be checked.
-   * @returns A promise that settles after all visible controls and discovered nested panels are exercised.
+   * Exercises nested tab and accordion controls, checking their rendered associations and content.
+   *
+   * @param container - Viewer region whose nested controls should be exercised.
+   *
+   * @return Nothing; interaction counts and any accessibility or content failures are recorded.
    */
   const exercisePanel = async (container) => {
     const lists = container.locator('[role="tablist"][aria-label="Tab options"]');
@@ -2581,9 +2641,11 @@ for (const sample of screenshotSamples) {
   await root.waitFor({ timeout: 15000 });
   if (sample.family === 'math') {
     /**
-     * Checks whether a Portable Text subtree contains a math block.
-     * @param value Node or array of nodes from a tab or accordion body.
-     * @returns `true` when at least one descendant has type `math`.
+     * Detects whether an authored block value contains a nested math block.
+     *
+     * @param value - Portable Text content to inspect.
+     *
+     * @return Whether the content includes at least one math block.
      */
     const containsMath = (value) => ofType(value, 'math').length > 0;
     for (const group of ofType(parsed, 'accordion')) {

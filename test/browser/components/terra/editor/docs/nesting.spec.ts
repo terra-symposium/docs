@@ -113,11 +113,11 @@ test(
     await blocks.getByRole('option', { name: 'Table', exact: true }).click();
     await expect(p.locator('[data-block="table"]')).toBeVisible();
     await expect
-      .poll(async () => {
-        return JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]').some(
+      .poll(async () =>
+        JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]').some(
           (block: { _type?: string }) => block._type === 'table',
-        );
-      })
+        ),
+      )
       .toBe(true);
   },
 );

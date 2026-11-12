@@ -40,27 +40,28 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Controlled editor surface backed by the canonical Docs editor.
+ * Renders a controlled Docs editor with lazy-loaded content in edit or read-only mode.
  *
- * The view mode is read-only; edit mode requires an `onChange` handler so the
- * host remains the owner of persisted content.
+ * @param editorOptions Controlled value, rendering mode, and optional block capabilities for one editor surface.
+ * @param editorOptions.value Controlled Portable Text document value.
+ * @param editorOptions.className Optional class applied to the editor root.
+ * @param editorOptions.blocks Optional rich-block capabilities supplied by the host.
+ * @param editorOptions.mode Selects editable controls or read-only rendering.
+ * @param editorOptions.onChange Required callback in edit mode for updated content.
  *
- * @param value - Portable Text blocks controlled by the host application.
- * @param className - Optional class added to the themed editor wrapper.
- * @param blocks - Optional registry of reusable blocks enabled by the host.
- * @param mode - Selects editable or read-only rendering.
- * @param onChange - Required in edit mode to return changes to the content owner.
- * @returns A lazily loaded editor wrapped in the Docs theme class and a Suspense boundary.
+ * @return The Docs editor surface configured for editing or read-only rendering.
  */
-export function Docs({ value, className, blocks, mode, onChange }: DocsProps): JSX.Element {
+export function Docs(editorOptions: DocsProps): JSX.Element {
   return (
-    <div className={['docs', className].filter(Boolean).join(' ')}>
+    <div className={['docs', editorOptions.className].filter(Boolean).join(' ')}>
       <Suspense fallback={null}>
         <ContentEditor
-          content={value}
-          readOnly={mode === 'view'}
-          {...(blocks !== undefined ? { blocks } : {})}
-          {...(mode === 'edit' ? { onChange: (v: unknown[]) => onChange(v as DocsValue) } : {})}
+          content={editorOptions.value}
+          readOnly={editorOptions.mode === 'view'}
+          {...(editorOptions.blocks !== undefined ? { blocks: editorOptions.blocks } : {})}
+          {...(editorOptions.mode === 'edit'
+            ? { onChange: (v: unknown[]) => editorOptions.onChange(v as DocsValue) }
+            : {})}
         />
       </Suspense>
     </div>

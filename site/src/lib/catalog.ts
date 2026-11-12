@@ -30,7 +30,7 @@ const G_REGEX = () => TerraQualityRegex.REGEX_G_REGEX_8();
 /**
  * Matches a numeric ordering prefix at the start of a route segment.
  *
- * @returns The numeric prefix and separator used to order a catalog entry.
+ * @return A regular expression for extracting the leading numeric order.
  */
 const ORDER_PREFIX_REGEX = () => /^(\d+)[-_]+/;
 /**
@@ -119,7 +119,7 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
           ?.trim() ||
           (slug.split('/').at(-1) || 'Overview')
             .replace(G_REGEX(), ' ')
-            .replace(B_P_L_GU_REGEX(), (letter) => letter.toUpperCase())),
+            .replace(B_P_L_GU_REGEX(), (initial) => initial.toUpperCase())),
       ...((frontmatter.sidebar?.label ?? frontmatter.label)
         ? { sidebarLabel: frontmatter.sidebar?.label ?? frontmatter.label }
         : {}),
@@ -133,9 +133,7 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
     };
   })
   .sort((l, r) => l.order - r.order || l.file.localeCompare(r.file));
-/**
- * Mutable route node whose children are indexed by segment while the navigation tree is assembled.
- */
+/** In-progress navigation node whose children are indexed by route segment. */
 type MutableNode = Omit<DocsNavNode, 'children'> & { children: Map<string, MutableNode> };
 const rootNodes = new Map<string, MutableNode>();
 /** Navigation tree built from the visible pages after their routes are registered. */

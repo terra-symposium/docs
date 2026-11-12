@@ -19,6 +19,7 @@ import {
   useEditorSelector,
 } from '@portabletext/editor';
 import { docsValueToMarkdown } from '../../../lib/markdown-model.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../lib/terra/layout-classes.js';
 import { renderCallout } from './docs/_Callout.js';
 import { renderCode } from './docs/_DocsCode.js';
 import { renderImage } from './docs/_DocsImage.js';
@@ -273,7 +274,7 @@ function ContentChangeListener({
               <div className="hidden h-6 w-px bg-primary-5 sm:block" />
             </>
           )}
-          <div className="flex items-center gap-1">
+          <div className={DOCS_LAYOUT_CLASSES.compactRow}>
             <Select
               onValueChange={(s) => {
                 editor.send({ type: 'style.toggle', style: s } as never);
@@ -360,7 +361,11 @@ function ContentChangeListener({
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="flex gap-2" aria-label="Attachment format" role="group">
+                  <div
+                    className={DOCS_LAYOUT_CLASSES.controlRow}
+                    aria-label="Attachment format"
+                    role="group"
+                  >
                     {visualEmbedAvailable && (
                       <Button
                         aria-pressed={selectedMode === 'embed'}
@@ -557,7 +562,7 @@ function ContentChangeListener({
                 onChange={(e) => setEndpoint(e.currentTarget.value)}
                 placeholder="/api/docs?action=testimonials"
               />
-              <div className="flex justify-end gap-2">
+              <div className={DOCS_LAYOUT_CLASSES.dialogActions}>
                 <Button variant="outline" onClick={() => setReceivedValueOpen(false)}>
                   Cancel
                 </Button>

@@ -32,6 +32,7 @@ import { dirname, docsPath, isDocsPath } from '../../../../lib/terra/runtime/sha
 import { sanitizeName } from '../../../../lib/terra/docs/tree.js';
 import { toast } from 'sonner';
 import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
@@ -94,11 +95,11 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Handles latest content.
+ * Gets the Markdown source for a Docs value used in an attachment preview.
  *
- * @param content - Docs content whose attachment references should be collected.
+ * @param content Markdown source or a Docs value containing Portable Text content.
  *
- * @return The current leaf's Markdown source, or an empty string when it has no text content.
+ * @return Existing Markdown or serialized Portable Text; returns a string value or empty text if serialization fails.
  */
 const latestContent = (content: unknown): string => {
   try {
@@ -130,8 +131,8 @@ COMPONENTS
 /**
  * Renders the document attachment manager for filtering, selecting, uploading, and organizing assets.
  *
- * @param dPath Source path of the document whose attachments are being managed.
- * @param tree Navigation tree used to find sibling documents and related attachment scopes.
+ * @param dPath Source path of the document whose attachment list is being managed.
+ * @param tree Navigation tree used to resolve document and ancestor attachment scopes.
  *
  * @return The attachment manager and its upload, selection, and organization controls.
  */
@@ -284,10 +285,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   }, [docId]);
 
   // ATTACHMENT ACTION HANDLERS
-  /**
-   * Handles view asset.
-   *
-   * @param sis - Attachment records being filtered for the active document.
+  /** Opens the viewer and loads a persisted text attachment's content for preview.
+   * @param sis Attachment selected for preview.
    */
   const viewAsset = async (sis: Sister): Promise<void> => {
     if (!textAsset(sis) || !sis.path || sis.path.startsWith('temp-')) {
@@ -314,12 +313,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     }
   };
 
-  /**
-   * Handles process upload.
-   *
-   * @param file - File selected for upload or attachment.
-   * @param tempId - Temporary identifier assigned before persistence.
-   * @param isMdFile - Whether the file should be treated as Markdown content.
+  /** Uploads one file in chunks and replaces its temporary list entry with persisted metadata.
+   * @param file File selected for upload.
+   * @param tempId Temporary row ID replaced after the upload succeeds.
+   * @param isMdFile Whether the uploaded file should be treated as a document.
    */
   const processUpload = async (file: File, tempId: string, isMdFile: boolean) => {
     try {
@@ -527,10 +524,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     [docId],
   );
   useEffect(() => {
-    /**
-     * Handles handle paste.
-     *
-     * @param e - Input event carrying the selected attachment files.
+    /** Adds supported pasted URLs or files when paste occurs outside a text input.
+     * @param e Document paste event whose clipboard contents are classified.
      */
     const handlePaste = (e: ClipboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -577,10 +572,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     };
   }, [addRemote, add]);
 
-  /**
-   * Handles rename attch.
-   *
-   * @param nName - Proposed attachment name displayed in the editor.
+  /** Renames the selected attachment while preserving its extension and current directory.
+   * @param nName New basename entered by the user.
    */
   const renameAttch = async (nName: string) => {
     if (!renameDlg) return;
@@ -618,10 +611,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     }
   };
 
-  /**
-   * Handles remove.
-   *
-   * @param items - Attachment items rendered by the list.
+  /** Confirms deletion, removes selected entries optimistically, and dispatches each document or asset write.
+   * @param items Selected document and attachment records to delete.
    */
   const remove = async (items: Sister[]) => {
     if (!window.confirm(`Are you sure you want to delete ${items.length} items?`)) return;
@@ -665,10 +656,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 
   // GLOBAL KEYBOARD SHORTCUTS
   useEffect(() => {
-    /**
-     * Handles handle key down.
-     *
-     * @param e - Keyboard event used to operate the attachment panel.
+    /** Deletes selected attachments on Backspace or Delete when no input or dialog owns the key.
+     * @param e Keyboard event used to recognize and claim the deletion shortcut.
      */
     const handleKeyDown = (e: KeyboardEvent) => {
       if (loading || uploading || isDialogOpen || selItems.length === 0) return;
@@ -877,11 +866,11 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
           )}
         </div>
         <input
-          aria-label="Upload attachments"
           data-testid="docs-attachment-upload"
           ref={fileRef}
           type="file"
           className="hidden"
+          aria-label="Select files to upload as attachments"
           multiple
           onChange={(e) => void add(e.currentTarget.files)}
           disabled={uploading || loading}
@@ -1286,7 +1275,6 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                     const { PDFDocument } = await import('pdf-lib');
                     const mergedPdf = await PDFDocument.create();
                     for (const pdf of mergePdfState.pdfs) {
-                      if (!pdf) continue;
                       const pdfDoc = await PDFDocument.load(await pdf.arrayBuffer());
                       (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach((p) =>
                         mergedPdf.addPage(p),
@@ -1449,7 +1437,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                         })();
                       }}
                     >
-                      <DownloadIcon className="mr-2 size-4" /> Download Asset
+                      <DownloadIcon className={DOCS_LAYOUT_CLASSES.iconBeforeLabel} /> Download
+                      Asset
                     </Button>
                   )}
                 </div>
@@ -1622,7 +1611,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className={DOCS_LAYOUT_CLASSES.spacedStack}>
                   {!['youtube', 'website', 'tsdocs'].includes(dialogMode) && (
                     <Button
                       variant="outline"

@@ -10,7 +10,6 @@ IMPORTS
 import { applyHue } from '@terra-symposium/styling';
 import { configureDocsHost } from '../../lib/host-runtime.js';
 import { docsHueTheme } from '../../lib/docs-theme.js';
-import { isDocBody } from '../../lib/terra/runtime/types.js';
 import { useEffect, useRef, useState } from 'react';
 
 // COMPONENTS
@@ -18,116 +17,50 @@ import Scaffold from './pages/docs/_main.js';
 import { DocsQuizProvider } from '../quiz.js';
 
 // TYPES
-import type { DocsHostTreeNode, DocsWorkspaceProps } from '../../lib/host.js';
-import type { DocBody, DocVer, Tree } from '../../lib/terra/runtime/types.js';
+import type { DocsWorkspaceProps } from '../../lib/host.js';
 import type { JSX } from 'react';
-
-/**
- * Converts the portable host tree to the stricter legacy scaffold shape.
- *
- * @param nodes - Host navigation nodes to adapt recursively.
- * @param permission - Workspace permission used when a host node omits its own permission.
- * @param routePath - Optional host route resolver for leaves with a source path but no URL.
- * @returns Scaffold nodes with branch children and leaf URLs normalized.
- */
-function toScaffoldTree(
-  nodes: DocsHostTreeNode[],
-  permission: 'read' | 'write',
-  routePath?: (path: string) => string,
-): Tree[] {
-  return nodes.map((n): Tree => {
-    if (n.type === 'branch') {
-      const { children, permission: nodePermission, hue, ...branch } = n;
-      return {
-        ...branch,
-        type: 'branch',
-        permission: nodePermission ?? permission,
-        children: toScaffoldTree(children ?? [], permission, routePath),
-        ...(typeof hue === 'number' ? { hue } : {}),
-      };
-    }
-    const { permission: nodePermission, ...leaf } = n;
-    return {
-      ...leaf,
-      type: 'leaf',
-      permission: nodePermission ?? permission,
-      url: n.url ?? (n.path ? routePath?.(n.path) : undefined) ?? n.path ?? n.origName,
-    };
-  });
-}
-
-/**
- * Validates one saved editor revision before forwarding host content to the scaffold.
- *
- * @param v - Candidate revision received from the host document adapter.
- * @returns `true` when the required revision metadata fields are present.
- */
-function isDocVersion(v: unknown): v is DocVer {
-  if (!v || typeof v !== 'object') return false;
-  const revision = v as Record<string, unknown>;
-  return (
-    typeof revision.contentJson === 'string' &&
-    typeof revision.description === 'string' &&
-    typeof revision.title === 'string' &&
-    typeof revision.savedAt === 'string'
-  );
-}
-
-/**
- * Keeps only the content representations accepted by the scaffold's editor contract.
- *
- * @param value - Host content supplied as Markdown, blocks, or revision history.
- * @returns A supported scaffold value, or `undefined` when the host value is malformed.
- */
-function toScaffoldContent(value: unknown): string | DocBody | DocVer[] | undefined {
-  if (typeof value === 'string' || isDocBody(value)) return value;
-  if (Array.isArray(value) && value.every(isDocVersion)) return value;
-  return undefined;
-}
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Adapts host navigation and content contracts to the shared Docs workspace surface.
+ * Mounts the shared Docs workspace for a host adapter, synchronizing route state, theme, portals, and page content.
  *
- * @param workspace - Host adapter, navigation tree, current document metadata, content, and presentation options.
- * @param workspace.host - Route resolver and host-specific navigation and block configuration.
- * @param workspace.tree - Navigation branches and leaves rendered by the Docs sidebar.
- * @param workspace.pathname - Current browser path used to select the active route.
- * @param workspace.permission - Read or write access applied to the scaffold.
- * @param workspace.path - Optional source path for the current document.
- * @param workspace.title - Current document title.
- * @param workspace.description - Optional description displayed with the document.
- * @param workspace.contributors - Optional contributor names for document metadata.
- * @param workspace.updatedAt - Optional last-updated date for document metadata.
- * @param workspace.userData - Signed-in user details used by workspace controls.
- * @param workspace.source - Original source text provided to the workspace and quiz context.
- * @param workspace.content - Saved content accepted by the scaffold's editor contract.
- * @param workspace.renderContent - Optional host-rendered content supplied for view mode.
- * @param workspace.staticContent - Indicates that the host content is already rendered statically.
- * @param workspace.beforeContent - Optional host content inserted before the document body.
- * @param workspace.afterContent - Optional host content inserted after the document body.
- * @param workspace.standalone - Enables the scaffold's standalone presentation.
- * @param workspace.full - Requests the scaffold's full-width presentation.
- * @param workspace.mode - Initial view, edit, or attachment mode.
- * @param workspace.blocks - Per-document settings for supported shared blocks.
- * @param workspace.customBlocks - Host-specific block renderers registered with the adapter.
- * @param workspace.quiz - Optional host quiz configuration and generation context.
- *
- * @returns The configured Docs scaffold with host routing, content, theme, and quiz behavior.
+ * @param workspaceOptions Host adapter, navigation, permission, current page, and optional render capabilities.
+ * @param workspaceOptions.host Storage, routing, capability, and rendering boundary supplied by the consumer.
+ * @param workspaceOptions.tree Navigation tree used to resolve current section metadata.
+ * @param workspaceOptions.pathname Current page route selected by the host.
+ * @param workspaceOptions.permission Current page permission used by the editor controls.
+ * @param workspaceOptions.path Optional source path of the current document.
+ * @param workspaceOptions.title Current document title.
+ * @param workspaceOptions.description Optional current document description.
+ * @param workspaceOptions.contributors Optional people credited on the current document.
+ * @param workspaceOptions.updatedAt Optional source update timestamp.
+ * @param workspaceOptions.userData Optional signed-in user details shown by the sidebar.
+ * @param workspaceOptions.source Optional Markdown source associated with the current document.
+ * @param workspaceOptions.content Optional document value rendered by the editor.
+ * @param workspaceOptions.renderContent Optional static React content for the canonical View surface.
+ * @param workspaceOptions.staticContent Whether host content is static and can skip editor transition guards.
+ * @param workspaceOptions.beforeContent Optional host content placed before the document body.
+ * @param workspaceOptions.afterContent Optional host content placed after the document body.
+ * @param workspaceOptions.standalone Whether to render without the surrounding site shell.
+ * @param workspaceOptions.full Whether the workspace should occupy the full available width.
+ * @param workspaceOptions.mode Optional explicit view, edit, or attachments mode.
+ * @param workspaceOptions.blocks Optional switches controlling shared rich block rendering.
+ * @param workspaceOptions.customBlocks Optional host-specific rich block renderers.
+ * @param workspaceOptions.quiz Optional host-owned quiz toolbar and generation callback.
+ * @return The themed Docs workspace with host-aware navigation, document content, and view or editing controls.
  */
-export function DocsWorkspace(workspace: DocsWorkspaceProps): JSX.Element {
-  configureDocsHost(workspace.host, workspace.customBlocks);
+export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element {
+  configureDocsHost(workspaceOptions.host, workspaceOptions.customBlocks);
   const portalThemeRoot = useRef<HTMLDivElement>(null);
-  const [aPath, setActivePath] = useState(workspace.pathname);
-  useEffect(() => setActivePath(workspace.pathname), [workspace.pathname]);
+  const [aPath, setActivePath] = useState(workspaceOptions.pathname);
+  useEffect(() => setActivePath(workspaceOptions.pathname), [workspaceOptions.pathname]);
   useEffect(() => {
     /**
-     * Tracks host navigation, Astro swaps, and browser history changes for route-specific theme resolution.
-     *
-     * @param event - Optional event whose custom detail may contain the new pathname or URL.
+     * Updates the active workspace route after Docs, Astro, or browser history navigation.
+     * @param event Optional event carrying an explicit Docs pathname or URL.
      */
     const updatePath = (event?: Event) => {
       const detail = (event as CustomEvent<{ pathname?: unknown; url?: unknown }> | undefined)
@@ -151,17 +84,17 @@ export function DocsWorkspace(workspace: DocsWorkspaceProps): JSX.Element {
   }, []);
   let aRoute;
   try {
-    aRoute = workspace.host.resolveRoute?.(aPath);
+    aRoute = workspaceOptions.host.resolveRoute?.(aPath);
   } catch {
     aRoute = undefined;
   }
-  let hue = workspace.host.hue;
+  let hue = workspaceOptions.host.hue;
   for (const target of [aRoute?.leafId, aRoute?.groupId, aRoute?.sectionId, aRoute?.targetId]) {
     if (!target) continue;
-    const pending = workspace.tree
+    const pending = workspaceOptions.tree
       .slice()
       .reverse()
-      .map((n) => ({ node: n, ancestors: [] as typeof workspace.tree }));
+      .map((n) => ({ node: n, ancestors: [] as typeof workspaceOptions.tree }));
     let foundTarget = false;
     while (pending.length > 0) {
       const current = pending.pop();
@@ -180,7 +113,6 @@ export function DocsWorkspace(workspace: DocsWorkspaceProps): JSX.Element {
     if (foundTarget) break;
   }
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
-  const content = toScaffoldContent(workspace.content);
 
   // Terra originally applied Styling's hue palette to the page root. Keep the
   // same behavior for every host so long documents never expose a white canvas
@@ -200,7 +132,7 @@ export function DocsWorkspace(workspace: DocsWorkspaceProps): JSX.Element {
       },
     };
     const appliedBackground = 'rgb(var(--primary-1))';
-    /** Applies the selected Styling hue palette and matching background to the document root and body. */
+    /** Applies the selected hue to the shared Styling tokens and document canvas. */
     const applyPageHue = () => {
       applyHue(hue);
       root.style.setProperty('background-color', appliedBackground);
@@ -212,10 +144,9 @@ export function DocsWorkspace(workspace: DocsWorkspaceProps): JSX.Element {
     return () => {
       colorScheme.removeEventListener('change', applyPageHue);
       /**
-       * Restores an original background only when the inline value still matches the applied hue.
-       *
-       * @param element - Document root or body whose background is being restored.
-       * @param original - Inline background value and priority saved before applying the Docs hue.
+       * Restores the previous inline color only while this effect still owns the applied value.
+       * @param element Document element whose background was updated.
+       * @param original Original inline value and priority to restore.
        */
       const restore = (element: HTMLElement, original: { value: string; priority: string }) => {
         if (element.style.getPropertyValue('background-color') !== appliedBackground) return;
@@ -250,9 +181,8 @@ export function DocsWorkspace(workspace: DocsWorkspaceProps): JSX.Element {
     let appliedBodyFont: string | undefined;
     let appliedThemeClasses: { dark: boolean; light: boolean } | undefined;
     /**
-     * Copies Docs theme tokens and the font to `body` so body-mounted Radix portals match the workspace.
-     *
-     * @returns No value; the body receives the current palette, theme classes, and font.
+     * Mirrors the Docs palette and typeface onto body-mounted Radix portals.
+     * @returns No value; synchronizes body classes, fonts, and custom properties in place.
      */
     const syncPortalTheme = () => {
       const computed = getComputedStyle(workspace);
@@ -348,38 +278,51 @@ export function DocsWorkspace(workspace: DocsWorkspaceProps): JSX.Element {
   return (
     <div ref={portalThemeRoot} className="docs-theme-scope" {...(theme ? { style: theme } : {})}>
       <DocsQuizProvider
-        config={workspace.quiz ?? {}}
-        title={workspace.title}
-        markdown={workspace.source ?? ''}
+        config={workspaceOptions.quiz ?? {}}
+        title={workspaceOptions.title}
+        markdown={workspaceOptions.source ?? ''}
       >
         <Scaffold
-          tree={toScaffoldTree(workspace.tree, workspace.permission, workspace.host.routePath)}
-          pathname={workspace.pathname}
-          permission={workspace.permission}
-          userData={workspace.userData ?? null}
-          title={workspace.title}
-          {...(workspace.path ? { path: workspace.path } : {})}
-          {...(workspace.description ? { description: workspace.description } : {})}
-          {...(workspace.contributors ? { contributors: workspace.contributors } : {})}
-          {...(workspace.updatedAt ? { updatedAt: workspace.updatedAt } : {})}
-          {...(workspace.source ? { source: workspace.source } : {})}
-          {...(content === undefined ? {} : { content })}
-          {...(workspace.renderContent !== undefined
-            ? { viewContent: workspace.renderContent }
+          tree={
+            workspaceOptions.tree as unknown as import('../../lib/terra/runtime/types.js').Tree[]
+          }
+          pathname={workspaceOptions.pathname}
+          permission={workspaceOptions.permission}
+          userData={workspaceOptions.userData ?? null}
+          title={workspaceOptions.title}
+          {...(workspaceOptions.path ? { path: workspaceOptions.path } : {})}
+          {...(workspaceOptions.description ? { description: workspaceOptions.description } : {})}
+          {...(workspaceOptions.contributors
+            ? { contributors: workspaceOptions.contributors }
             : {})}
-          {...(workspace.staticContent !== undefined
-            ? { staticContent: workspace.staticContent }
+          {...(workspaceOptions.updatedAt ? { updatedAt: workspaceOptions.updatedAt } : {})}
+          {...(workspaceOptions.source ? { source: workspaceOptions.source } : {})}
+          {...(workspaceOptions.content !== undefined
+            ? {
+                content: workspaceOptions.content as unknown as
+                  | string
+                  | import('../../lib/terra/runtime/types.js').DocVer[]
+                  | import('../../lib/terra/runtime/types.js').DocBody,
+              }
             : {})}
-          {...(workspace.beforeContent !== undefined
-            ? { beforeContent: workspace.beforeContent }
+          {...(workspaceOptions.renderContent !== undefined
+            ? { viewContent: workspaceOptions.renderContent }
             : {})}
-          {...(workspace.afterContent !== undefined
-            ? { afterContent: workspace.afterContent }
+          {...(workspaceOptions.staticContent !== undefined
+            ? { staticContent: workspaceOptions.staticContent }
             : {})}
-          {...(workspace.standalone !== undefined ? { standalone: workspace.standalone } : {})}
-          {...(workspace.full !== undefined ? { full: workspace.full } : {})}
-          {...(workspace.mode ? { mode: workspace.mode } : {})}
-          {...(workspace.blocks ? { blocks: workspace.blocks } : {})}
+          {...(workspaceOptions.beforeContent !== undefined
+            ? { beforeContent: workspaceOptions.beforeContent }
+            : {})}
+          {...(workspaceOptions.afterContent !== undefined
+            ? { afterContent: workspaceOptions.afterContent }
+            : {})}
+          {...(workspaceOptions.standalone !== undefined
+            ? { standalone: workspaceOptions.standalone }
+            : {})}
+          {...(workspaceOptions.full !== undefined ? { full: workspaceOptions.full } : {})}
+          {...(workspaceOptions.mode ? { mode: workspaceOptions.mode } : {})}
+          {...(workspaceOptions.blocks ? { blocks: workspaceOptions.blocks } : {})}
         />
       </DocsQuizProvider>
     </div>

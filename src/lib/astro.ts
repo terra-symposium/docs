@@ -6,6 +6,20 @@
  * and its nested CommonJS dependencies is optimized explicitly.
  */
 
+/**
+ * Checks a direct package import before adding its specifier to Vite's optimizer list.
+ *
+ * @param specifier Dependency specifier passed to Vite, including an optional parent edge.
+ * @param resolvedImport Import URL resolved from the Docs package's Node context.
+ * @return The unchanged Vite specifier after confirming its package is installed.
+ * @throws Error when the dependency does not resolve to a local package file.
+ */
+const resolvablePrebundle = (specifier: string, resolvedImport: string): string => {
+  if (!resolvedImport.startsWith('file:'))
+    throw new Error(`Vite prebundle dependency did not resolve to a package file: ${specifier}`);
+  return specifier;
+};
+
 export const DOCS_VITE_OPTIMIZE_DEPS = [
   '@terra-symposium/docs',
   '@terra-symposium/docs/astro',
@@ -17,13 +31,22 @@ export const DOCS_VITE_OPTIMIZE_DEPS = [
   '@terra-symposium/standards-error-boundaries/react',
   // Also expose the CommonJS package as a root entry. Some consumer Vite
   // roots do not discover the nested edge when styling is loaded lazily.
-  'bezier-easing',
+  resolvablePrebundle('bezier-easing', import.meta.resolve('bezier-easing')),
   'react',
   'react-dom/client',
   'react-dom',
-  '@terra-symposium/docs > @xstate/react',
-  '@terra-symposium/docs > use-sync-external-store/shim',
-  '@terra-symposium/docs > use-sync-external-store/shim/with-selector',
+  resolvablePrebundle(
+    '@terra-symposium/docs > @xstate/react',
+    import.meta.resolve('@xstate/react'),
+  ),
+  resolvablePrebundle(
+    '@terra-symposium/docs > use-sync-external-store/shim',
+    import.meta.resolve('use-sync-external-store/shim'),
+  ),
+  resolvablePrebundle(
+    '@terra-symposium/docs > use-sync-external-store/shim/with-selector',
+    import.meta.resolve('use-sync-external-store/shim/with-selector'),
+  ),
   '@terra-symposium/docs > @carbon/icons-react',
   '@terra-symposium/docs > @dagrejs/dagre',
   '@terra-symposium/docs > @portabletext/editor',

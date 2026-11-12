@@ -1,5 +1,12 @@
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import assert from 'node:assert/strict';
 import test from 'node:test';
+
+// UTILITIES
 import { normalizeCodeForAudit } from '../scripts/render-audit-utils.mjs';
 
 test('normalizes CR, CRLF, trailing line whitespace, and final newlines', () => {

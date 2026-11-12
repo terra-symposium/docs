@@ -28,19 +28,19 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Loads the shared Portable Text editor only when a Docs page needs it.
+ * Loads the shared Portable Text editor lazily inside a Suspense boundary.
  *
- * @param editorConfiguration Portable Text value and host controls forwarded to the lazy editor.
- * @param editorConfiguration.content Initial or replacement Portable Text value.
- * @param editorConfiguration.onChange Optional callback receiving accepted editor changes.
- * @param editorConfiguration.readOnly Renders the document without edit controls when true.
- * @param editorConfiguration.resetKey Remount key used when the host switches documents.
- * @param editorConfiguration.nested Selects compact controls for nested rich blocks and rejects recursive nested content.
- * @param editorConfiguration.toolbar Controls whether insertion and formatting actions are visible.
- * @param editorConfiguration.docsAttachments Attachment records available to the editor controls.
+ * @param editorConfiguration Initial content and host options forwarded to ContentEditor.
+ * @param editorConfiguration.content Portable Text value used to initialize or replace the editor content.
+ * @param editorConfiguration.onChange Optional callback that receives normalized content after edits.
+ * @param editorConfiguration.readOnly Whether to render the content without edit controls.
+ * @param editorConfiguration.resetKey Key that remounts the editor when the host switches documents.
+ * @param editorConfiguration.nested Whether to use compact controls for a nested rich-text block.
+ * @param editorConfiguration.toolbar Whether insertion and formatting controls are shown.
+ * @param editorConfiguration.docsAttachments Attachments available to insertion and preview controls.
  * @param editorConfiguration.toolbarActions Optional host actions rendered beside the Docs toolbar.
- * @param editorConfiguration.blocks Feature switches controlling which rich blocks the editor accepts.
- * @returns The editor once its module has loaded, or the empty suspense fallback while loading.
+ * @param editorConfiguration.blocks Feature switches that select the rich block types enabled in the editor.
+ * @returns The loaded ContentEditor, or the null Suspense fallback while its module loads.
  */
 export function TerraContentEditor(
   editorConfiguration: ComponentProps<typeof LazyTerraContentEditor>,

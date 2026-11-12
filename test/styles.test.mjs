@@ -31,9 +31,11 @@ test('the packed Docs stylesheet is a single deterministic Styling and Docs casc
   assert.match(style, /\.font-docs\s*\{/);
   assert.match(style, /\.max-w-5xl\s*\{/);
   const hiddenUtility = style.indexOf('.hidden{display:none}');
-  const responsiveSidebar = style.indexOf('.md\\:block{display:block}');
   assert.ok(hiddenUtility >= 0, 'base hidden utility is present');
-  assert.ok(responsiveSidebar > hiddenUtility, 'responsive sidebar variant follows base utility');
+  assert.ok(
+    style.indexOf('.md\\:block{display:block}') > hiddenUtility,
+    'responsive sidebar variant follows base utility',
+  );
   assert.match(style, /\.grain\s*\{/);
   assert.doesNotMatch(
     style,
@@ -51,7 +53,9 @@ test('the packed Docs stylesheet is a single deterministic Styling and Docs casc
   );
 });
 test('math font URLs in the package stylesheet resolve inside its published files', async () => {
-  const css = await readFile(`${root}/dist/lib/style.css`, 'utf8');
-  assert.match(css, /fonts\/KaTeX_Main-Regular\.woff2/);
+  assert.match(
+    await readFile(`${root}/dist/lib/style.css`, 'utf8'),
+    /fonts\/KaTeX_Main-Regular\.woff2/,
+  );
   await stat(`${root}/dist/lib/fonts/KaTeX_Main-Regular.woff2`);
 });

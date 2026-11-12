@@ -81,8 +81,7 @@ test(
     await dialog.getByRole('button', { name: 'Generate quiz' }).click();
     await expect(dialog.getByText('Question 1 · Multiple choice')).toBeVisible();
     await expect(dialog.getByText('Question 2 · Keyword')).toBeVisible();
-    const request = JSON.parse((await p.locator('html').getAttribute('data-quiz-input')) ?? '{}');
-    expect(request).toEqual({
+    expect(JSON.parse((await p.locator('html').getAttribute('data-quiz-input')) ?? '{}')).toEqual({
       title: 'Course Leaf',
       markdown: fixture.pages[0].markdown,
       count: 2,

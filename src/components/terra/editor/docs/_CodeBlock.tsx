@@ -86,13 +86,9 @@ const light = [githubLight] satisfies Extension[];
 const dark = [oneDark] satisfies Extension[];
 const codeSrcCache = new Map<string, Promise<string>>();
 /**
- * Re-measures a CodeMirror view so it expands to fit its rendered content.
+ * Expands CodeMirror to its measured content height after mount or visibility changes.
  *
- * @param v - The target CodeMirror view reference.
- *
- * @return No value; the view's content height is applied to its editor and scroll surface.
- *
- * @remarks Hidden editors can report zero dimensions until visible, so this requests a fresh measurement.
+ * @param v CodeMirror view whose editor height needs to match its content.
  */
 const expand = (v: EditorView | null): void => {
   if (!v) return;
@@ -113,9 +109,9 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Reserves space for a Docs code block while its remote source is loading.
+ * Renders the loading placeholder for deferred Docs content.
  *
- * @param src Optional source identifier copied to the placeholder for deferred-block matching.
+ * @param src Optional source URL attached to the placeholder for editor lookup.
  *
  * @return The loading placeholder.
  */
@@ -130,40 +126,40 @@ function BlockSkeleton({ source: src }: { source?: string }): JSX.Element {
 }
 
 /**
- * Normalizes a language name for CodeMirror, using plain text when no name is supplied.
+ * Resolves the primary language format identifier from a passed string.
  *
  * @param v - The unformatted language identifier.
  *
  * @return The resolved language name string.
  *
- * @remarks The normalized value is used for editor extensions and language comparisons.
+ * @remarks Used generally for syntax highlighting assignments.
  */
 function langOf(v: string): string {
   return v?.trim().toLowerCase() || 'text';
 }
 
 /**
- * Renders Docs code as a read-only preview or an editable CodeMirror surface with optional remote-source controls.
+ * Renders a code block as a static preview or an editable CodeMirror surface and relays source changes to the host.
  *
- * @param blockOptions Code content, language, display mode, remote-source, and editing options.
- * @param blockOptions.code Source text or serialized code value to display.
- * @param blockOptions.language CodeMirror language identifier for the source.
- * @param blockOptions.tone Selects a read-only preview or editable CodeMirror controls.
- * @param blockOptions.source Optional endpoint used to load remote code.
- * @param blockOptions.className Optional classes applied to the block container.
- * @param blockOptions.placeholder Placeholder shown when the editor has no code.
- * @param blockOptions.docsSource Enables normalization of embedded Docs `<Code>` source.
- * @param blockOptions.expandAll Expands every source line in the editable view.
- * @param blockOptions.fullHeight Lets the editor fill the available vertical space.
- * @param blockOptions.languageEditable Controls whether edit mode can change the selected language.
- * @param blockOptions.readOnly Blocks edits even when the selected tone is editable.
- * @param blockOptions.onCodeChange Receives each change made to the source text.
- * @param blockOptions.onCommit Receives a committed source and language pair.
- * @param blockOptions.onLanguageChange Receives a language selection and current code value.
+ * @param blockOptions Source text, language, display mode, and optional endpoint or editor controls.
+ * @param blockOptions.className Additional classes merged into the outer code surface.
+ * @param blockOptions.code Code value shown in the preview or loaded into CodeMirror.
+ * @param blockOptions.docsSource Marks code as Markdown-authored Docs source for preview normalization.
+ * @param blockOptions.language Language identifier used for syntax highlighting and, when enabled, language selection.
+ * @param blockOptions.source Optional endpoint whose response is displayed as received code.
+ * @param blockOptions.tone Selects a static preview or the interactive editor layout.
+ * @param blockOptions.placeholder Text shown in CodeMirror while the code value is empty.
+ * @param blockOptions.expandAll Expands the editor to fit the full code value.
+ * @param blockOptions.fullHeight Lets the edit-mode surface fill its available vertical space.
+ * @param blockOptions.languageEditable Allows language selection for a local editable block.
+ * @param blockOptions.readOnly Prevents typing and edit callbacks while retaining the edit-mode layout.
+ * @param blockOptions.onCodeChange Receives each code edit from CodeMirror.
+ * @param blockOptions.onCommit Receives the code and language when the editor commits them.
+ * @param blockOptions.onLanguageChange Receives the selected language and current code after a language change.
  *
- * @return A code block with highlighted preview content or interactive CodeMirror controls.
+ * @return A syntax-highlighted code preview or a CodeMirror editor with the requested controls.
  *
- * @remarks View mode can resolve remote sources through the host adapter. Remote responses remain separate from authored source until converted, and edit mode commits only through caller callbacks.
+ * @remarks View mode can resolve source-backed blocks through the host adapter; edit mode never commits without the caller's callback.
  */
 export function CodeBlock(
   blockOptions:
@@ -230,10 +226,8 @@ export function CodeBlock(
   const received = useRef<HTMLElement>(null);
   const view = useRef<EditorView | null>(null);
   const theme = useRef(new Compartment());
-  /**
-   * Returns the displayed code.
-   *
-   * @return Current displayed code.
+  /** Returns the source code snapshot used to synchronize the editor view.
+   * @returns Current code value supplied to the editor.
    */
   const codeVal = (): string => viewCode;
   const codeRef = useRef(resCode);
@@ -516,9 +510,8 @@ export function CodeBlock(
         }),
       });
       /**
-       * Inserts a newline directly into CodeMirror when Enter reaches the editable surface.
-       *
-       * @param event Keyboard event used to detect and consume Enter.
+       * Inserts a newline directly into CodeMirror when Enter is pressed in editable code.
+       * @param event Keyboard event from the active code editor.
        * @returns No value; ignored keys pass through to CodeMirror's normal handlers.
        */
       const onCodeEnter = (event: KeyboardEvent): void => {
@@ -593,18 +586,14 @@ export function CodeBlock(
   }, [expAll]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    /**
-     * Synchronises the editor theme with the system preference.
-     *
-     * @return Nothing.
-     */
-    const m = window.matchMedia('(prefers-color-scheme: dark)'),
-      sync = (): void => {
-        if (!view.current) return;
-        view.current.dispatch({
-          effects: theme.current.reconfigure(isDarkMode() ? dark : light),
-        });
-      };
+    const m = window.matchMedia('(prefers-color-scheme: dark)');
+    /** Applies the active system theme to the mounted CodeMirror editor. */
+    const sync = (): void => {
+      if (!view.current) return;
+      view.current.dispatch({
+        effects: theme.current.reconfigure(isDarkMode() ? dark : light),
+      });
+    };
     sync();
     m.addEventListener('change', sync);
     return () => {

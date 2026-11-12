@@ -7,35 +7,34 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import { CodeBlock } from './_CodeBlock.js';
 import { ErrorBoundary } from '../../ui.js';
 
 // TYPES
-import type { JSX } from 'react';
 import type { DocsBlock } from '../types.js';
+import type { JSX } from 'react';
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders authored raw Markdown source as a Docs code preview, or as a divider when it is only a rule.
+ * Keeps unrecognized Markdown visible verbatim while turning horizontal-rule syntax into a divider.
  *
- * @param block Raw Portable Text block whose `markdown` field contains the authored source.
+ * @param block Raw Markdown string rendered as a horizontal rule or a source-preserving code block.
  *
- * @returns The raw code preview or the horizontal divider represented by the source.
+ * @return A divider for Markdown rules, otherwise a source-preserving Markdown code block.
  */
 export function Raw({
   block,
 }: {
   block: /** Sanity Portable Text raw markup block fields. */ DocsBlock<'raw'>;
 }): JSX.Element {
-  const markdown = typeof block.markdown === 'string' ? block.markdown : '';
+  const markdown = block.markdown ?? '';
   return (
     <ErrorBoundary name="Raw">
-      {TerraQualityRegex.REGEX_T_2_T_2_T_2_T_REGEX().test(
-        markdown.replace(TerraQualityRegex.REGEX_R_N_G_REGEX_2(), '\n').trim(),
+      {/^(?:\*(?:[\t ]*\*){2,}|-(?:[\t ]*-){2,}|_(?:[\t ]*_){2,})[\t ]*$/.test(
+        markdown.replace(/\r\n?/g, '\n').trim(),
       ) ? (
         <hr
           className="my-16 h-px w-full border-0 bg-primary-6 print:hidden"

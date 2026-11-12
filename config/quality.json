@@ -15,8 +15,8 @@
     ".html",
     ".java",
     ".js",
-    ".jsx",
     ".json",
+    ".jsx",
     ".jsonc",
     ".md",
     ".mdx",
@@ -39,6 +39,19 @@
   "regexDedup": {
     "minimumCount": 2,
     "sharedModule": "src/lib/terra/regex.mjs"
+  },
+  "tailwindCanonical": {
+    "stylesheet": "src/styles/style.css"
+  },
+  "repeatedClasses": {
+    "minimumCount": 3
+  },
+  "uiPatterns": {
+    "forbidden": [
+      "<[^>]*\\brole\\s*=\\s*['\"]dialog['\"]",
+      "\\baria-modal\\s*=",
+      "\\bcreatePortal\\s*\\("
+    ]
   },
   "frameworkEntryExports": {
     "site/src/components/DocsSiteIsland.tsx": ["DocsSiteIsland"],
@@ -188,6 +201,13 @@
     "command": "pnpm",
     "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.json"]
   },
+  "qualityCommands": [
+    {
+      "name": "demo-typecheck",
+      "command": "pnpm",
+      "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.demo.json"]
+    }
+  ],
   "enabledChecks": {
     "document": true,
     "format": true,
@@ -219,6 +239,7 @@
     "extensions": [".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]
   },
   "security": {
+    "runtimeRoots": ["bin", "config", "scripts", "site/config", "test"],
     "allowProcessEnvRoots": ["bin", "config", "scripts", "site/config", "test"],
     "clientRoots": ["site/src"]
   },

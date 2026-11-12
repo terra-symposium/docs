@@ -15,39 +15,41 @@ import Canvas from '../../flow/Nodes.js';
 import { ErrorBoundary } from '../../ui.js';
 
 // TYPES
-import type { JSX } from 'react';
 import type { DocsBlock } from '../types.js';
 import type { Edge, FlowNode, NodesProps } from '../../../../lib/terra/runtime/types.js';
+import type { JSX } from 'react';
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Adapts persisted Docs graph data to the interactive flow canvas renderer.
+ * Decodes Docs graph data and renders a filtered React Flow preview.
  *
- * @param className Optional classes applied to the graph wrapper and canvas.
- * @param rawNodes Serialized node records validated before entering React Flow.
- * @param rawEdges Serialized edge records validated before entering React Flow.
- * @param direction Optional layout direction accepted by the shared flow canvas.
- * @param height Requested canvas height, defaulted when it is not finite.
- * @param nodeSep Optional horizontal spacing between graph nodes.
- * @param rankSep Optional spacing between graph ranks.
- * @param proximityConnect Whether nearby nodes may connect automatically.
- * @param rest Remaining flow and DOM options forwarded to the canvas.
- * @return A Docs wrapper containing the normalized React Flow graph.
+ * @param diagramOptions Graph data, layout options, and presentation props for the flow canvas.
+ * @param diagramOptions.className Additional classes merged into the Docs and canvas containers.
+ * @param diagramOptions.nodes Serialized or typed nodes to decode and validate before rendering.
+ * @param diagramOptions.edges Serialized or typed edges to decode and validate before rendering.
+ * @param diagramOptions.direction Optional top-to-bottom or left-to-right graph layout.
+ * @param diagramOptions.height Graph viewport height in pixels; defaults to 384 when omitted or invalid.
+ * @param diagramOptions.nodeSep Optional horizontal separation between sibling nodes in the layout.
+ * @param diagramOptions.rankSep Optional separation between graph ranks in the layout.
+ * @param diagramOptions.proximityConnect Whether the layout may connect eligible nearby nodes automatically.
+ *
+ * @return A Docs diagram container with the validated graph and requested layout options.
  */
-function NodesRenderer({
-  className,
-  nodes: rawNodes,
-  edges: rawEdges,
-  direction,
-  height,
-  nodeSep,
-  rankSep,
-  proximityConnect,
-  ...rest
-}: NodesProps & { className?: string }): JSX.Element {
+function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX.Element {
+  const {
+    className,
+    nodes: rawNodes,
+    edges: rawEdges,
+    direction,
+    height,
+    nodeSep,
+    rankSep,
+    proximityConnect,
+    ...rest
+  } = diagramOptions;
   const resolvedHeight = Number.isFinite(Number(height)) ? Number(height) : 384;
   return (
     <ErrorBoundary name="Nodes">
@@ -63,11 +65,11 @@ function NodesRenderer({
       >
         <Canvas
           {...rest}
-          {...(direction === 'TB' || direction === 'LR' ? { direction } : {})}
           height={resolvedHeight}
-          {...(typeof nodeSep === 'number' ? { nodeSep } : {})}
-          {...(typeof rankSep === 'number' ? { rankSep } : {})}
-          {...(typeof proximityConnect === 'boolean' ? { proximityConnect } : {})}
+          {...(direction === undefined ? {} : { direction })}
+          {...(nodeSep === undefined ? {} : { nodeSep })}
+          {...(rankSep === undefined ? {} : { rankSep })}
+          {...(proximityConnect === undefined ? {} : { proximityConnect })}
           nodes={decodeNodesPayload(rawNodes).filter((n): n is FlowNode => {
             if (!n || typeof n !== 'object') return false;
             const val = n as Record<string, unknown>;
@@ -90,17 +92,18 @@ function NodesRenderer({
 }
 
 /**
- * Renders a Portable Text graph block using the shared interactive canvas.
+ * Renders a Portable Text nodes block through the Docs flow canvas.
  *
- * @param block Authored Docs nodes block containing graph data and visualization settings.
+ * @param block Portable Text nodes block with graph data and optional layout settings.
  *
- * @returns The validated graph preview wrapped in an error boundary.
+ * @return The nodes block inside its rendering error boundary.
  */
 export function NodesBlock({
   block,
 }: {
   block: /** Sanity Portable Text graph data and its visualization settings. */ DocsBlock<'nodes'>;
 }): JSX.Element {
+  const height = Number(block.height);
   return (
     <ErrorBoundary name="NodesBlock">
       <NodesRenderer
@@ -117,12 +120,12 @@ export function NodesBlock({
         {...(block.direction === 'TB' || block.direction === 'LR'
           ? { direction: block.direction }
           : {})}
-        {...(typeof block.height === 'number' ? { height: block.height } : {})}
-        {...(typeof block.nodeSep === 'number' ? { nodeSep: block.nodeSep } : {})}
-        {...(typeof block.proximityConnect === 'boolean'
-          ? { proximityConnect: block.proximityConnect }
-          : {})}
-        {...(typeof block.rankSep === 'number' ? { rankSep: block.rankSep } : {})}
+        {...(Number.isFinite(height) ? { height } : {})}
+        {...(block.nodeSep === undefined ? {} : { nodeSep: block.nodeSep })}
+        {...(block.proximityConnect === undefined
+          ? {}
+          : { proximityConnect: block.proximityConnect })}
+        {...(block.rankSep === undefined ? {} : { rankSep: block.rankSep })}
       />
     </ErrorBoundary>
   );

@@ -7,8 +7,9 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // COMPONENTS
-import React from 'react';
 import { ErrorBoundary } from '@terra-symposium/standards-error-boundaries/react';
+import { DocsStaticWorkspace } from '../../../dist/lib/components/StaticWorkspace.js';
+import { DocsSiteSearch } from './DocsSiteSearch.js';
 
 // TYPES
 import type { ComponentProps } from 'react';
@@ -17,16 +18,9 @@ import type { ComponentProps } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const { Suspense } = React;
 const DOCS_SITE_COMPONENTS = {
-  Workspace: React.lazy(() =>
-    import('#docs-site-workspace').then(({ DocsStaticWorkspace }) => ({
-      default: DocsStaticWorkspace,
-    })),
-  ),
-  Search: React.lazy(() =>
-    import('./DocsSiteSearch.js').then(({ DocsSiteSearch }) => ({ default: DocsSiteSearch })),
-  ),
+  Workspace: DocsStaticWorkspace,
+  Search: DocsSiteSearch,
 };
 
 /*//////////////////////////////////////////////////
@@ -36,8 +30,8 @@ COMPONENTS
 /**
  * Keeps Docs workspace and search rendering failures inside a visible, recoverable page boundary.
  *
- * @param searchBase - Public base path used to locate the search index.
- * @param workspaceProps - Props passed through to the lazy static Docs workspace.
+ * @param searchBase Base URL used to fetch the generated search index.
+ * @param workspaceProps Props forwarded to the static documentation workspace.
  *
  * @return The lazy Docs workspace and search dialog inside a recoverable error boundary.
  */
@@ -68,16 +62,8 @@ export function DocsSiteIsland({
         </main>
       )}
     >
-      <Suspense
-        fallback={
-          <p aria-live="polite" role="status">
-            Loading documentation…
-          </p>
-        }
-      >
-        <DOCS_SITE_COMPONENTS.Workspace {...workspaceProps} />
-        <DOCS_SITE_COMPONENTS.Search base={searchBase} />
-      </Suspense>
+      <DOCS_SITE_COMPONENTS.Workspace {...workspaceProps} />
+      <DOCS_SITE_COMPONENTS.Search base={searchBase} />
     </ErrorBoundary>
   );
 }

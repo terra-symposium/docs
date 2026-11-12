@@ -8,6 +8,7 @@ IMPORTS
 
 // API
 import { createContext, useContext, useState } from 'react';
+import { DOCS_LAYOUT_CLASSES } from '../lib/terra/layout-classes.js';
 
 // TYPES
 import type { JSX, ReactNode } from 'react';
@@ -430,7 +431,7 @@ export function DocsQuizGenerator({
               </label>
             </fieldset>
           ))}
-          <div className="flex gap-2">
+          <div className={DOCS_LAYOUT_CLASSES.controlRow}>
             <button
               type="button"
               onClick={() => setStage('setup')}
@@ -542,7 +543,7 @@ export function DocsQuizGenerator({
               {question.explanation && <p className="mt-1 text-sm">{question.explanation}</p>}
             </div>
           )}
-          <div className="flex gap-2">
+          <div className={DOCS_LAYOUT_CLASSES.controlRow}>
             <button
               type="button"
               disabled={index === 0}

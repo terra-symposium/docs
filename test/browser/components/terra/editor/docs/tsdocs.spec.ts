@@ -24,12 +24,6 @@ const XL_VIEWPORT_TEST = {
     description: 'Rich-block interactions use the standard desktop editor layout.',
   },
 } as const;
-const emptyScopeFixture = [
-  { _key: 'tsdocs-under-test', _type: 'tsDocs', scope: '' },
-] satisfies Content;
-const scopedFixture = [
-  { _key: 'tsdocs-under-test', _type: 'tsDocs', scope: 'lib/local' },
-] satisfies Content;
 /**
  * Builds the read-source response body expected by the TSDocs browser fixture.
  *
@@ -47,29 +41,35 @@ const paragraph = (text: string): Content => [
   },
 ];
 test('tsdocs.spec: Hide remote panel without a scope', XL_VIEWPORT_TEST, async ({ page: p }) => {
-  await openEditor(p, emptyScopeFixture);
+  await openEditor(p, [
+    { _key: 'tsdocs-under-test', _type: 'tsDocs', scope: '' },
+  ] satisfies Content);
   await expect(p.locator('[data-docs-block-skeleton]')).toHaveCount(0);
   await expect(p.getByTestId('editor-output')).toContainText('tsDocs');
 });
 test('tsdocs.spec: Render generated pages for a scope', XL_VIEWPORT_TEST, async ({ page: p }) => {
-  await openEditor(p, scopedFixture, {
-    mockResponses: {
-      'read.tsdocs': {
-        data: {
-          docs: [
-            { slug: 'lib/local/alpha', title: 'Alpha helper', body: 'alpha source' },
-            { slug: 'lib/local/beta', title: 'Beta helper', body: 'beta source' },
-          ],
+  await openEditor(
+    p,
+    [{ _key: 'tsdocs-under-test', _type: 'tsDocs', scope: 'lib/local' }] satisfies Content,
+    {
+      mockResponses: {
+        'read.tsdocs': {
+          data: {
+            docs: [
+              { slug: 'lib/local/alpha', title: 'Alpha helper', body: 'alpha source' },
+              { slug: 'lib/local/beta', title: 'Beta helper', body: 'beta source' },
+            ],
+          },
         },
-      },
-      'read.source.body': {
-        dataByInput: {
-          'alpha source': paragraph('Alpha returns a value.'),
-          'beta source': paragraph('Beta returns nothing.'),
+        'read.source.body': {
+          dataByInput: {
+            'alpha source': paragraph('Alpha returns a value.'),
+            'beta source': paragraph('Beta returns nothing.'),
+          },
         },
       },
     },
-  });
+  );
   const contents = p.getByRole('navigation', { name: 'TSDocs contents' });
   await expect(contents.getByRole('link', { name: 'Alpha helper' })).toHaveAttribute(
     'href',
@@ -86,9 +86,11 @@ test(
   'tsdocs.spec: Show an error when the scope cannot load',
   XL_VIEWPORT_TEST,
   async ({ page: p }) => {
-    await openEditor(p, scopedFixture, {
-      mockResponses: { 'read.tsdocs': { data: { docs: null } } },
-    });
+    await openEditor(
+      p,
+      [{ _key: 'tsdocs-under-test', _type: 'tsDocs', scope: 'lib/local' }] satisfies Content,
+      { mockResponses: { 'read.tsdocs': { data: { docs: null } } } },
+    );
     await expect(p.getByText('TsDocs Error')).toBeVisible();
   },
 );

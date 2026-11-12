@@ -99,47 +99,50 @@ test.describe('Docs editor table contracts', () => {
       'table.spec: Preserve inline code marks inside nested cells',
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
-        const fixture = [
-          {
-            _key: 'inline-code-table',
-            _type: 'table',
-            header: 'Inline code',
-            rows: [
-              {
-                _key: 'inline-code-header',
-                _type: 'row',
-                cells: [textCell('inline-code-heading', 'Value')],
-              },
-              {
-                _key: 'inline-code-row',
-                _type: 'row',
-                cells: [
-                  {
-                    _key: 'inline-code-cell',
-                    _type: 'cell',
-                    content: [
-                      {
-                        _key: 'inline-code-block',
-                        _type: 'block',
-                        children: [
-                          {
-                            _key: 'inline-code-span',
-                            _type: 'span',
-                            marks: ['code'],
-                            text: 'problem',
-                          },
-                        ],
-                        markDefs: [],
-                        style: 'normal',
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ] satisfies Content;
-        await openEditor(p, fixture, { readOnly: true });
+        await openEditor(
+          p,
+          [
+            {
+              _key: 'inline-code-table',
+              _type: 'table',
+              header: 'Inline code',
+              rows: [
+                {
+                  _key: 'inline-code-header',
+                  _type: 'row',
+                  cells: [textCell('inline-code-heading', 'Value')],
+                },
+                {
+                  _key: 'inline-code-row',
+                  _type: 'row',
+                  cells: [
+                    {
+                      _key: 'inline-code-cell',
+                      _type: 'cell',
+                      content: [
+                        {
+                          _key: 'inline-code-block',
+                          _type: 'block',
+                          children: [
+                            {
+                              _key: 'inline-code-span',
+                              _type: 'span',
+                              marks: ['code'],
+                              text: 'problem',
+                            },
+                          ],
+                          markDefs: [],
+                          style: 'normal',
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ] satisfies Content,
+          { readOnly: true },
+        );
         await expect(
           p.locator('[data-docs-editor-block="DocsTable"] tbody td').locator('code'),
         ).toHaveText('problem');
@@ -168,32 +171,35 @@ test.describe('Docs editor table contracts', () => {
             },
           ],
         });
-        const fixture = [
-          {
-            _key: 'sanity-table',
-            _type: 'table',
-            header: 'Sanity table payload',
-            rows: [
-              {
-                _key: 'sanity-header-row',
-                _type: 'row',
-                cells: [
-                  terraCell('sanity-heading-cell', 'Aspect'),
-                  terraCell('sanity-description-cell', 'Description'),
-                ],
-              },
-              {
-                _key: 'sanity-data-row',
-                _type: 'row',
-                cells: [
-                  terraCell('sanity-aspect-cell', 'Professional practice'),
-                  terraCell('sanity-body-cell', 'Evidence-based and collaborative.'),
-                ],
-              },
-            ],
-          },
-        ] satisfies Content;
-        await openEditor(p, fixture, { readOnly: true });
+        await openEditor(
+          p,
+          [
+            {
+              _key: 'sanity-table',
+              _type: 'table',
+              header: 'Sanity table payload',
+              rows: [
+                {
+                  _key: 'sanity-header-row',
+                  _type: 'row',
+                  cells: [
+                    terraCell('sanity-heading-cell', 'Aspect'),
+                    terraCell('sanity-description-cell', 'Description'),
+                  ],
+                },
+                {
+                  _key: 'sanity-data-row',
+                  _type: 'row',
+                  cells: [
+                    terraCell('sanity-aspect-cell', 'Professional practice'),
+                    terraCell('sanity-body-cell', 'Evidence-based and collaborative.'),
+                  ],
+                },
+              ],
+            },
+          ] satisfies Content,
+          { readOnly: true },
+        );
         const table = p.locator('[data-docs-editor-block="DocsTable"] table');
         await expect(table.getByRole('columnheader').nth(0)).toContainText('Aspect');
         await expect(table.getByRole('columnheader').nth(1)).toContainText('Description');
@@ -226,32 +232,35 @@ test.describe('Docs editor table contracts', () => {
             },
           ],
         });
-        const fixture = [
-          {
-            _key: 'compact-markdown-table',
-            _type: 'table',
-            header: 'Markdown parser table',
-            rows: [
-              {
-                _key: 'compact-header-row',
-                _type: 'row',
-                cells: [
-                  compactCell('compact-header', '🏗️ Service'),
-                  compactCell('compact-tech', '📦 Technology'),
-                ],
-              },
-              {
-                _key: 'compact-data-row',
-                _type: 'row',
-                cells: [
-                  compactCell('compact-service', 'Web Application'),
-                  compactCell('compact-runtime', 'Astro'),
-                ],
-              },
-            ],
-          },
-        ] satisfies Content;
-        await openEditor(p, fixture, { readOnly: true });
+        await openEditor(
+          p,
+          [
+            {
+              _key: 'compact-markdown-table',
+              _type: 'table',
+              header: 'Markdown parser table',
+              rows: [
+                {
+                  _key: 'compact-header-row',
+                  _type: 'row',
+                  cells: [
+                    compactCell('compact-header', '🏗️ Service'),
+                    compactCell('compact-tech', '📦 Technology'),
+                  ],
+                },
+                {
+                  _key: 'compact-data-row',
+                  _type: 'row',
+                  cells: [
+                    compactCell('compact-service', 'Web Application'),
+                    compactCell('compact-runtime', 'Astro'),
+                  ],
+                },
+              ],
+            },
+          ] satisfies Content,
+          { readOnly: true },
+        );
         const table = p.locator('[data-docs-editor-block="DocsTable"] table');
         await expect(table.getByRole('columnheader').nth(0)).toHaveText('🏗️ Service');
         await expect(table.getByRole('columnheader').nth(1)).toHaveText('📦 Technology');
@@ -276,32 +285,35 @@ test.describe('Docs editor table contracts', () => {
             { _key: `${key}-block`, _type: 'block', children: text, markDefs: [], style: 'normal' },
           ],
         });
-        const fixture = [
-          {
-            _key: 'legacy-string-children-table',
-            _type: 'table',
-            header: 'Production-shaped Sanity table',
-            rows: [
-              {
-                _key: 'legacy-string-children-header',
-                _type: 'row',
-                cells: [
-                  legacyTextCell('legacy-header-label', '🔍 Aspect'),
-                  legacyTextCell('legacy-header-description', 'Description'),
-                ],
-              },
-              {
-                _key: 'legacy-string-children-body',
-                _type: 'row',
-                cells: [
-                  legacyTextCell('legacy-body-label', '🗣️ Voice'),
-                  legacyTextCell('legacy-body-description', 'Professional and evidence-based.'),
-                ],
-              },
-            ],
-          },
-        ] satisfies Content;
-        await openEditor(p, fixture, { readOnly: true });
+        await openEditor(
+          p,
+          [
+            {
+              _key: 'legacy-string-children-table',
+              _type: 'table',
+              header: 'Production-shaped Sanity table',
+              rows: [
+                {
+                  _key: 'legacy-string-children-header',
+                  _type: 'row',
+                  cells: [
+                    legacyTextCell('legacy-header-label', '🔍 Aspect'),
+                    legacyTextCell('legacy-header-description', 'Description'),
+                  ],
+                },
+                {
+                  _key: 'legacy-string-children-body',
+                  _type: 'row',
+                  cells: [
+                    legacyTextCell('legacy-body-label', '🗣️ Voice'),
+                    legacyTextCell('legacy-body-description', 'Professional and evidence-based.'),
+                  ],
+                },
+              ],
+            },
+          ] satisfies Content,
+          { readOnly: true },
+        );
         const table = p.locator('[data-docs-editor-block="DocsTable"] table');
         await expect(table.getByRole('columnheader').nth(0)).toHaveText('🔍 Aspect');
         await expect(table.getByRole('columnheader').nth(1)).toHaveText('Description');
@@ -316,10 +328,10 @@ test.describe('Docs editor table contracts', () => {
       'table.spec: Import a Markdown table into the visual editor',
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
-        const value = markdownToDocsValue(
-          '| Name | Value |\n| --- | --- |\n| Terra | **Shared Docs** |\n',
+        await openEditor(
+          p,
+          markdownToDocsValue('| Name | Value |\n| --- | --- |\n| Terra | **Shared Docs** |\n'),
         );
-        await openEditor(p, value);
         const table = p.locator('[data-block="table"]');
         await expect(table).toBeVisible();
         await expect(table.getByRole('textbox', { name: 'Table cell 1, 1' })).toHaveValue('Name');

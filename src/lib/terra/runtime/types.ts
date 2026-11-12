@@ -161,20 +161,19 @@ export type EditorRefs = {
   version?: unknown;
   [key: string]: unknown;
 };
-/** Draft and activity state reported by the mounted editor provider. */
-export type EditorSurfaceState = {
-  busy: string | null;
-  dirty: boolean;
-  draft: Draft;
-  loaded: boolean;
-  optimistic: boolean;
-  version: number;
-};
+
 /** State and callbacks exposed to Docs components while a document editor is mounted. */
 export type EditorSurface = {
   attachFiles?: (files: File[]) => Promise<void>;
   controls: ToolbarState;
-  editor: EditorSurfaceState;
+  editor: {
+    busy: string | null;
+    dirty: boolean;
+    draft: Draft;
+    loaded: boolean;
+    optimistic: boolean;
+    version: number;
+  };
   insert: (markdown: string, rootEnd?: boolean, selection?: EditorSel | null) => void;
   mode: Mode;
   onBodyChange: (body: DocBody) => void;
@@ -349,7 +348,9 @@ export type NodeData = Record<string, unknown> & {
 export type FlowNodeType =
   'data' | 'decision' | 'erd' | 'group' | 'note' | 'origin' | 'process' | 'terminal' | 'terminator';
 /** React Flow node shape used by the shared Docs diagram canvas. */
-export type FlowNode = XYFlowNode<NodeData, FlowNodeType>;
+export type FlowNode = Omit<XYFlowNode<NodeData, FlowNodeType | undefined>, 'type'> & {
+  type?: FlowNodeType;
+};
 /** React Flow edge shape with a serializable, host-defined data record. */
 export type Edge = XYFlowEdge<Record<string, unknown>, string | undefined>;
 /** Valid sides for graph node connection handles. */

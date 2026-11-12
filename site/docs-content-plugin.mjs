@@ -59,9 +59,8 @@ function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
   const match = /^(<[^>]+>|[^\s]+)([\s\S]*)$/.exec(target);
   if (!match) return rawTarget;
   const bracketed = match[1].startsWith('<') && match[1].endsWith('>');
-  const pathname = bracketed ? match[1].slice(1, -1) : match[1];
   const suffix = match[2];
-  const [filePath, ...hashParts] = pathname.split('#');
+  const [filePath, ...hashParts] = (bracketed ? match[1].slice(1, -1) : match[1]).split('#');
   const [cPath, ...queryParts] = filePath.split('?');
   const fragment = hashParts.length ? `#${hashParts.join('#')}` : '';
   const query = queryParts.length ? `?${queryParts.join('?')}` : '';
@@ -69,13 +68,13 @@ function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
     const basePath =
       base === '/' ? '' : `/${base.replace(TerraQualityRegex.REGEX_G_REGEX_35(), '')}`;
     const rootBase = `${basePath}/`;
-    const routedPath =
+    const rewritten = `${
       base === '/' || cPath.startsWith(rootBase)
         ? cPath
         : cPath === basePath
           ? rootBase
-          : `${basePath}${cPath}`;
-    const rewritten = `${routedPath}${query}${fragment}`;
+          : `${basePath}${cPath}`
+    }${query}${fragment}`;
     return `${bracketed ? `<${rewritten}>` : rewritten}${suffix}`;
   }
   let resolvedPath;
@@ -87,8 +86,7 @@ function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
   const relativePath = relative(docsRoot, resolvedPath);
   if (relativePath.startsWith(`..${sep}`) || relativePath === '..' || !existsSync(resolvedPath))
     return rawTarget;
-  const ext = extname(resolvedPath).toLowerCase();
-  const rewritten = markdownExts.has(ext)
+  const rewritten = markdownExts.has(extname(resolvedPath).toLowerCase())
     ? publicRoute(resolvedPath, docsRoot, base)
     : `${base}_docs/assets/${relativePath.split(sep).join('/')}`;
   return `${bracketed ? `<${rewritten}${query}${fragment}>` : `${rewritten}${query}${fragment}`}${suffix}`;
@@ -135,16 +133,17 @@ export function docsContentPlugin({ root, base }) {
       const sourceFile = resolve(id);
       const relativePath = relative(docsRoot, sourceFile);
       if (relativePath.startsWith(`..${sep}`) || relativePath === '..') return null;
-      const withMarkdownLinks = source.replace(
-        /(!?\[[^\]]*\]\()([^)]+)(\))/g,
-        (_full, b, t, a) => `${b}${rewriteTarget(t, sourceFile, docsRoot, base)}${a}`,
-      );
-      return mapOutsideCode(withMarkdownLinks, (s) =>
-        s.replace(
-          /\b(src|href)=(['"])(.*?)\2/g,
-          (full, attribute, quote, target) =>
-            `${attribute}=${quote}${rewriteTarget(target, sourceFile, docsRoot, base)}${quote}`,
+      return mapOutsideCode(
+        source.replace(
+          /(!?\[[^\]]*\]\()([^)]+)(\))/g,
+          (_full, b, t, a) => `${b}${rewriteTarget(t, sourceFile, docsRoot, base)}${a}`,
         ),
+        (s) =>
+          s.replace(
+            /\b(src|href)=(['"])(.*?)\2/g,
+            (full, attribute, quote, target) =>
+              `${attribute}=${quote}${rewriteTarget(target, sourceFile, docsRoot, base)}${quote}`,
+          ),
       );
     },
   };

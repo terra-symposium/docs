@@ -16,5 +16,7 @@ import { URL } from 'node:url';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const configPath = fileURLToPath(new URL('../config/quality.json', import.meta.url));
-await runQualityFromCfg(configPath, process.argv.slice(2));
+await runQualityFromCfg(
+  fileURLToPath(new URL('../config/quality.json', import.meta.url)),
+  process.argv.slice(2),
+);

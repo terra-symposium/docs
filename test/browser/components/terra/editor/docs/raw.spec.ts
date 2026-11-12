@@ -17,9 +17,6 @@ import type { Content } from '../../../../support/editor.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const rawFixture = [
-  { _key: 'raw-under-test', _type: 'raw', markdown: '# Terra source' },
-] satisfies Content;
 test(
   'raw.spec: Show read-only source',
   {
@@ -30,7 +27,9 @@ test(
     },
   } as const,
   async ({ page: p }) => {
-    await openEditor(p, rawFixture);
+    await openEditor(p, [
+      { _key: 'raw-under-test', _type: 'raw', markdown: '# Terra source' },
+    ] satisfies Content);
     const source = p.locator('[data-docs-code-block="view"]');
     await expect(source).toContainText('# Terra source');
     await expect(source.getByRole('button', { name: 'Copy' })).toBeVisible();

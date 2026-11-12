@@ -58,8 +58,12 @@ export function createProjectExportAliases(manifest, packageRoot) {
     const prefix = manifest.name + (k === '.' ? '' : k.slice(1));
     if (k.includes('*')) {
       const [prefixStart, prefixEnd = ''] = prefix.split('*');
-      const find = new RegExp(`^${escapeRegex(prefixStart)}(.+)${escapeRegex(prefixEnd)}$`);
-      return [{ find, replacement: resolve(packageRoot, target.replace('*', '$1')) }];
+      return [
+        {
+          find: new RegExp(`^${escapeRegex(prefixStart)}(.+)${escapeRegex(prefixEnd)}$`),
+          replacement: resolve(packageRoot, target.replace('*', '$1')),
+        },
+      ];
     }
     return [
       { find: new RegExp(`^${escapeRegex(prefix)}$`), replacement: resolve(packageRoot, target) },

@@ -14,26 +14,23 @@ import { validateType } from '../runtime/runtime.js';
 
 // TYPES
 import type { EditorSel, EditorSurface, Mode, ToolbarState, Transition } from '../runtime/types.js';
+
 /**
- * Subscribes React to an external store and reads its current value for rendering.
+ * Subscribes a React component to a Nanostores-compatible value store.
  *
- * @param store - Store that provides a current snapshot and change subscription.
- *
- * @return The current store value, updated when the store notifies React.
+ * @param store Store exposing a current snapshot and a change subscription.
+ * @returns The current store value, kept in sync with subsequent notifications.
  */
 export function useAtom<Value>(store: {
   /**
-   * Reads the store snapshot used for rendering and server-side hydration.
-   *
-   * @return The current store value.
+   * Returns the store's current snapshot for React's render cycle.
+   * @returns The current typed store value.
    */
   get(): Value;
   /**
-   * Registers a change listener and returns the function that removes it.
-   *
-   * @param listener - Callback invoked after the store changes.
-   *
-   * @return An unsubscribe function that removes the listener.
+   * Registers a callback for future store snapshots.
+   * @param listener Notification callback invoked after the stored value changes.
+   * @returns Function that removes this listener from the store.
    */
   subscribe(listener: (val: Value) => void): () => void;
 }): Value {
@@ -47,13 +44,12 @@ export function useAtom<Value>(store: {
   );
 }
 /**
- * Reads a validated JSON value from local storage, falling back when storage is unavailable or invalid.
+ * Loads and validates a JSON value from browser storage, falling back on inaccessible or invalid data.
  *
- * @param key - Local-storage key containing the serialized value.
- * @param fallback - Value returned when storage cannot be read or validated.
- * @param valid - Type guard that accepts parsed values usable by the caller.
- *
- * @return The parsed value when valid, or the provided fallback.
+ * @param key Browser storage key to read.
+ * @param fallback Value returned when storage is unavailable or validation fails.
+ * @param valid Type guard that accepts only values safe for the caller to use.
+ * @returns The parsed value when it passes `valid`, otherwise `fallback`.
  */
 function readStorage<T>(key: string, fallback: T, valid: (input: unknown) => input is T): T {
   if (validateType(['undefined'], globalThis.window)) return fallback;
@@ -97,11 +93,15 @@ export const $leafTitle = atom<{ path: string; title: string } | null>(null);
 /**
  * Global transition flag for docs navigation and mutations.
  *
+ * @returns A boolean atom.
+ *
  * @remarks This lets the UI disable inputs while a transition is active.
  */
 export const $transition = atom<boolean>(false);
 /**
  * Current toolbar state.
+ *
+ * @returns A nullable toolbar atom.
  *
  * @remarks The toolbar is controlled centrally so overlays can share the same focus state.
  */
@@ -109,11 +109,15 @@ export const $toolbar = atom<ToolbarState | null>(null);
 /**
  * Hydration counter for docs editor widgets.
  *
+ * @returns A numeric atom tracking hydration depth.
+ *
  * @remarks This is used to delay interactions until the editor tree is ready.
  */
 export const $hydrating = atom<number>(0);
 /**
  * Surface readiness state for docs editing.
+ *
+ * @returns A nullable mode atom.
  *
  * @remarks The value flips once the interactive surface is available.
  */
@@ -125,7 +129,7 @@ export const $cursor = atom<EditorSel | null>(null);
 export const $cursorGhost = atom<EditorSel | null>(null);
 /** Linear caret bookmark used to simulate the visible cursor without relying on DOM focus. */
 export const $cursorTrack = atom<
-  | (Pick<EditorSel, 'box' | 'collapsed' | 'visible'> & {
+  | /* Describes a cursor track type. */ (Pick<EditorSel, 'box' | 'collapsed' | 'visible'> & {
       anchor: number;
       focus: number;
       range: [number, number];
@@ -135,17 +139,23 @@ export const $cursorTrack = atom<
 /**
  * Cursor position snapshot for the docs editor.
  *
+ * @returns A nullable cursor atom.
+ *
  * @remarks This duplicates the visible cursor state for consumers that need direct position access.
  */
 export const $cursorPosition = atom<EditorSel | null>(null);
 /**
  * Unsaved docs draft flags.
  *
+ * @returns A map store keyed by document id.
+ *
  * @remarks This store only tracks presence, not draft content.
  */
 export const $unsavedDrafts = map<Record<string, boolean>>({});
 /**
  * In-memory docs draft cache.
+ *
+ * @returns A map of draft payloads and metadata.
  *
  * @remarks This cache is process-local and intentionally not persisted.
  */
@@ -155,6 +165,8 @@ export const memoryDrafts = new Map<
 >();
 /**
  * Sidebar visibility state for the docs editor.
+ *
+ * @returns A persisted boolean atom.
  *
  * @remarks The default keeps the sidebar open for discoverability.
  */
@@ -182,6 +194,8 @@ TRANSITION SYSTEM
 /**
  * Shared transition store for docs UI coordination.
  *
+ * @returns transition store object.
+ *
  * @remarks This is kept as a plain object so listeners can subscribe without extra abstractions.
  */
 export const transitionStore = {
@@ -207,6 +221,8 @@ export function setTransition(transition: Transition): void {
 
 /**
  * Clears the active docs transition state.
+ *
+ *
  * @remarks Idle is the only state that leaves the transition flag unset.
  */
 export function clearTransition(): void {
@@ -217,14 +233,14 @@ export function clearTransition(): void {
 /**
  * Subscribes to the current docs transition state.
  *
- * @return The latest transition value, updated when a transition begins or ends.
+ * @return use Transition State.
  *
  * @remarks This is used by components that need to react to local mutation states.
  */
 export function useTransitionState(): Transition {
   const [transition, setTransitionState] = useState(transitionStore.transition);
   useEffect(() => {
-    /** Copies the shared transition snapshot into React state after store changes. */
+    /** Refreshes the hook snapshot after the transition store notifies subscribers. */
     const update = (): void => {
       setTransitionState(transitionStore.transition);
     };
@@ -238,6 +254,8 @@ export function useTransitionState(): Transition {
 
 /**
  * Shared editor transition context.
+ *
+ * @returns transition context object.
  *
  * @remarks The provider keeps layout and loading overlays in sync.
  */
@@ -262,6 +280,8 @@ export const EditStateCtx = createContext<{
 /**
  * Context for the docs editor surface.
  *
+ * @returns surface context object.
+ *
  * @remarks This lets nested components reach the active editor surface without prop drilling.
  */
 export const EditorSurfaceCtx = createContext<EditorSurface | null>(null);
@@ -273,10 +293,9 @@ export const $editorMounts = atom<{ expected: string[]; mounted: string[]; path:
 const assignments = new Map<string, string>();
 
 /**
- * Clears the previous mount assignments and declares which editors should mount for the next route.
- *
- * @param path - Route or source path used to associate mount events with this editor session.
- * @param expected - Stable keys for editor instances expected on the selected page.
+ * Clears reporter associations and resets the expected and mounted block IDs for a new route.
+ * @param path Route path that owns the next editor surface, if known.
+ * @param expected Block IDs expected to report their mounted state on that route.
  */
 export function resetEditorMounts(path: string | undefined, expected: string[]): void {
   assignments.clear();
@@ -284,12 +303,11 @@ export function resetEditorMounts(path: string | undefined, expected: string[]):
 }
 
 /**
- * Records or removes an editor instance and updates readiness when the mounted set changes.
- *
- * @param path - Route or source path reported by the editor instance.
- * @param reporter - Unique reporter key that identifies this mounted instance.
- * @param mounted - Whether the instance has mounted; `false` removes its assignment.
- * @param kind - Optional editor kind used to match the reporter to an expected mount key.
+ * Associates a mounted editor reporter with its expected block ID, then updates the route's mount state.
+ * @param path Route currently rendering the editor block.
+ * @param reporter Stable reporter ID emitted by the mounted editor block.
+ * @param mounted Whether the reporter is entering or leaving the mounted set.
+ * @param kind Optional block kind used to match an unassigned expected ID.
  */
 export function setEditorMount(
   path: string | undefined,

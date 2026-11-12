@@ -19,12 +19,6 @@ CONFIG
 // excluded from the package capture.
 const referenceStyle = 'astro-dev-toolbar, astro-dev-overlay { display: none !important; }';
 const screenshotTolerance = { threshold: 0.1, maxDiffPixelRatio: 0.002 };
-const viewports = [
-  { name: 'desktop', width: 1440, height: 1000 },
-  { name: 'breakpoint', width: 768, height: 900 },
-  { name: 'mobile', width: 390, height: 844 },
-] as const;
-
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
@@ -73,7 +67,11 @@ async function setMode(
   await page.getByRole('combobox', { name: 'Mode' }).click();
   await page.getByRole('option', { name: mode, exact: true }).click();
 }
-for (const viewport of viewports) {
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 1000 },
+  { name: 'breakpoint', width: 768, height: 900 },
+  { name: 'mobile', width: 390, height: 844 },
+] as const) {
   test(`pinned Docs UI parity: ${viewport.name}`, async ({ page: p }) => {
     const errs: string[] = [];
     p.on('pageerror', (error) => errs.push(error.message));

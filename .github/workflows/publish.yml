@@ -34,7 +34,8 @@ jobs:
           fi
       - run: pnpm install --frozen-lockfile
         if: steps.version.outputs.published != 'true'
-      - run: pnpm run quality -- --all
+      - name: Run full repository quality
+        run: pnpm run quality
         if: steps.version.outputs.published != 'true'
       - run: pnpm run build
         if: steps.version.outputs.published != 'true'

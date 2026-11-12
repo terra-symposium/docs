@@ -65,11 +65,11 @@ test(
     await blocks.getByRole('option', { name: 'Code', exact: true }).click();
     await expect(p.locator('[data-block="code"]')).toBeVisible();
     await expect
-      .poll(async () => {
-        return JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]').some(
+      .poll(async () =>
+        JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]').some(
           (block: { _type?: string }) => block._type === 'code',
-        );
-      })
+        ),
+      )
       .toBe(true);
   },
 );
@@ -88,12 +88,14 @@ test(
       blocks: { code: false, docImage: false, embed: false },
     });
     await expect(p.locator('[data-docs-unsupported-block="code"]')).toBeVisible();
-    const displayedSource = await p
-      .locator('[data-docs-unsupported-block="code"] pre')
-      .textContent();
-    expect(JSON.parse(displayedSource ?? 'null')).toEqual(preservedCode);
-    const initialValue = JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]');
-    expect(initialValue).toContainEqual(preservedCode);
+    expect(
+      JSON.parse(
+        (await p.locator('[data-docs-unsupported-block="code"] pre').textContent()) ?? 'null',
+      ),
+    ).toEqual(preservedCode);
+    expect(JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]')).toContainEqual(
+      preservedCode,
+    );
     await p.getByRole('button', { name: 'Insert content' }).click();
     const menu = p.getByRole('listbox');
     const blocks = menu.getByRole('group', { name: 'Block' });
@@ -109,10 +111,9 @@ test(
     await expect(dialog.getByRole('button', { name: 'Visual embed', exact: true })).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Insert text link', exact: true }).click();
     await expect
-      .poll(async () => {
-        const value = JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]');
-        return JSON.stringify(value);
-      })
+      .poll(async () =>
+        JSON.stringify(JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]')),
+      )
       .toContain('Course notes.pdf');
     await expect(p.getByTestId('editor-output')).toContainText('/files/course-notes.pdf');
   },

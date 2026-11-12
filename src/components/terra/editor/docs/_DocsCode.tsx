@@ -1,8 +1,7 @@
 /**
  * src/components/terra/editor/docs/_DocsCode.tsx
+ * Docs code block renderer with view and edit modes.
  */
-
-/* Docs code block renderer with view and edit modes. */
 
 /*//////////////////////////////////////////////////
 IMPORTS
@@ -11,7 +10,7 @@ IMPORTS
 // API
 import { useEditor } from '@portabletext/editor';
 import { useEffect, useRef, useState } from 'react';
-import type { JSX } from 'react';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 
 // COMPONENTS
 import {
@@ -33,6 +32,7 @@ import type {
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
+import type { JSX } from 'react';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -48,18 +48,17 @@ HELPERS
 /**
  * Renders a Docs code block from its authored block.
  *
- * @param block Authored code block with source text, language, and optional endpoint.
+ * @param block Authored code block containing source text, language, and optional endpoint.
  *
  * @return The authored code block and its preview.
  */
 function Code({ block }: { block: CodeBlockData }): JSX.Element {
-  const source = typeof block.source === 'string' ? block.source : undefined;
   return (
     <ErrorBoundary name="Code">
       <CodeBlock
         code={typeof block.value === 'string' ? block.value : ''}
-        language={typeof block.language === 'string' ? block.language : 'text'}
-        {...(source === undefined ? {} : { source })}
+        language={block.language ?? 'text'}
+        {...(block.source !== undefined ? { source: block.source } : {})}
         tone="view"
       />
     </ErrorBoundary>
@@ -67,13 +66,13 @@ function Code({ block }: { block: CodeBlockData }): JSX.Element {
 }
 
 /**
- * Chooses a read-only preview or the editor-backed code block.
+ * Adapts Portable Text's block-object contract to the code renderer.
  *
- * @param attrs Portable Text attributes applied to the editor wrapper.
- * @param children Nested Portable Text content retained inside the wrapper.
- * @param node Authored code block to display or edit.
- * @param path Editor path used when code or endpoint data changes.
- * @param readOnly Whether the workspace displays or edits this block.
+ * @param attrs DOM attributes supplied by the Portable Text renderer.
+ * @param children Nested editor content associated with the code block.
+ * @param node Code block fields used by either the static preview or editor.
+ * @param path Portable Text path targeted by code and language edits.
+ * @param readOnly Selects the static code preview when editing is disabled.
  *
  * @return The code block renderer in editable or read-only mode.
  */
@@ -92,12 +91,12 @@ export function renderCode({
 }
 
 /**
- * Connects code source and endpoint controls to the Portable Text editor.
+ * Connects the code block's local controls to its Portable Text state.
  *
- * @param attrs Attributes applied to the editor wrapper.
- * @param children Nested Portable Text content retained below the code editor.
- * @param node Current code block data.
- * @param path Path of the code block in the document.
+ * @param attrs DOM attributes supplied by the Portable Text editor.
+ * @param children Nested editor content rendered after the CodeMirror surface.
+ * @param node Code block whose source, language, and endpoint are being edited.
+ * @param path Portable Text path targeted by code updates.
  *
  * @return The editable code block controls.
  */
@@ -109,19 +108,15 @@ function CodeEditor({
 }: PortableTextBlockEditorProps<CodeBlockData>): JSX.Element {
   const editor = useEditor();
   const code = node;
-  const source = typeof code.source === 'string' ? code.source : undefined;
-  const currentLang = typeof code.language === 'string' ? code.language : 'text';
-  const value = typeof code.value === 'string' ? code.value : '';
-  const [endpoint, setEndpoint] = useState(source ?? '');
+  const [endpoint, setEndpoint] = useState(code.source ?? '');
   const [endpointDialog, setEndpointDialog] = useState<'change' | 'receive' | null>(null);
   const boundary = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!boundary.current) return;
     /**
-     * Stops Portable Text from handling browser input events inside this custom block.
-     *
-     * @param e - The native event bubbling from the code block surface.
-     * @returns No value; the event no longer bubbles to the editor's handlers.
+     * Stops code-editor input and focus events from triggering the parent Portable Text editor.
+     * @param e DOM event originating within the code editor boundary.
+     * @returns No value; the event is stopped before reaching the parent editor.
      */
     const stop = (e: Event): void => e.stopPropagation();
     const es = [
@@ -142,11 +137,11 @@ function CodeEditor({
     return () => {
       for (const e of es) element.removeEventListener(e, stop);
     };
-  }, [source]);
+  }, [code.source]);
   useEffect(() => {
     if (!boundary.current) return;
     const block = boundary.current as BlockTgt;
-    block.__blockActions = source
+    block.__blockActions = code.source
       ? [
           {
             text: 'Change API endpoint',
@@ -166,7 +161,7 @@ function CodeEditor({
                 at: path,
                 value: {
                   ...localCode,
-                  language: typeof code.language === 'string' ? code.language : 'json',
+                  language: code.language ?? 'json',
                   value: received.textContent ?? '',
                 },
               });
@@ -182,20 +177,19 @@ function CodeEditor({
     return () => {
       delete block.__blockActions;
     };
-  }, [editor, currentLang, path, source]);
-  useEffect(() => setEndpoint(source ?? ''), [source]);
+  }, [code.language, code.source, editor, path]);
+  useEffect(() => setEndpoint(code.source ?? ''), [code.source]);
   /**
-   * Saves an edited source string and language at the current Portable Text block path.
-   *
-   * @param val - Code text to store in the block's `value` field.
-   * @param lang - Language to store with the code; defaults to the block's current language.
-   * @returns No value; the editor action updates the active block.
+   * Writes the edited code and language while preserving the current API endpoint.
+   * @param val New code text produced by the block editor.
+   * @param lang Language label selected for syntax highlighting.
+   * @returns No value; sends the changed block fields to the Portable Text editor.
    */
-  const update = (val: string, lang = currentLang): void =>
+  const update = (val: string, lang = code.language ?? 'text'): void =>
     editor.send({
       type: 'block.set',
       at: path,
-      props: { language: lang, source, value: val },
+      props: { language: lang, source: code.source, value: val },
     });
   return (
     <ErrorBoundary name="CodeBlock">
@@ -208,10 +202,10 @@ function CodeEditor({
           data-docs-editor-block="code"
         >
           <CodeBlock
-            code={value}
+            code={typeof code.value === 'string' ? code.value : ''}
             expandAll
-            language={currentLang}
-            {...(source === undefined ? {} : { source })}
+            language={code.language ?? 'text'}
+            {...(code.source !== undefined ? { source: code.source } : {})}
             tone="edit"
             onCodeChange={(v) => update(v)}
             onCommit={(v, l) => update(v, l)}
@@ -232,7 +226,7 @@ function CodeEditor({
               value={endpoint}
               onChange={(e) => setEndpoint(e.currentTarget.value)}
             />
-            <div className="flex justify-end gap-2">
+            <div className={DOCS_LAYOUT_CLASSES.dialogActions}>
               <Button variant="outline" onClick={() => setEndpointDialog(null)}>
                 Cancel
               </Button>

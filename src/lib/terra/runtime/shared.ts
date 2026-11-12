@@ -20,7 +20,6 @@ REGEX
 //////////////////////////////////////////////////*/
 
 const SHARED_REGEX = /^\/+/;
-const SHARED_CLASS_2 = TerraQualityRegex.REGEX_PATTERN_REGEX_7();
 export const REORDER = {
   active: 'bg-primary-3 text-primary-12 ring-1 ring-primary-7',
   after:
@@ -63,7 +62,7 @@ export function docsRootPath(): string {
  * @return The path without trailing slashes.
  */
 export function trimTrailingSlashes(path: string): string {
-  return path.replace(SHARED_CLASS_2, '');
+  return path.replace(TerraQualityRegex.REGEX_PATTERN_REGEX_7(), '');
 }
 /**
  * Builds a Docs route through the host adapter or the default root path.

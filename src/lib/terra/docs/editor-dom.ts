@@ -31,9 +31,9 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Returns the current browser selection only when it is a collapsed caret range.
+ * Reads the browser's current selection when it is a collapsed caret.
  *
- * @return The collapsed range at the caret, or `null` when there is no collapsed selection.
+ * @return The active zero-width selection range, or `null` when there is no browser selection or it spans text.
  */
 export function getCollapsedRange(): Range | null {
   if (typeof window === 'undefined') return null;
@@ -92,11 +92,11 @@ export function captureLinearOffset(
 }
 
 /**
- * Inserts pasted Markdown on the next animation frame, after the browser finishes its native paste.
- *
- * @param insert - Editor callback that applies the Markdown at the captured selection.
- * @param md - Markdown payload to insert.
- * @param selection - Selection to restore for the insertion, when the caller captured one.
+ * Waits for the editor to settle across two animation frames before inserting Markdown in a browser.
+ * Outside a browser, insertion runs immediately.
+ * @param insert Editor operation that inserts the prepared Markdown.
+ * @param md Markdown source to insert.
+ * @param selection Saved editor selection to restore before insertion, when available.
  */
 export function pasteMd(
   insert: (md: string, rootEnd?: boolean, selection?: EditorSel | null) => void,
@@ -115,9 +115,9 @@ export function pasteMd(
 }
 
 /**
- * Returns the CodeMirror view attached to the currently focused Docs code block.
+ * Finds the CodeMirror view belonging to the currently focused Docs code block.
  *
- * @return The focused code editor view, or `null` when focus is elsewhere or no view is attached.
+ * @return The active embedded CodeMirror view, or `null` when focus is elsewhere or the editor is not mounted.
  */
 export function codeViewOf(): EditorView | null {
   if (typeof document === 'undefined') return null;

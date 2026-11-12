@@ -17,7 +17,7 @@ import { renderMarkdown } from '../dist/lib/lib/markdown.js';
 import { renderMd } from '../dist/lib/lib/terra/runtime/content/markdown.js';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { stringifyDocBody } from '../dist/lib/lib/terra/runtime/content/document-markdown.js';
-import { toCodeJsx } from '../dist/lib/lib/terra/runtime/content.js';
+import { fromBlockJsx, toCodeJsx } from '../dist/lib/lib/terra/runtime/content.js';
 
 // COMPONENTS
 import { DocsRichBlock } from '../dist/lib/components/blocks.js';
@@ -96,33 +96,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.match(result, /===\[Item\]\nOriginal \*\*content\*\*\n===/);
       assert.match(result, /<custom-widget value="1"><\/custom-widget>/);
     });
-    test('legacy Terra Portable Text paragraphs remain readable and normalize on import', () => {
-      const legacy = {
-        _type: 'terraBlock',
-        style: 'normal',
-        markDefs: [],
-        children: [{ _type: 'span', marks: [], text: 'Legacy paragraph' }],
-      };
-      const markdown = docsValueToMarkdown([legacy]);
-      assert.equal(markdown, 'Legacy paragraph\n');
-      assert.equal(markdownToDocsValue(markdown)[0]._type, 'block');
-      assert.equal(
-        docsValueToMarkdown([
-          {
-            _type: 'callout',
-            kind: 'note',
-            title: 'Imported content',
-            content: [legacy, { ...legacy, children: [{ _type: 'span', marks: [], text: ' ' }] }],
-          },
-        ]).startsWith(':::note[Imported content]'),
-        true,
-      );
-      const directive = `<DocsBlock type="terraBlock" data={${JSON.stringify(legacy)}} />`;
-      const importedDirective = markdownToDocsValue(directive);
-      assert.equal(importedDirective[0]?._type, 'terraBlock');
-      assert.equal(importedDirective[0]?.children[0]?.text, 'Legacy paragraph');
-    });
-    test('legacy structured groups render with the shared Styling controls', () => {
+    test('persisted Portable Text groups migrate to Markdown and the shared renderer', () => {
       const tabBlock = {
         _type: 'tabs',
         items: [
@@ -157,57 +131,47 @@ test.describe('Docs block conversion and rendering contracts', () => {
           },
         ],
       };
-      const tabMarkdown = docsValueToMarkdown([tabBlock]);
-      const accordionMarkdown = docsValueToMarkdown([accordionBlock]);
-      const tabs = renderToStaticMarkup(createElement(DocsRichBlock, { block: tabBlock }));
-      const accordion = renderToStaticMarkup(
-        createElement(DocsRichBlock, { block: accordionBlock }),
+      const legacyContent = {
+        _type: 'callout',
+        kind: 'note',
+        title: 'Persisted groups',
+        content: [tabBlock, accordionBlock],
+      };
+      const canonicalMarkdown = docsValueToMarkdown([legacyContent]);
+      assert.match(canonicalMarkdown, /\|\|\|\[Overview\]/);
+      assert.match(canonicalMarkdown, /===\[Details\]/);
+      const migrated = renderToStaticMarkup(createElement(DocsRichBlock, { block: legacyContent }));
+      const markdownRenderer = renderToStaticMarkup(
+        createElement(DocsMarkdown, { markdown: canonicalMarkdown }),
       );
-      assert.equal(
-        tabs,
-        renderToStaticMarkup(createElement(DocsMarkdown, { markdown: tabMarkdown })),
+      assert.match(migrated, /role="tablist"/);
+      assert.match(migrated, /data-orientation="vertical"/);
+      assert.match(migrated, /Overview/);
+      assert.match(migrated, /Shared tab body/);
+      assert.match(migrated, /Details/);
+      assert.match(migrated, /Shared accordion body/);
+      assert.doesNotMatch(migrated, /docs-tabs|docs-accordion/);
+      assert.match(markdownRenderer, /role="tablist"/);
+      assert.match(markdownRenderer, /data-orientation="vertical"/);
+      assert.match(markdownRenderer, /Shared tab body/);
+      assert.match(markdownRenderer, /Shared accordion body/);
+    });
+    test('persisted JSX group wrappers are accepted only by the Markdown import adapter', () => {
+      const markdown = fromBlockJsx(
+        '<TabsGroup>\n<TabsItem title="Overview">\n<p>Existing record</p>\n</TabsItem>\n</TabsGroup>',
       );
-      assert.equal(
-        accordion,
-        renderToStaticMarkup(createElement(DocsMarkdown, { markdown: accordionMarkdown })),
-      );
-      const disabledTabs = renderToStaticMarkup(
-        createElement(DocsRichBlock, { block: tabBlock, options: { tabs: false } }),
-      );
-      const disabledAccordion = renderToStaticMarkup(
-        createElement(DocsRichBlock, { block: accordionBlock, options: { accordion: false } }),
-      );
-      assert.match(disabledTabs, /<pre data-docs-unsupported-block="tabs">/);
-      assert.match(disabledTabs, /\|\|\|\[Overview\]/);
-      assert.match(disabledAccordion, /<pre data-docs-unsupported-block="accordion">/);
-      assert.match(disabledAccordion, /===\[Details\]/);
-      assert.match(tabs, /role="tablist"/);
-      assert.match(tabs, /Overview/);
-      assert.match(tabs, /Shared tab body/);
-      assert.match(accordion, /data-orientation="vertical"/);
-      assert.match(accordion, /Details/);
-      assert.match(accordion, /Shared accordion body/);
-      assert.doesNotMatch(`${tabs}${accordion}`, /docs-tabs|docs-accordion/);
-      assert.equal(
-        tabs,
-        renderToStaticMarkup(
-          createElement(DocsMarkdown, { markdown: '|||[Overview]\nShared tab body\n|||' }),
-        ),
-      );
-      assert.equal(
-        accordion,
-        renderToStaticMarkup(
-          createElement(DocsMarkdown, { markdown: '===[Details]\nShared accordion body\n===' }),
-        ),
-      );
+      assert.match(markdown, /^\|\|\|\[Overview\]/);
+      assert.match(markdown, /Existing record/);
+      assert.doesNotMatch(markdown, /TabsGroup|TabsItem/);
     });
     test('structured block containers round-trip without losing source fields', () => {
       for (const type of DOCS_BLOCK_TYPES.filter(
         (item) => item !== 'accordion' && item !== 'tabs',
       )) {
         const block = { _type: type, _key: 'stable', value: 'example', extra: { nested: true } };
-        const source = `<DocsBlock type="${type}" data={${JSON.stringify(block)}} />\n`;
-        const restored = markdownToDocsValue(source);
+        const restored = markdownToDocsValue(
+          `<DocsBlock type="${type}" data={${JSON.stringify(block)}} />\n`,
+        );
         assert.equal(restored.length, 1, type);
         assert.equal(restored[0]._type, type);
         assert.deepEqual(restored[0].extra, block.extra);
@@ -287,16 +251,17 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.deepEqual(markdownToDocsValue(markdown), [raw]);
     });
     test('legacy rich components nested in callouts serialize and render as their content', () => {
-      const source = [
-        ':::example[3NF Decomposition Visualised]',
-        '',
-        '<Code language="yaml">',
-        'node_data: "graph"',
-        '</Code>',
-        '',
-        ':::',
-      ].join('\n');
-      const parsed = markdownToDocsValue(source);
+      const parsed = markdownToDocsValue(
+        [
+          ':::example[3NF Decomposition Visualised]',
+          '',
+          '<Code language="yaml">',
+          'node_data: "graph"',
+          '</Code>',
+          '',
+          ':::',
+        ].join('\n'),
+      );
       assert.equal(parsed.length, 1);
       assert.equal(parsed[0]._type, 'callout');
       assert.equal(parsed[0].content[0]._type, 'code');
@@ -339,11 +304,12 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.match(html, /The audio workflow begins here\./);
       assert.match(html, /The workflow continues here\./);
       assert.doesNotMatch(html, /&lt;Nodes/);
-      const tabs = markdownToDocsValue(['|||[Pipeline]', node, '|||'].join('\n')).find(
-        (block) => block._type === 'tabs',
+      assert.ok(
+        markdownToDocsValue(['|||[Pipeline]', node, '|||'].join('\n')).find(
+          (block) => block._type === 'tabs',
+        ),
       );
-      assert.ok(tabs);
-      const tabHtml = renderToStaticMarkup(createElement(DocsRichBlock, { block: tabs }));
+      const tabHtml = renderToStaticMarkup(createElement(DocsMarkdown, { markdown: source }));
       assert.match(tabHtml, /docs-diagram/);
       assert.match(tabHtml, /Script Requirements/);
       assert.doesNotMatch(tabHtml, /&lt;Nodes/);
@@ -620,10 +586,10 @@ test.describe('Docs block conversion and rendering contracts', () => {
           },
         ],
       };
-      const restored = markdownToDocsValue(
-        `:::docs table\n${JSON.stringify(value, null, 2)}\n:::\n`,
+      assert.deepEqual(
+        markdownToDocsValue(`:::docs table\n${JSON.stringify(value, null, 2)}\n:::\n`)[0],
+        value,
       );
-      assert.deepEqual(restored[0], value);
     });
     test('canonical Portable Text components preserve marks and inline math exactly', () => {
       const value = {
@@ -637,8 +603,10 @@ test.describe('Docs block conversion and rendering contracts', () => {
           { _key: 'equation', _type: 'math', code: 'x^2', inline: true },
         ],
       };
-      const source = `<DocsBlock type="block" data={${JSON.stringify(value)}} />`;
-      assert.deepEqual(markdownToDocsValue(source), [value]);
+      assert.deepEqual(
+        markdownToDocsValue(`<DocsBlock type="block" data={${JSON.stringify(value)}} />`),
+        [value],
+      );
     });
     test('adjacent overlapping inline marks remain readable Markdown and round-trip without duplication', () => {
       const value = {
@@ -671,9 +639,11 @@ test.describe('Docs block conversion and rendering contracts', () => {
           '<strong><em>how it works internally</em></strong><em>.</em>\n',
       );
       assert.doesNotMatch(markdown, /\*{4}/);
-      const restored = markdownToDocsValue(markdown)[0];
       assert.deepEqual(
-        restored.children.map(({ text, marks }) => [text, [...marks].sort()]),
+        markdownToDocsValue(markdown)[0].children.map(({ text, marks }) => [
+          text,
+          [...marks].sort(),
+        ]),
         value.children.map(({ text, marks }) => [text, [...marks].sort()]),
       );
     });
@@ -686,7 +656,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
             {
               _key: 'first-item',
               _type: 'item',
-              title: 'First',
+              title: 'First ] topic',
               content: [
                 {
                   _key: 'first-content',
@@ -702,7 +672,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
             {
               _key: 'second-item',
               _type: 'item',
-              title: 'Second',
+              title: 'Second \\] topic',
               content: [
                 {
                   _key: 'second-content',
@@ -718,13 +688,26 @@ test.describe('Docs block conversion and rendering contracts', () => {
           ],
         };
         const markdown = docsValueToMarkdown([value]);
-        assert.match(markdown, type === 'accordion' ? /^===\[First\]/m : /^\|\|\|\[First\]/m);
-        assert.deepEqual(
-          markdownToDocsValue(markdown).flatMap(
-            (block) => block.items?.map((item) => item.title) ?? [],
-          ),
-          ['First', 'Second'],
+        assert.match(
+          markdown,
+          type === 'accordion' ? /^===\[First \\] topic\]/m : /^\|\|\|\[First \\] topic\]/m,
         );
+        const parsed = markdownToDocsValue(markdown);
+        assert.equal(parsed.length, 1);
+        assert.equal(parsed[0]._type, type);
+        assert.deepEqual(
+          parsed[0].items.map((item) => item.title),
+          ['First ] topic', 'Second \\] topic'],
+        );
+        const html = renderToStaticMarkup(createElement(DocsMarkdown, { markdown }));
+        assert.match(html, /First ] topic/);
+        assert.match(html, /Second \\] topic/);
+        if (type === 'tabs') {
+          assert.equal((html.match(/role="tablist"/g) ?? []).length, 1);
+          assert.equal((html.match(/role="tab"/g) ?? []).length, 2);
+        } else {
+          assert.equal((html.match(/<button\b/g) ?? []).length, 2);
+        }
       }
     });
     test('grouped blocks keep nested rich content readable instead of serializing ordinary text as YAML', () => {
@@ -831,8 +814,10 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.match(markdown, /```text\nweek = 1\n```/);
       assert.match(markdown, /:::note\[Bring your student card\]/);
       assert.doesNotMatch(markdown, /_type: (?:item|block|block|span)/);
-      const restored = markdownToDocsValue(markdown);
-      assert.deepEqual(withoutPortableTextKeys(restored), withoutPortableTextKeys([value]));
+      assert.deepEqual(
+        withoutPortableTextKeys(markdownToDocsValue(markdown)),
+        withoutPortableTextKeys([value]),
+      );
       const rendered = renderMarkdown(markdown);
       assert.match(rendered, /data-orientation="vertical"/);
       assert.match(rendered, /Contacts and resources/);
@@ -951,11 +936,12 @@ Identify suitable companies and provide:
       assert.equal(roundTrip.find((block) => block._type === 'tsDocs').scope, tsDocs.scope);
     });
     test('legacy adjacent Code tags do not swallow the following code samples', () => {
-      const code = markdownToDocsValue(
-        `<Code language="c">\nint first(void) { return 1; }\n\n<Code language="c">\n#include <stdio.h>\n\n<Code language="c">\nstruct player { int age; };\n</Code>`,
-      ).filter((block) => block._type === 'code');
       assert.deepEqual(
-        code.map(({ language, value }) => [language, value.trim()]),
+        markdownToDocsValue(
+          `<Code language="c">\nint first(void) { return 1; }\n\n<Code language="c">\n#include <stdio.h>\n\n<Code language="c">\nstruct player { int age; };\n</Code>`,
+        )
+          .filter((block) => block._type === 'code')
+          .map(({ language, value }) => [language, value.trim()]),
         [
           ['c', 'int first(void) { return 1; }'],
           ['c', '#include <stdio.h>'],
@@ -964,14 +950,15 @@ Identify suitable companies and provide:
       );
     });
     test('component examples inside fenced or inline code stay code content', () => {
-      const source = [
-        '`<Embed src="https://example.test" />`',
-        '',
-        '```tsx',
-        '<Nodes nodes={[]} edges={[]} />',
-        '```',
-      ].join('\n');
-      const value = markdownToDocsValue(source);
+      const value = markdownToDocsValue(
+        [
+          '`<Embed src="https://example.test" />`',
+          '',
+          '```tsx',
+          '<Nodes nodes={[]} edges={[]} />',
+          '```',
+        ].join('\n'),
+      );
       assert.equal(
         value.some((block) => block._type === 'embed' || block._type === 'nodes'),
         false,
@@ -1128,9 +1115,8 @@ Identify suitable companies and provide:
     });
     test('inline math survives Markdown escapes split across lexer tokens', () => {
       const source = String.raw`The acceleration due to gravity is $G = 9.8\,\text{m s}^{-2}$.`;
-      const value = markdownToDocsValue(source);
       assert.equal(
-        value[0].children.find((child) => child._type === 'math')?.code,
+        markdownToDocsValue(source)[0].children.find((child) => child._type === 'math')?.code,
         String.raw`G = 9.8\,\text{m s}^{-2}`,
       );
       assert.match(renderMarkdown(source), /katex/);
@@ -1144,13 +1130,16 @@ Identify suitable companies and provide:
           children: [{ _type: 'span', text: 'The program $P$ is modified.', marks: [] }],
         },
       ]);
-      const restored = markdownToDocsValue(markdown);
-      assert.equal(restored[0].children.find((child) => child._type === 'math')?.code, 'P');
+      assert.equal(
+        markdownToDocsValue(markdown)[0].children.find((child) => child._type === 'math')?.code,
+        'P',
+      );
       assert.match(renderMarkdown(markdown), /katex/);
     });
     test('escaped dollar delimiters in plain spans stay literal across Markdown round trips', () => {
-      const source = String.raw`5. Apply \$\sum \vec{F} = 0\$, \$\sum \tau = 0\$, or \$\sum \tau = I\alpha\$ with a declared sign convention.`;
-      const first = markdownToDocsValue(source);
+      const first = markdownToDocsValue(
+        String.raw`5. Apply \$\sum \vec{F} = 0\$, \$\sum \tau = 0\$, or \$\sum \tau = I\alpha\$ with a declared sign convention.`,
+      );
       const markdown = docsValueToMarkdown(first);
       assert.match(markdown, /\\\$/);
       const restored = markdownToDocsValue(markdown);
@@ -1274,8 +1263,12 @@ Identify suitable companies and provide:
       assert.match(markdown, /^\| Lab \| Location \|$/m);
       assert.match(markdown, /<code>&#10;\{CB11\.07\.406&#96;\}&#10;<\/code>/);
       assert.doesNotMatch(markdown, /^:::docs table$/m);
-      const restored = markdownToDocsValue(markdown).find((block) => block._type === 'table');
-      assert.deepEqual(withoutPortableTextKeys(restored), withoutPortableTextKeys(value[0]));
+      assert.deepEqual(
+        withoutPortableTextKeys(
+          markdownToDocsValue(markdown).find((block) => block._type === 'table'),
+        ),
+        withoutPortableTextKeys(value[0]),
+      );
     });
     test('tables with structured or list content keep the source readable and round-trip list metadata', () => {
       /**
@@ -1337,12 +1330,6 @@ Identify suitable companies and provide:
       );
     });
     test('simple tables preserve deliberately empty cells as readable GFM', () => {
-      const empty = {
-        _type: 'block',
-        style: 'normal',
-        markDefs: [],
-        children: [{ _type: 'span', text: '', marks: [] }],
-      };
       /**
        * Creates a plain text paragraph for a nonempty cell in the GFM fixture.
        * @param value Text to store in a single span.
@@ -1362,7 +1349,17 @@ Identify suitable companies and provide:
             {
               _type: 'row',
               cells: [
-                { _type: 'cell', content: [empty] },
+                {
+                  _type: 'cell',
+                  content: [
+                    {
+                      _type: 'block',
+                      style: 'normal',
+                      markDefs: [],
+                      children: [{ _type: 'span', text: '', marks: [] }],
+                    },
+                  ],
+                },
                 { _type: 'cell', content: [text('Location')] },
                 { _type: 'cell', content: [text('Description')] },
               ],
@@ -1493,14 +1490,15 @@ Identify suitable companies and provide:
       assert.match(docsValueToMarkdown(value), /\| \*\*Terra\*\* \| One & two \|/);
     });
     test('HTML table cells keep every paragraph, literal identifiers, inline code, and math', () => {
-      const source = [
-        '<table><tbody><tr>',
-        '<td><p>Clients: dynamic/intermittent IP, may be offline.</p><p>Server: permanent IP, always online.</p></td>',
-        '<td>Python __str__() and SQL pk_prod.</td>',
-        '<td><p>Call <code>pk_prod</code>.</p><p>Formula $z_1z_2$.</p></td>',
-        '</tr></tbody></table>',
-      ].join('');
-      const table = markdownToDocsValue(source).find((block) => block._type === 'table');
+      const table = markdownToDocsValue(
+        [
+          '<table><tbody><tr>',
+          '<td><p>Clients: dynamic/intermittent IP, may be offline.</p><p>Server: permanent IP, always online.</p></td>',
+          '<td>Python __str__() and SQL pk_prod.</td>',
+          '<td><p>Call <code>pk_prod</code>.</p><p>Formula $z_1z_2$.</p></td>',
+          '</tr></tbody></table>',
+        ].join(''),
+      ).find((block) => block._type === 'table');
       assert.ok(table);
       const [paragraphs, identifiers, fmt] = table.rows[0].cells.map((cell) => cell.content);
       assert.deepEqual(
@@ -1568,11 +1566,10 @@ Identify suitable companies and provide:
       const source = `<table><tbody><tr><td>$${formula}$</td></tr></tbody></table>`;
       const table = markdownToDocsValue(source).find((block) => block._type === 'table');
       assert.ok(table);
-      const math = table.rows[0].cells[0].content[0].children.filter(
-        (child) => child._type === 'math',
-      );
       assert.deepEqual(
-        math.map((child) => child.code),
+        table.rows[0].cells[0].content[0].children
+          .filter((child) => child._type === 'math')
+          .map((child) => child.code),
         [formula],
       );
       const roundTrip = docsValueToMarkdown(markdownToDocsValue(source));
@@ -1581,21 +1578,21 @@ Identify suitable companies and provide:
     });
     test('Markdown table math with letter subscripts is parsed before emphasis', () => {
       const formula = String.raw`\vec{F}_{A \to B} = -\vec{F}_{B \to A}`;
-      const source = [
-        '| Law | Statement |',
-        '| --- | --- |',
-        `| Third | $${formula}$ |`,
-        '',
-        'Literal code: `$x_A$` and escaped currency: \\$607 billion.',
-      ].join('\n');
-      const value = markdownToDocsValue(source);
+      const value = markdownToDocsValue(
+        [
+          '| Law | Statement |',
+          '| --- | --- |',
+          `| Third | $${formula}$ |`,
+          '',
+          'Literal code: `$x_A$` and escaped currency: \\$607 billion.',
+        ].join('\n'),
+      );
       const table = value.find((block) => block._type === 'table');
       assert.ok(table);
-      const math = table.rows[1].cells[1].content[0].children.filter(
-        (child) => child._type === 'math',
-      );
       assert.deepEqual(
-        math.map((child) => child.code),
+        table.rows[1].cells[1].content[0].children
+          .filter((child) => child._type === 'math')
+          .map((child) => child.code),
         [formula],
       );
       const roundTrip = docsValueToMarkdown(value);
@@ -1609,18 +1606,16 @@ Identify suitable companies and provide:
       );
     });
     test('Markdown and HTML table images stay structured and round-trip as readable Markdown', () => {
-      const markdownSource = [
-        '| Topic | Illustration |',
-        '| --- | --- |',
-        '| Before ![diagram](./diagram.png "System diagram") after | ![axes](./axes.svg) |',
-      ].join('\n');
-      const markdownTable = markdownToDocsValue(markdownSource).find(
-        (block) => block._type === 'table',
-      );
+      const markdownTable = markdownToDocsValue(
+        [
+          '| Topic | Illustration |',
+          '| --- | --- |',
+          '| Before ![diagram](./diagram.png "System diagram") after | ![axes](./axes.svg) |',
+        ].join('\n'),
+      ).find((block) => block._type === 'table');
       assert.ok(markdownTable);
-      const markdownCell = markdownTable.rows[1].cells[0].content;
       assert.deepEqual(
-        markdownCell
+        markdownTable.rows[1].cells[0].content
           .filter((block) => block._type === 'docImage')
           .map(({ alt, url, title }) => ({ alt, url, title })),
         [{ alt: 'diagram', url: './diagram.png', title: 'System diagram' }],
@@ -1643,9 +1638,8 @@ Identify suitable companies and provide:
         '<table><tbody><tr><td>Before <img src="./inline.png" alt="Inline diagram" title="Inline title"/> after</td></tr></tbody></table>',
       ).find((block) => block._type === 'table');
       assert.ok(htmlTable);
-      const htmlCell = htmlTable.rows[0].cells[0].content;
       assert.deepEqual(
-        htmlCell
+        htmlTable.rows[0].cells[0].content
           .filter((block) => block._type === 'docImage')
           .map(({ alt, url, title }) => ({ alt, url, title })),
         [{ alt: 'Inline diagram', url: './inline.png', title: 'Inline title' }],

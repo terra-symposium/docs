@@ -1,8 +1,19 @@
 ---
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// COMPONENTS
 import { DocsSiteIsland } from '../../site/src/components/DocsSiteIsland.js';
+
+// INTEGRATIONS
 import AstroErrorBoundary from '@terra-symposium/standards-error-boundaries/astro-boundary';
-import '#docs-site-style';
+
+// STYLES
+import '../../dist/lib/style.css';
 import '../../site/src/styles/search.css';
+
+// TYPES
 import type { DocsAttachment, DocsSection, DocsNavNode } from '../../dist/lib/lib/index.js';
 
 type Props = {
@@ -24,31 +35,36 @@ type Props = {
 };
 
 const { title, homeHref = '/', description, pageTitle, pageDescription, hue = 145, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
-const staticContent = Astro.slots.has('default');
+const hasStaticSlot = Astro.slots.has('default');
+const staticContent = hasStaticSlot || markdown.trim().length > 0;
+const siteIslandProps = {
+	title,
+	homeHref,
+	description,
+	pageTitle,
+	pageDescription,
+	hue,
+	nodes,
+	sections,
+	currentPath,
+	rootPath,
+	markdown,
+	content,
+	attachments,
+	updatedAt,
+	staticContent,
+	searchBase,
+};
 ---
 
 <AstroErrorBoundary title="Documentation could not load" description="The Docs interface failed to start. The error has been recorded for diagnosis." reloadLabel="Reload Docs">
-	<DocsSiteIsland
-		client:load
-		title={title}
-		homeHref={homeHref}
-		description={description}
-		pageTitle={pageTitle}
-		pageDescription={pageDescription}
-		hue={hue}
-		nodes={nodes}
-		sections={sections}
-		currentPath={currentPath}
-		rootPath={rootPath}
-		markdown={markdown}
-		content={content}
-		attachments={attachments}
-		updatedAt={updatedAt}
-		staticContent={staticContent}
-		searchBase={searchBase}
-	>
-		<slot />
-	</DocsSiteIsland>
+	{hasStaticSlot ? (
+		<DocsSiteIsland client:load {...siteIslandProps}>
+			<slot />
+		</DocsSiteIsland>
+	) : (
+		<DocsSiteIsland client:load {...siteIslandProps} />
+	)}
 </AstroErrorBoundary>
 
 <style is:global>

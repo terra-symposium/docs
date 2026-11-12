@@ -85,13 +85,13 @@ const R_N_G_REGEX = () => /\r?\n/g;
  * @return A fresh global matcher for line-feed boundaries.
  */
 const N_G_CLASS_2_3 = () => TerraQualityRegex.REGEX_N_G_REGEX_3();
-const N_CLASS_2 = TerraQualityRegex.REGEX_N_REGEX();
+const N_CLASS_2 = /\n+$/;
 /**
  * Escapes closing brackets in link text before writing Markdown.
  *
  * @return A fresh global matcher for literal closing brackets.
  */
-const G_CLASS_2_3_4 = () => /\]/g;
+const G_CLASS_2_3_4 = () => /[\\\]]/g;
 
 /**
  * Creates collision-resistant keys for blocks synthesized during parsing.
@@ -1290,11 +1290,11 @@ function parseMarkdown(
       groupOffset = lineEnd;
       continue;
     }
-    const open = line.match(/^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*$/);
+    const open = line.match(/^(===|\|\|\|)\s*\[((?:\\.|[^\]\n])+)\]\s*$/);
     if (open)
       groupStack.push({
         delimiter: open[1] as MarkdownGroup['delimiter'],
-        title: open[2]!.trim(),
+        title: open[2]!.replace(/\\([\\\]])/g, '$1').trim(),
         start: groupOffset,
         bodyStart: lineEnd,
       });
@@ -1305,25 +1305,42 @@ function parseMarkdown(
     }
     groupOffset = lineEnd;
   }
-  for (const range of groupRanges.reverse()) {
-    const markdown = calloutSource.slice(range.bodyStart, range.closeStart).trimEnd();
-    const type = range.delimiter === '===' ? 'accordion' : 'tabs';
+  const adjacentGroups: MarkdownGroup[][] = [];
+  for (const range of groupRanges) {
+    const previousGroup = adjacentGroups.at(-1);
+    const previousRange = previousGroup?.at(-1);
+    if (
+      (range.delimiter === '|||' &&
+        previousGroup?.[0]?.delimiter === '|||' &&
+        previousRange !== undefined &&
+        calloutSource.slice(previousRange.end, range.start).trim() === '') ||
+      (range.delimiter === '===' &&
+        previousGroup?.[0]?.delimiter === '===' &&
+        previousRange !== undefined &&
+        calloutSource.slice(previousRange.end, range.start).trim() === '')
+    )
+      previousGroup!.push(range);
+    else adjacentGroups.push([range]);
+  }
+  for (const group of adjacentGroups.reverse()) {
+    const first = group[0]!;
+    const last = group.at(-1)!;
+    const type = first.delimiter === '===' ? 'accordion' : 'tabs';
+    const items = group.map((r) => {
+      const markdown = calloutSource.slice(r.bodyStart, r.closeStart).trimEnd();
+      return {
+        _type: 'item' as const,
+        title: r.title,
+        markdown,
+        content: parseMarkdown(markdown, options, blocks),
+      };
+    });
     calloutSource =
-      calloutSource.slice(0, range.start) +
+      calloutSource.slice(0, first.start) +
       (enabled(options, type)
-        ? richPlaceholder(blocks, {
-            _type: type,
-            items: [
-              {
-                _type: 'item',
-                title: range.title,
-                markdown,
-                content: parseMarkdown(markdown, options, blocks),
-              },
-            ],
-          })
-        : rawPlaceholder(blocks, calloutSource.slice(range.start, range.end))) +
-      calloutSource.slice(range.end);
+        ? richPlaceholder(blocks, { _type: type, items })
+        : rawPlaceholder(blocks, calloutSource.slice(first.start, last.end))) +
+      calloutSource.slice(last.end);
   }
   /** State retained while scanning for a balanced callout fence. */
   type OpenCallout = {
@@ -2417,7 +2434,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
                 String(item.title).replace(G_REGEX(), '\\\\').replace(G_CLASS_2_3(), '\\"') +
                 '"'
             : '',
-          String(item.alt ?? '').replace(G_CLASS_2_3_4(), '\\]'),
+          String(item.alt ?? '').replace(G_CLASS_2_3_4(), '\\$&'),
         ),
       );
       continue;
@@ -2644,7 +2661,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
             (e) =>
               delimiter +
               '[' +
-              (typeof e.title === 'string' ? e.title : 'Item').replace(G_CLASS_2_3_4(), '\\]') +
+              (typeof e.title === 'string' ? e.title : 'Item').replace(G_CLASS_2_3_4(), '\\$&') +
               ']\n' +
               nestedMarkdown(e).replace(N_CLASS_2, '') +
               '\n' +

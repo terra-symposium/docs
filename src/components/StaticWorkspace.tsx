@@ -10,7 +10,7 @@ IMPORTS
 import { $surfaceReady, useTransitionState } from '../lib/terra/docs/state.js';
 import { docsHueTheme } from '../lib/docs-theme.js';
 import { docsValueToMarkdown, markdownToDocsValue } from '../lib/markdown-model.js';
-import { useEffect } from 'react';
+import { Fragment, isValidElement, useEffect } from 'react';
 
 // COMPONENTS
 import { Button } from '@terra-symposium/styling/ui';
@@ -37,29 +37,6 @@ CONFIG
  */
 const G_REGEX = () => TerraQualityRegex.REGEX_G_REGEX_35();
 const SHARED_REGEX = TerraQualityRegex.REGEX_PATTERN_REGEX_3();
-
-/** Properties used to build a host-independent, read-only Docs workspace. */
-type Props = {
-  title: string;
-  homeHref?: string;
-  description?: string;
-  pageTitle?: string;
-  pageDescription?: string;
-  hue?: number | null;
-  nodes?: DocsNavNode[];
-  sections?: DocsSection[];
-  currentPath: string;
-  rootPath?: string;
-  markdown?: string;
-  content?: unknown;
-  attachments?: DocsAttachment[];
-  updatedAt?: string;
-  renderContent?: ReactNode;
-  children?: ReactNode;
-  staticContent?: boolean;
-  /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
-  quiz?: DocsQuizConfig;
-};
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -95,11 +72,12 @@ const routeKey = (value: string): string => {
 };
 
 /**
- * Returns whether a Docs leaf owns the requested route, including nested subpages.
+ * Checks whether a Docs leaf owns a route or one of its nested subpages.
  *
- * @param leafRoute - Leaf route whose page or subpages may own the request.
- * @param requestedRoute - Current route selected by the browser or host.
- * @returns Whether the request is the leaf route or a nested route beneath it.
+ * @param leafRoute Canonical route for the leaf that owns the page content.
+ * @param requestedRoute Route requested by the browser or workspace navigation.
+ *
+ * @return Whether the requested route matches the leaf route or a descendant path.
  */
 const routeOwnsPath = (leafRoute: string, requestedRoute: string): boolean => {
   const leaf = routeKey(leafRoute).split('#', 1)[0] ?? '';
@@ -182,9 +160,26 @@ COMPONENTS
 //////////////////////////////////////////////////*/
 
 /**
+ * Checks whether React children contain a node that can produce visible output.
+ *
+ * @param c React children supplied by an Astro slot or host component.
+ *
+ * @return Whether rendering the children can produce visible content.
+ */
+function hasRenderableChildren(c: ReactNode): boolean {
+  if (c === null || c === undefined || typeof c === 'boolean' || c === '') return false;
+  if (Array.isArray(c)) return c.some(hasRenderableChildren);
+  if (isValidElement(c)) {
+    if (c.type === Fragment || typeof c.type === 'string')
+      return hasRenderableChildren((c.props as { children?: ReactNode }).children);
+  }
+  return true;
+}
+
+/**
  * Signals that static content is visible after the workspace transition completes.
  *
- * @param children - Host-rendered content that appears once the view transition completes.
+ * @param children Markdown or MDX content to reveal when the workspace is ready.
  *
  * @return The content fragment after marking the view surface as ready.
  */
@@ -200,24 +195,24 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
 /**
  * Adapts a host's local Markdown pages to the original, read-only Docs workspace.
  *
- * @param title - Site name displayed in the workspace navigation.
- * @param homeHref - Destination of the site brand link.
- * @param description - Optional site-level supporting text.
- * @param pageTitle - Optional title override for the active page.
- * @param pageDescription - Optional description override for the active page.
- * @param hue - Optional base hue used to derive the workspace palette.
- * @param nodes - Flat navigation nodes used when prebuilt sections are not supplied.
- * @param sections - Structured section, group, and page navigation for the workspace.
- * @param currentPath - Current URL used to select the active navigation leaf.
- * @param rootPath - Base route used for root navigation and fallback page links.
- * @param markdown - Markdown source for the active page when parsed content is absent.
- * @param content - Parsed content blocks for the active page.
- * @param attachments - Attachment metadata associated with the active page.
- * @param updatedAt - Fallback update timestamp shown when the page lacks one.
- * @param renderContent - Optional host-rendered page body that replaces Markdown rendering.
- * @param children - Alternate host-rendered page body.
- * @param staticContent - Marks even an empty host slot as ready after the view transition.
- * @param quiz - Optional server-backed quiz configuration for the active page.
+ * @param title Site title shown in the Docs workspace.
+ * @param homeHref URL opened by the workspace's home navigation.
+ * @param description Description shown with the site title.
+ * @param pageTitle Title of the page selected for the current route.
+ * @param pageDescription Description of the selected page.
+ * @param hue Theme hue used to color the workspace.
+ * @param nodes Host navigation tree used when `sections` is not supplied.
+ * @param sections Structured navigation sections supplied by the host.
+ * @param currentPath Current browser path used to select the displayed leaf.
+ * @param rootPath Base path for routes within the documentation site.
+ * @param markdown Markdown source for the selected page.
+ * @param content Portable Text content supplied for the selected page.
+ * @param attachments Attachment metadata for the selected page.
+ * @param updatedAt Fallback update timestamp when the selected leaf has none.
+ * @param renderContent Host-rendered page content that replaces Markdown rendering.
+ * @param children Host-rendered page content supplied as a React child.
+ * @param staticContent Whether the host supplies content that is ready to display.
+ * @param quiz Optional quiz workflow configuration supplied by the static host.
  *
  * @return The Docs workspace configured for read-only navigation and page viewing.
  */
@@ -240,7 +235,27 @@ export function DocsStaticWorkspace({
   children,
   staticContent = false,
   quiz,
-}: Props): JSX.Element {
+}: {
+  title: string;
+  homeHref?: string;
+  description?: string;
+  pageTitle?: string;
+  pageDescription?: string;
+  hue?: number | null;
+  nodes?: DocsNavNode[];
+  sections?: DocsSection[];
+  currentPath: string;
+  rootPath?: string;
+  markdown?: string;
+  content?: unknown;
+  attachments?: DocsAttachment[];
+  updatedAt?: string;
+  renderContent?: ReactNode;
+  children?: ReactNode;
+  staticContent?: boolean;
+  /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
+  quiz?: DocsQuizConfig;
+}): JSX.Element {
   const workspaceSections: DocsSection[] = sections ?? sectionsFromNavigation(nodes);
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
   const currentKey = routeKey(currentPath);
@@ -274,7 +289,7 @@ export function DocsStaticWorkspace({
       : '';
   const contentSlot =
     renderContent ??
-    children ??
+    (hasRenderableChildren(children) ? children : undefined) ??
     (markdownSource ? <DocsMarkdown markdown={markdownSource} /> : undefined);
   const readyContent =
     contentSlot !== undefined || staticContent ? (
@@ -291,8 +306,7 @@ export function DocsStaticWorkspace({
       url: s.groups[0]?.leaves[0]?.href ?? rootPath,
       permission: 'read',
       children: s.groups.map((group) => {
-        const groupId = group.id ?? slug(group.title);
-        const groupKey = `${sectionId}/${groupId}`;
+        const groupKey = `${sectionId}/${group.id ?? slug(group.title)}`;
         return {
           type: 'branch',
           origName: group.id ?? groupKey,
@@ -369,13 +383,14 @@ export function DocsStaticWorkspace({
      * @return The matching page URL, or `rootPath` when no page matches.
      */
     buildRoute(sectionId, groupId, leafId) {
-      const found = allLeaves.find(
-        (i) =>
-          (i.section.id ?? slug(i.section.title)) === sectionId &&
-          (groupId === undefined || (i.group.id ?? slug(i.group.title)) === groupId) &&
-          (leafId === undefined || (i.leaf.id ?? slug(i.leaf.title)) === leafId),
+      return (
+        allLeaves.find(
+          (i) =>
+            (i.section.id ?? slug(i.section.title)) === sectionId &&
+            (groupId === undefined || (i.group.id ?? slug(i.group.title)) === groupId) &&
+            (leafId === undefined || (i.leaf.id ?? slug(i.leaf.title)) === leafId),
+        )?.leaf.href ?? rootPath
       );
-      return found?.leaf.href ?? rootPath;
     },
     /**
      * Resolves a page URL into the route identifiers used by the workspace.
@@ -437,8 +452,7 @@ export function DocsStaticWorkspace({
             .map((i) => i.leaf.path ?? i.leaf.href);
         } else data = [];
       } else if (op === 'read.doc.get') {
-        const request = input as { path?: string } | undefined;
-        const selected = leafForPath(request?.path) ?? a?.leaf;
+        const selected = leafForPath((input as { path?: string } | undefined)?.path) ?? a?.leaf;
         if (
           selected &&
           typeof window !== 'undefined' &&
@@ -458,16 +472,7 @@ export function DocsStaticWorkspace({
             }
           : null;
       } else if (op === 'read.doc.attachments') {
-        const request = input as { path?: string; paths?: string[] } | undefined;
-        /** Returns the static page's attachment list only for paths it can resolve locally. */
-        const attachmentsForPath = (path?: string): DocsHostAttachment[] => {
-          return (path ? (path === a?.leaf.id ? a?.leaf : leafForPath(path)) : a?.leaf) === a?.leaf
-            ? hostAttachments
-            : [];
-        };
-        data = Array.isArray(request?.paths)
-          ? Object.fromEntries(request.paths.map((path) => [path, attachmentsForPath(path)]))
-          : attachmentsForPath(request?.path);
+        data = hostAttachments;
       } else if (op === 'read.util.pathname') {
         data = currentPath;
       } else if (op === 'read.util.node') {

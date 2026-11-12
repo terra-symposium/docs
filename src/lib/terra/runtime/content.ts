@@ -121,7 +121,7 @@ const listKind = (val: unknown): string =>
 /**
  * Serializes a string literal so it can be embedded safely in JSX attributes.
  *
- * @param val - String literal to quote.
+ * @param val - String to encode as a JSX attribute literal.
  *
  * @return A quoted string literal that can survive MDX parsing unchanged.
  */
@@ -130,7 +130,7 @@ const quote = (val: string): string => JSON.stringify(val);
 /**
  * Escapes HTML control characters before text is embedded in serialized docs markup.
  *
- * @param val - HTML text to escape.
+ * @param val - Text to escape before embedding in HTML.
  *
  * @return Text with HTML metacharacters escaped for serialization.
  */
@@ -168,138 +168,13 @@ BLOCK SYNTAX
 //////////////////////////////////////////////////*/
 
 /**
- * Registry of the custom accordion and tabs block syntaxes used in docs content.
- *
- * @remarks
- * The registry is intentionally tiny so the parser can stay predictable.
+ * Legacy JSX group wrappers found only in Portable Text records already persisted by Docs consumers.
+ * New and repository-owned content uses Markdown delimiters and never writes these wrappers.
  */
-const BLOCKS = [
-  {
-    id: 'accordion',
-    syntax: '===',
-    root: 'AccordionGroup',
-    item: 'AccordionItem',
-    label: 'Accordion',
-  },
-  { id: 'tabs', syntax: '|||', root: 'TabsGroup', item: 'TabsItem', label: 'Tabs' },
+const LEGACY_GROUPS = [
+  { syntax: '===', root: 'AccordionGroup', item: 'AccordionItem' },
+  { syntax: '|||', root: 'TabsGroup', item: 'TabsItem' },
 ] as const;
-
-/**
- * Finds editor-block ids in document source while ignoring text inside code and math.
- *
- * @param src Source text containing the Docs blocks to parse.
- *
- * @return Unique editor block identifiers in the order they first appear.
- */
-export const docsEditorMountIds = (src: string): string[] => {
-  const code = new Map<string, string>();
-  const lns = normBlockMarkers(src)
-    .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), (m) => {
-      const key = `TERRA_CODE_${code.size}`;
-      code.set(key, m);
-      return key;
-    })
-    .replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), (m) => {
-      let result = '';
-      for (let i = 0; i < m.length; i++) {
-        const character = m[i];
-        if (character === undefined) continue;
-        result +=
-          ['{', '}', '<', '>'].includes(character) && (i === 0 || m[i - 1] !== '\\')
-            ? `\\${character}`
-            : character;
-      }
-      return result;
-    })
-    .replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
-    .split(TerraQualityRegex.REGEX_R_N_REGEX());
-  const blocks: string[] = [];
-  let inCode = false;
-  const groups = new Set<string>();
-  const items = new Set<string>();
-  for (let i = 0; i < lns.length; i++) {
-    const line = lns[i];
-    if (line === undefined) continue;
-    const trimmedStart = line.trimStart();
-    const trimmed = trimmedStart.trimEnd();
-    if (trimmedStart.startsWith('```')) {
-      inCode = !inCode;
-      blocks.push(trimmedStart);
-      continue;
-    }
-    if (inCode) {
-      blocks.push(line);
-      continue;
-    }
-    const block = BLOCKS.find((e) => trimmed.startsWith(e.syntax));
-    if (block) {
-      const marker = trimmed.match(
-        new RegExp(
-          `^${block.syntax.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}(?:\\s*\\[(.*?)\\])?$`,
-        ),
-      );
-      if (trimmed === block.syntax) {
-        if (items.has(block.item)) {
-          blocks.push('', `</${block.item}>`);
-          items.delete(block.item);
-        }
-        let sameGroup = false;
-        for (let j = i + 1; j < lns.length; j++) {
-          const nLine = lns[j]?.trim();
-          if (!nLine) continue;
-          if (nLine.startsWith(block.syntax) && nLine !== block.syntax) sameGroup = true;
-          break;
-        }
-        if (!sameGroup && groups.has(block.label)) {
-          blocks.push(`</${block.root}>`, '');
-          groups.delete(block.label);
-        }
-      } else if (marker) {
-        if (items.has(block.item)) {
-          blocks.push('', `</${block.item}>`);
-          items.delete(block.item);
-        }
-        if (!groups.has(block.label)) {
-          blocks.push('', `<${block.root}>`);
-          groups.add(block.label);
-        }
-        blocks.push(`<${block.item} title=${quote(marker[1] || 'Section')}>`, '');
-        items.add(block.item);
-      } else blocks.push(trimmedStart);
-      continue;
-    }
-    blocks.push(line);
-  }
-  for (const label of groups) {
-    const block = BLOCKS.find((e) => e.label === label);
-    if (block) {
-      if (items.has(block.item)) {
-        blocks.push('', `</${block.item}>`);
-        items.delete(block.item);
-      }
-      blocks.push(`</${block.root}>`, '');
-    }
-  }
-  const norm = blocks.join('\n');
-  return [
-    'root',
-    ...Array.from(
-      (code.size
-        ? norm.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), (k) => code.get(k) || k)
-        : norm
-      )
-        .replace(/```[\s\S]*?```/g, '')
-        .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), '')
-        .replace(
-          /<TabsGroup\b[^>]*>([\s\S]*?)<\/TabsGroup>/g,
-          (g, i: string) =>
-            `${g.slice(0, g.indexOf('>') + 1)}${i.match(/<TabsItem\b[\s\S]*?<\/TabsItem>/)?.[0] || ''}</TabsGroup>`,
-        )
-        .matchAll(/<(AccordionGroup|AccordionItem|TabsGroup|DocsTable|Nodes)\b/g),
-      (m) => `${m[1]}:${m.index}`,
-    ),
-  ];
-};
 
 /**
  * Separates compact tabs markers before they reach the line-based block parser.
@@ -315,14 +190,15 @@ const normBlockMarkers = (md: string): string =>
     .replace(TerraQualityRegex.REGEX_N_T_T_T_GM_REGEX(), '$1|||\n\n');
 
 /**
- * Restores the custom docs JSX wrappers back to the markdown block syntax they came from.
+ * Converts legacy JSX group wrappers from consumer-persisted content to canonical Markdown.
  *
- * @param jsx - Canonical JSX source to restore.
+ * @param jsx - Stored source that may contain legacy Docs JSX wrappers.
  *
- * @return Markdown where supported docs JSX wrappers have been converted back to block syntax.
+ * @return Markdown with legacy group wrappers replaced by the canonical delimiters.
  *
  * @remarks
- * This is the inverse of `toBlockJsx` for the supported docs block shapes.
+ * This is an import compatibility path for pre-Markdown content already stored by external Docs hosts.
+ * New and repository-owned content is authored directly as Markdown.
  */
 export function fromBlockJsx(jsx: string): string {
   if (!jsx) return '';
@@ -390,16 +266,16 @@ export function fromBlockJsx(jsx: string): string {
       out.push(raw.startsWith(pad) ? raw.slice(pad.length) : t);
       continue;
     }
-    if (BLOCKS.find((b) => t === `<${b.root}>`)) {
+    if (LEGACY_GROUPS.find((b) => t === `<${b.root}>`)) {
       out.push('');
       continue;
     }
-    if (BLOCKS.find((b) => t === `</${b.root}>`)) {
+    if (LEGACY_GROUPS.find((b) => t === `</${b.root}>`)) {
       out.push('');
       continue;
     }
     if (
-      BLOCKS.find((b) => {
+      LEGACY_GROUPS.find((b) => {
         const match = t.match(new RegExp(`^<${b.item}\\b[^>]*title="([^"]*)"[^>]*>$`));
         if (!match) return false;
         out.push(`\n\n${b.syntax}[${match[1] || 'Section'}]\n\n`);
@@ -407,7 +283,7 @@ export function fromBlockJsx(jsx: string): string {
       })
     )
       continue;
-    const itemClose = BLOCKS.find((b) => t === `</${b.item}>`);
+    const itemClose = LEGACY_GROUPS.find((b) => t === `</${b.item}>`);
     if (itemClose) {
       out.push(`\n\n${itemClose.syntax}\n\n`);
       continue;
@@ -702,7 +578,6 @@ const atomicTableHtml = (val: string): string => {
   return sanitizeTableHtml(val).trim();
 };
 
-/**
 /**
  * Replaces complete literal markup blocks without scanning past an unclosed legacy tag.
  *
@@ -1042,11 +917,11 @@ const blockMd = (b: DocBlock, number = 1): string => {
 };
 
 /**
- * Protects raw table HTML by converting Docs table blocks to canonical JSX.
+ * Escapes template-literal delimiters in embedded DocsTable HTML so the markup is preserved in JSX.
  *
- * @param md - Markdown source containing Docs table blocks.
+ * @param md - Markdown source that may contain DocsTable HTML templates.
  *
- * @return Markdown source with raw table blocks represented by `DocsTable` components.
+ * @return Source with DocsTable HTML values escaped for canonical JSX attributes.
  */
 const escDocsTableTemplates = (md: string): string =>
   md.replace(
@@ -1058,7 +933,7 @@ const escDocsTableTemplates = (md: string): string =>
 /**
  * Serializes nested editor content while restoring protected table and rich-block markup.
  *
- * @param body - Structured Portable Text blocks to serialize.
+ * @param body - Structured body used as the serialization source.
  * @param markdown - Markdown fallback used when structured content is unavailable.
  *
  * @return Nested source reconstructed from the body, or the supplied Markdown fallback.
@@ -1082,9 +957,8 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
             for (let i = 0; i < body.length; i++) {
               const block = body[i];
               if (!block) continue;
-              const previous = body[i - 1];
               const listNumber =
-                listKind(block) === 'number' && listKind(previous) === 'number' ? number + 1 : 1;
+                listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
               const text = editorBlockMd(block, listNumber).trim();
               void {
                 index: i,
@@ -1284,10 +1158,9 @@ export const stringifyProblemEditorContentBody = (body: DocBody | null | undefin
     const block = body[i];
     if (!block) continue;
     const list = listKind(block);
-    const previous = body[i - 1];
     const text = editorBlockMd(
       block,
-      list === 'number' && listKind(previous) === 'number' ? number + 1 : 1,
+      list === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1,
       'problem',
     ).trim();
     if (!text) continue;

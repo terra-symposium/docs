@@ -1,5 +1,7 @@
 /**
  * src/components/terra/pages/docs/_toolbar.tsx
+ * Shared UI components, toolbars, and context menus for the visual MDX Editor.
+ * Folder boundary: editor chrome and commands; document state, block rendering, and navigation remain outside this module.
  */
 
 /*//////////////////////////////////////////////////
@@ -20,6 +22,7 @@ import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import { isDocBody } from '../../../../lib/terra/runtime/types.js';
 import { redo, redoDepth, undo, undoDepth } from '@codemirror/commands';
 import { stringifyDocBody } from '../../../../lib/terra/runtime/content/document-markdown.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 import { toast } from 'sonner';
 import { toolbarFocusValue } from '../../../../lib/terra/docs/toolbar.js';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -136,13 +139,19 @@ const SECONDARY_TEXT_CLASS = 'text-xs text-primary-11';
 const MENU_GAP_CLASS = 'gap-2';
 const FIELD_GAP_CLASS = 'space-y-1.5';
 const MENU_WIDTH_CLASS = 'w-56';
-/** Host-supplied block template that can be inserted into the active editor. */
-type ToolbarBlock = {
-  icon: ComponentType<{ className?: string }>;
-  insert: () => string;
-  label: string;
-  type: string;
-};
+
+/**
+ * Renders a block icon supplied either as an existing React node or a component.
+ *
+ * @param icon - Host-provided icon node or component constructor.
+ * @returns The icon node, or `null` when the value cannot render an icon.
+ */
+const blockIcon = (icon: BlockOpt['icon']): ReactNode =>
+  React.isValidElement(icon)
+    ? icon
+    : typeof icon === 'function'
+      ? React.createElement(icon, { className: ICON_CLASS })
+      : null;
 
 /**
  * Narrows a host block to entries the toolbar can turn into a source import.
@@ -156,19 +165,6 @@ function hasComponentPath(
 ): c is (typeof repoComponents)[number] & { path: string } {
   return typeof c.path === 'string' && c.path.length > 0;
 }
-
-/**
- * Renders either an icon element or an icon component supplied by a block option.
- *
- * @param icon - Block icon value from the host or shared Docs block registry.
- * @returns The existing icon element, a component instance, or `null` when unsupported.
- */
-const blockIcon = (icon: BlockOpt['icon']): ReactNode =>
-  React.isValidElement(icon)
-    ? icon
-    : typeof icon === 'function'
-      ? React.createElement(icon, { className: ICON_CLASS })
-      : null;
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -308,7 +304,6 @@ function Mode({
   editable: boolean;
   size?: 'sm' | 'xs';
 }): JSX.Element {
-  const modes: ToolbarMode[] = editable ? ['view', 'edit', 'attachments'] : ['view', 'attachments'];
   return (
     <Select
       size={size}
@@ -326,7 +321,7 @@ function Mode({
       </SelectTrigger>
       {/* prettier-ignore */}
       <SelectContent align='start'>
-				{modes.map(o => <SelectItem key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</SelectItem>)}
+        {(editable ? ['view', 'edit', 'attachments'] : ['view', 'attachments']).map(o => <SelectItem key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</SelectItem>)}
 			</SelectContent>
     </Select>
   );
@@ -429,7 +424,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       if (!editable) return null;
       return (
         <TooltipProvider>
-          <div className="flex items-center gap-1" data-docs-toolbar-actions>
+          <div className={DOCS_LAYOUT_CLASSES.compactRow} data-docs-toolbar-actions>
             <Mode
               editable={editable}
               mode={aMode}
@@ -506,7 +501,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                         </SelectContent>
                       </Select>
                     </DialogHeader>
-                    <div className="min-h-0 flex-1 overflow-y-auto">
+                    <div className={DOCS_LAYOUT_CLASSES.flexScrollArea}>
                       <CodeBlock
                         tone="view"
                         language="mdx"
@@ -1340,7 +1335,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
 							{search.busy && search.tree.length === 0 && <p className='py-4 text-center text-sm text-primary-11'>Loading...</p>}
 							{search.query.trim() && (
 								<UiButton variant='outline' className='mb-2 flex-col items-start gap-y-0 border-dashed py-6' onClick={() => void embed('', true)} disabled={search.busy}>
-									<span className='text-sm font-medium'>{search.busy ? 'Creating...' : `Create "${search.query}"`}</span>
+								<span className={DOCS_LAYOUT_CLASSES.controlTitle}>{search.busy ? 'Creating...' : `Create "${search.query}"`}</span>
 									<span className={SECONDARY_TEXT_CLASS}>Create page and embed as attachment</span>
 								</UiButton>
 							)}
@@ -1608,9 +1603,15 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
           <SelectContent align="start">
             {/* prettier-ignore */}
             <SelectGroup>
-					<SelectLabel>Block Type</SelectLabel>
-						{opts.filter(o => o.group === 'type').map(({ value: v, label: l, icon: i }) => (<SelectItem key={v} value={v} icon={blockIcon(i)}>{l}</SelectItem>))}
-				</SelectGroup>
+              <SelectLabel>Block Type</SelectLabel>
+              {opts
+                .filter((o) => o.group === 'type')
+                .map(({ value: v, label: l, icon: i }) => (
+                  <SelectItem key={v} value={v} icon={blockIcon(i)}>
+                    {l}
+                  </SelectItem>
+                ))}
+            </SelectGroup>
             <SelectSeparator />
             <SelectGroup>
               <SelectLabel>Insert Block</SelectLabel>
@@ -1651,7 +1652,14 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       editable: boolean;
       toolbar: ToolbarState | null;
       transitioning?: boolean;
-      blocks?: ToolbarBlock[];
+      blocks?: {
+        icon: ComponentType<{
+          className?: string;
+        }>;
+        insert: () => string;
+        label: string;
+        type: string;
+      }[];
       adapter?: EditorToolbarAdapter;
       docs?: boolean;
     }): JSX.Element | null {
@@ -2397,7 +2405,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </ButtonGroup>
-                      <div className="flex items-center gap-1">
+                      <div className={DOCS_LAYOUT_CLASSES.compactRow}>
                         {/* MODE */}
                         {docs && (
                           <Mode
@@ -2669,7 +2677,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                                       </SelectContent>
                                     </Select>
                                   </DialogHeader>
-                                  <div className="min-h-0 flex-1 overflow-y-auto">
+                                  <div className={DOCS_LAYOUT_CLASSES.flexScrollArea}>
                                     <CodeBlock
                                       tone="view"
                                       language="mdx"
@@ -2754,7 +2762,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
                             placeholder="/api/docs?action=testimonials"
                           />
                           {/* prettier-ignore */}
-                          <div className='flex justify-end gap-2'>
+                          <div className={DOCS_LAYOUT_CLASSES.dialogActions}>
 										<UiButton variant='outline' onClick={() => { setEndpointOpen(false); }}>Cancel</UiButton>
 					<UiButton disabled={!endpoint.trim()} onClick={insertionActions.receiveCode}>Receive value</UiButton>
 									</div>

@@ -1,8 +1,5 @@
 /**
  * src/components/terra/editor/docs/_Math.tsx
- */
-
-/*
  * Docs math renderer with optional editing controls.
  */
 
@@ -13,6 +10,7 @@ IMPORTS
 // API
 import katex from 'katex';
 import { cn } from '../../../../lib/terra/runtime/runtime.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 import {
   createElement as __terraQualityCreateElement,
   useEffect,
@@ -27,7 +25,6 @@ import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Button, Popover, PopoverContent, Textarea } from '@terra-symposium/styling/ui';
 import { Edit as EditIcon, FunctionMath as MathIcon } from '@carbon/icons-react';
 import { ErrorBoundary } from '../../ui.js';
-import type { JSX } from 'react';
 
 // TYPES
 import type { BlockTgt } from '../../../../lib/terra/runtime/types.js';
@@ -36,6 +33,7 @@ import type {
   PortableTextBlockEditorProps,
   PortableTextBlockRendererProps,
 } from '../types.js';
+import type { JSX } from 'react';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -51,10 +49,10 @@ HELPERS
 /**
  * Renders the formula display and, when supplied, its edit popover.
  *
- * @param code LaTeX source rendered by KaTeX.
- * @param inline Whether to use inline or display layout.
- * @param className Optional classes added to the rendered math element.
- * @param write Optional callback used to save edited source or change display mode.
+ * @param code LaTeX source passed to KaTeX.
+ * @param inline Whether to render the formula inline instead of as a display block.
+ * @param className Additional class applied to the rendered math element.
+ * @param write Optional callback that persists changes from the edit popover.
  *
  * @return The formatted math expression or editable math control.
  */
@@ -80,12 +78,12 @@ export function renderMath({
     (ref.current as BlockTgt).__blockActions = [
       {
         text: 'Edit Formula',
-        icon: <EditIcon className="mr-2 size-4" aria-hidden="true" />,
+        icon: <EditIcon className={DOCS_LAYOUT_CLASSES.iconBeforeLabel} aria-hidden="true" />,
         onSelect: () => setOpen(true),
       },
       {
         text: `Set to ${inline ? 'Display' : 'Inline'}`,
-        icon: <MathIcon className="mr-2 size-4" aria-hidden="true" />,
+        icon: <MathIcon className={DOCS_LAYOUT_CLASSES.iconBeforeLabel} aria-hidden="true" />,
         onSelect: () => write(code, !inline),
       },
     ];
@@ -155,7 +153,7 @@ export function renderMath({
               className="h-32 font-mono text-xs"
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <div className={DOCS_LAYOUT_CLASSES.dialogActions}>
             <Button
               variant="ghost"
               size="sm"
@@ -184,27 +182,24 @@ export function renderMath({
 }
 
 /**
- * Renders an authored Docs math block without editor controls.
+ * Renders a Docs math block from its authored block.
  *
- * @param block Math block containing the LaTeX source and inline-display flag.
+ * @param block Authored math block containing the expression and optional inline flag.
  *
  * @return The rendered math expression.
  */
 function MathBlock({ block }: { block: MathBlockData }): JSX.Element {
-  return renderMath({
-    code: typeof block.code === 'string' ? block.code : '',
-    inline: Boolean(block.inline),
-  });
+  return renderMath({ code: block.code ?? '', inline: Boolean(block.inline) });
 }
 
 /**
- * Chooses a read-only math preview or the editor-backed math control.
+ * Adapts Portable Text's block-object contract to the math renderer.
  *
- * @param attrs Portable Text attributes that belong on the renderer wrapper.
- * @param children Nested content supplied by the Portable Text renderer.
- * @param node Authored math block to display.
- * @param path Editor path used when a user updates the block.
- * @param readOnly Whether the workspace is displaying or editing the block.
+ * @param attrs DOM attributes supplied by the Portable Text renderer.
+ * @param children Nested editor content associated with the block.
+ * @param node Math block data containing its LaTeX source.
+ * @param path Portable Text path used to target the editable block.
+ * @param readOnly Selects static KaTeX output when editing is unavailable.
  *
  * @return The math block renderer in editable or read-only mode.
  */
@@ -223,40 +218,28 @@ export function renderMathBlock({
 }
 
 /**
- * Connects the math block editor to the Portable Text editor context.
+ * Connects an editable Portable Text math block to the current editor state.
  *
- * @param attrs - Portable Text attributes applied to the editor wrapper.
- * @param children - Nested Portable Text content retained below the math controls.
- * @param node - Authored formula block and display mode.
- * @param path - Editor path used when a formula update is committed.
+ * @param mathOptions Portable Text editor attributes, nested content, math block data, and its update path.
+ * @param mathOptions.attributes DOM attributes applied to the editable block container.
+ * @param mathOptions.children Nested editor content rendered after the math controls.
+ * @param mathOptions.node Math block whose source and display mode are edited.
+ * @param mathOptions.path Portable Text path used to apply math block updates.
  *
- * @returns The editable math expression controls.
+ * @return Math expression controls and nested content connected to Portable Text updates.
  */
-function MathEditor({
-  attributes: attrs,
-  children,
-  node,
-  path,
-}: PortableTextBlockEditorProps<MathBlockData>): JSX.Element {
-  return (
-    <MathEditorContent
-      attributes={attrs}
-      children={children}
-      node={node}
-      path={path}
-      editor={useEditor()}
-    />
-  );
+function MathEditor(mathOptions: PortableTextBlockEditorProps<MathBlockData>): JSX.Element {
+  return <MathEditorContent {...mathOptions} editor={useEditor()} />;
 }
 
 /**
- * Renders math controls and writes formula edits to the active Portable Text path.
+ * Renders math controls using the editor context supplied by the Portable Text boundary.
  *
- * @param attrs Attributes applied to the editor wrapper.
- * @param children Nested Portable Text content retained below the math controls.
- * @param node Current math block data.
- * @param path Path of the math block in the document.
- * @param editor Portable Text editor used to commit changes.
+ * @param attrs DOM attributes supplied by the Portable Text editor.
+ * @param children Nested editor content rendered after the formula.
+ * @param node Math block data containing source and display mode.
+ * @param path Portable Text path targeted by the `block.set` update.
+ * @param editor Editor instance used to persist formula edits.
  *
  * @return The math block controls and any nested editor content.
  */

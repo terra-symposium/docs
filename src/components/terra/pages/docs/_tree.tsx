@@ -113,7 +113,7 @@ MENU COMPONENTS
 /**
  * Renders a standard ContextMenu with support for nested sub-actions and separators.
  *
- * @param actions Ordered menu actions with labels, optional icons, disabled state, separators, callbacks, and nested submenus.
+ * @param actions Ordered menu actions, including labels, optional icons, disabled state, separators, and nested sub-actions.
  *
  * @return The context menu with the supplied actions and any nested menus.
  */
@@ -133,18 +133,17 @@ export function Menu({ actions }: { actions: MenuAction[] }): React.JSX.Element 
 }
 
 /**
- * Renders a sidebar link and handles client-side document navigation when appropriate.
+ * Renders a sidebar row with its navigation target, unsaved state, and current interaction state.
  *
- * @param a Whether this document is the active navigation item.
- * @param contexting Whether its context menu is open.
- * @param dragging Whether dragging suppresses pointer interaction on the link.
- * @param renaming Whether the item is being renamed in place.
- * @param node Document or group metadata used for the route and displayed label.
- * @param trailing Optional control rendered after the link, such as its reorder handle.
- * @param mode Current Docs display mode, preserved in the destination URL when needed.
- * @param transitioning Whether route navigation is already in progress.
- *
- * @return The interactive sidebar link with its current selection and drag/rename states.
+ * @param a Whether this row is selected as the current route.
+ * @param contexting Whether the row is currently under a context menu.
+ * @param dragging Whether a drag operation is moving this row.
+ * @param renaming Whether the row is in its inline rename state.
+ * @param node Leaf or branch data rendered by the row.
+ * @param trailing Optional controls displayed at the row's trailing edge.
+ * @param mode Sidebar mode that determines the available navigation behavior.
+ * @param transitioning Whether route navigation is currently in progress.
+ * @return The navigation row with asset/PDF targets opening separately from document routes.
  */
 function Link({
   active: a,
@@ -325,12 +324,7 @@ TOC COMPONENTS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the toc component.
- *
- * @param props - Optional heading override used while collecting the document's navigable section headings.
- * @param title - Heading text shown in toc.
- *
- * @return A table of contents for discovered headings, or `null` when there are no headings to navigate.
+ * Shared renderers for leaf and branch entries in the recursive sidebar tree.
  */
 const TREE_COMPONENTS = {
   /*//////////////////////////////////////////////////
@@ -338,15 +332,13 @@ LEAF COMPONENTS
 //////////////////////////////////////////////////*/
 
   /**
-   * Renders one document leaf with navigation and the actions permitted by its context.
-   *
-   * @param a Whether this leaf represents the active document.
-   * @param bPath Path of the containing branch, used to resolve sibling files and relative actions.
-   * @param node Leaf metadata used to render the row and perform document actions.
-   * @param ctx Shared route, permission, selection, and mutation handlers for the sidebar tree.
-   * @param siblings Other nodes in the containing branch, used to locate related assets.
-   *
-   * @return The document row with its navigation, selection, rename, attachment, export, and reorder controls.
+   * Renders a leaf row with its navigation, selection, rename, attachment, export, and reorder controls.
+   * @param a Whether this leaf is selected as the current route.
+   * @param bPath Path of the containing branch used to build tree navigation targets.
+   * @param node Leaf metadata and actions rendered by the row.
+   * @param ctx Shared sidebar state and operations for creating, uploading, moving, and refreshing entries.
+   * @param siblings Neighboring tree entries used to calculate this leaf's reorder position.
+   * @returns The interactive sidebar row and its leaf-specific controls.
    */
   Leaf({
     active: a,
@@ -440,12 +432,6 @@ LEAF COMPONENTS
     const fileRef = useRef<HTMLInputElement | null>(null);
     const leafRef = useRef<HTMLLIElement | null>(null);
     const permission = shellPermission === 'write' ? 'write' : node.permission;
-    /**
-     * Checks whether editable file.
-     *
-     * @param path - Path to process.
-     * @param fileType - Value passed to the helper.
-     */
     const editable =
       permission === 'write' && !!node.path && (node.fileType === 'md' || node.fileType === 'mdx');
     const path = node.path ?? '';
@@ -468,10 +454,7 @@ LEAF COMPONENTS
     // SCROLL ACTIVE TO VIEWPORT TOP
     useEffect(() => {
       if (!a || !leafRef.current) return;
-      /**
-       * Returns the raise.
-       *
-       */
+      /** Scrolls the active leaf into view after the sidebar finishes laying out. */
       const raise = () => {
         const el = leafRef.current;
         if (!el) return;
@@ -541,10 +524,6 @@ LEAF COMPONENTS
     }, [contexting, editable, path, siblings, isIdx]);
 
     // HANDLERS
-    /**
-     * Returns the rename page.
-     *
-     */
     const pageActions = {
       renamePage: (): void => {
         if (renaming || !node.path) return;
@@ -627,11 +606,7 @@ LEAF COMPONENTS
         });
       },
 
-      /*
-       * Returns the duplicate.
-       *
-       * @param mode - Value passed to the helper.
-       */
+      /* Creates a sibling page by reference or by copying the current Markdown source. */
       duplicate: (m: 'reference' | 'content'): void => {
         if (creating || !node.path) return;
         // prettier-ignore
@@ -713,10 +688,8 @@ LEAF COMPONENTS
       },
     };
 
-    /**
-     * Returns the add.
-     *
-     * @param files - Value passed to the helper.
+    /** Uploads selected files as attachments and updates each file's visible progress.
+     * @param files Files chosen for attachment to this leaf.
      */
     const add = async (files: FileList | File[] | null): Promise<void> => {
       if (creating || !files || files.length === 0 || !node.path) return;
@@ -765,13 +738,7 @@ LEAF COMPONENTS
     };
 
     // SISTER ACTION HANDLERS
-    /**
-     * Rename sister.
-     *
-     * @param s - Value passed to the helper.
-     *
-     * @returns True when the helper predicate succeeds.
-     */
+    /** Opens a rename prompt and moves the document or asset while keeping the list optimistic. */
     const sisterActions = {
       renameSister: (s: { path: string; name: string; isMd: boolean }) => {
         ctx.setInputDlg({
@@ -839,13 +806,7 @@ LEAF COMPONENTS
         });
       },
 
-      /*
-       * Duplicates the duplicate Sister.
-       *
-       * @param s - Value passed to the helper.
-       *
-       * @returns True when the helper predicate succeeds.
-       */
+      /* Copies a Markdown attachment to a sibling path and appends the new entry to the list. */
       duplicateSister: async (s: { path: string; name: string; isMd: boolean }) => {
         ctx.setInputDlg({
           open: true,
@@ -892,13 +853,7 @@ LEAF COMPONENTS
         });
       },
 
-      /*
-       * Deletes the delete Sister.
-       *
-       * @param s - Value passed to the helper.
-       *
-       * @returns True when the helper predicate succeeds.
-       */
+      /* Removes an attachment after confirmation and restores its list entry if deletion fails. */
       deleteSister: async (s: { path: string; name: string; isMd: boolean }) => {
         if (!window.confirm(`Are you sure you want to delete ${s.name}?`)) return;
         const deletion = {
@@ -922,11 +877,7 @@ LEAF COMPONENTS
         }, 'Failed to delete attachment.');
       },
 
-      /*
-       * Synthesize sister.
-       *
-       * @param s - Value passed to the helper.
-       */
+      /* Notifies the host that this attachment should be converted into a document. */
       synthesizeSister: (s: { path: string; name: string }): void => {
         try {
           document.dispatchEvent(
@@ -947,10 +898,10 @@ LEAF COMPONENTS
         {!!node.path && !isSimulated ? (
           <ContextMenu onOpenChange={setContexting}>
             <input
-              aria-label="Upload files to this section"
               ref={fileRef}
               type="file"
               className="hidden"
+              aria-label={`Select files to add to ${node.origName || node.path}`}
               multiple
               onChange={(e) => void add(e.currentTarget.files)}
               disabled={disabled}
@@ -1225,12 +1176,12 @@ TREE COMPONENTS
 //////////////////////////////////////////////////*/
 
   /**
-   * Renders a branch and recursively maps its children using shared sidebar state.
+   * Renders a branch and its recursive children while sharing the current tree interaction state.
    *
-   * @param bPath Parent branch path used to build each child's full path.
-   * @param node Branch or section metadata that determines the group and its descendants.
-   * @param ctx Shared route, permission, selection, and mutation handlers for the sidebar tree.
-   * @param sibs Nodes at the same tree level, used for selection and reorder operations.
+   * @param bPath Canonical path of the parent branch.
+   * @param node Branch or leaf represented by this entry.
+   * @param ctx Shared selection, permission, drag, and mutation state for the tree.
+   * @param sibs Sibling entries when the parent already has them available.
    *
    * @return {React.JSX.Element} The rendered SidebarGroup bounding nested leaves and child trees.
    */
@@ -1341,10 +1292,6 @@ TREE COMPONENTS
     const disabled = creating || renaming;
 
     // HANDLERS
-    /**
-     * Returns the rename node.
-     *
-     */
     const treeActions = {
       renameNode: (): void => {
         if (renaming || node.type !== 'branch') return;
@@ -1415,9 +1362,7 @@ TREE COMPONENTS
       },
 
       /*
-       * Handles drag over.
-       *
-       * @param e - Value passed to the helper.
+       * Shows a drop target when the pointer carries supported files or a movable Docs node.
        */
       handleDragOver: (e: React.DragEvent<HTMLElement>): void => {
         if (permission !== 'write') return;
@@ -1442,9 +1387,7 @@ TREE COMPONENTS
       },
 
       /*
-       * Handles drag leave.
-       *
-       * @param e - Value passed to the helper.
+       * Clears the drop target after the pointer leaves the branch and its descendants.
        */
       handleDragLeave: (e: React.DragEvent<HTMLElement>): void => {
         if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;

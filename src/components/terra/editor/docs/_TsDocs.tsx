@@ -27,8 +27,8 @@ HELPERS
 /**
  * Loads and renders TypeScript documentation for a selected scope.
  *
- * @param scope API documentation path whose reference entries should be loaded.
- * @param className Additional classes applied to the rendered reference panel.
+ * @param scope Package or symbol scope whose TypeScript reference entries should be loaded.
+ * @param className Additional class applied to the rendered reference panel.
  *
  * @return The API reference panel, or `null` when no scope is selected.
  */
@@ -46,18 +46,28 @@ function TsDocsRenderer({
     let a = true;
     actions.read
       .tsdocs({ scope })
-      .then(async ({ data: d, error: e }) => {
-        if (e || !d?.docs) throw e || new Error('Failed to fetch tsdocs');
-        const docs: TsDocsItem[] = [];
-        for (const entry of d.docs) {
-          const { data: body, error: bodyErr } = await actions.read.source.body({
-            source: entry.body,
-          });
-          if (bodyErr || !body) throw bodyErr || new Error(`Failed to parse ${entry.slug}`);
-          docs.push({ slug: entry.slug, title: entry.title, body });
-        }
-        if (a) setItems(docs);
-      })
+      .then(
+        async ({
+          data: d,
+          error: e,
+        }: {
+          data?: {
+            docs?: Array<{ slug: string; title: string; body: string }>;
+          } | null;
+          error?: unknown;
+        }) => {
+          if (e || !d?.docs) throw e || new Error('Failed to fetch tsdocs');
+          const docs: TsDocsItem[] = [];
+          for (const entry of d.docs) {
+            const { data: body, error: bodyErr } = await actions.read.source.body({
+              source: entry.body,
+            });
+            if (bodyErr || !body) throw bodyErr || new Error(`Failed to parse ${entry.slug}`);
+            docs.push({ slug: entry.slug, title: entry.title, body });
+          }
+          if (a) setItems(docs);
+        },
+      )
       .catch((e: unknown) => {
         if (a) setErr(e instanceof Error ? e.message : 'Failed to fetch tsdocs');
       });
@@ -125,11 +135,11 @@ function TsDocsRenderer({
 }
 
 /**
- * Renders the API documentation block for its selected scope.
+ * Selects the TypeScript API scope whose entries the reference renderer loads and displays.
  *
- * @param block Portable Text block selecting the API documentation scope to display.
+ * @param block TypeScript Docs block selecting the API scope to display.
  *
- * @return Rendered TypeScript documentation content.
+ * @return The selected API reference, or `null` when the block has no scope.
  */
 export function TsDocs({
   block,
@@ -138,7 +148,7 @@ export function TsDocs({
 }): React.JSX.Element | null {
   return (
     <ErrorBoundary name="TsDocs">
-      <TsDocsRenderer {...(typeof block.scope === 'string' ? { scope: block.scope } : {})} />
+      <TsDocsRenderer {...(block.scope === undefined ? {} : { scope: block.scope })} />
     </ErrorBoundary>
   );
 }

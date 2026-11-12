@@ -40,23 +40,6 @@ type DocListInput =
   | { type: 'nav'; pathname: string; full?: boolean; edit?: boolean }
   | { type: 'folderEntries'; path: string };
 
-/** Navigation and file-list results vary according to the requested list mode. */
-type DocListCall = {
-  (
-    input: Extract<DocListInput, { type: 'nav' }>,
-  ): Promise<DocsActionResult<DocsHostTreeNode[] | Tree[]>>;
-  (input: Extract<DocListInput, { type: 'folderEntries' }>): Promise<DocsActionResult<string[]>>;
-  (
-    input: Record<string, unknown>,
-  ): Promise<DocsActionResult<DocsHostTreeNode[] | Tree[] | string[]>>;
-};
-
-/** Summary returned after reading a remote website or its transcript. */
-type ExternalWebsite = { title: string; text: string };
-/** TSDoc files returned by a selected documentation scope. */
-type TsDocsFile = { slug: string; title: string; body: string };
-/** TSDoc paths returned when a caller requests the scope index. */
-type TsDocsScope = { path: string; type: 'folder' | 'file' };
 /** Result of creating a reference from another document. */
 type AttachmentResult = Partial<DocsHostAttachment> & {
   id?: string;
@@ -64,144 +47,9 @@ type AttachmentResult = Partial<DocsHostAttachment> & {
   sourceUrl?: string;
   type?: string;
 };
-/** Legacy save result fields still read by older Docs adapters. */
-type WriteResult = { _id?: string; id?: string; path?: string; title?: string };
-/** Path and directory returned by legacy path resolution. */
-type ResolvedPath = { dir: string; path: string };
+
 /** Metadata written when Docs creates or updates a document. */
 type WrittenDocument = DocsHostDocument & { _id?: string; _type?: string };
-
-/** Request and result types for the supported legacy read operations. */
-type ReadActions = {
-  asset: { get: ActionCall<{ path: string }, ArrayBuffer> };
-  doc: {
-    attachments: ActionCall<
-      { path: string } | { paths: string[] },
-      DocsHostAttachment[] | Sister[] | Record<string, DocsHostAttachment[] | Sister[]>
-    >;
-    get: ActionCall<
-      { access?: unknown; id?: string; path?: string; pathname?: string },
-      WrittenDocument | Md | null
-    >;
-    list: DocListCall;
-    resolvePath: ActionCall<{ path: string; title?: string }, ResolvedPath>;
-  };
-  external: {
-    pdf: ActionCall<{ url: string }, { pdfBase64?: string }>;
-    website: ActionCall<
-      { url: string; description?: string; source?: string; text?: string; title?: string },
-      ExternalWebsite
-    >;
-    youtube: ActionCall<
-      { url: string },
-      { title?: string; transcript?: string; description?: string }
-    >;
-  };
-  source: { body: ActionCall<{ source?: string }, DocBody> };
-  tsdocs: ActionCall<{ scope?: string }, { docs?: TsDocsFile[]; scopes?: TsDocsScope[] }>;
-  util: {
-    node: {
-      (input: { op: 'name'; val: string }): Promise<DocsActionResult<string>>;
-      (input: {
-        op: 'fmt';
-        val: string;
-      }): Promise<DocsActionResult<{ title?: string; origName?: string; type?: string } | null>>;
-    };
-    pathname: ActionCall<{ path: string }, string>;
-  };
-};
-
-/** Request and result types for the supported legacy write operations. */
-type WriteActions = {
-  asset: {
-    delete: ActionCall<{ url: string }, boolean>;
-    raw: ActionCall<{ bytes: unknown; path: string }, boolean>;
-    upload: ActionCall<
-      FormData,
-      { id?: string; path?: string; src?: string; compressedSize?: number; name?: string }
-    >;
-  };
-  attachment: {
-    add: ActionCall<{ files: Array<{ name: string }>; path: string }, unknown>;
-    docRef: ActionCall<{ path: string; refId: string; title?: string }, AttachmentResult>;
-    link: ActionCall<{ path: string; url: string; type: string; title?: string }, AttachmentResult>;
-    move: ActionCall<
-      { sourceDocPath: string; targetDocPath: string; attachmentKey: string },
-      boolean | AttachmentResult
-    >;
-    remoteFile: ActionCall<
-      { path: string; url: string; type: string; title?: string },
-      AttachmentResult
-    >;
-    rename: ActionCall<
-      { docPath: string; attachmentKey: string; newName: string },
-      boolean | AttachmentResult
-    >;
-    rm: ActionCall<{ docPath: string; attachmentKey: string }, boolean>;
-    youtube: ActionCall<{ path: string; url: string }, AttachmentResult>;
-  };
-  doc: {
-    asset: ActionCall<
-      { component: string; description?: string; path: string; title?: string },
-      WrittenDocument
-    >;
-    commit: ActionCall<
-      {
-        content?: unknown[] | undefined;
-        cur: string;
-        next: string;
-        source?: string | undefined;
-        title?: string | undefined;
-        description?: string | undefined;
-      },
-      WrittenDocument | Md | null
-    >;
-    createGroup: ActionCall<
-      { title: string; path: string; sectionId: string },
-      (DocsHostTreeNode | Tree) & { _id?: string }
-    >;
-    createSection: ActionCall<
-      { title: string },
-      { group: WrittenDocument; leaf: WrittenDocument; section: WrittenDocument } | WriteResult
-    >;
-    editor: ActionCall<
-      {
-        source?: string | undefined;
-        description?: string | undefined;
-        fmt?: boolean | undefined;
-        path: string;
-        title?: string | undefined;
-        type?: string | undefined;
-        sourceUrl?: string | undefined;
-        parentId?: string | undefined;
-      },
-      WrittenDocument
-    >;
-    hue: ActionCall<{ id: string; hue: number }, boolean>;
-    reorder: ActionCall<
-      { id: string; field?: string; items: Array<Record<string, unknown>> },
-      DocsHostTreeNode[] | null
-    >;
-    retargetSources: ActionCall<{ sourceIds: string[]; targetId: string }, boolean>;
-    retitle: ActionCall<{ id: string; title: string }, boolean>;
-    rm: ActionCall<{ assets?: boolean; path: string; type: 'asset' | 'doc' | 'folder' }, boolean>;
-    save: ActionCall<
-      {
-        content?: unknown[] | undefined;
-        source?: string | undefined;
-        path: Record<string, string> | string | string[];
-        src?: string | undefined;
-        title?: string | undefined;
-        description?: string | undefined;
-        type?: string | undefined;
-        sourceUrl?: string | undefined;
-        parentId?: string | undefined;
-      },
-      WrittenDocument
-    >;
-    versions: { get: ActionCall<{ path: string }, DocVer[]> };
-  };
-};
 
 /** Symbol used by nested action proxies to retain their accumulated path. */
 const actionPath: unique symbol = Symbol('docsActionPath');
@@ -257,4 +105,153 @@ export const actions = new Proxy(
       );
     },
   },
-) as unknown as { read: ReadActions; write: WriteActions };
+) as unknown as {
+  read: {
+    asset: { get: ActionCall<{ path: string }, ArrayBuffer> };
+    doc: {
+      attachments: ActionCall<
+        { path: string } | { paths: string[] },
+        DocsHostAttachment[] | Sister[] | Record<string, DocsHostAttachment[] | Sister[]>
+      >;
+      get: ActionCall<
+        { access?: unknown; id?: string; path?: string; pathname?: string },
+        WrittenDocument | Md | null
+      >;
+      list: {
+        (
+          input: Extract<DocListInput, { type: 'nav' }>,
+        ): Promise<DocsActionResult<DocsHostTreeNode[] | Tree[]>>;
+        (
+          input: Extract<DocListInput, { type: 'folderEntries' }>,
+        ): Promise<DocsActionResult<string[]>>;
+        (
+          input: Record<string, unknown>,
+        ): Promise<DocsActionResult<DocsHostTreeNode[] | Tree[] | string[]>>;
+      };
+      resolvePath: ActionCall<{ path: string; title?: string }, { dir: string; path: string }>;
+    };
+    external: {
+      pdf: ActionCall<{ url: string }, { pdfBase64?: string }>;
+      website: ActionCall<
+        { url: string; description?: string; source?: string; text?: string; title?: string },
+        { title: string; text: string }
+      >;
+      youtube: ActionCall<
+        { url: string },
+        { title?: string; transcript?: string; description?: string }
+      >;
+    };
+    source: { body: ActionCall<{ source?: string }, DocBody> };
+    tsdocs: ActionCall<
+      { scope?: string },
+      {
+        docs?: { slug: string; title: string; body: string }[];
+        scopes?: { path: string; type: 'folder' | 'file' }[];
+      }
+    >;
+    util: {
+      node: {
+        (input: { op: 'name'; val: string }): Promise<DocsActionResult<string>>;
+        (input: {
+          op: 'fmt';
+          val: string;
+        }): Promise<DocsActionResult<{ title?: string; origName?: string; type?: string } | null>>;
+      };
+      pathname: ActionCall<{ path: string }, string>;
+    };
+  };
+  write: {
+    asset: {
+      delete: ActionCall<{ url: string }, boolean>;
+      raw: ActionCall<{ bytes: unknown; path: string }, boolean>;
+      upload: ActionCall<
+        FormData,
+        { id?: string; path?: string; src?: string; compressedSize?: number; name?: string }
+      >;
+    };
+    attachment: {
+      add: ActionCall<{ files: Array<{ name: string }>; path: string }, unknown>;
+      docRef: ActionCall<{ path: string; refId: string; title?: string }, AttachmentResult>;
+      link: ActionCall<
+        { path: string; url: string; type: string; title?: string },
+        AttachmentResult
+      >;
+      move: ActionCall<
+        { sourceDocPath: string; targetDocPath: string; attachmentKey: string },
+        boolean | AttachmentResult
+      >;
+      remoteFile: ActionCall<
+        { path: string; url: string; type: string; title?: string },
+        AttachmentResult
+      >;
+      rename: ActionCall<
+        { docPath: string; attachmentKey: string; newName: string },
+        boolean | AttachmentResult
+      >;
+      rm: ActionCall<{ docPath: string; attachmentKey: string }, boolean>;
+      youtube: ActionCall<{ path: string; url: string }, AttachmentResult>;
+    };
+    doc: {
+      asset: ActionCall<
+        { component: string; description?: string; path: string; title?: string },
+        WrittenDocument
+      >;
+      commit: ActionCall<
+        {
+          content?: unknown[] | undefined;
+          cur: string;
+          next: string;
+          source?: string | undefined;
+          title?: string | undefined;
+          description?: string | undefined;
+        },
+        WrittenDocument | Md | null
+      >;
+      createGroup: ActionCall<
+        { title: string; path: string; sectionId: string },
+        (DocsHostTreeNode | Tree) & { _id?: string }
+      >;
+      createSection: ActionCall<
+        { title: string },
+        | { group: WrittenDocument; leaf: WrittenDocument; section: WrittenDocument }
+        | { _id?: string; id?: string; path?: string; title?: string }
+      >;
+      editor: ActionCall<
+        {
+          source?: string | undefined;
+          description?: string | undefined;
+          fmt?: boolean | undefined;
+          path: string;
+          title?: string | undefined;
+          type?: string | undefined;
+          sourceUrl?: string | undefined;
+          parentId?: string | undefined;
+        },
+        WrittenDocument
+      >;
+      hue: ActionCall<{ id: string; hue: number }, boolean>;
+      reorder: ActionCall<
+        { id: string; field?: string; items: Array<Record<string, unknown>> },
+        DocsHostTreeNode[] | null
+      >;
+      retargetSources: ActionCall<{ sourceIds: string[]; targetId: string }, boolean>;
+      retitle: ActionCall<{ id: string; title: string }, boolean>;
+      rm: ActionCall<{ assets?: boolean; path: string; type: 'asset' | 'doc' | 'folder' }, boolean>;
+      save: ActionCall<
+        {
+          content?: unknown[] | undefined;
+          source?: string | undefined;
+          path: Record<string, string> | string | string[];
+          src?: string | undefined;
+          title?: string | undefined;
+          description?: string | undefined;
+          type?: string | undefined;
+          sourceUrl?: string | undefined;
+          parentId?: string | undefined;
+        },
+        WrittenDocument
+      >;
+      versions: { get: ActionCall<{ path: string }, DocVer[]> };
+    };
+  };
+};

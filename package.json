@@ -42,6 +42,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck",
+    "quality:all": "pnpm run check && pnpm run build:demo && pnpm docs:build && pnpm test && pnpm run test:browser && pnpm run test:consumer",
     "test": "pnpm build && node --test test/*.test.mjs",
     "test:browser": "playwright test",
     "test:consumer": "playwright test --config=playwright.consumer.config.ts",

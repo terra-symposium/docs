@@ -3,7 +3,36 @@
   "root": ".",
   "tsconfig": "config/tsconfig.json",
   "sourceRoots": ["."],
-  "extensions": [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"],
+  "languageProfiles": ["c", "java", "python"],
+  "extensions": [
+    ".astro",
+    ".c",
+    ".cjs",
+    ".cpp",
+    ".cts",
+    ".css",
+    ".h",
+    ".html",
+    ".java",
+    ".js",
+    ".jsx",
+    ".json",
+    ".jsonc",
+    ".md",
+    ".mdx",
+    ".mjs",
+    ".mts",
+    ".py",
+    ".pyi",
+    ".rs",
+    ".sh",
+    ".sql",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml"
+  ],
   "tools": {
     "eslint": "node_modules/.bin/eslint"
   },
@@ -152,17 +181,51 @@
       "types": true,
       "functions": true,
       "exportedFunctions": true
-    }
+    },
+    "commandRoots": ["."]
   },
   "typecheckCommand": {
     "command": "pnpm",
     "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.json"]
   },
-  "qualityCommands": [
-    {
-      "name": "demo-typecheck",
-      "command": "pnpm",
-      "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.demo.json"]
-    }
-  ]
+  "enabledChecks": {
+    "document": true,
+    "format": true,
+    "import": true,
+    "name": true,
+    "forward": true,
+    "accessibility": true,
+    "display-name": true,
+    "performance-patterns": true,
+    "documented-commands": true,
+    "lint": true,
+    "knip": true,
+    "dead-code": true,
+    "type": true,
+    "recommend": true,
+    "command": true,
+    "diff": true,
+    "alias": true,
+    "security": true,
+    "repeated-classes": true,
+    "tailwind-canonical": true,
+    "regex-dedup": true,
+    "ui-patterns": true,
+    "ui-recommendations": true,
+    "error-boundaries": true,
+    "github": true
+  },
+  "performancePatterns": {
+    "extensions": [".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]
+  },
+  "security": {
+    "allowProcessEnvRoots": ["bin", "config", "scripts", "site/config", "test"],
+    "clientRoots": ["site/src"]
+  },
+  "github": {
+    "repositories": ["Terra-Symposium/docs"]
+  },
+  "autofix": {
+    "document": false
+  }
 }

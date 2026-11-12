@@ -40,9 +40,12 @@ test(
     await openEditor(p, paragraph);
     await p.getByRole('button', { name: 'Insert content' }).click();
     const menu = p.getByRole('listbox');
-    const inline = menu.getByRole('group', { name: 'Inline' });
     const blocks = menu.getByRole('group', { name: 'Block' });
-    await expect(inline.getByRole('option', { name: 'Math', exact: true })).toBeVisible();
+    await expect(
+      menu
+        .getByRole('group', { name: 'Inline' })
+        .getByRole('option', { name: 'Math', exact: true }),
+    ).toBeVisible();
     for (const block of [
       'Math',
       'Code',
@@ -63,8 +66,9 @@ test(
     await expect(p.locator('[data-block="code"]')).toBeVisible();
     await expect
       .poll(async () => {
-        const value = JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]');
-        return value.some((block: { _type?: string }) => block._type === 'code');
+        return JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]').some(
+          (block: { _type?: string }) => block._type === 'code',
+        );
       })
       .toBe(true);
   },

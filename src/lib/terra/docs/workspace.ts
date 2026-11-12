@@ -1,7 +1,5 @@
 /**
  * src/lib/terra/docs/workspace.ts
- * Shared Docs state, browser coordination, and pure helpers used by multiple Docs surfaces.
- * Folder boundary: cross-surface contracts only; page composition, sidebar UI, editor lifecycle, and visual blocks remain in their owners.
  */
 
 /*//////////////////////////////////////////////////
@@ -31,20 +29,20 @@ export const document: Document =
     ? globalThis.document
     : (undefined as unknown as Document);
 /**
- * Handles sanitize name.
+ * Converts a display name into the lowercase path segment used by Docs routes.
  *
  * @param name - Document name used to construct the canonical path.
  *
- * @return
+ * @return The lowercase name with each run of non-alphanumeric characters replaced by a hyphen.
  */
 export const sanitizeName = (name: string): string =>
   name.replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX(), '-').toLowerCase();
 /**
- * Handles is index file.
+ * Checks whether a Docs path points to an `index.md` or `index.mdx` file.
  *
- * @param path - Docs path to normalize into a route-safe identifier.
+ * @param path - Docs path to inspect.
  *
- * @return
+ * @return Whether the path ends in an index Markdown filename.
  */
 export const isIndexFile = (path: string): boolean =>
   TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
@@ -68,11 +66,11 @@ TREE UTILS
 export { getHue };
 
 /**
- * Handles get stable key.
+ * Returns the original route name for a branch or leaf.
  *
- * @param node - Docs tree node whose route should be resolved.
+ * @param node - Docs tree node whose key is needed by the rendered tree.
  *
- * @return
+ * @return The original name for branches and leaves, or a generated key for other node types.
  */
 export const getStableKey = (node: TreeType): string => {
   if (node.type === 'branch') return node.origName;
@@ -557,14 +555,12 @@ NAVIGATION
 //////////////////////////////////////////////////*/
 
 /**
- * Handles keep deep path.
+ * Preserves a current route when the proposed route is one of its deeper descendants.
  *
- * @param curr
- * @param n
- * @param current - Current value before the update.
- * @param next - Proposed value to compare with the current value.
+ * @param curr - Current Docs route.
+ * @param n - Proposed Docs route.
  *
- * @return
+ * @return The current route when it contains the proposed route as a suffix; otherwise the proposed route.
  */
 export const keepDeepPath = (curr: string, n: string): string => {
   // prettier-ignore
@@ -578,22 +574,14 @@ export const keepDeepPath = (curr: string, n: string): string => {
 };
 
 /**
- * Handles is doc body.
+ * Checks whether a value is an array of Portable Text document blocks.
  *
- * @param val
- * @param value - Value whose display label should be derived.
+ * @param val - Value to validate.
  *
- * @return
+ * @return Whether every array item is an object with a Portable Text `_type` field.
  */
 export const isDocBody = (val: unknown): val is DocBody =>
   Array.isArray(val) && val.every((b) => b && typeof b === 'object' && '_type' in b);
-
-/**
- * Handles docs navigation state.
- *
- * @param prev - Previous state used as the base for the update.
- * @param detail - Change detail merged into the next state.
- */
 
 /*//////////////////////////////////////////////////
 TOOLBAR

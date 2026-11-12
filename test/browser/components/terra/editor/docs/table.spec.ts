@@ -140,8 +140,9 @@ test.describe('Docs editor table contracts', () => {
           },
         ] satisfies Content;
         await openEditor(p, fixture, { readOnly: true });
-        const cell = p.locator('[data-docs-editor-block="DocsTable"] tbody td');
-        await expect(cell.locator('code')).toHaveText('problem');
+        await expect(
+          p.locator('[data-docs-editor-block="DocsTable"] tbody td').locator('code'),
+        ).toHaveText('problem');
       },
     );
     test(

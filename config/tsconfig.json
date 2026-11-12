@@ -19,6 +19,5 @@
     "rootDir": "../src",
     "outDir": "../dist/lib"
   },
-  "include": ["../src"],
-  "exclude": ["../src/content.config.ts"]
+  "include": ["../src"]
 }

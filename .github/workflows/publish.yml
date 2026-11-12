@@ -34,6 +34,8 @@ jobs:
           fi
       - run: pnpm install --frozen-lockfile
         if: steps.version.outputs.published != 'true'
+      - run: pnpm run quality -- --all
+        if: steps.version.outputs.published != 'true'
       - run: pnpm run build
         if: steps.version.outputs.published != 'true'
       - run: npm --version && npm publish --access public --loglevel verbose

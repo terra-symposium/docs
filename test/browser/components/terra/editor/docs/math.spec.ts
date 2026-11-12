@@ -85,8 +85,7 @@ test('math.spec: Render inline within a paragraph', async ({ page: p }) => {
     }
   });
   await openEditor(p, inlineFixture);
-  const inline = p.locator('[data-terra-inline="math"]');
-  await expect(inline.locator('.katex')).toBeVisible();
+  await expect(p.locator('[data-terra-inline="math"]').locator('.katex')).toBeVisible();
   await p.evaluate(() => document.fonts.ready);
   await expect.poll(() => p.evaluate(() => document.fonts.check('16px "KaTeX_Main"'))).toBe(true);
   expect(missingKatexFonts).toEqual([]);

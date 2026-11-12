@@ -7,14 +7,15 @@ const description = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
 const base = import.meta.env.BASE_URL;
 
 export function getStaticPaths() {
-	return sitePages.filter((page) => page.slug !== '' && page.slug !== '404').map((page) => ({
-		params: { slug: page.slug || undefined },
-		props: { slug: page.slug },
+	return sitePages.filter((p) => p.slug !== '' && p.slug !== '404').map((p) => ({
+		params: { slug: p.slug || undefined },
+		props: { slug: p.slug },
 	}));
 }
 
 const { slug = '' } = Astro.props;
 const page = pageForSlug(slug);
+const Content = page?.file.endsWith('.mdx') ? (page.content as any) : undefined;
 const currentPath = pageHref(slug, base);
 ---
 
@@ -38,7 +39,9 @@ const currentPath = pageHref(slug, base);
 				rootPath={pageHref('', base)}
 				markdown={page.markdown}
 				searchBase={base}
-			/>
+			>
+				{Content ? <main class="docs-page-content"><Content /></main> : null}
+			</DocsSiteLayout>
 		</body>
 	</html>
 ) : null}

@@ -4,7 +4,6 @@ node_modules/
 # Build and generated output
 dist/
 dist/.docs/
-demo-dist/
 lib-dist/
 site-dist/
 .astro/

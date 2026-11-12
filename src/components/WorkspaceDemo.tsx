@@ -36,9 +36,11 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 /**
- * Builds a deterministic sample quiz from selected page text without calling a generation service.
- * @param v Title, Markdown source, question count, and supported formats for the sample quiz.
- * @returns A generated-shape quiz whose questions quote or select terms from the page excerpt.
+ * Builds a deterministic sample quiz from a document's title and Markdown excerpt.
+ *
+ * @param v - Document title and source, question count, and allowed question types.
+ *
+ * @returns Quiz questions whose prompts and answer text come from the selected document.
  */
 function genDemoQuiz(v: DocsQuizGenerationInput): Promise<unknown> {
   const excerpt =
@@ -75,6 +77,7 @@ function genDemoQuiz(v: DocsQuizGenerationInput): Promise<unknown> {
     }),
   });
 }
+
 const demoQuiz: DocsQuizConfig = { toolbar: true, generate: genDemoQuiz };
 
 /*//////////////////////////////////////////////////
@@ -82,8 +85,9 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Returns the current browser route, including query and fragment, or the demo root during SSR.
- * @returns Current URL path, query, and fragment, or the demo route during server rendering.
+ * Reads the current browser route, falling back to the demo seed route during server rendering.
+ *
+ * @returns The pathname, query, and fragment used to select the active demo document.
  */
 function currentLocation(): string {
   if (typeof window === 'undefined') return WORKSPACE_DEMO_PATH;
@@ -91,17 +95,36 @@ function currentLocation(): string {
 }
 
 /**
- * Renders the interactive workspace fixture used to preview host integration behavior.
+ * Copies a navigation tree while routing every leaf to the local workspace base path.
  *
- * @param readOnly Disables demo mutations and switches the fixture to its read-only route.
- * @param quizEnabled Adds the deterministic sample quiz generator to eligible leaves.
- * @param routeBase Route used by the read-only demo workspace.
- * @param hue Primary Styling hue for the workspace palette.
- * @param siteTitle Host title shown in the sidebar and document title.
- * @param siteDescription Supporting host description, or `null` to omit it.
- * @param syncParentOnNavigate Whether route changes update the embedding page's browser history.
+ * @param nodes - Navigation nodes to copy for the read-only preview.
+ * @param routeBase - Local route used by all copied leaf links.
  *
- * @return The local Docs workspace demo with its navigation and interaction controls.
+ * @returns A tree with leaf URLs rewritten and nested branches recursively copied.
+ */
+function withLocalRoute(
+  nodes: DocsHostTreeNode[],
+  routeBase = '/workspace-readonly/',
+): DocsHostTreeNode[] {
+  return nodes.map((n) => ({
+    ...n,
+    ...(n.type === 'leaf' ? { url: routeBase } : {}),
+    ...(n.children ? { children: withLocalRoute(n.children, routeBase) } : {}),
+  }));
+}
+
+/**
+ * Renders the local or host-backed Docs workspace with seeded fixture state and demo metadata.
+ *
+ * @param readOnly - Uses the host-free, read-only workspace adapter.
+ * @param quizEnabled - Adds the deterministic sample quiz flow to the workspace.
+ * @param routeBase - Root path used for navigation in the local read-only workspace.
+ * @param hue - Base hue used to derive the demonstration's primary and secondary palettes.
+ * @param siteTitle - Site name shown by the host-backed workspace.
+ * @param siteDescription - Supporting site text; `null` or an empty string hides it.
+ * @param syncParentOnNavigate - Syncs this fixture with navigation events from a parent Docs shell.
+ *
+ * @returns The Docs workspace configured for the selected fixture route and mode.
  */
 export default function WorkspaceDemo({
   readOnly = false,
@@ -123,14 +146,17 @@ export default function WorkspaceDemo({
   const [state, setState] = useState<WorkspaceDemoState>(() => createWorkspaceDemoSeed());
   const [location, setLocation] = useState(WORKSPACE_DEMO_PATH);
   useEffect(() => {
-    /** Reloads the demo fixture and current URL after storage or history changes. */
+    /**
+     * Reloads the fixture and current route after persisted demo or browser history changes.
+     */
     const syncFixture = (): void => {
       setState(readWorkspaceDemoState());
       setLocation(currentLocation());
     };
     /**
-     * Applies the route from a parent workspace event and refreshes fixture data.
-     * @param event Navigation event whose detail may carry a pathname or URL.
+     * Applies a navigation event from the surrounding Docs shell and reloads its fixture data.
+     *
+     * @param event - Custom event carrying the target pathname or URL in its detail payload.
      */
     const syncLocation = (event: Event): void => {
       const detail = (event as CustomEvent<{ pathname?: unknown; url?: unknown }>).detail;
@@ -191,21 +217,6 @@ export default function WorkspaceDemo({
       '# Salesphere\n\nSalesphere helps sales professionals choose a useful next step in a customer relationship and understand why it matters.\n\n## Start with the product\n\nRead [Salesphere’s purpose](/product/purpose/) for the larger aim.',
     attachments: selectedDocument.attachments,
   };
-  /**
-   * Points every read-only fixture leaf at the single locally rendered page.
-   * @param nodes Navigation subtree whose leaf URLs should be rewritten.
-   * @param routeBase Shared route used by the read-only preview.
-   * @returns A copied tree with nested branches preserved and leaf URLs replaced.
-   */
-  const withLocalRoute = (
-    nodes: DocsHostTreeNode[],
-    routeBase = '/workspace-readonly/',
-  ): DocsHostTreeNode[] =>
-    nodes.map((n) => ({
-      ...n,
-      ...(n.type === 'leaf' ? { url: routeBase } : {}),
-      ...(n.children ? { children: withLocalRoute(n.children, routeBase) } : {}),
-    }));
   return (
     <div
       className="workspace-demo-theme min-h-svh bg-primary-1 text-primary-12"

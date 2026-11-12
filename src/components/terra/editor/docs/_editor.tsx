@@ -28,14 +28,14 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Defers loading the shared Portable Text editor until its client-side surface is mounted.
+ * Loads the shared Portable Text editor only when a Docs page needs it.
  *
  * @param editorConfiguration Portable Text value and host controls forwarded to the lazy editor.
  * @param editorConfiguration.content Initial or replacement Portable Text value.
  * @param editorConfiguration.onChange Optional callback receiving accepted editor changes.
  * @param editorConfiguration.readOnly Renders the document without edit controls when true.
  * @param editorConfiguration.resetKey Remount key used when the host switches documents.
- * @param editorConfiguration.nested Selects compact controls for a nested rich block.
+ * @param editorConfiguration.nested Selects compact controls for nested rich blocks and rejects recursive nested content.
  * @param editorConfiguration.toolbar Controls whether insertion and formatting actions are visible.
  * @param editorConfiguration.docsAttachments Attachment records available to the editor controls.
  * @param editorConfiguration.toolbarActions Optional host actions rendered beside the Docs toolbar.

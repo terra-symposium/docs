@@ -17,13 +17,6 @@ import type { Content } from '../../../../support/editor.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const XL_VIEWPORT_TEST = {
-  tag: '@viewport:xl',
-  annotation: {
-    type: 'viewport-reason',
-    description: 'Rich-block interactions use the standard desktop editor layout.',
-  },
-} as const;
 const embedFixture = [
   {
     _key: 'embed-under-test',
@@ -36,7 +29,13 @@ const embedFixture = [
 ] satisfies Content;
 test(
   'embed.spec: Render title and size without remote requests',
-  XL_VIEWPORT_TEST,
+  {
+    tag: '@viewport:xl',
+    annotation: {
+      type: 'viewport-reason',
+      description: 'Rich-block interactions use the standard desktop editor layout.',
+    },
+  } as const,
   async ({ page: p }) => {
     await openEditor(p, embedFixture);
     const frame = p.getByTitle('Local example');

@@ -7,20 +7,21 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // COMPONENTS
+import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import { ErrorBoundary } from '../../ui.js';
 
 // TYPES
-import type { DocsBlock } from '../types.js';
 import type { JSX } from 'react';
+import type { DocsBlock } from '../types.js';
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the embed component.
+ * Safely renders a stored external URL, converting supported YouTube links to player URLs.
  *
- * @param block External source URL, title, and optional frame dimensions.
+ * @param block Embed block containing a source URL and optional title and dimensions.
  *
  * @return Embedded content, or null when no source is available.
  */
@@ -29,11 +30,17 @@ export function Embed({
 }: {
   block: /** Sanity Portable Text embed URL and presentation data. */ DocsBlock<'embed'>;
 }): JSX.Element | null {
-  if (!block.src) return null;
-  let embedSource = block.src;
+  const source = typeof block.src === 'string' ? block.src : '';
+  if (!source) return null;
+  const title = typeof block.title === 'string' ? block.title : source;
+  const height =
+    typeof block.height === 'string' || typeof block.height === 'number' ? block.height : '500px';
+  const width =
+    typeof block.width === 'string' || typeof block.width === 'number' ? block.width : '100%';
+  let embedSource = source;
   try {
-    const url = new URL(block.src);
-    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    const url = new URL(source);
+    const host = url.hostname.toLowerCase().replace(TerraQualityRegex.REGEX_WWW_REGEX(), '');
     let videoId: string | undefined;
     if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
       const [, route, routeId] = url.pathname.match(/^\/(embed|shorts|live)\/([^/]+)/) ?? [];
@@ -42,7 +49,7 @@ export function Embed({
     } else if (host === 'youtu.be') {
       videoId = url.pathname.split('/').filter(Boolean)[0];
     }
-    if (videoId && /^[\w-]+$/.test(videoId)) {
+    if (videoId && TerraQualityRegex.REGEX_W_REGEX().test(videoId)) {
       const embed = new URL(
         `https://${host === 'youtube-nocookie.com' ? 'www.youtube-nocookie.com' : 'www.youtube.com'}/embed/${videoId}`,
       );
@@ -52,9 +59,9 @@ export function Embed({
       }
       const time = url.searchParams.get('start') ?? url.searchParams.get('t');
       let seconds: number | undefined;
-      if (time && /^\d+$/.test(time)) seconds = Number(time);
+      if (time && TerraQualityRegex.REGEX_D_REGEX().test(time)) seconds = Number(time);
       else if (time) {
-        const match = time.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
+        const match = time.match(TerraQualityRegex.REGEX_D_H_D_M_D_S_I_REGEX());
         if (match?.[0]) {
           const duration =
             Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0);
@@ -72,10 +79,10 @@ export function Embed({
       <iframe
         className="my-6 w-full border-0"
         src={embedSource}
-        title={block.title ?? block.src}
+        title={title}
         style={{
-          height: block.height ?? '500px',
-          width: block.width ?? '100%',
+          height,
+          width,
         }}
       />
     </ErrorBoundary>

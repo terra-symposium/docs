@@ -16,7 +16,7 @@ import { Handle, Position as HandlePos } from '@xyflow/react';
 
 // TYPES
 import type { ComponentPropsWithoutRef, ElementType, JSX } from 'react';
-import type { FlowNodeLike, Pos } from '../../../lib/terra/runtime/types.js';
+import type { FlowNodeLike, FlowSize, Pos } from '../../../lib/terra/runtime/types.js';
 
 /*//////////////////////////////////////////////////
 LAYOUT
@@ -62,11 +62,8 @@ export function getNodeSize(
     erdHeight: 60,
   },
   extraHeight?: (n: FlowNodeLike) => number | undefined,
-): {
-  w: number;
-  h: number;
-} {
-  const style: Record<string, unknown> = isRec(n.style) ? n.style : {};
+): FlowSize {
+  const style: Record<string, unknown> = isRec(n.style) ? (n.style as Record<string, unknown>) : {};
   const width = Number(
     n.measured?.width ??
       style.width ??
@@ -96,9 +93,9 @@ NODE CHROME
 /**
  * Renders all handles for a node based on editability and required directions.
  *
- * @param editable Whether every handle should accept connections.
- * @param srcs Required source-side handle positions shown when the node is read-only.
- * @param tgts Required target-side handle positions shown when the node is read-only.
+ * @param editable - Whether each handle accepts connections.
+ * @param srcs - Source-side positions that remain visible on a read-only node.
+ * @param tgts - Target-side positions that remain visible on a read-only node.
  *
  * @return The full handle set for a node.
  */
@@ -152,10 +149,10 @@ export function Handles({
 /**
  * Renders the compact skeleton card used while a flow is resolving.
  *
- * @param as HTML element used for the skeleton card, defaulting to a `div`.
- * @param className Additional classes merged onto the selected element.
- * @param style Inline presentation values forwarded to the selected element.
- * @param htmlAttrs Native element attributes forwarded to the card, including accessibility labels and event handlers.
+ * @param as - HTML element used as the skeleton card root, defaulting to a `div`.
+ * @param className - Additional classes merged with the skeleton presentation.
+ * @param style - Inline styles that override default dimensions and colors.
+ * @param htmlAttrs - Native attributes forwarded to the selected element, including accessibility labels and handlers.
  *
  * @return The loading skeleton card.
  */

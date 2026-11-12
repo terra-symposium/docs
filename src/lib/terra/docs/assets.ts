@@ -21,13 +21,13 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Uploads a file in bounded chunks so the host can assemble large attachments without one request body.
+ * Uploads a browser `File` in sequential chunks and returns the final attachment metadata.
  *
- * @param file Browser file whose bytes and MIME type are sent to the host attachment API.
- * @param dPath Document path that owns the uploaded asset.
- * @param opts Optional image conversion settings and byte-progress callback.
- * @return Asset metadata returned by the host after the final chunk, or an empty object if it omits metadata.
- * @remarks Chunk requests reuse a stable upload ID; image options and preview paths are sent with each part.
+ * @param file - File whose bytes and media type are sent to the host.
+ * @param dPath - Destination path the host should assign to the completed asset.
+ * @param opts - Optional image processing and per-chunk progress settings.
+ *
+ * @return Metadata returned for the final uploaded attachment.
  */
 export async function uploadAssetChunked(
   file: File,

@@ -28,6 +28,12 @@ CONFIG
  */
 const G_REGEX = () => TerraQualityRegex.REGEX_G_REGEX_8();
 /**
+ * Matches a numeric ordering prefix at the start of a route segment.
+ *
+ * @returns The numeric prefix and separator used to order a catalog entry.
+ */
+const ORDER_PREFIX_REGEX = () => /^(\d+)[-_]+/;
+/**
  * Matches the first Unicode letter after a word boundary for title capitalization.
  *
  * @return A global Unicode-aware regular expression for capitalizing word initials.
@@ -127,7 +133,9 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
     };
   })
   .sort((l, r) => l.order - r.order || l.file.localeCompare(r.file));
-/** In-progress navigation node whose children are indexed by route segment. */
+/**
+ * Mutable route node whose children are indexed by segment while the navigation tree is assembled.
+ */
 type MutableNode = Omit<DocsNavNode, 'children'> & { children: Map<string, MutableNode> };
 const rootNodes = new Map<string, MutableNode>();
 /** Navigation tree built from the visible pages after their routes are registered. */
@@ -148,7 +156,24 @@ HELPERS
  * @return Human-readable navigation text.
  */
 function label(value: string): string {
-  return value.replace(G_REGEX(), ' ').replace(B_P_L_GU_REGEX(), (l) => l.toUpperCase());
+  return value
+    .replace(ORDER_PREFIX_REGEX(), '')
+    .replace(G_REGEX(), ' ')
+    .replace(B_P_L_GU_REGEX(), (l) => l.toUpperCase());
+}
+
+/**
+ * Removes a route's numeric ordering prefix from its displayed page title.
+ *
+ * @param title Authored or generated page title.
+ * @param routeSegment Final route segment associated with the page.
+ *
+ * @return The title without the route's ordering prefix when present.
+ */
+function pageNavigationTitle(title: string, routeSegment: string): string {
+  const prefix = ORDER_PREFIX_REGEX().exec(routeSegment)?.[1];
+  if (!prefix) return title;
+  return title.replace(new RegExp(`^\\s*${prefix}[-_\\s]+`), '').trim();
 }
 
 /**
@@ -217,7 +242,10 @@ for (const page of sitePages.filter((i) => !i.hidden && i.slug !== '' && i.slug 
   if (current)
     Object.assign(current, {
       id: page.slug || 'index',
-      title: page.sidebarLabel ?? page.title,
+      title: pageNavigationTitle(
+        page.sidebarLabel ?? page.title,
+        page.slug.split('/').at(-1) ?? '',
+      ),
       href: pageHref(page.slug, base),
       ...(page.description ? { description: page.description } : {}),
       ...(page.hue !== undefined ? { hue: page.hue } : {}),

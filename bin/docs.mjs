@@ -26,6 +26,7 @@ const MD_MDX_I_REGEX = TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2();
 const requestedMode = process.argv[2];
 const mode = requestedMode === 'docs' ? 'dev' : requestedMode;
 const root = resolve(process.cwd());
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const consumerProject = createConsumerProject(root, process.env.DOCS_PACKAGE_ROOT ?? '.');
 const args = [
   resolve(dirname(createRequire(import.meta.url).resolve('astro/package.json')), 'bin/astro.mjs'),
@@ -133,6 +134,7 @@ async function buildSearchIndex() {
           frontmatter.title ??
           TerraQualityRegex.REGEX_S_S_S_M_REGEX().exec(body)?.[1]?.trim() ??
           (file.relativePath.replace(MD_MDX_I_REGEX, '').split('/').at(-1) ?? '')
+            .replace(/^\d+[-_]+/, '')
             .replace(TerraQualityRegex.REGEX_G_REGEX_8(), ' ')
             .replace(TerraQualityRegex.REGEX_B_P_L_GU_REGEX(), (l) => l.toUpperCase()),
         description: frontmatter.description ?? '',
@@ -210,6 +212,7 @@ const child = spawn(process.execPath, args, {
   env: {
     ...process.env,
     DOCS_ROOT: root,
+    DOCS_SOURCE_DEV: String(mode === 'dev' && root === packageRoot),
     DOCS_SITE: options.get('--site') ?? docsConfig.site ?? '',
     DOCS_BASE: base,
     DOCS_OUT: options.get('--out') ?? docsConfig.out ?? 'dist/docs',

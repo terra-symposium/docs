@@ -54,10 +54,10 @@ test('callout.spec: Render content and emit title edits', async ({ page: p }) =>
 });
 test('callout.spec: Emit nested content edits', async ({ page: p }) => {
   await openEditor(p, calloutFixture);
-  const nested = p
+  await p
     .locator('[data-block="callout"]')
-    .getByRole('textbox', { name: 'Document editor' });
-  await nested.click();
+    .getByRole('textbox', { name: 'Document editor' })
+    .click();
   await p.keyboard.press('End');
   await p.keyboard.type(' updated');
   await expect
@@ -74,8 +74,7 @@ test('callout.spec: Imported directives retain rich body while edited content se
   await openEditor(p, markdownToDocsValue(':::warning[Check this]\nReview **the source**.\n:::'));
   const callout = p.locator('[data-block="callout"]');
   await expect(callout).toContainText('Review the source.');
-  const nested = callout.getByRole('textbox', { name: 'Document editor' });
-  await nested.click();
+  await callout.getByRole('textbox', { name: 'Document editor' }).click();
   await p.keyboard.press('End');
   await p.keyboard.type(' updated');
   await expect

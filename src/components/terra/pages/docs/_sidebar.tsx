@@ -1,7 +1,5 @@
 /**
  * src/components/terra/pages/docs/_sidebar.tsx
- * Docs sidebar entrypoint, state management, and unified dialog orchestrators.
- * Folder boundary: sidebar navigation and its dialogs; the recursive tree structure remains in `_tree.tsx`.
  */
 
 /*//////////////////////////////////////////////////
@@ -46,6 +44,8 @@ import { navigateDocs as navigate } from '../../../../lib/terra/docs/navigation.
 import { runMutation } from '../../../../lib/terra/docs/mutations.js';
 import { toast } from 'sonner';
 import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
+import type { JSX } from 'react';
+import type { DocsHostUser } from '../../../../lib/host.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // COMPONENTS
@@ -114,9 +114,9 @@ import type {
   AttchType,
   Branch,
   DelTgt,
-  DocsExportOpts as ExportOptions,
   DocsTreeMenuAction as MenuAction,
   DragState,
+  DocsExportOpts as ExportOptions,
   Leaf as LeafNode,
   Md,
   PromptState,
@@ -124,7 +124,6 @@ import type {
   Sister,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
-import type { DocsHostUser } from '../../../../lib/host.js';
 import type { PDFDocument, PDFImage } from 'pdf-lib';
 
 // prettier-ignore
@@ -164,13 +163,13 @@ const SidebarComponents = {} as {
     state: PromptState;
     setState: (v: PromptState) => void;
     disabled: boolean;
-  }) => React.JSX.Element | null;
+  }) => JSX.Element | null;
   DeleteDialog: (props: {
     tgt: DelTgt;
     setTgt: (v: DelTgt) => void;
     onConfirm: () => void;
     disabled: boolean;
-  }) => React.JSX.Element | null;
+  }) => JSX.Element | null;
 };
 
 /*
@@ -189,9 +188,9 @@ SidebarComponents.PromptDialog =
   /**
    * Prompts for a new sidebar operation and reports the user's choice to the owning component.
    *
-   * @param s Prompt payload containing the requested title, value, and callbacks.
-   * @param setS State setter that closes or replaces the active prompt.
-   * @param disabled Whether the host is currently preventing sidebar mutations.
+   * @param s Current prompt details, or `null` when no prompt should be shown.
+   * @param setS Updates the prompt state after a save or cancel action.
+   * @param disabled Whether the enclosing sidebar operation currently blocks dialog actions.
    *
    * @return The prompt dialog while a prompt is active, or `null` when no prompt is open.
    */
@@ -203,7 +202,7 @@ SidebarComponents.PromptDialog =
     state: PromptState;
     setState: (v: PromptState) => void;
     disabled: boolean;
-  }): React.JSX.Element | null {
+  }): JSX.Element | null {
     if (!s) return null;
     return (
       <Dialog
@@ -264,10 +263,10 @@ SidebarComponents.DeleteDialog =
   /**
    * Confirms deletion of the selected page, group, or section before invoking the caller's action.
    *
-   * @param tgt Selected page, group, or section awaiting deletion.
-   * @param setTgt State setter that clears the pending deletion target.
-   * @param onConfirm Callback that performs deletion after confirmation.
-   * @param disabled Whether the host is currently preventing sidebar mutations.
+   * @param tgt Page, group, or section selected for deletion, or `null` when the dialog is closed.
+   * @param setTgt Clears the selected target when the user cancels the dialog.
+   * @param onConfirm Performs the deletion after the user confirms.
+   * @param disabled Whether the enclosing operation currently blocks deletion.
    *
    * @return The confirmation dialog while a target is selected, or `null` otherwise.
    */
@@ -281,7 +280,7 @@ SidebarComponents.DeleteDialog =
     setTgt: (v: DelTgt) => void;
     onConfirm: () => void;
     disabled: boolean;
-  }): React.JSX.Element | null {
+  }): JSX.Element | null {
     if (!tgt) return null;
     return (
       <Dialog
@@ -318,14 +317,14 @@ SidebarComponents.DeleteDialog =
 /**
  * Coordinates the Docs sidebar's route selection, navigation tree, dialogs, and user actions.
  *
- * @param items Navigation tree shown in the sidebar.
- * @param pathname Browser path used to identify the active section and leaf.
- * @param permission Whether the current Docs host route is read-only or editable.
- * @param userData Optional account details shown in the sidebar footer.
- * @param siteTitle Host title shown beside the brand link.
- * @param siteDescription Supporting text shown below the site title.
- * @param homePath Destination of the sidebar brand link.
- * @param sidebarAttrs Remaining root attributes forwarded to the shared sidebar component.
+ * @param items Navigation tree supplied by the Docs host.
+ * @param pathname Browser path used to determine the active section and document.
+ * @param permission Read or write capability granted to the current viewer.
+ * @param userData Signed-in user details displayed in the sidebar, or `null` if signed out.
+ * @param siteTitle Optional site name shown above sidebar navigation.
+ * @param siteDescription Optional short description shown below the site name.
+ * @param homePath Host route used for links back to the site's root.
+ * @param sidebarAttrs Additional sidebar attributes and focus handlers forwarded to the root component.
  *
  * @return The Docs sidebar and its navigation controls for the active host route.
  */
@@ -342,11 +341,11 @@ function Nav({
   docs: TreeType[];
   pathname: string;
   permission: import('../../../../lib/terra/runtime/types.js').DocsPermissionLevel;
-  userData?: DocsHostUser | null;
-  siteTitle?: string;
-  siteDescription?: string;
-  homePath?: string;
-}): React.JSX.Element {
+  userData?: DocsHostUser | null | undefined;
+  siteTitle?: string | undefined;
+  siteDescription?: string | undefined;
+  homePath?: string | undefined;
+}): JSX.Element {
   // STATES
   const leafTitle = useAtom($leafTitle);
   const curMode = useAtom($mode);
@@ -400,11 +399,10 @@ function Nav({
     hue: number;
     section: TreeType;
   } | null>(null);
-  const [sectionMenuTarget, setSectionMenuTarget] = useState<TreeType | null>(null);
   const [inputDlg, setInputDlg] = useState<{
     open: boolean;
     title: string;
-    description?: string;
+    description?: string | undefined;
     label: string;
     value: string;
     onSave: (val: string) => void;
@@ -454,9 +452,9 @@ function Nav({
   navTripwireRenders.current++;
   if (navTripwireRenders.current > 50) {
     const navTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
-    for (const key of Object.keys(navTripwireTrackedVars) as Array<
-      keyof typeof navTripwireTrackedVars
-    >)
+    for (const key of Object.keys(
+      navTripwireTrackedVars,
+    ) as (keyof typeof navTripwireTrackedVars)[])
       if (navTripwireTrackedVars[key] !== navTripwirePrevVars.current[key])
         navTripwireDiff[key] = {
           old: navTripwirePrevVars.current[key],
@@ -850,61 +848,33 @@ function Nav({
 							try {
 								const [firstPath, ...restPaths] = orderedPaths;
 								if (!firstPath) throw new Error('Not enough valid documents to merge');
-								setTree(v => {
-														/*
-                   * Handles prune.
-                                     *
-                                                       * @param items - Sidebar items being pruned from the tree.
+								setTree((items) => {
+                  /**
+                   * Removes merged leaves and prunes branches that become empty.
+                   *
+                   * @param nodes - Sidebar nodes copied from the current tree.
+                   * @returns The tree without merged source pages or empty branches.
                    */
-									return (/**
-									return ( * return ( * return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * return ( * return ( * @param items
-									return ( * return ( * return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * return ( * return ( * @return
-									return ( * return ( * return ( * return ( * return ( * return (
-									return ( * return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * return ( * @param items
-									return ( * return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * return ( * @return
-									return ( * return ( * return ( * return ( * return (
-									return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * @param items
-									return ( * return ( * return ( * return ( *
-									return ( * return ( * return ( * return ( * @return
-									return ( * return ( * return ( * return (
-									return ( * return ( * return ( *
-									return ( * return ( * return ( * @param items
-									return ( * return ( * return ( *
-									return ( * return ( * return ( * @return
-									return ( * return ( * return (
-									return ( * return ( *
-									return ( * return ( * @param items
-									return ( * return ( *
-									return ( * return ( * @return
-									return ( * return (
-									return ( *
-									return ( * @param items
-									return ( *
-									return ( * @return
-									return ( */
-function prune(items: TreeType[]): TreeType[] {
-						const n: TreeType[] = [];
-						for (const node of items) {
-							if (node.type === 'leaf') {
-								if (!node.path || new Set(restPaths).has(node.path)) continue;
-								n.push(node.path === firstPath ? { ...node, title: nTitle } : node);
-								continue;
-							}
-							if (!node.children) {
-								n.push(node);
-								continue;
-							}
-							const children = prune(node.children);
-							if (children.length > 0) n.push({ ...node, children });
-						}
-						return n;
-					})(v);
-								});
+                  const prune = (nodes: TreeType[]): TreeType[] => {
+                    const n: TreeType[] = [];
+                    const mergedPaths = new Set(restPaths);
+                    for (const node of nodes) {
+                      if (node.type === 'leaf') {
+                        if (!node.path || mergedPaths.has(node.path)) continue;
+                        n.push(node.path === firstPath ? { ...node, title: nTitle } : node);
+                        continue;
+                      }
+                      if (!node.children) {
+                        n.push(node);
+                        continue;
+                      }
+                      const children = prune(node.children);
+                      if (children.length > 0) n.push({ ...node, children });
+                    }
+                    return n;
+                  };
+                  return prune(items);
+                });
 				const pages = (await Promise.all(orderedPaths.map(p => actions.read.doc.get({ path: p }))))
 					.map((r, i) => ({ path: orderedPaths[i]!, doc: r?.data as Md | undefined }))
 					.filter((e): e is { path: string; doc: Md } => Boolean(e.doc));
@@ -964,7 +934,7 @@ function prune(items: TreeType[]): TreeType[] {
       setInputDlg({
         open: true,
         title: o?.title || 'Add Section',
-        ...(o?.description === undefined ? {} : { description: o.description }),
+        description: o?.description,
         label: 'Section name',
         value: 'Untitled Section',
         onCancel: () => {},
@@ -1001,7 +971,8 @@ function prune(items: TreeType[]): TreeType[] {
 							window.history.pushState(null, '', tgtUrl.toString());
 							document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: url, pathname: url, path: dPath, title: 'Untitled', description: '', source: '', content: [], compiledMDX: '' } }),);
 							const { data, error } = await actions.write.doc.createSection({ title: name });
-							if (error || !data) throw new Error(errorMessage(error, 'Failed to create section.'));
+							if (error || !data)
+                throw new Error(errorMessage(error, 'Failed to create section.'));
 							setTimeout(() => {
 								void refreshTree();
 							}, 2500);
@@ -1255,62 +1226,41 @@ function prune(items: TreeType[]): TreeType[] {
 									}
 							}
 							url = aParentId === sectId ? buildRoute(sectId, undefined, tLeafId) : buildRoute(sectId, aParentId, tLeafId);
-							setTree(v => {
-								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
-								(/**
-								( * ( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * ( * @return
-								( * ( * ( * ( * ( * (
-								( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * @return
-								( * ( * ( * ( * (
-								( * ( * ( * ( *
-								( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( *
-								( * ( * ( * ( * @return
-								( * ( * ( * (
-								( * ( * ( *
-								( * ( * ( * @param nodes
-								( * ( * ( * @param tgtId
-								( * ( * ( *
-								( * ( * ( * @return
-								( * ( * (
-								( * ( *
-								( * ( * @param nodes
-								( * ( * @param tgtId
-								( * ( *
-								( * ( * @return
-								( * (
-								( *
-								( * @param nodes
-								( * @param tgtId
-								( *
-								( * @return
-								( */
-function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
-									for (const n of nodes) {
-										if (n.type === 'branch') {
-											if (n.origName === tgtId) {
-												if (!n.children) n.children = [];
-												// prevent duplicate pushes if it re-renders
-													if (!n.children.find(c => c.type === 'leaf' && c.url === url))
-														n.children.push({ type: 'leaf', fileType: 'mdx', origName: tLeafId, path: dPath, permission: 'write', title: name, description: '', url, source: '' });
-												return true;
-											}
-											if (n.children && insertLeaf(n.children, tgtId)) return true;
-										}
-									}
-									return false;
-								})(nTree, aParentId);
-								return nTree;
-							});
+							setTree((currentTree) => {
+                  const nTree = JSON.parse(JSON.stringify(currentTree)) as TreeType[];
+                  /**
+                   * Inserts a leaf under the matching branch without adding a duplicate route.
+                   *
+                   * @param nodes - Navigation nodes searched at the current level.
+                   * @param targetId - Branch identifier that should receive the new leaf.
+                   * @returns Whether the target branch was found.
+                   */
+                  const insertLeaf = (nodes: TreeType[], targetId: string): boolean => {
+                    for (const node of nodes) {
+                      if (node.type !== 'branch') continue;
+                      if (node.origName === targetId) {
+                        node.children ??= [];
+                        if (!node.children.some((child) => child.type === 'leaf' && child.url === url))
+                          node.children.push({
+                            type: 'leaf',
+                            fileType: 'mdx',
+                            origName: tLeafId,
+                            path: dPath,
+                            permission: 'write',
+                            title: name,
+                            description: '',
+                            url,
+                            source: '',
+                          });
+                        return true;
+                      }
+                      if (node.children && insertLeaf(node.children, targetId)) return true;
+                    }
+                    return false;
+                  };
+                  insertLeaf(nTree, aParentId);
+                  return nTree;
+                });
 							memoryDrafts.set(url, { source: '', draft: { content: [], description: '', path: dPath, title: name }, metadata: { path: dPath, title: name, description: '', pathname: url } });
 							$unsavedDrafts.setKey(url, false);
 							const tgtUrl = new URL(url, window.location.origin);
@@ -1358,64 +1308,54 @@ function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
 							const rootId = s || urlIds.sectionId;
 							const url = buildRoute(rootId, tGrpId, tLeafId);
 							const gUrl = buildRoute(rootId, tGrpId);
-							setTree(v => {
-								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
-								(/**
-								( * ( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * ( * @return
-								( * ( * ( * ( * ( * (
-								( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( * ( *
-								( * ( * ( * ( * ( * @return
-								( * ( * ( * ( * (
-								( * ( * ( * ( *
-								( * ( * ( * ( * @param nodes
-								( * ( * ( * ( * @param tgtId
-								( * ( * ( * ( *
-								( * ( * ( * ( * @return
-								( * ( * ( * (
-								( * ( * ( *
-								( * ( * ( * @param nodes
-								( * ( * ( * @param tgtId
-								( * ( * ( *
-								( * ( * ( * @return
-								( * ( * (
-								( * ( *
-								( * ( * @param nodes
-								( * ( * @param tgtId
-								( * ( *
-								( * ( * @return
-								( * (
-								( *
-								( * @param nodes
-								( * @param tgtId
-								( *
-								( * @return
-								( */
-function insertGroup(nodes: TreeType[], tgtId: string): boolean {
-									for (const n of nodes) {
-										if (n.type === 'branch') {
-											if (n.origName === tgtId) {
-												if (!n.children) n.children = [];
-												if (!n.children.find(c => c.type === 'branch' && 'url' in c && c.url === gUrl))
-													n.children.push({
-                           type: 'branch', origName: tGrpId, permission: 'write', title: name, url: gUrl,
-                           children: [{ type: 'leaf', fileType: 'mdx', origName: tLeafId, path: dPath, permission: 'write', title: 'Untitled', description: '', url, source: '' }],
-												});
-												return true;
-											}
-											if (n.children && insertGroup(n.children, tgtId)) return true;
-										}
-									}
-									return false;
-								})(nTree, rootId);
-								return nTree;
-							});
+							setTree((currentTree) => {
+                  const nTree = JSON.parse(JSON.stringify(currentTree)) as TreeType[];
+                  /**
+                   * Inserts a group and its starter leaf under the matching section.
+                   *
+                   * @param nodes - Navigation nodes searched at the current level.
+                   * @param targetId - Section identifier that should receive the group.
+                   * @returns Whether the target section was found.
+                   */
+                  const insertGroup = (nodes: TreeType[], targetId: string): boolean => {
+                    for (const node of nodes) {
+                      if (node.type !== 'branch') continue;
+                      if (node.origName === targetId) {
+                        node.children ??= [];
+                        if (
+                          !node.children.some(
+                            (child) => child.type === 'branch' && 'url' in child && child.url === gUrl,
+                          )
+                        )
+                          node.children.push({
+                            type: 'branch',
+                            origName: tGrpId,
+                            permission: 'write',
+                            title: name,
+                            url: gUrl,
+                            children: [
+                              {
+                                type: 'leaf',
+                                fileType: 'mdx',
+                                origName: tLeafId,
+                                path: dPath,
+                                permission: 'write',
+                                title: 'Untitled',
+                                description: '',
+                                url,
+                                source: '',
+                              },
+                            ],
+                          });
+                        return true;
+                      }
+                      if (node.children && insertGroup(node.children, targetId)) return true;
+                    }
+                    return false;
+                  };
+                  insertGroup(nTree, rootId);
+                  return nTree;
+                });
 							memoryDrafts.set(url, { source: '', draft: { content: [], description: '', path: dPath, title: 'Untitled' }, metadata: { path: dPath, title: 'Untitled', description: '', pathname: url } });
 							$unsavedDrafts.setKey(url, false);
 							const tgtUrl = new URL(url, window.location.origin);
@@ -1885,9 +1825,9 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   attachmentTripwireRenders.current++;
   if (attachmentTripwireRenders.current > 50) {
     const attachmentTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
-    for (const key of Object.keys(attachmentTripwireTrackedVars) as Array<
-      keyof typeof attachmentTripwireTrackedVars
-    >)
+    for (const key of Object.keys(
+      attachmentTripwireTrackedVars,
+    ) as (keyof typeof attachmentTripwireTrackedVars)[])
       if (attachmentTripwireTrackedVars[key] !== attachmentTripwirePrevVars.current[key])
         attachmentTripwireDiff[key] = {
           old: attachmentTripwirePrevVars.current[key],
@@ -1991,7 +1931,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           groups.push({ groupTitle: gTitle, nodes: gNodes });
         } else if (c.type === 'leaf') {
           const lTitle = cTitle(toNodeLabel(c.title || c.origName));
-          groups[0]!.nodes.push({
+          groups[0]?.nodes.push({
             title: lTitle,
             fullTitle: `${sectTitle} / ${lTitle}`,
             id: c.origName,
@@ -2010,31 +1950,34 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     if (!trimmedQuery) return [];
     const lowerQuery = trimmedQuery.toLowerCase();
     const leaves: { path: string; title: string; breadcrumb: string }[] = [];
-    /**
-     * Collects matching leaf pages while carrying their displayed breadcrumb.
-     * @param nodes Navigation siblings to search in their rendered order.
-     * @param pathStr Breadcrumb prefix accumulated from parent branches.
-     * @returns No value; matches are appended to the enclosing search result.
-     */
-    const walk = (nodes: TreeType[], pathStr: string): void => {
-      nodes.forEach((n) => {
-        const currTitle = n.title || n.origName;
-        if (n.type === 'leaf') {
-          if (
-            currTitle.toLowerCase().includes(lowerQuery) ||
-            (n.path ? n.path.toLowerCase() : '').includes(lowerQuery)
-          ) {
-            leaves.push({
-              path: n.path!,
-              title: currTitle,
-              breadcrumb: pathStr,
-            });
-          }
-        } else if (n.type === 'branch' && n.children)
-          walk(n.children, pathStr ? `${pathStr} / ${currTitle}` : currTitle);
-      });
-    };
-    walk(tree, '');
+    (
+      /**
+       * Collects document leaves whose title or path matches the current sidebar search.
+       *
+       * @param nodes Tree nodes searched at the current hierarchy level.
+       * @param pathStr Ancestor route prefix used when constructing each matching leaf path.
+       *
+       * @returns Nothing; appends matching leaf metadata to the enclosing search result list.
+       */
+      function walk(nodes: TreeType[], pathStr: string): void {
+        nodes.forEach((n) => {
+          const currTitle = n.title || n.origName;
+          if (n.type === 'leaf') {
+            if (
+              currTitle.toLowerCase().includes(lowerQuery) ||
+              (n.path ? n.path.toLowerCase() : '').includes(lowerQuery)
+            ) {
+              leaves.push({
+                path: n.path!,
+                title: currTitle,
+                breadcrumb: pathStr,
+              });
+            }
+          } else if (n.type === 'branch' && n.children)
+            walk(n.children, pathStr ? `${pathStr} / ${currTitle}` : currTitle);
+        });
+      }
+    )(tree, '');
     return leaves;
   }, [query, tree]);
   useEffect(() => {
@@ -2058,17 +2001,33 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     setAttachmentDialogLoading(true);
     const paths = [
       ...new Set(
-        (a ? [a.id] : nodeGroups.flatMap((g) => g.nodes.map((n) => n.id))).filter(
+        (a ? [a.id] : nodeGroups.flatMap((group) => group.nodes.map((node) => node.id))).filter(
           (path): path is string => typeof path === 'string' && path.length > 0,
         ),
       ),
     ];
-    const entries = await Promise.all(
-      paths.map(async (path) => {
-        const { data, error: err } = await actions.read.doc.attachments({ path });
-        return [path, err || !data ? [] : data] as const;
-      }),
-    );
+    const { data, error: err } = await actions.read.doc.attachments({ paths });
+    if (err || !data || Array.isArray(data)) {
+      setAtts({});
+      setAttachmentDialogLoading(false);
+      return;
+    }
+    const entries = Object.entries(data).map(([path, attachments]): [string, Sister[]] => [
+      path,
+      Array.isArray(attachments)
+        ? attachments.flatMap((attachment): Sister[] => {
+            if (!attachment || typeof attachment !== 'object') return [];
+            const sister = attachment as Sister;
+            if (typeof sister.path !== 'string' || typeof sister.name !== 'string') return [];
+            return [
+              {
+                ...sister,
+                isMd: typeof sister.isMd === 'boolean' ? sister.isMd : /\.mdx?$/i.test(sister.path),
+              },
+            ];
+          })
+        : [],
+    ]);
     setAtts(Object.fromEntries(entries));
     setAttachmentDialogLoading(false);
   }, [manageAttTgt, a, nodeGroups]);
@@ -2077,22 +2036,16 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   }, [fetchAtts]);
 
   // DRAG AND DROP
-  /**
-   * Handles on drop.
-   *
-   * @param e - Pointer event received from the sidebar item.
-   * @param tgtPath - Destination path associated with the selected item.
-   */
 
   // SELECTION
   /**
-   * Handles toggle sel.
+   * Toggles an attachment in the selection, or replaces the selection without a modifier key.
    *
    * @param e - Pointer event received from the document action.
    * @param docPath - Document path targeted by the action.
    * @param a - Action metadata used to perform the document operation.
    *
-   * @return
+   * @return Nothing; updates the selected attachments.
    */
   const toggleSel = (e: React.MouseEvent, docPath: string, a: Sister) => {
     e.stopPropagation();
@@ -2174,13 +2127,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
   }, [manageAttTgt, attachmentDialogLoading, disabled, selAtts, handleKeyboardDelete]);
 
   /**
-   * Handles upload.
-   *
-   * @param files - Files available to the sidebar resolver.
-   * @param tgtPath - Target path used to select the matching file.
-   */
-  /**
-   * Handles add remote.
+   * Adds local or remote document links to the selected Docs node.
    *
    * @param v - Sidebar value being normalized.
    * @param type - Sidebar node type used to select the renderer.
@@ -2296,29 +2243,32 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           }
           // 2. Secondary Fallback: Tree Search (for established documents)
           if (!groupId) {
-            /**
-             * Finds the target leaf and records its nearest containing branch as the group.
-             * @param nodes Navigation nodes in the active sidebar tree.
-             * @param tgtLeafId Leaf ID or path being moved or selected.
-             * @param currGroupId Nearest branch identifier inherited by the recursive call.
-             * @returns `true` after a matching leaf updates `groupId`, otherwise `false`.
-             */
-            const findGroup = (
-              nodes: TreeType[],
-              tgtLeafId: string,
-              currGroupId?: string,
-            ): boolean => {
-              for (const n of nodes) {
-                if (n.type === 'leaf' && (n.origName === tgtLeafId || n.path === tgtLeafId)) {
-                  groupId = currGroupId;
-                  return true;
+            (
+              /**
+               * Finds the containing group for a selected leaf in the navigation tree.
+               *
+               * @param nodes Tree nodes searched at this level.
+               * @param tgtLeafId Leaf ID or path being resolved.
+               * @param currGroupId Group ID inherited from the current branch.
+               *
+               * @returns `true` when the leaf is found and its parent group is assigned.
+               */
+              function findGroup(
+                nodes: TreeType[],
+                tgtLeafId: string,
+                currGroupId?: string,
+              ): boolean {
+                for (const n of nodes) {
+                  if (n.type === 'leaf' && (n.origName === tgtLeafId || n.path === tgtLeafId)) {
+                    groupId = currGroupId;
+                    return true;
+                  }
+                  if (n.type === 'branch' && n.children)
+                    if (findGroup(n.children, tgtLeafId, n.origName)) return true;
                 }
-                if (n.type === 'branch' && n.children)
-                  if (findGroup(n.children, tgtLeafId, n.origName)) return true;
+                return false;
               }
-              return false;
-            };
-            findGroup(tree, a.id);
+            )(tree, a.id);
           }
           if (groupId) parentId = groupId;
         }
@@ -2355,7 +2305,6 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
     setAddMode(null);
     setQuery('');
   };
-
   // RENDERS
   return (
     <ErrorBoundary
@@ -3486,6 +3435,7 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                       ref={fileRef}
                       type="file"
                       className="hidden"
+                      aria-label="Upload attachments"
                       multiple
                       onChange={(e) => {
                         const files = e.currentTarget.files;
@@ -3682,55 +3632,35 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
           {(sects.length > 1 || permission === 'write') && (
             <div className="mt-2 flex items-center">
               <div className={cn('block min-w-0 flex-1 rounded-md transition-opacity')}>
-                <ContextMenu onOpenChange={(o) => o && setSectionOpen(false)}>
-                  <Select
-                    disabled={transitioning}
-                    open={sectionOpen}
-                    onOpenChange={setSectionOpen}
-                    value={aViewed ? aViewed.origName : ''}
-                    onValueChange={async (v) => {
-                      if (v === '__add_section__') {
-                        setTimeout(() => {
-                          addSection();
-                        }, 0);
-                        return;
-                      }
-                      if (aViewed?.origName === v) return;
-                      setViewedSecId(v);
+                <Select
+                  disabled={transitioning}
+                  open={sectionOpen}
+                  onOpenChange={setSectionOpen}
+                  value={aViewed ? aViewed.origName : ''}
+                  onValueChange={async (v) => {
+                    if (v === '__add_section__') {
+                      setTimeout(() => {
+                        addSection();
+                      }, 0);
+                      return;
+                    }
+                    if (aViewed?.origName === v) return;
+                    setViewedSecId(v);
+                  }}
+                >
+                  <SelectTrigger
+                    className="w-full"
+                    aria-label="Section"
+                    data-docs-navigation="true"
+                    onPointerDown={(e) => {
+                      if (e.button === 0) setSectionOpen(true);
                     }}
                   >
-                    <SelectTrigger
-                      className="w-full"
-                      aria-label="Section"
-                      data-docs-navigation="true"
-                      onPointerDown={(e) => {
-                        if (e.button === 0) setSectionOpen(true);
-                      }}
-                    >
-                      <SelectValue placeholder="Section" />
-                    </SelectTrigger>
-                    <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
-                      {sects.map((s) => {
-                        if (s.simulated) {
-                          return (
-                            <SelectItem
-                              key={s.origName}
-                              value={s.origName}
-                              icon={
-                                <span
-                                  aria-hidden="true"
-                                  className="size-3.5 rounded-[3px]"
-                                  style={{
-                                    backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
-                                  }}
-                                />
-                              }
-                              className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
-                            >
-                              {s.title || 'New Section'}
-                            </SelectItem>
-                          );
-                        }
+                    <SelectValue placeholder="Section" />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
+                    {sects.map((s) => {
+                      if (s.simulated) {
                         return (
                           <SelectItem
                             key={s.origName}
@@ -3740,45 +3670,58 @@ function insertGroup(nodes: TreeType[], tgtId: string): boolean {
                                 aria-hidden="true"
                                 className="size-3.5 rounded-[3px]"
                                 style={{
-                                  backgroundColor: `hsl(${hueDlg?.open && hueDlg.section.origName === s.origName ? hueDlg.hue : getHue(s.title || s.origName, s.hue)} 65% 55%)`,
+                                  backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
                                 }}
                               />
                             }
                             className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
                           >
-                            <ContextMenuTrigger
-                              className="flex w-full items-center justify-between"
-                              onContextMenuCapture={() => setSectionMenuTarget(s)}
-                            >
+                            {s.title || 'New Section'}
+                          </SelectItem>
+                        );
+                      }
+                      return (
+                        <SelectItem
+                          key={s.origName}
+                          value={s.origName}
+                          icon={
+                            <span
+                              aria-hidden="true"
+                              className="size-3.5 rounded-[3px]"
+                              style={{
+                                backgroundColor: `hsl(${hueDlg?.open && hueDlg.section.origName === s.origName ? hueDlg.hue : getHue(s.title || s.origName, s.hue)} 65% 55%)`,
+                              }}
+                            />
+                          }
+                          className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                        >
+                          <ContextMenu>
+                            <ContextMenuTrigger className="flex w-full items-center justify-between">
                               <span className="line-clamp-1">
                                 {cTitle(toNodeLabel(s.title || s.origName))}
                               </span>
                             </ContextMenuTrigger>
-                          </SelectItem>
-                        );
-                      })}
-                      {permission === 'write' && (
-                        <>
-                          {sects.length > 0 && !sects[0]?.simulated && (
-                            <Separator className="my-1" />
-                          )}
-                          <SelectItem
-                            value="__add_section__"
-                            icon={<AddIcon className="size-4" />}
-                            className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
-                          >
-                            <span>Add section</span>
-                          </SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <ContextMenuContent>
-                    {sectionMenuTarget && (
-                      <Menu actions={SidebarActions.renderSects!(sectionMenuTarget)} />
+                            <ContextMenuContent>
+                              <Menu actions={SidebarActions.renderSects!(s)} />
+                            </ContextMenuContent>
+                          </ContextMenu>
+                        </SelectItem>
+                      );
+                    })}
+                    {permission === 'write' && (
+                      <>
+                        {sects.length > 0 && !sects[0]?.simulated && <Separator className="my-1" />}
+                        <SelectItem
+                          value="__add_section__"
+                          icon={<AddIcon className="size-4" />}
+                          className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                        >
+                          <span>Add section</span>
+                        </SelectItem>
+                      </>
                     )}
-                  </ContextMenuContent>
-                </ContextMenu>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}

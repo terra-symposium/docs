@@ -25,7 +25,7 @@ HELPERS
 /**
  * A package-safe interactive demo for the host-configurable leaf quiz flow.
  *
- * @return The published Docs workspace showing the deterministic, host-configured quiz demo.
+ * @return The published Docs workspace showing the deterministic, host-configured interactive quiz demo.
  */
 export function QuizDemo() {
   return (

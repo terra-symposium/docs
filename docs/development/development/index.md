@@ -11,4 +11,6 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-The command starts the Vite component playground. Run the Astro installation guide separately with `pnpm docs:dev`. Build the package, playground, and guide with `pnpm run check`, `pnpm run build`, `pnpm run build:demo`, and `pnpm run docs:build`.
+`pnpm dev` builds the package, then serves this repository's Docs site from `docs/`. The site is read-only. Markdown and search data refresh as files change, and edits to Docs UI source such as the toolbar hot-reload in the same host.
+
+Run `pnpm run check` for package checks, `pnpm run build` for the library, and `pnpm run docs` to build the Docs site.

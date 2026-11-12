@@ -44,28 +44,101 @@ const docsManifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'
 const projectRoot = process.env.DOCS_ROOT ?? process.cwd();
 const publicDir = resolve(projectRoot, 'dist/public');
 const outDir = resolve(projectRoot, process.env.DOCS_OUT ?? 'dist/docs');
+const sourceDevelopment = process.env.DOCS_SOURCE_DEV === 'true';
+const docsSiteAliases = [
+  {
+    find: '#docs-site-workspace',
+    replacement: resolve(
+      packageRoot,
+      sourceDevelopment
+        ? 'src/components/StaticWorkspace.tsx'
+        : 'dist/lib/components/StaticWorkspace.js',
+    ),
+  },
+  {
+    find: '#docs-site-style',
+    replacement: resolve(
+      packageRoot,
+      sourceDevelopment ? 'src/styles/style.css' : 'dist/lib/style.css',
+    ),
+  },
+];
 const site = process.env.DOCS_SITE;
 const base = process.env.DOCS_BASE ?? '/';
 const consumerProject = createConsumerProject(projectRoot, process.env.DOCS_PACKAGE_ROOT ?? '.');
 const consumerRoot = consumerProject.root;
 const projectManifest = consumerProject.manifest;
 const requireFromProject = consumerProject.require;
+const sourceTailwindConfig = sourceDevelopment
+  ? (await import('../../config/tailwind.docs.config.mjs')).default
+  : undefined;
+const sourceCssPlugins = sourceDevelopment
+  ? [
+      requireFromPackage('postcss-import')(),
+      requireFromPackage('tailwindcss/nesting')(),
+      requireFromPackage('tailwindcss')(sourceTailwindConfig),
+    ]
+  : undefined;
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Creates Vite aliases for package entry points declared by the consuming project's exports map.
- * @returns Alias records for concrete and wildcard project exports that target local files.
+ * Aliases exports from the content site's own package to its local sources.
+ *
+ * @return Vite aliases for the site's package exports.
  */
 function packageExportAliases() {
   return createProjectExportAliases(projectManifest, consumerRoot);
 }
 
 /**
- * Resolves Astro's internal MDX runtime and public non-wildcard exports from the Docs installation.
- * @returns Vite alias records that keep Astro imports on the package's compatible runtime.
+ * Checks whether the site package owns the dependency selected for its runtime.
+ *
+ * This avoids treating an unrelated pnpm workspace hoist as the site's React installation.
+ *
+ * @param name Package name to check.
+ *
+ * @return Whether the site package declares this dependency.
+ */
+function projectDeclaresDependency(name) {
+  return ['dependencies', 'devDependencies', 'peerDependencies'].some(
+    (s) => projectManifest[s]?.[name],
+  );
+}
+
+/**
+ * Checks whether the consumer explicitly owns the complete Docs UI runtime.
+ *
+ * React, ReactDOM, and Styling must come from one installation so their hooks share a dispatcher.
+ *
+ * @return Whether the project declares React, ReactDOM, and Styling directly.
+ */
+function projectOwnsSharedUiRuntime() {
+  return (
+    projectManifest.name === '@terra-symposium/styling' ||
+    (projectDeclaresDependency('@terra-symposium/styling') &&
+      projectDeclaresDependency('react') &&
+      projectDeclaresDependency('react-dom'))
+  );
+}
+
+/**
+ * Escapes literal text before it is used as a Vite alias regular expression.
+ *
+ * @param value Literal package name or export path.
+ *
+ * @return The value with regular-expression metacharacters escaped.
+ */
+function escapeRegex(value) {
+  return value.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&');
+}
+
+/**
+ * Resolves Astro export paths from the installation used by Docs.
+ *
+ * @return Vite aliases for Astro's public exports and runtime entrypoints.
  */
 function astroPackageExportAliases() {
   return [
@@ -108,10 +181,12 @@ function astroDependencyAliases() {
 }
 
 /**
- * Finds the package manifest owning a resolved entry by walking parent directories.
- * @param name Expected package name used to confirm the owning manifest.
- * @param resolver Module resolver whose installation tree should be searched.
- * @returns The matching package manifest, or `null` when resolution or lookup fails.
+ * Reads the package manifest for a specifier resolved by the provided module loader.
+ *
+ * @param name Expected package name.
+ * @param resolver Resolver rooted at the package installation to inspect.
+ *
+ * @return The matching package manifest, or null when it cannot be resolved.
  */
 function dependencyManifest(name, resolver = requireFromPackage) {
   let entry;
@@ -135,14 +210,20 @@ function dependencyManifest(name, resolver = requireFromPackage) {
 }
 
 /**
- * Creates Vite aliases for Docs runtime dependencies and their concrete exported subpaths.
- * @returns Alias records resolved from the Docs package installation.
+ * Maps Docs dependencies to one consistent package-manager installation.
+ *
+ * @return Vite aliases for the public exports of Docs dependencies.
  */
 function packageDependencyAliases() {
   return Object.keys(docsManifest.dependencies ?? {})
     .filter((n) => n !== 'astro')
     .flatMap((n) => {
-      const manifest = dependencyManifest(n);
+      const resolver =
+        projectOwnsSharedUiRuntime() &&
+        ['@terra-symposium/styling', 'react', 'react-dom'].includes(n)
+          ? requireFromProject
+          : requireFromPackage;
+      const manifest = dependencyManifest(n, resolver);
       if (!manifest) return [];
       const subpaths = Object.keys(manifest.exports ?? {}).filter(
         (key) => key.startsWith('./') && !key.includes('*'),
@@ -154,7 +235,7 @@ function packageDependencyAliases() {
               find: new RegExp(
                 `^${specifier.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}$`,
               ),
-              replacement: requireFromPackage.resolve(specifier),
+              replacement: resolver.resolve(specifier),
             },
           ];
         } catch {
@@ -165,46 +246,76 @@ function packageDependencyAliases() {
 }
 
 /**
- * Aligns styling dependencies with the consumer's installation to avoid duplicate runtime packages.
- * @returns Alias records for the styling package's non-React peer dependencies.
+ * Keeps Styling's React-aware dependencies beside the selected Styling package.
+ *
+ * @return Vite aliases for Styling and its React-related dependency graph.
  */
 function stylingDependencyAliases() {
+  const resolveStylingFrom = projectOwnsSharedUiRuntime() ? requireFromProject : requireFromPackage;
   const stylingManifest =
     projectManifest.name === '@terra-symposium/styling'
       ? projectManifest
-      : dependencyManifest('@terra-symposium/styling', requireFromProject);
+      : dependencyManifest('@terra-symposium/styling', resolveStylingFrom);
   if (!stylingManifest) return [];
+  const requireFromStyling =
+    projectManifest.name === '@terra-symposium/styling'
+      ? requireFromProject
+      : createRequire(resolveStylingFrom.resolve('@terra-symposium/styling'));
+  const visited = new Set(['react', 'react-dom']);
+  /**
+   * Recursively aliases dependencies whose installed React peers must resolve beside Styling.
+   *
+   * @param name - Styling dependency currently being examined.
+   * @param resolver - Module resolver rooted at the installation that owns this dependency.
+   *
+   * @return Vite aliases for its public entries and React-aware transitive dependencies.
+   */
+  function dependencyAliases(name, resolver) {
+    if (visited.has(name)) return [];
+    visited.add(name);
+    let entry;
+    try {
+      entry = resolver.resolve(name);
+    } catch {
+      return [];
+    }
+    const manifest = dependencyManifest(name, resolver);
+    if (!manifest) return [];
+    const sharesReactRuntime =
+      name.includes('react') ||
+      name.startsWith('@radix-ui/') ||
+      manifest.peerDependencies?.react ||
+      manifest.peerDependencies?.['react-dom'];
+    const subpaths = sharesReactRuntime
+      ? Object.keys(manifest.exports ?? {}).filter((k) => k.startsWith('./') && !k.includes('*'))
+      : [];
+    const aliases = sharesReactRuntime
+      ? [name, ...subpaths.map((k) => `${name}${k.slice(1)}`)].flatMap((s) => {
+          try {
+            return [{ find: new RegExp(`^${escapeRegex(s)}$`), replacement: resolver.resolve(s) }];
+          } catch {
+            return [];
+          }
+        })
+      : [];
+    const requireFromDependency = createRequire(entry);
+    const nested = Object.keys(manifest.dependencies ?? {}).flatMap((d) =>
+      dependencyAliases(d, requireFromDependency),
+    );
+    return [...aliases, ...nested];
+  }
   return Object.keys(stylingManifest.dependencies ?? {})
     .filter(
       (n) =>
         n !== 'react' && n !== 'react-dom' && (n.includes('react') || ['cmdk', 'vaul'].includes(n)),
     )
-    .flatMap((n) => {
-      const manifest = dependencyManifest(n, requireFromProject);
-      if (!manifest) return [];
-      const subpaths = Object.keys(manifest.exports ?? {}).filter(
-        (key) => key.startsWith('./') && !key.includes('*'),
-      );
-      return [n, ...subpaths.map((key) => `${n}${key.slice(1)}`)].flatMap((specifier) => {
-        try {
-          return [
-            {
-              find: new RegExp(
-                `^${specifier.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}$`,
-              ),
-              replacement: requireFromProject.resolve(specifier),
-            },
-          ];
-        } catch {
-          return [];
-        }
-      });
-    });
+    .flatMap((n) => dependencyAliases(n, requireFromStyling));
 }
 
 /**
- * Resolves React entry points from the consumer when available and supplies the browser server renderer.
- * @returns Vite aliases that keep Docs UI and its consumer on one React runtime.
+ * Selects one React runtime for bundled and externalized Docs UI components.
+ *
+ * @return Vite aliases for React, ReactDOM, and browser-side Markdown rendering.
  */
 function sharedReactAliases() {
   const specifiers = [
@@ -217,8 +328,9 @@ function sharedReactAliases() {
   ];
   return [
     ...specifiers.map((s) => {
-      // Prefer the consumer's React, with Docs supplying it to content-only hosts.
-      const replacement = resolveConsumerDependency(requireFromProject, requireFromPackage, s);
+      const replacement = (
+        projectOwnsSharedUiRuntime() ? requireFromProject : requireFromPackage
+      ).resolve(s);
       return {
         find: new RegExp(`^${s.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}$`),
         replacement,
@@ -230,9 +342,7 @@ function sharedReactAliases() {
       // `util` is externalized and the Docs workspace fails to hydrate. The
       // browser server renderer also works during Node prerendering.
       find: /^react-dom\/server$/,
-      replacement: resolveConsumerDependency(
-        requireFromProject,
-        requireFromPackage,
+      replacement: (projectOwnsSharedUiRuntime() ? requireFromProject : requireFromPackage).resolve(
         'react-dom/server.browser',
       ),
     },
@@ -251,12 +361,14 @@ export default defineConfig({
   markdown: { processor: unified({ remarkPlugins: [[basePathRemarkPlugin, { base }]] }) },
   vite: {
     plugins: [docsContentPlugin({ root: projectRoot, base })],
+    ...(sourceCssPlugins ? { css: { postcss: { plugins: sourceCssPlugins } } } : {}),
     optimizeDeps: { include: [...DOCS_VITE_OPTIMIZE_DEPS] },
     resolve: {
       // Astro's virtual build entries are resolved from the consumer project
       // root. Consumers only need the Docs package, so map Astro's exported
       // subpaths to the installation shipped with Docs.
       alias: [
+        ...docsSiteAliases,
         ...packageExportAliases(),
         ...createProjectExportAliases(docsManifest, packageRoot),
         ...sharedReactAliases(),
@@ -268,8 +380,12 @@ export default defineConfig({
       dedupe: ['react', 'react-dom'],
     },
     ssr: {
-      // Bundle the shared UI packages while retaining their peer runtime.
-      noExternal: ['@terra-symposium/styling', '@terra-symposium/standards-error-boundaries'],
+      // Bundle Styling and Radix so their React peer imports pass through the shared aliases.
+      noExternal: [
+        '@terra-symposium/styling',
+        '@terra-symposium/standards-error-boundaries',
+        /^@radix-ui\/react-/,
+      ],
     },
     server: { fs: { allow: [projectRoot, consumerRoot, packageRoot] } },
   },

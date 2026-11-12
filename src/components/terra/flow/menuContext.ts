@@ -1,4 +1,6 @@
 /**
  * src/components/terra/flow/menuContext.ts
- * Context tracked by the shared React Flow context menu.
  */
+
+/** Context-menu target and its optional node or edge identifier. */
+export type FlowMenuContext = { type: 'pane' | '_node' | 'e'; id: string | null };

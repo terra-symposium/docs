@@ -9,8 +9,8 @@ importers:
   ..:
     devDependencies:
       '@terra-symposium/docs':
-        specifier: ^0.4.13
-        version: 0.4.13(@astrojs/markdown-satteri@0.4.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.3)
+        specifier: ^0.4.14
+        version: 0.4.14(@astrojs/markdown-satteri@0.4.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.3)
 
 packages:
 
@@ -1409,8 +1409,8 @@ packages:
     peerDependencies:
       tailwindcss: '>=3.0.0 || >=4.0.0 || insiders'
 
-  '@terra-symposium/docs@0.4.13':
-    resolution: {integrity: sha512-3G2AF2WybXlmYvcy+JOHUUhz1U26nFGMO+vtSAMGuEkdSff+0qXrvucFNoZwRqNFaz11SZk5Wk6+semOVK/94g==}
+  '@terra-symposium/docs@0.4.14':
+    resolution: {integrity: sha512-2rDqEPpP2ZojT36KOfrNNZIY9C/MezSlvZULuCQHIa/JFoMT+LFCjPW2WNBrRjyrkidaB5EAbesdT0rjBdBgEg==}
     engines: {node: '>=24.12.0'}
     hasBin: true
 
@@ -4817,7 +4817,7 @@ snapshots:
       postcss-selector-parser: 6.0.10
       tailwindcss: 3.4.19(yaml@2.9.1)
 
-  '@terra-symposium/docs@0.4.13(@astrojs/markdown-satteri@0.4.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.3)':
+  '@terra-symposium/docs@0.4.14(@astrojs/markdown-satteri@0.4.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.3)':
     dependencies:
       '@astrojs/markdown-remark': 7.3.5
       '@astrojs/mdx': 8.1.2(@astrojs/markdown-remark@7.3.5)(@astrojs/markdown-satteri@0.4.6)(astro@7.4.4(@astrojs/markdown-remark@7.3.5)(jiti@1.21.7)(yaml@2.9.1))

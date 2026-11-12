@@ -1,6 +1,6 @@
 /**
  * src/components/terra/pages/docs/_blocks.tsx
- * Legacy Docs utilities and TypeDoc scope selector.
+ * Image Markdown helpers and the host-backed TypeDoc scope selector.
  */
 
 /*//////////////////////////////////////////////////
@@ -75,17 +75,17 @@ export function toImgAlt(v: string): string {
 }
 
 /**
- * Renders a searchable resource picker that can select one path or several paths.
+ * Lets the user select one or more published TypeDoc scopes.
  *
- * @param value Current selected path, or the selected paths when multiple selection is enabled.
- * @param onChange Receives the chosen path or path list after a selection.
- * @param className Optional classes added to the picker root.
- * @param variant Chooses the compact inline picker or the larger dialog picker.
- * @param multiple Allows the picker to retain more than one selected resource.
+ * @param value Currently selected scope path, or selected paths in multiple mode.
+ * @param onChange Receives the newly selected path or path list.
+ * @param className Additional classes applied to the selector trigger or inline surface.
+ * @param variant Chooses a dialog-based selector or an inline tree.
+ * @param multiple Allows selecting a set of TypeDoc scopes.
  *
- * @return Interactive dropdown presentation filtering file structures directly.
+ * @return The TypeDoc selector populated from the host's available paths.
  *
- * @remarks Search results are derived from the host's Docs tree and asset metadata.
+ * @remarks Scope data is loaded through the host `tsdocs` action and filtered locally as the user types.
  */
 export function TsDocsSelect({
   value,

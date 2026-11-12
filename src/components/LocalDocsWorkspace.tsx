@@ -44,7 +44,7 @@ export type DocsLocalPage = {
   updatedAt?: string;
   attachments?: DocsHostAttachment[];
 };
-/** Inputs required to render repository-owned Markdown through the shared Docs workspace. */
+/** Read-only workspace settings and page data supplied by the consuming repository. */
 export type DocsLocalWorkspaceProps = {
   tree: DocsHostTreeNode[];
   pages: DocsLocalPage[];
@@ -68,12 +68,11 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Normalizes a page identifier or URL to the pathname and fragment used by local routing.
+ * Normalizes a local URL to its pathname and fragment for page matching.
  *
- * @param value Page route or browser URL to normalize.
- * @param base Fallback origin used to resolve relative URLs.
- *
- * @return Pathname and fragment without host-specific query parameters, or the original value if it is not a URL.
+ * @param value - Candidate URL or route, including an optional query and fragment.
+ * @param base - Base URL used to resolve relative candidate routes.
+ * @returns The normalized pathname and fragment, or the original value if URL parsing fails.
  */
 function norm(value: string, base = 'http://docs.local'): string {
   try {
@@ -100,12 +99,14 @@ function routeId(value: string): string {
 }
 
 /**
- * Resolves a local page by fragment ID, pathname, source path, or page ID.
+ * Finds the local page matching a host route, page ID, or source path.
  *
- * @param pages Available local pages in their navigation order.
- * @param value Page ID, path, pathname, or browser URL to resolve.
+ * Hash-addressed IDs take precedence over shared paths; a root page is used as
+ * fallback only for the unfragmented root route.
  *
- * @return The best matching page, with fragment IDs taking precedence over shared pathnames.
+ * @param pages - Local pages available to the workspace.
+ * @param value - Candidate page ID, source path, pathname, or URL.
+ * @returns The best matching page, or `undefined` when no route matches.
  */
 export function findDocsLocalPage(
   pages: DocsLocalPage[],
@@ -134,11 +135,12 @@ export function findDocsLocalPage(
 }
 
 /**
- * Finds a node in the local navigation tree and carries its parent chain with it.
- * @param nodes Sibling nodes to search in their existing order.
- * @param id `origName` identifier to match.
- * @param ancestors Parents accumulated by the recursive caller.
- * @return Matching node and its parents, or `undefined` if the ID is absent.
+ * Searches the navigation tree and records the branch path to a matching node.
+ *
+ * @param nodes - Sibling navigation nodes to search recursively.
+ * @param id - Original node name to match.
+ * @param ancestors - Branch path already traversed before this sibling list.
+ * @returns The matching node and its ancestors, or `undefined` when absent.
  */
 function findTreeNode(
   nodes: DocsHostTreeNode[],
@@ -154,10 +156,11 @@ function findTreeNode(
 }
 
 /**
- * Finds a leaf by ID and retains its parent chain for section/group routing.
- * @param nodes Sibling nodes to search in navigation order.
- * @param id Page ID stored in a leaf's `origName` field.
- * @param ancestors Parents already visited on the current path.
+ * Finds a leaf by ID and retains its parent chain for section and group routing.
+ *
+ * @param nodes - Sibling nodes to search in navigation order.
+ * @param id - Page ID stored in a leaf's `origName` field.
+ * @param ancestors - Branch path already traversed before this sibling list.
  * @returns The matching leaf and its parent chain, or `undefined` when absent.
  */
 function findTreeLeaf(
@@ -175,7 +178,8 @@ function findTreeLeaf(
 
 /**
  * Selects the first leaf nested beneath the supplied navigation nodes.
- * @param nodes Navigation nodes in their displayed order.
+ *
+ * @param nodes - Navigation nodes in their displayed order.
  * @returns The first descendant leaf or `undefined` when the branch is empty.
  */
 function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
@@ -188,23 +192,24 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
 }
 
 /**
- * Renders repository-owned Markdown in the shared Docs workspace through a read-only host adapter.
+ * Renders repository-owned Markdown with the original Docs workspace.
+ * This adapter has no write operations, account dependency, or server requirement.
  *
- * @param workspaceOptions Host-owned route tree, Markdown page index, and optional presentation capabilities.
- * @param workspaceOptions.tree Navigation tree displayed by the workspace.
- * @param workspaceOptions.pages Local Markdown documents indexed by route and ID.
- * @param workspaceOptions.pathname Current browser route used to select the document.
- * @param workspaceOptions.title Host title shown in the sidebar and document title.
- * @param workspaceOptions.description Optional site description shown below the title.
- * @param workspaceOptions.beforeContent Optional host-owned content placed before the page body.
- * @param workspaceOptions.hue Optional Styling hue for the workspace palette.
- * @param workspaceOptions.rootPath Host Docs root used to build local routes.
- * @param workspaceOptions.homePath Optional destination for the site brand link.
- * @param workspaceOptions.afterContent Optional host-owned content appended after the page body.
- * @param workspaceOptions.customBlocks Optional host-specific rich block renderers.
- * @param workspaceOptions.blocks Optional switches controlling supported rich blocks.
- * @param workspaceOptions.quiz Optional quiz controls and host generation callback.
- * @return The shared Docs workspace configured for local, account-free content.
+ * @param workspaceOptions - Read-only workspace settings and local page records.
+ * @param workspaceOptions.tree - Navigation hierarchy rendered by the workspace sidebar.
+ * @param workspaceOptions.pages - Local page records available for route and document lookups.
+ * @param workspaceOptions.pathname - Current route used to select the initial page.
+ * @param workspaceOptions.title - Site title shown by the workspace shell.
+ * @param workspaceOptions.description - Optional site description shown by the workspace shell.
+ * @param workspaceOptions.beforeContent - Optional host content rendered before the page body.
+ * @param workspaceOptions.hue - Optional theme hue; defaults to the Docs palette hue.
+ * @param workspaceOptions.rootPath - Base route used when a page has no explicit route.
+ * @param workspaceOptions.homePath - Optional home route for the workspace brand link.
+ * @param workspaceOptions.afterContent - Optional host content rendered after the page body.
+ * @param workspaceOptions.customBlocks - Optional host-defined blocks available to the renderer.
+ * @param workspaceOptions.blocks - Optional switches for built-in Docs blocks.
+ * @param workspaceOptions.quiz - Optional host configuration for the ephemeral quiz interface.
+ * @returns A read-only Docs workspace backed by local page data.
  */
 export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): JSX.Element {
   const {
@@ -353,9 +358,9 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             );
           },
           /**
-           * Resolves a source path to the canonical route used by the local page index.
-           * @param path Host path or route supplied for a local document.
-           * @returns The indexed page pathname, or the workspace root when no page matches.
+           * Resolves a page URL to its local path, falling back to the workspace root.
+           * @param path - URL or ID supplied by a workspace navigation action.
+           * @returns The matched page pathname or the configured root route.
            */
           routePath(path) {
             return findDocsLocalPage(pages, path)?.pathname ?? rootPath;
@@ -374,7 +379,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             if (op === 'read.doc.list') return { data: tree as T };
             if (op === 'read.doc.get') {
               /**
-               * Builds the content payload expected by the editor's document reader.
+               * Returns the selected local page with both Markdown and parsed content.
                * @returns The resolved page with source and parsed blocks, or `null` if missing.
                */
               const readDocument = (): unknown => {
@@ -392,12 +397,28 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
               };
             }
             if (op === 'read.doc.attachments') {
+              /** Resolves local attachment metadata into the legacy Docs UI shape. */
+              const attachmentsForPath = (path?: string): DocsHostAttachment[] =>
+                ((resolvePage(path ? { path } : args) ?? aPage())?.attachments ?? []).map(
+                  (attachment) => ({
+                    ...attachment,
+                    title: attachment.name,
+                    isMd: false,
+                  }),
+                );
+              if (Array.isArray(args.paths)) {
+                return {
+                  data: Object.fromEntries(
+                    args.paths
+                      .filter((path): path is string => typeof path === 'string')
+                      .map((path) => [path, attachmentsForPath(path)]),
+                  ) as T,
+                };
+              }
               return {
-                data: ((resolvePage(args) ?? aPage())?.attachments ?? []).map((attachment) => ({
-                  ...attachment,
-                  title: attachment.name,
-                  isMd: false,
-                })) as T,
+                data: attachmentsForPath(
+                  typeof args.path === 'string' ? args.path : undefined,
+                ) as T,
               };
             }
             if (op === 'read.source.body')

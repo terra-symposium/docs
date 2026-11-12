@@ -68,14 +68,14 @@ export type DocsHostCapabilities = {
   history?: boolean;
   publish?: boolean;
 };
-/** Operation names supported by the shared host action bridge. */
+/** Legacy host operation names grouped by the read/write permission they require. */
 export type DocsActionOperation =
   | `read.${'asset' | 'doc' | 'external' | 'source' | 'util'}.${string}`
   | `read.${'tsdocs'}`
   | `write.${'asset' | 'attachment' | 'doc'}.${string}`;
-/** Result envelope returned by host reads and writes. */
+/** Result envelope returned by a legacy host operation. */
 export type DocsActionResult<T = unknown> = { data?: T; error?: unknown };
-/** Route components resolved from a host pathname by its Docs adapter. */
+/** Route match produced by resolving a browser pathname against the host tree. */
 export type DocsResolvedRoute = {
   sectionId: string;
   groupId?: string;
@@ -90,7 +90,10 @@ export type DocsHostOperationContracts = {
     output: DocsHostTreeNode[];
   };
   'read.doc.get': { input: { id?: string; pathname?: string }; output: DocsHostDocument | null };
-  'read.doc.attachments': { input: { path: string }; output: DocsHostAttachment[] };
+  'read.doc.attachments': {
+    input: { path: string } | { paths: string[] };
+    output: DocsHostAttachment[] | Record<string, DocsHostAttachment[]>;
+  };
   'write.doc.save': {
     input: {
       path: string;
@@ -122,10 +125,10 @@ export type DocsHostAdapter = {
   /**
    * Legacy action bridge for host-specific operations outside the stable contract.
    *
-   * @param op Stable or host-specific operation name requested by the shared UI.
-   * @param input Operation payload shaped according to the selected action contract.
+   * @param op Permission-scoped operation name understood by the host.
+   * @param input Operation-specific payload; omitted when the operation takes no data.
    *
-   * @return The host result, with an error when the operation cannot be completed.
+   * @return Host result containing operation data or an error.
    */
   invoke<T = unknown>(op: DocsActionOperation, input?: unknown): Promise<DocsActionResult<T>>;
   /** Load a host-owned draft when an editor enters Edit mode. */

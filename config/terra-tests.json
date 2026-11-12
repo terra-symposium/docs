@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "suites": [
+    {
+      "name": "unit",
+      "command": "pnpm",
+      "args": ["run", "test:unit"],
+      "owns": ["test/*.test.mjs", "test/fixtures/**"]
+    },
+    {
+      "name": "browser",
+      "command": "pnpm",
+      "args": ["run", "test:browser"],
+      "owns": ["test/browser/**"]
+    }
+  ]
+}

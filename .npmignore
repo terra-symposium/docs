@@ -1,2 +1,2 @@
-lib-dist/EditorHarness.*
-lib-dist/WorkspaceDemo.*
+dist/lib/EditorHarness.*
+dist/lib/WorkspaceDemo.*

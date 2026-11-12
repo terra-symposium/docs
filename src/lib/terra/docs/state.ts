@@ -1,11 +1,37 @@
-/** Shared state, transitions, contexts, and surface readiness for Terra Docs. */
+/**
+ * src/lib/terra/docs/state.ts
+ * Shared state, transitions, contexts, and surface readiness for Docs.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { atom, map } from 'nanostores';
 import { createContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { validateType } from '../runtime/runtime.js';
+
+// TYPES
 import type { EditorSel, EditorSurface, Mode, ToolbarState, Transition } from '../runtime/types.js';
 
+/**
+ * Subscribes a React component to a Nanostores-compatible value store.
+ *
+ * @param store Store exposing a current snapshot and a change subscription.
+ * @returns The current store value, kept in sync with subsequent notifications.
+ */
 export function useAtom<Value>(store: {
+  /**
+   * Returns the store's current snapshot for React's render cycle.
+   * @returns The current typed store value.
+   */
   get(): Value;
+  /**
+   * Registers a callback for future store snapshots.
+   * @param listener Notification callback invoked after the stored value changes.
+   * @returns Function that removes this listener from the store.
+   */
   subscribe(listener: (val: Value) => void): () => void;
 }): Value {
   return useSyncExternalStore(
@@ -17,7 +43,14 @@ export function useAtom<Value>(store: {
     () => store.get(),
   );
 }
-
+/**
+ * Loads and validates a JSON value from browser storage, falling back on inaccessible or invalid data.
+ *
+ * @param key Browser storage key to read.
+ * @param fallback Value returned when storage is unavailable or validation fails.
+ * @param valid Type guard that accepts only values safe for the caller to use.
+ * @returns The parsed value when it passes `valid`, otherwise `fallback`.
+ */
 function readStorage<T>(key: string, fallback: T, valid: (input: unknown) => input is T): T {
   if (validateType(['undefined'], globalThis.window)) return fallback;
   try {
@@ -50,7 +83,6 @@ function writeStorage(key: string, v: unknown): void {
     return;
   }
 }
-
 export const $mode = atom<Mode>(
   readStorage('docs-mode', 'view', (i): i is Mode =>
     ['view', 'edit', 'attachments'].includes(i as string),
@@ -208,9 +240,7 @@ export function clearTransition(): void {
 export function useTransitionState(): Transition {
   const [transition, setTransitionState] = useState(transitionStore.transition);
   useEffect(() => {
-    /**
-     * Handles update.
-     */
+    /** Refreshes the hook snapshot after the transition store notifies subscribers. */
     const update = (): void => {
       setTransitionState(transitionStore.transition);
     };
@@ -233,9 +263,8 @@ export const TransitionCtx = createContext<{
   setSourceReady: (ready: boolean) => void;
   setLoading: (loading: boolean) => void;
 } | null>(null);
-
 export const EditStateCtx = createContext<{
-  busy: import('../runtime/types.js').EditorState['busy'];
+  busy: string | null;
   code: string;
   draft: import('../runtime/types.js').Draft;
   dirty: boolean;
@@ -244,7 +273,6 @@ export const EditStateCtx = createContext<{
   references?: import('react').MutableRefObject<import('../runtime/types.js').EditorRefs>;
   setSrc?: (val: string) => void;
   source?: string;
-  state?: import('../runtime/types.js').EditorState;
   save: (code?: string, opts?: { force?: boolean; format?: boolean }) => void;
   setCode: (val: string) => void;
   update: (patch: Partial<import('../runtime/types.js').Draft>) => void;
@@ -257,19 +285,17 @@ export const EditStateCtx = createContext<{
  * @remarks This lets nested components reach the active editor surface without prop drilling.
  */
 export const EditorSurfaceCtx = createContext<EditorSurface | null>(null);
-
-export const $editorMounts = atom<{
-  expected: string[];
-  mounted: string[];
-  path: string | null;
-}>({ expected: [], mounted: [], path: null });
+export const $editorMounts = atom<{ expected: string[]; mounted: string[]; path: string | null }>({
+  expected: [],
+  mounted: [],
+  path: null,
+});
 const assignments = new Map<string, string>();
 
 /**
- * Handles reset editor mounts.
- *
- * @param path - Source or route path resolved for reset editor mounts.
- * @param expected - Expected input supplied to reset editor mounts's operation.
+ * Clears reporter associations and resets the expected and mounted block IDs for a new route.
+ * @param path Route path that owns the next editor surface, if known.
+ * @param expected Block IDs expected to report their mounted state on that route.
  */
 export function resetEditorMounts(path: string | undefined, expected: string[]): void {
   assignments.clear();
@@ -277,12 +303,11 @@ export function resetEditorMounts(path: string | undefined, expected: string[]):
 }
 
 /**
- * Handles set editor mount.
- *
- * @param path - Source or route path resolved for set editor mount.
- * @param reporter - Reporter input supplied to set editor mount's operation.
- * @param mounted - Mounted input supplied to set editor mount's operation.
- * @param kind - Content kind that selects set editor mount's renderer.
+ * Associates a mounted editor reporter with its expected block ID, then updates the route's mount state.
+ * @param path Route currently rendering the editor block.
+ * @param reporter Stable reporter ID emitted by the mounted editor block.
+ * @param mounted Whether the reporter is entering or leaving the mounted set.
+ * @param kind Optional block kind used to match an unassigned expected ID.
  */
 export function setEditorMount(
   path: string | undefined,

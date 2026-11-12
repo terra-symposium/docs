@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_editable.tsx
+ * src/components/terra/pages/docs/_editable.tsx
  * JSON draft state and persistence provider for Docs View, Edit, and Attachments modes.
  */
 
@@ -21,57 +20,47 @@ import {
   useAtom,
   useTransitionState,
 } from '../../../../lib/terra/docs/state.js';
-import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
-import { isDocBody } from '../../../../lib/terra/runtime/types.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
 import { cn } from '../../../../lib/terra/runtime/runtime.js';
-import { toast } from 'sonner';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
+import { isDocBody } from '../../../../lib/terra/runtime/types.js';
+import { toast } from 'sonner';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // COMPONENTS
 import React from 'react';
 import { EditStateCtx, EditorSurfaceCtx, TransitionCtx } from '../../../../lib/terra/docs/state.js';
 import { ErrorBoundary } from '../../ui.js';
-import { Progress } from '@terra-symposium/styling/ui/terra-original';
-
-// DATA
-import { IMG_RESPONSIVE } from '../../ui.js';
+import { Progress } from '@terra-symposium/styling/ui';
 
 // TYPES
-import type { DocBody } from '../../../../lib/terra/runtime/types.js';
 import type {
+  DocBody,
   DocsPermissionLevel as Permission,
   Draft,
   EditorRefs,
   EditorSel,
-  EditorState,
   EditorSurface,
   Mode,
-  PathProps,
   ToolbarState,
 } from '../../../../lib/terra/runtime/types.js';
 import type { ReactNode } from 'react';
-
-/*//////////////////////////////////////////////////
-CONFIG
-//////////////////////////////////////////////////*/
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the loader component.
+ * Shows Docs loading progress while expected editor blocks mount.
  *
- * @param props - Optional styling for the loading indicator while a Docs route or editor is resolving.
- * @param className - Additional CSS classes merged into loader.
+ * @param className Optional classes added to the loading indicator.
  *
- * @return The accessible loading indicator used by Docs transitions.
+ * @return An accessible progress indicator with the host-provided illustration when available.
  */
 export function Loader({ className }: { className?: string }): React.JSX.Element {
   const mounts = useAtom($editorMounts);
-  const loadingImage = getDocsHostAdapter()?.assetUrl?.(
+  const loadingImg = getDocsHostAdapter()?.assetUrl?.(
     'image-1e365a8f99a0859fa0ad38617b1b399520b32767-984x984',
     1200,
   );
@@ -87,8 +76,8 @@ export function Loader({ className }: { className?: string }): React.JSX.Element
         data-docs-loading-overlay
         role="status"
       >
-        {loadingImage && (
-          <img alt="" src={loadingImage} className={cn('size-40', IMG_RESPONSIVE)} />
+        {loadingImg && (
+          <img alt="" src={loadingImg} className={cn('size-40', 'max-w-full object-contain')} />
         )}
         <Progress
           className="h-3 w-56"
@@ -106,26 +95,28 @@ export function Loader({ className }: { className?: string }): React.JSX.Element
 }
 
 /**
- * Orchestrates layout math and hydration visibility to prevent FOUC during navigation.
+ * Coordinates route transitions with editor and viewer readiness before revealing document content.
  *
- * @param props - Child content, visual class, navigation mode, and optional route key for the Docs page transition.
- * @param children - Child content nested inside transition shell's rendered output.
- * @param className - Additional CSS classes merged into transition shell.
- * @param mode - Mode input supplied to transition shell's operation.
- * @param path - Source or route path resolved for transition shell.
+ * @param children Document surface rendered inside the transition shell.
+ * @param className Additional classes applied to the outer transition container.
+ * @param mode Current Docs surface mode used to match transitions to the mounted editor or viewer.
+ * @param path Optional document path used to match the transition with editor readiness signals.
+ * @param staticContent Whether already-rendered content should skip editor-mount readiness checks.
  *
- * @return A transition wrapper that keeps page visibility synchronized with route hydration.
+ * @return A transition provider and content wrapper with a loading overlay until the surface is ready.
  */
 export function TransitionShell({
   children,
   className,
   mode,
   path,
+  staticContent = false,
 }: {
   children: ReactNode;
   className?: string;
   mode: Mode | 'transitioning';
   path?: string;
+  staticContent?: boolean;
 }): React.JSX.Element {
   // STATE
   const container = useRef<HTMLDivElement | null>(null);
@@ -137,18 +128,24 @@ export function TransitionShell({
     armed: boolean;
     loading: boolean;
     ready: boolean;
-  }>({ armed: false, loading: true, ready: false });
+  }>(() => ({ armed: staticContent, loading: !staticContent, ready: staticContent }));
 
   // LIFECYCLE
   // enforces loading guard during cross-page transitions to prevent layout shifts
   useEffect(() => {
+    if (staticContent) {
+      reported.current = false;
+      pending.current = false;
+      setState((p) => ({ ...p, armed: true, loading: false, ready: true }));
+      return;
+    }
     if (transition === 'idle') return;
     reported.current = false;
     pending.current = true;
     $editReadyPath.set(null);
     $surfaceReady.set(null);
     setState((p) => ({ ...p, armed: false, loading: true, ready: false }));
-  }, [transition]);
+  }, [staticContent, transition]);
   useEffect(() => {
     if (mode === 'edit') return;
     setState((p) => (p.armed ? p : { ...p, armed: true }));
@@ -156,7 +153,7 @@ export function TransitionShell({
 
   // A missing editor readiness event must not leave the document hidden without feedback.
   useEffect(() => {
-    if (!state.loading || !state.armed) return;
+    if (staticContent || !state.loading || !state.armed) return;
     let a = true;
     window.setTimeout(() => {
       if (!a || reported.current) return;
@@ -169,7 +166,7 @@ export function TransitionShell({
     return () => {
       a = false;
     };
-  }, [state.armed, state.loading]);
+  }, [state.armed, state.loading, staticContent]);
 
   // releases layout lock once the internal editor or viewer confirms mounting
   useEffect(() => {
@@ -195,11 +192,10 @@ export function TransitionShell({
   // SYNCHRONIZATION
   // Keeps the transition lock aligned with the structured editor lifecycle.
   useEffect(() => {
+    if (staticContent) return;
     const root = container.current;
     if (!root) return;
-    /**
-     * Handles check.
-     */
+    /** Reconciles the loading overlay with transition, hydration, and editor-mount readiness. */
     const check = () => {
       const tgt =
         typeof transition === 'string' && transition.startsWith('to-')
@@ -226,10 +222,8 @@ export function TransitionShell({
       $hydrating.listen(check),
     ];
     check();
-    return (): void => {
-      for (let i = 0; i < stop.length; i++) stop[i]();
-    };
-  }, [mode, path, transition]);
+    return (): void => stop.forEach((unsubscribe) => unsubscribe());
+  }, [mode, path, staticContent, transition]);
 
   // restores cursor or scroll position globally once shell unlocks
   useEffect(() => {
@@ -241,7 +235,7 @@ export function TransitionShell({
   const setSrcReady = useCallback((a: boolean): void => {
     setState((p) => (p.armed === a ? p : { ...p, armed: a }));
   }, []);
-  const loading = transition !== 'idle' || state.loading;
+  const loading = !staticContent && (transition !== 'idle' || state.loading);
 
   // RENDER
   return (
@@ -267,7 +261,7 @@ export function TransitionShell({
         >
           <div
             aria-hidden={loading ? 'true' : 'false'}
-            className={cn(loading ? 'hidden' : 'block')}
+            className={loading ? 'hidden' : 'block'}
             data-docs-transition-content
           >
             {children}
@@ -280,19 +274,18 @@ export function TransitionShell({
 }
 
 /**
- * Renders the editable component.
+ * Provides document draft state and save actions to the nested Docs editor surfaces.
  *
- * @param props - Document content, title, path, source, and permission state that determine whether the page is editable or read-only.
- * @param children - Child content nested inside editable's rendered output.
- * @param content - Content input supplied to editable's operation.
- * @param description - Supporting text shown in editable.
- * @param path - Source or route path resolved for editable.
- * @param permission - Permission input supplied to editable's operation.
- * @param pathname - Pathname input supplied to editable's operation.
- * @param title - Heading text shown in editable.
- * @param source - Source node identifier for the connection drawn by editable.
+ * @param children Editor and viewer surfaces that consume the document state contexts.
+ * @param content Initial Portable Text body for the document draft.
+ * @param description Optional description stored with the document draft.
+ * @param path Optional canonical document path used for saving and attachment uploads.
+ * @param permission Access level that controls which editing and save actions are available.
+ * @param pathname Route path used to identify the current Docs document.
+ * @param title Document title stored with the draft and shown by its editor surface.
+ * @param src Optional host source identifier used to load content when no body is supplied.
  *
- * @return The document editor or read-only view configured for the supplied document and permission.
+ * @return Children rendered inside the Docs editor-state and surface providers.
  */
 export default function Editable({
   children,
@@ -303,7 +296,9 @@ export default function Editable({
   pathname,
   title = 'Untitled',
   source: src = '',
-}: PathProps & {
+}: {
+  pathname: string;
+} & {
   children?: React.ReactNode;
   content?: DocBody;
   description?: string;
@@ -336,7 +331,21 @@ export default function Editable({
   const saving = useRef(false);
   const [err, setErr] = useState<string | null>(null);
   // prettier-ignore
-  const [state, setState] = useState<EditorState>({ busy: null, dirty: false, draft: { content, description, path: path || pathname, source: src, title }, loaded: Boolean(content.length || !src), optimistic: false, version: 0, });
+  const [state, setState] = useState<{
+    busy: string | null;
+    dirty: boolean;
+    draft: Draft;
+    loaded: boolean;
+    optimistic: boolean;
+    version: number;
+  }>({
+    busy: null,
+    dirty: false,
+    draft: { content, description, path: path || pathname, source: src, title },
+    loaded: Boolean(content.length || !src),
+    optimistic: false,
+    version: 0,
+  });
   const draftContent = isDocBody(state.draft.content) ? state.draft.content : [];
 
   // INIT
@@ -344,7 +353,14 @@ export default function Editable({
     refs.current.route = { path, pathname };
     setState((p) => ({
       ...p,
-      draft: { ...p.draft, content, description, path: path || pathname, source: src, title },
+      draft: {
+        ...p.draft,
+        content,
+        description,
+        path: path || pathname,
+        source: src,
+        title,
+      },
       dirty: false,
       loaded: Boolean(content.length || !src),
       version: p.version + 1,
@@ -353,20 +369,22 @@ export default function Editable({
   useEffect(() => {
     if (content.length || !src) return;
     let a = true;
-    void actions.read.source
-      .body({ source: src })
-      .then(({ data: d, error: err }: { data?: unknown; error?: { message?: string } | null }) => {
-        if (!a) return;
-        if (err || !d) {
-          setErr(err?.message || 'Unable to convert source to document blocks.');
-          setState((p) => ({ ...p, loaded: true }));
-        } else if (isDocBody(d))
-          setState((p) => ({ ...p, draft: { ...p.draft, content: d }, loaded: true }));
-        else {
-          setErr('Converted source did not return valid document blocks.');
-          setState((p) => ({ ...p, loaded: true }));
-        }
-      });
+    void actions.read.source.body({ source: src }).then(({ data: d, error: err }) => {
+      if (!a) return;
+      if (err || !d) {
+        setErr(err instanceof Error ? err.message : 'Unable to convert source to document blocks.');
+        setState((p) => ({ ...p, loaded: true }));
+      } else if (isDocBody(d))
+        setState((p) => ({
+          ...p,
+          draft: { ...p.draft, content: d },
+          loaded: true,
+        }));
+      else {
+        setErr('Converted source did not return valid document blocks.');
+        setState((p) => ({ ...p, loaded: true }));
+      }
+    });
     return () => {
       a = false;
     };
@@ -447,9 +465,13 @@ export default function Editable({
         }
       }
       if (n === 'edit' && !draftContent.length && state.draft.source) {
-        const { data, error: err } = await actions.read.source.body({ source: state.draft.source });
+        const { data, error: err } = await actions.read.source.body({
+          source: state.draft.source,
+        });
         if (err || !data) {
-          setErr(err?.message || 'Unable to convert source to document blocks.');
+          setErr(
+            err instanceof Error ? err.message : 'Unable to convert source to document blocks.',
+          );
           return;
         }
         if (!isDocBody(data)) {
@@ -463,12 +485,12 @@ export default function Editable({
     [draftContent.length, state.draft.source, update],
   );
   const insert = useCallback(
-    (m: string, _replace = false, s?: EditorSel | null): void => {
+    (m: string, r = false, s?: EditorSel | null): void => {
       void actions.read.source
         .body({ source: m })
         .then(({ data: d, error: err }) => {
           if (err || !d) {
-            toast.error(err?.message || 'Unable to convert pasted Markdown.');
+            toast.error(err instanceof Error ? err.message : 'Unable to convert pasted Markdown.');
             return;
           }
           if (!isDocBody(d)) {
@@ -477,6 +499,7 @@ export default function Editable({
           }
           update({
             content:
+              !r &&
               Boolean(s?.text?.trim()) &&
               s?.text?.trim().length === (refs.current.body?.innerText.trim() || '').length
                 ? d
@@ -518,7 +541,11 @@ export default function Editable({
   const onBodyChange = useCallback((c: DocBody): void => {
     setState((p) => {
       if (JSON.stringify(p.draft.content) === JSON.stringify(c)) return p;
-      return { ...p, dirty: true, draft: { ...p.draft, content: c, source: '' } };
+      return {
+        ...p,
+        dirty: true,
+        draft: { ...p.draft, content: c, source: '' },
+      };
     });
   }, []);
   const attachFiles = useCallback(
@@ -545,11 +572,10 @@ export default function Editable({
               setState((p) => ({ ...p, dirty: true }));
             },
             references: refs,
-            save: (code?: string) => void save(code),
+            save: () => void save(),
             setCode,
             setSrc: setCode,
             source: state.draft.source,
-            state,
             update,
           }),
           [refs, save, setCode, state, update],
@@ -564,8 +590,8 @@ export default function Editable({
               mode,
               onBodyChange,
               onMdChange: setCode,
-              onVisualError: (err) => {
-                setErr(err);
+              onVisualError: (error) => {
+                setErr(error instanceof Error ? error.message : String(error));
               },
               parseError: err,
               path,

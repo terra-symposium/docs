@@ -1,0 +1,59 @@
+---
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// COMPONENTS
+import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
+
+// DATA
+import { pageForSlug, pageHref, siteNavigation, sitePages } from '../lib/catalog.js';
+
+const title = import.meta.env.PUBLIC_DOCS_TITLE ?? 'Documentation';
+const description = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
+const base = import.meta.env.BASE_URL;
+
+export function getStaticPaths() {
+	return sitePages.filter((d) => d.slug !== '' && d.slug !== '404').map((d) => ({
+		params: { slug: d.slug || undefined },
+		props: { slug: d.slug },
+	}));
+}
+
+const { slug = '' } = Astro.props;
+const currentPage = pageForSlug(slug);
+const Content = currentPage?.file.endsWith('.mdx') ? (currentPage.content as any) : undefined;
+const currentPath = pageHref(slug, base);
+const layoutProps = {
+	title,
+	homeHref: pageHref('', base),
+	description,
+	pageTitle: currentPage?.title,
+	hue: currentPage?.hue,
+	nodes: siteNavigation,
+	currentPath,
+	rootPath: pageHref('', base),
+	markdown: currentPage?.markdown ?? '',
+	searchBase: base,
+};
+---
+
+{currentPage ? (
+	<html lang="en">
+		<head>
+			<meta charset="utf-8" />
+			<meta name="viewport" content="width=device-width, initial-scale=1" />
+			{currentPage.description ? <meta name="description" content={currentPage.description} /> : description ? <meta name="description" content={description} /> : null}
+			<title>{currentPage.title} · {title}</title>
+		</head>
+		<body>
+			{Content ? (
+				<DocsSiteLayout {...layoutProps}>
+					<main class="docs-page-content"><Content /></main>
+				</DocsSiteLayout>
+			) : (
+				<DocsSiteLayout {...layoutProps} />
+			)}
+		</body>
+	</html>
+) : null}

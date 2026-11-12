@@ -1,7 +1,17 @@
+/**
+ * src/lib/terra/custom-components.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// TYPES
 import type { DocsCustomBlock } from '../host.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 /** Mutated in place by a host before the workspace renders. */
 export const components: DocsCustomBlock[] = [];
-export function setDocsCustomComponents(next: DocsCustomBlock[]): void {
-  components.splice(0, components.length, ...next);
-}

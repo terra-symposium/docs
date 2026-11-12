@@ -1,6 +1,6 @@
-// @ts-nocheck -- canonical website serializer, now isolated from host imports.
 /**
- * astro/src/actions/docs/content.ts
+ * src/lib/terra/runtime/content.ts
+ * Formerly astro/src/actions/docs/content.ts.
  * Shared helpers for normalizing and serializing docs content versions, syntax, and tables.
  */
 
@@ -12,6 +12,7 @@ IMPORTS
 import { createTrace } from './runtime.js';
 import { encodeNodesPayload } from './nodes.js';
 import { isEndpointVal } from './shared.js';
+import { stringifyCodeValue } from './content/markdown.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../regex.mjs';
@@ -20,8 +21,12 @@ import * as TerraQualityRegex from '../regex.mjs';
 import { TESTIMONIALS_EXPORT } from './shared.js';
 
 // TYPES
-import type { DocBlock, DocBody, DocTableCell } from './types.js';
-import type { DocsContentPtMarkDef as PtMarkDef, DocsContentPtSpan as PtSpan } from './types.js';
+import type {
+  DocBlock,
+  DocBody,
+  DocTableCell,
+  DocsContentPtMarkDef as PtMarkDef,
+} from './types.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -32,7 +37,7 @@ CONFIG
  *
  * @param val - Candidate value to narrow to a non-array record.
  *
- * @returns True when the value is a non-array object with own properties.
+ * @return True when the value is a non-array object with own properties.
  */
 const isRec = (val: unknown): val is Record<string, unknown> =>
   Boolean(val && typeof val === 'object' && !Array.isArray(val));
@@ -55,11 +60,25 @@ HELPERS
  *
  * @param val - Candidate Portable Text node to narrow to a text span.
  *
- * @returns True when the value is a Portable Text span node.
+ * @return True when the value is a Portable Text span node.
  */
-const ptText = (val: unknown): val is PtSpan => isRec(val) && val._type === 'span';
+const ptText = (
+  val: unknown,
+): val is {
+  _key?: string;
+  _type?: string;
+  marks?: string[];
+  text?: string;
+  [key: string]: unknown;
+} => isRec(val) && val._type === 'span';
 
-/** Narrows persisted mark definitions before the Markdown serializer reads link fields. */
+/**
+ * Keeps only persisted link marks that satisfy the serializer's expected field types.
+ *
+ * @param val Untrusted mark-definition data from stored Portable Text.
+ *
+ * @return Link definitions with a valid type and optional string key and URL.
+ */
 const ptMarkDefs = (val: unknown): PtMarkDef[] =>
   Array.isArray(val)
     ? val.filter(
@@ -78,7 +97,7 @@ const ptMarkDefs = (val: unknown): PtMarkDef[] =>
  * @param marks - Marks to apply in render order.
  * @param defs - Portable Text mark definitions.
  *
- * @returns Text wrapped in the mark syntax used by docs Markdown.
+ * @return Text wrapped in the mark syntax used by docs Markdown.
  */
 const renderMarks = (text: string, marks: string[], defs: PtMarkDef[]): string =>
   marks.reduce((a, m) => {
@@ -94,7 +113,7 @@ const renderMarks = (text: string, marks: string[], defs: PtMarkDef[]): string =
  *
  * @param val - Portable Text block or other persisted value whose list marker is inspected.
  *
- * @returns Stored list style, or an empty string when the block is not part of a list.
+ * @return Stored list style, or an empty string when the block is not part of a list.
  */
 const listKind = (val: unknown): string =>
   isRec(val) && typeof val.listItem === 'string' ? val.listItem : '';
@@ -102,18 +121,18 @@ const listKind = (val: unknown): string =>
 /**
  * Serializes a string literal so it can be embedded safely in JSX attributes.
  *
- * @param value - String literal to quote.
+ * @param val - String to encode as a JSX attribute literal.
  *
- * @returns A quoted string literal that can survive MDX parsing unchanged.
+ * @return A quoted string literal that can survive MDX parsing unchanged.
  */
 const quote = (val: string): string => JSON.stringify(val);
 
 /**
  * Escapes HTML control characters before text is embedded in serialized docs markup.
  *
- * @param value - HTML text to escape.
+ * @param val - Text to escape before embedding in HTML.
  *
- * @returns Text with HTML metacharacters escaped for serialization.
+ * @return Text with HTML metacharacters escaped for serialization.
  */
 const escHtml = (val: string): string =>
   val
@@ -128,7 +147,7 @@ const escHtml = (val: string): string =>
  *
  * @param val - Nested docs content or leaf payload.
  *
- * @returns Plain text recovered from the input.
+ * @return Plain text recovered from the input.
  */
 const bodyText = (val: unknown): string => {
   if (typeof val === 'string') return val;
@@ -149,197 +168,65 @@ BLOCK SYNTAX
 //////////////////////////////////////////////////*/
 
 /**
- * Registry of the custom accordion and tabs block syntaxes used in docs content.
- *
- * @remarks
- * The registry is intentionally tiny so the parser can stay predictable.
+ * Legacy JSX group wrappers found only in Portable Text records already persisted by Docs consumers.
+ * New and repository-owned content uses Markdown delimiters and never writes these wrappers.
  */
-const BLOCKS = [
-  {
-    id: 'accordion',
-    syntax: '===',
-    root: 'AccordionGroup',
-    item: 'AccordionItem',
-    label: 'Accordion',
-  },
-  { id: 'tabs', syntax: '|||', root: 'TabsGroup', item: 'TabsItem', label: 'Tabs' },
+const LEGACY_GROUPS = [
+  { syntax: '===', root: 'AccordionGroup', item: 'AccordionItem' },
+  { syntax: '|||', root: 'TabsGroup', item: 'TabsItem' },
 ] as const;
 
-/**
- * Handles docs editor mount ids.
- *
- * @param source - Source text containing the Docs blocks to parse.
- */
-export const docsEditorMountIds = (src: string): string[] => {
-  return [
-    'root',
-    ...Array.from(
-      toBlockJsx(src)
-        .replace(/```[\s\S]*?```/g, '')
-        .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), '')
-        .replace(
-          /<TabsGroup\b[^>]*>([\s\S]*?)<\/TabsGroup>/g,
-          (g, i: string) =>
-            `${g.slice(0, g.indexOf('>') + 1)}${i.match(/<TabsItem\b[\s\S]*?<\/TabsItem>/)?.[0] || ''}</TabsGroup>`,
-        )
-        .matchAll(/<(AccordionGroup|AccordionItem|TabsGroup|DocsTable|Nodes)\b/g),
-      (m) => `${m[1]}:${m.index}`,
-    ),
-  ];
-};
-
-/** Returns stable mount identifiers for every asynchronous Docs editor renderer. */
 /**
  * Separates compact tabs markers before they reach the line-based block parser.
  *
  * @param md - Markdown or MDX source containing docs block markers.
  *
- * @returns Source with tab labels, bodies, and adjacent delimiters on distinct lines.
+ * @return Source with tab labels, bodies, and adjacent delimiters on distinct lines.
  */
 const normBlockMarkers = (md: string): string =>
   md
-    .replace(/([^\n])[ \t]+(?=\|\|\|(?:[ \t]*(?:\|\|\||$)))/g, '$1\n\n')
-    .replace(/(\|\|\|[ \t]*\[[^\]\n]*\])[ \t]+(?=\S)/g, '$1\n\n')
-    .replace(/(^|\n)[ \t]*\|\|\|[ \t]+(?=\|\|\|[ \t]*\[)/gm, '$1|||\n\n');
+    .replace(TerraQualityRegex.REGEX_N_T_T_G_REGEX(), '$1\n\n')
+    .replace(TerraQualityRegex.REGEX_T_N_T_S_G_REGEX(), '$1\n\n')
+    .replace(TerraQualityRegex.REGEX_N_T_T_T_GM_REGEX(), '$1|||\n\n');
 
 /**
- * Rewrites the supported docs block markers into their JSX wrapper forms.
+ * Converts legacy JSX group wrappers from consumer-persisted content to canonical Markdown.
  *
- * @param md - Markdown or MDX source to normalize.
+ * @param jsx - Stored source that may contain legacy Docs JSX wrappers.
  *
- * @return Source where supported block markers have been rewritten to their JSX wrappers.
- *
- * @remarks
- * Only the supported block syntaxes are rewritten; everything else is preserved.
- */
-export function toBlockJsx(md: string): string {
-  if (!md) return '';
-  const code = new Map<string, string>();
-  const lns = normBlockMarkers(md)
-    .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), (m) => {
-      const key = `TERRA_CODE_${code.size}`;
-      code.set(key, m);
-      return key;
-    })
-    .replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), (m) => {
-      let res = '';
-      for (let i = 0; i < m.length; i++)
-        res +=
-          m[i] && ['{', '}', '<', '>'].includes(m[i]) && (i === 0 || m[i - 1] !== '\\')
-            ? '\\' + m[i]
-            : (m[i] ?? '');
-      return res;
-    })
-    .replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
-    .split(TerraQualityRegex.REGEX_R_N_REGEX());
-  const res: string[] = [];
-  let icode = false;
-  const grp = new Set<string>();
-  const itm = new Set<string>();
-  for (let i = 0; i < lns.length; i++) {
-    const line = lns[i];
-    const t = line.trimStart();
-    const tClean = t.trimEnd();
-    if (t.startsWith('```')) {
-      icode = !icode;
-      res.push(t);
-      continue;
-    }
-    if (icode) {
-      res.push(line);
-      continue;
-    }
-    const _m = BLOCKS.find((b) => tClean.startsWith(b.syntax));
-    if (_m) {
-      const rM = tClean.match(
-        new RegExp(
-          `^${_m.syntax.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}(?:\\s*\\[(.*?)\\])?$`,
-        ),
-      );
-      if (tClean === _m.syntax) {
-        if (itm.has(_m.item)) {
-          res.push('', `</${_m.item}>`);
-          itm.delete(_m.item);
-        }
-        let nIsSameGroup = false;
-        for (let j = i + 1; j < lns.length; j++) {
-          const nLine = lns[j]?.trim();
-          if (!nLine) continue;
-          if (nLine.startsWith(_m.syntax) && nLine !== _m.syntax) nIsSameGroup = true;
-          break;
-        }
-        if (!nIsSameGroup && grp.has(_m.label)) {
-          res.push(`</${_m.root}>`, '');
-          grp.delete(_m.label);
-        }
-      } else if (rM) {
-        if (itm.has(_m.item)) {
-          res.push('', `</${_m.item}>`);
-          itm.delete(_m.item);
-        }
-        if (!grp.has(_m.label)) {
-          res.push('', `<${_m.root}>`);
-          grp.add(_m.label);
-        }
-        res.push(`<${_m.item} title=${quote(rM?.[1] || 'Section')}>`, '');
-        itm.add(_m.item);
-      } else res.push(t);
-      continue;
-    }
-    res.push(line);
-  }
-  for (const label of grp) {
-    const b = BLOCKS.find((x) => x.label === label);
-    if (b) {
-      if (itm.has(b.item)) {
-        res.push('', `</${b.item}>`);
-        itm.delete(b.item);
-      }
-      res.push(`</${b.root}>`, '');
-    }
-  }
-  const n = res.join('\n');
-  return code.size
-    ? n.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), (k) => code.get(k) || k)
-    : n;
-}
-
-/**
- * Restores the custom docs JSX wrappers back to the markdown block syntax they came from.
- *
- * @param jsx - Canonical JSX source to restore.
- *
- * @return Markdown where supported docs JSX wrappers have been converted back to block syntax.
+ * @return Markdown with legacy group wrappers replaced by the canonical delimiters.
  *
  * @remarks
- * This is the inverse of `toBlockJsx` for the supported docs block shapes.
+ * This is an import compatibility path for pre-Markdown content already stored by external Docs hosts.
+ * New and repository-owned content is authored directly as Markdown.
  */
 export function fromBlockJsx(jsx: string): string {
   if (!jsx) return '';
   const code = new Map<string, string>();
   let _rs = toCodeJsx(jsx)
-    .replace(/<Code\b[\s\S]*?<\/Code>/g, (m) => {
+    .replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX_3(), (m) => {
       const key = `TERRA_CODE_${code.size}`;
       code.set(key, m);
       return key;
     })
-    .replace(/^\\?=\\?=\\?=/gm, '===')
-    .replace(/^\\?\|\\?\|\\?\|/gm, '|||')
-    .replace(/^\\?:\\?:\\?:/gm, ':::')
+    .replace(TerraQualityRegex.REGEX_GM_REGEX_3(), '===')
+    .replace(TerraQualityRegex.REGEX_GM_REGEX_2(), '|||')
+    .replace(TerraQualityRegex.REGEX_GM_REGEX(), ':::')
     .replace(
-      /^(===|\|\|\||\^\^\^|:::)[ \t]*\\?\[(.*?)\\?\]/gm,
-      (_m, p, c) => `${p}[${c.replace(/\\\]/g, ']').replace(/\\\[/g, '[')}]`,
+      TerraQualityRegex.REGEX_T_GM_REGEX(),
+      (_m, p, c) =>
+        `${p}[${c.replace(TerraQualityRegex.REGEX_G_REGEX_28(), ']').replace(TerraQualityRegex.REGEX_G_REGEX_27(), '[')}]`,
     );
   _rs = _rs
     .replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
     .replace(
-      /<DocsMath\b([\s\S]*?)code=(?:\{\s*("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)\s*\}|(["'])([\s\S]*?)\3)([\s\S]*?)\/>/gi,
+      TerraQualityRegex.REGEX_DOCSMATH_B_S_S_CODE_S_S_S_S_S_S_S_S_S_S_3_S_S_GI_REGEX(),
       (_m, p, e, _quote, s, v) => {
         // prettier-ignore
         const parsed = e
 					? e.startsWith('`')
 						? e.slice(1, -1).replace(TerraQualityRegex.REGEX_G_REGEX_15(), '`').replace(TerraQualityRegex.REGEX_G_REGEX_14(), '$').replace(TerraQualityRegex.REGEX_G_REGEX_13(), '\\')
-						: e.startsWith('"') ? JSON.parse(e.replace(TerraQualityRegex.REGEX_N_G_REGEX_3(), '\\n')) : e.slice(1, -1).replace(/\\([`'"])/g, '$1')
+						: e.startsWith('"') ? JSON.parse(e.replace(TerraQualityRegex.REGEX_N_G_REGEX_3(), '\\n')) : e.slice(1, -1).replace(TerraQualityRegex.REGEX_G_REGEX_26(), '$1')
 					: s;
         return TerraQualityRegex.REGEX_BINLINE_B_I_REGEX().test(p) ||
           TerraQualityRegex.REGEX_BINLINE_B_I_REGEX().test(v)
@@ -348,10 +235,17 @@ export function fromBlockJsx(jsx: string): string {
       },
     )
     .replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), (_m) =>
-      _m.replace(/\\\{/g, '{').replace(/\\\}/g, '}').replace(/\\</g, '<').replace(/\\>/g, '>'),
+      _m
+        .replace(TerraQualityRegex.REGEX_G_REGEX_29(), '{')
+        .replace(TerraQualityRegex.REGEX_G_REGEX_30(), '}')
+        .replace(TerraQualityRegex.REGEX_G_REGEX_31(), '<')
+        .replace(TerraQualityRegex.REGEX_G_REGEX_32(), '>'),
     );
   _rs = _rs
-    .replace(/(<\/?(?:AccordionGroup|TabsGroup|AccordionItem|TabsItem)\b[^>]*>)/g, '\n$1\n')
+    .replace(
+      TerraQualityRegex.REGEX_ACCORDIONGROUP_TABSGROUP_ACCORDIONITEM_TABSITEM_B_G_REGEX(),
+      '\n$1\n',
+    )
     .replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
   if (code.size)
     _rs = _rs.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), (k) => code.get(k) || k);
@@ -364,7 +258,7 @@ export function fromBlockJsx(jsx: string): string {
     const t = raw.trimStart();
     if (t.startsWith('```')) {
       icode = !icode;
-      if (icode) pad = raw.match(/^[ \t]*/)?.[0] || '';
+      if (icode) pad = raw.match(TerraQualityRegex.REGEX_T_REGEX())?.[0] || '';
       out.push(t);
       continue;
     }
@@ -372,16 +266,16 @@ export function fromBlockJsx(jsx: string): string {
       out.push(raw.startsWith(pad) ? raw.slice(pad.length) : t);
       continue;
     }
-    if (BLOCKS.find((b) => t === `<${b.root}>`)) {
+    if (LEGACY_GROUPS.find((b) => t === `<${b.root}>`)) {
       out.push('');
       continue;
     }
-    if (BLOCKS.find((b) => t === `</${b.root}>`)) {
+    if (LEGACY_GROUPS.find((b) => t === `</${b.root}>`)) {
       out.push('');
       continue;
     }
     if (
-      BLOCKS.find((b) => {
+      LEGACY_GROUPS.find((b) => {
         const match = t.match(new RegExp(`^<${b.item}\\b[^>]*title="([^"]*)"[^>]*>$`));
         if (!match) return false;
         out.push(`\n\n${b.syntax}[${match[1] || 'Section'}]\n\n`);
@@ -389,7 +283,7 @@ export function fromBlockJsx(jsx: string): string {
       })
     )
       continue;
-    const itemClose = BLOCKS.find((b) => t === `</${b.item}>`);
+    const itemClose = LEGACY_GROUPS.find((b) => t === `</${b.item}>`);
     if (itemClose) {
       out.push(`\n\n${itemClose.syntax}\n\n`);
       continue;
@@ -398,11 +292,11 @@ export function fromBlockJsx(jsx: string): string {
       out.push('');
       continue;
     }
-    if (/^(===|\|\|\||\^\^\^|:::)/.test(t)) {
+    if (TerraQualityRegex.REGEX_PATTERN_REGEX_5().test(t)) {
       out.push(t);
       continue;
     }
-    out.push(raw.replace(/^[ \t]{1,8}/, ''));
+    out.push(raw.replace(TerraQualityRegex.REGEX_T_1_8_REGEX(), ''));
   }
   return (
     /* prettier-ignore */ out.join('\n').replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n').trim() + '\n'
@@ -416,46 +310,12 @@ CODE SYNTAX
 /**
  * Emits the optional language attribute used by serialized code fences.
  *
- * @param language - Code fence language label.
+ * @param lang Code fence language label.
  *
- * @returns `language` attribute when the fence declares one, otherwise an empty string.
+ * @return A quoted `language` attribute for a non-empty label, otherwise an empty string.
  */
 const codeAttrs = (lang?: string): string =>
   lang?.trim() ? ` language=${JSON.stringify(lang.trim())}` : '';
-
-/**
- * Converts any code payload into a printable string before it is written into docs markup.
- *
- * @param val - Any code-like value to stringify.
- *
- * @return Printable code string used by the markdown and MDX serializers.
- *
- * @remarks
- * Prefers compact primitives and pretty-prints structured values.
- */
-export function stringifyCodeValue(val: unknown): string {
-  if (typeof val === 'string') {
-    let n = val;
-    for (let i = 0; i < 16; i++) {
-      const match = n.match(/^\s*\{`([\s\S]*)`}\s*$/);
-      if (!match) break;
-      const unwrapped = match[1]
-        .replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1')
-        .replace(TerraQualityRegex.REGEX_N_G_REGEX_2(), '\n');
-      if (unwrapped === n) break;
-      n = unwrapped;
-    }
-    return n.replace(/\\r\\n|\\n|\\r/g, (m) => (m === '\\r' ? '\r' : '\n'));
-  }
-  if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'bigint')
-    return String(val);
-  if (val == null) return '';
-  try {
-    return JSON.stringify(val, null, 2);
-  } catch {
-    return String(val);
-  }
-}
 
 /**
  * Serializes fenced code into the canonical `<Code>` JSX used by docs content.
@@ -475,10 +335,12 @@ ${val.replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQuality
 }
 
 /**
- * Handles code src jsx.
+ * Emits a self-closing Code component for a code block loaded from a source endpoint.
  *
  * @param lang - Code language label used for the generated code block.
  * @param src - Source code text to wrap in the code block.
+ *
+ * @return Canonical `Code` JSX with its source URL encoded as an attribute.
  */
 export const codeSrcJsx = (lang: string | undefined, src: string): string =>
   `\n<Code${codeAttrs(lang)} source=${quote(src)} />\n`;
@@ -525,27 +387,11 @@ export function toCodeJsx(src: string): string {
   res = protectMarkupBlocks(res, 'Code', blocks);
   if (res.includes('<pre><code'))
     res = res.replace(
-      /<pre><code(?:\s+class="language-([^"]+)")?>([\s\S]*?)<\/code><\/pre>/gi,
+      TerraQualityRegex.REGEX_PRE_CODE_S_CLASS_LANGUAGE_S_S_CODE_PRE_GI_REGEX(),
       (_, l: string, v: string) => codeJsx(l || '', v),
     );
-  if (/<(?:td|th)\b[^>]*>\s*<code\b/i.test(res))
-    res = res.replace(
-      /<(t[dh])(\b[^>]*)>\s*<code(?:\s+class="language-([^"]+)")?>([\s\S]*?)<\/code>\s*<\/\1>/gi,
-      (_, t: string, a: string, l: string, v: string) =>
-        `<${t}${a}>${codeJsx(
-          l || '',
-          v
-            .replace(/&#10;/g, '\n')
-            .replace(/&#13;/g, '\r')
-            .replace(TerraQualityRegex.REGEX_QUOT_G_REGEX(), '"')
-            .replace(/&#39;/g, "'")
-            .replace(TerraQualityRegex.REGEX_AMP_G_REGEX(), '&')
-            .replace(TerraQualityRegex.REGEX_LT_G_REGEX(), '<')
-            .replace(TerraQualityRegex.REGEX_GT_G_REGEX(), '>'),
-        )}</${t}>`,
-    );
   res = res.replace(
-    /<Code\b([\s\S]*?)\s+code=(?:"([\s\S]*?)"|\{`((?:\\.|[^`])*?)`\})\s*\/>/g,
+    TerraQualityRegex.REGEX_CODE_B_S_S_S_CODE_S_S_S_G_REGEX(),
     (_match, p, q, e) => {
       return `<Code${p} source=${quote(e !== undefined ? e.replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1') : q)} />`;
     },
@@ -560,10 +406,10 @@ TABLE HTML
 /**
  * Removes the outer `|` characters from a pipe-table row while respecting escaped pipes.
  *
- * @param value - Pipe-delimited text to trim.
+ * @param val Pipe-delimited text to trim.
  * @param side - Side of the pipe to trim.
  *
- * @returns Row fragment with the requested outer pipe removed.
+ * @return Row fragment with the requested unescaped outer pipe removed.
  */
 const trimPipe = (val: string, side: 'start' | 'end'): string => {
   if (side === 'start' && val.startsWith('|')) return val.slice(1);
@@ -581,7 +427,7 @@ const trimPipe = (val: string, side: 'start' | 'end'): string => {
  * @param md - Table markdown to render.
  * @param renderCell - Cell renderer used for each value.
  *
- * @returns HTML table markup when the input is a valid pipe table, otherwise `null`.
+ * @return HTML table markup when the input is a valid pipe table, otherwise `null`.
  *
  * @remarks
  * Callers can supply a custom cell renderer to preserve nested markdown or JSX.
@@ -592,11 +438,11 @@ export const mdTableToHtml = (
 ): string | null => {
   const lines = md.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').trim().split('\n');
   if (lines.length < 2 || lines.some((l) => !l.trim())) return null;
-  const rows = lines.map((line) => {
+  const rows = lines.map((l) => {
     const cells: string[] = [];
     let cell = '';
     let esc = false;
-    for (const ch of trimPipe(trimPipe(line.trim(), 'start'), 'end')) {
+    for (const ch of trimPipe(trimPipe(l.trim(), 'start'), 'end')) {
       if (esc) {
         cell += ch;
         esc = false;
@@ -616,17 +462,22 @@ export const mdTableToHtml = (
     cells.push(cell.trim());
     return cells;
   });
-  const width = rows[0]?.length || 0;
+  const header = rows[0];
+  const width = header?.length || 0;
   if (
+    !header ||
     !width ||
     rows.some((r) => r.length !== width) ||
-    !rows[1]?.every((val) => /^:?-{3,}:?$/u.test(val.trim()))
+    !rows[1]?.every((v) => TerraQualityRegex.REGEX_3_U_REGEX().test(v.trim()))
   )
     return null;
 
   // prettier-ignore
   const body = rows.slice(2).map(r => `<tr>${r.map(c => `<td>${renderCell(c)}</td>`).join('')}</tr>`).join('');
-  return `<table><thead><tr>${/* prettier-ignore */ rows[0].map(renderCell).map(c => `<th>${c}</th>`).join('')}</tr></thead>${body ? `<tbody>${body}</tbody>` : ''}</table>`;
+  return `<table><thead><tr>${header
+    .map(renderCell)
+    .map((c) => `<th>${c}</th>`)
+    .join('')}</tr></thead>${body ? `<tbody>${body}</tbody>` : ''}</table>`;
 };
 
 /*//////////////////////////////////////////////////
@@ -636,25 +487,26 @@ CONTENT SERIALIZATION
 /**
  * Converts plain markdown into HTML for the serializer's fallback path.
  *
- * @param value - Markdown source to parse.
+ * @param val Markdown source to parse.
  *
- * @returns Rendered HTML string used when markdown does not map to richer docs blocks.
+ * @return HTML for code, links, emphasis, and paragraph breaks in the fallback path.
  */
 const renderMd = (val: string): string => {
   const text = val.trim();
   if (!text) return '';
-  const code = text.match(/^```([^\n`]*)\n([\s\S]*?)\n```$/);
+  const code = text.match(TerraQualityRegex.REGEX_N_N_S_S_N_REGEX());
   if (code)
     return `<pre><code${code[1]?.trim() ? ` class="language-${escHtml(code[1].trim())}"` : ''}>${escHtml(code[2] || '')}</code></pre>`;
   const codes: string[] = [];
-  const lines = text.split(/\n{2,}/);
-  let html = escHtml(text)
-    .replace(/`([^`]+)`/g, (_, c: string) => {
+  const lines = text.split(TerraQualityRegex.REGEX_N_2_REGEX());
+  let html = escHtml(
+    text.replace(TerraQualityRegex.REGEX_G_REGEX_34(), (_, c: string) => {
       codes.push(`<code>${escHtml(c)}</code>`);
       return `__CODE_${codes.length - 1}__`;
-    })
+    }),
+  )
     .replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
+      TerraQualityRegex.REGEX_G_REGEX_25(),
       (_, l: string, h: string) => `<a href="${escHtml(h)}">${l}</a>`,
     )
     .replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
@@ -671,71 +523,61 @@ const renderMd = (val: string): string => {
 };
 
 /**
- * Handles strip nested anchors.
- *
- * @param val - Table cell markup to sanitize before it is embedded in a Docs table.
- */
-export const stripNestedAnchors = (val: string): string =>
-  val
-    .replace(/<a([^>]*)>\s*<a[^>]*>([\s\S]*?)<\/a>\s*<\/a>/gi, '<a$1>$2</a>')
-    .replace(/\[\[([^\]]+)\]\(([^)]+)\)\]\(\2\)/g, '[$1]($2)');
-
-/**
- * Handles sanitize table html.
+ * Removes inline style attributes that are not part of serialized table content.
  *
  * @param val - Table markup whose inline styles should be removed.
+ *
+ * @return The same table markup without editor-only style attributes.
  */
 export const sanitizeTableHtml = (val: string): string =>
   val
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
-    .replace(/\sstyle\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    .replace(TerraQualityRegex.REGEX_STYLE_B_S_S_STYLE_S_GI_REGEX(), '')
+    .replace(TerraQualityRegex.REGEX_SSTYLE_S_S_S_GI_REGEX(), '');
 
 /**
  * Formats raw table HTML with consistent indentation so docs tables round-trip cleanly.
  *
- * @param value - Table HTML to format.
+ * @param val Table HTML to format.
  *
- * @returns Formatted table HTML string with stable indentation.
+ * @return The input when it is not a table, or normalized indentation for table markup.
  */
 const fmtRawTable = (val: string): string => {
   if (!TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
   let depth = 0;
   return val
-    .replace(/\s*\n\s*/g, ' ')
-    .replace(/(<(?:td|th)\b[^>]*>)\s+(?=<(?:p|ul|ol|table|pre|div)\b)/gi, '$1')
-    .replace(/(<\/(?:th|td)>)\s*(?=<(?:th|td)\b)/gi, '$1\n')
-    .replace(/(<\/(?:p|ul|ol|pre|div)>)\s*(?=<\/td>)/gi, '$1')
-    .replace(/(<\/li>)\s*(?=<li\b)/gi, '$1\n')
-    .replace(/(<\/?(?:table|thead|tbody|tfoot|tr|ul|ol)\b[^>]*>)/gi, '\n$1\n')
+    .replace(TerraQualityRegex.REGEX_S_N_S_G_REGEX(), ' ')
+    .replace(TerraQualityRegex.REGEX_TD_TH_B_S_P_UL_OL_TABLE_PRE_DIV_B_GI_REGEX(), '$1')
+    .replace(TerraQualityRegex.REGEX_TH_TD_S_TH_TD_B_GI_REGEX(), '$1\n')
+    .replace(TerraQualityRegex.REGEX_P_UL_OL_PRE_DIV_S_TD_GI_REGEX(), '$1')
+    .replace(TerraQualityRegex.REGEX_LI_S_LI_B_GI_REGEX(), '$1\n')
+    .replace(TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_UL_OL_B_GI_REGEX(), '\n$1\n')
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean)
     .map((l) => {
-      if (/^<\/(?:table|thead|tbody|tfoot|tr|th|td|ul|ol)\b[^>]*>$/iu.test(l))
+      if (TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_UL_OL_B_IU_REGEX_2().test(l))
         depth = Math.max(0, depth - 1);
-      if (/^<(?:table|thead|tbody|tfoot|tr|th|td|ul|ol)\b[^>]*>$/iu.test(l)) depth++;
+      if (TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_UL_OL_B_IU_REGEX().test(l))
+        depth++;
       return `${'\t'.repeat(depth)}${l}`;
     })
     .join('\n');
 };
 
 /** Identifies complete canonical HTML table markup. */
-export const TABLE_TAG = /<\/?(?:table|thead|tbody|tfoot|tr|th|td)\b/i;
+export const TABLE_TAG = TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_B_I_REGEX();
 
 /**
- * Handles atomic table html.
+ * Removes editor-only styles and surrounding whitespace from a table source block.
  *
  * @param val - Complete table markup captured from a Docs source block.
+ *
+ * @return Trimmed markup without style attributes.
  */
 const atomicTableHtml = (val: string): string => {
   return sanitizeTableHtml(val).trim();
 };
 
-/**
- * Handles fmt raw tables.
- *
- * @param source - Source text containing markup blocks to protect during normalization.
- */
 /**
  * Replaces complete literal markup blocks without scanning past an unclosed legacy tag.
  *
@@ -743,7 +585,7 @@ const atomicTableHtml = (val: string): string => {
  * @param tag - Literal JSX or HTML tag name to protect.
  * @param blocks - Protected block collection restored after spacing normalization.
  *
- * @returns Source with complete matching blocks substituted by stable placeholders.
+ * @return Source with complete matching blocks substituted by stable placeholders.
  *
  * @remarks
  * Legacy leaves can contain an incomplete opening tag; `indexOf` leaves that text untouched rather than allowing a regex to consume the rest of the document.
@@ -769,7 +611,7 @@ const protectMarkupBlocks = (src: string, tag: string, blocks: string[]): string
  *
  * @param src - Markdown or MDX source to normalize.
  *
- * @returns Source with headings and block delimiters separated onto their own lines.
+ * @return Source with headings and block delimiters separated onto their own lines.
  */
 export const normDocsSpacing = (src: string): string => {
   if (!src) return '';
@@ -777,10 +619,7 @@ export const normDocsSpacing = (src: string): string => {
   let n = protectMarkupBlocks(
     protectMarkupBlocks(
       normBlockMarkers(
-        toCodeJsx(src).replace(
-          /(<Code\b[^>]*>\s*\{`(?:\\.|[^`])*`\})(?!\s*<\/Code>)/g,
-          '$1\n</Code>',
-        ),
+        toCodeJsx(src).replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX_2(), '$1\n</Code>'),
       ),
       'Code',
       blocks,
@@ -790,19 +629,16 @@ export const normDocsSpacing = (src: string): string => {
   );
   for (let i = 0; i < 4; i++) {
     n = n
-      .replace(/([^\n])\s+(?=(?:#{1,6}\s+|===|\|\|\||:::(?![A-Za-z])))/g, '$1\n\n')
-      .replace(/([^\n])\s+(?=:::[A-Za-z])/g, '$1\n\n')
-      .replace(
-        /^(?:===|\|\|\||:::[A-Za-z][\w-]*)(?:\[[^\]]*\])?\s+(?=\S)/gm,
-        (m) => `${m.trimEnd()}\n\n`,
-      )
-      .replace(/([^\n])\s+(?=(?:[*-]|\d+\.)\s)/g, '$1\n')
-      .replace(/([^\n])\n(?=<table\b)/g, '$1\n\n')
-      .replace(/([^\n])\n(?=<Code\b)/g, '$1\n\n')
-      .replace(/([^\n])\n(?=:::(?!:))/g, '$1\n\n')
-      .replace(/^(:::[A-Za-z][\w-]*(?:\[[^\]]*\])?)\s+(.+)$/gm, '$1\n\n$2')
-      .replace(/^:::\s+(.+)$/gm, ':::\n\n$1')
-      .replace(/([^\n])\s+(?=:::(?![A-Za-z]))/g, '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_N_S_1_6_S_A_ZA_Z_G_REGEX(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_N_S_A_ZA_Z_G_REGEX_2(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_A_ZA_Z_W_S_S_GM_REGEX(), (m) => `${m.trimEnd()}\n\n`)
+      .replace(TerraQualityRegex.REGEX_N_S_D_S_G_REGEX(), '$1\n')
+      .replace(TerraQualityRegex.REGEX_N_N_TABLE_B_G_REGEX(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_N_N_CODE_B_G_REGEX(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_N_N_G_REGEX(), '$1\n\n')
+      .replace(TerraQualityRegex.REGEX_A_ZA_Z_W_S_GM_REGEX(), '$1\n\n$2')
+      .replace(TerraQualityRegex.REGEX_S_GM_REGEX(), ':::\n\n$1')
+      .replace(TerraQualityRegex.REGEX_N_S_A_ZA_Z_G_REGEX(), '$1\n\n')
       .replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
     if (n === n) break;
   }
@@ -827,17 +663,20 @@ export const normDocsSpacing = (src: string): string => {
     .lines.join('\n')
     .split('\n')
     .flatMap((l) => {
-      const heading = l.match(/^(#{1,6}\s+)(.+)$/);
+      const heading = l.match(TerraQualityRegex.REGEX_1_6_S_REGEX());
       if (!heading) return [l];
-      const words = heading[2].trim().split(TerraQualityRegex.REGEX_S_REGEX_2()).filter(Boolean);
+      const words = (heading[2] ?? '')
+        .trim()
+        .split(TerraQualityRegex.REGEX_S_REGEX_2())
+        .filter(Boolean);
       if (words.length < 2) return [l];
       let cap = 0;
       for (const word of words) {
-        if (/^[A-Z0-9]/.test(word)) cap++;
+        if (TerraQualityRegex.REGEX_A_Z0_9_REGEX().test(word)) cap++;
         else break;
       }
       if (cap < 2) return [l];
-      if (!words.slice(cap).some((w) => /[a-z]/.test(w))) return [l];
+      if (!words.slice(cap).some((w) => TerraQualityRegex.REGEX_A_Z_REGEX().test(w))) return [l];
       return [
         `${heading[1]}${words.slice(0, Math.max(1, cap - 1)).join(' ')}`,
         '',
@@ -848,12 +687,12 @@ export const normDocsSpacing = (src: string): string => {
     .replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
   return blocks
     .reduceRight((o, b, i) => o.replace(new RegExp(`TERRA_PROTECTED_${i}__`, 'g'), b), n)
-    .replace(/(<\/Code>)[ \t]*(\d+)(?=\s|$)/g, '$1')
-    .replace(/(<\/Code>)\n+\s*(\d+)\s*(?=\n|$)/g, '$1')
+    .replace(TerraQualityRegex.REGEX_CODE_T_D_S_G_REGEX(), '$1')
+    .replace(TerraQualityRegex.REGEX_CODE_N_S_D_S_N_G_REGEX(), '$1')
     .replace(
-      /^(#{1,6})[ \t]*\n[ \t]*(?:\n[ \t]*)?(\d+\.\s+\S[^\n]*)/gm,
+      TerraQualityRegex.REGEX_1_6_T_N_T_N_T_D_S_S_N_GM_REGEX(),
       (m, h: string, i: string, o: number, v: string) =>
-        /^\n\s*\d+\.\s/.test(v.slice(o + m.length)) ? m : `${h} ${i}`,
+        TerraQualityRegex.REGEX_N_S_D_S_REGEX().test(v.slice(o + m.length)) ? m : `${h} ${i}`,
     )
     .trim();
 };
@@ -863,7 +702,7 @@ export const normDocsSpacing = (src: string): string => {
  *
  * @param rows - Table rows to serialize.
  *
- * @returns HTML table markup for the stored Portable Text rows.
+ * @return HTML table markup for the stored Portable Text rows.
  */
 const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
   /**
@@ -872,18 +711,23 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
    * @param row - Table row to render.
    * @param tag - Cell tag to emit for the row.
    *
-   * @returns Table row markup for the rendered header or body row.
+   * @return Table row markup for the rendered header or body row.
    */
   const renderRow = (row: { cells: DocTableCell[] }, tag: 'th' | 'td'): string => {
     return `\t<tr>\n${(Array.isArray(row.cells) ? row.cells : [])
-      .map((cell) => {
+      .map((c) => {
         let html: string;
-        if (cell.html?.trim())
-          html = sanitizeTableHtml(stripNestedAnchors(cell.html.trim()))
+        if (c.html?.trim())
+          html = sanitizeTableHtml(
+            c.html
+              .trim()
+              .replace(TerraQualityRegex.REGEX_A_S_A_S_S_A_S_A_GI_REGEX(), '<a$1>$2</a>')
+              .replace(TerraQualityRegex.REGEX_2_G_REGEX(), '[$1]($2)'),
+          )
             .replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
             .replace(TerraQualityRegex.REGEX_N_G_REGEX(), '$1<em>$2</em>$3');
         else {
-          const body = stringifyDocBody(cell.content).trim();
+          const body = stringifyDocBody(c.content).trim();
           if (TerraQualityRegex.REGEX_CODE_B_S_S_CODE_REGEX().test(body)) html = body;
           else {
             const table = body ? mdTableToHtml(body, renderMd) : null;
@@ -893,28 +737,30 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
                 TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(body) ? body : renderMd(body),
               );
             else {
-              const md = fromBlockJsx(cell.markdown || '').trim();
+              const md = fromBlockJsx(c.markdown || '').trim();
               const fallback = mdTableToHtml(md, renderMd);
               if (fallback) html = sanitizeTableHtml(fallback);
               else if (TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(md))
                 html = sanitizeTableHtml(md);
               else {
-                const text =
-                  bodyText(cell.content) || bodyText(cell.markdown) || bodyText(cell.html);
+                const text = bodyText(c.content) || bodyText(c.markdown) || bodyText(c.html);
                 html = text ? sanitizeTableHtml(renderMd(text)) : '';
               }
             }
           }
         }
-        if (html.includes('\n') || /<(?:p|ul|ol|table|pre|div)\b/i.test(html)) {
+        if (
+          html.includes('\n') ||
+          TerraQualityRegex.REGEX_P_UL_OL_TABLE_PRE_DIV_B_I_REGEX().test(html)
+        ) {
           let depth = 0;
           return `\t\t<${tag}>\n${html
             .split(TerraQualityRegex.REGEX_R_N_REGEX())
             .map((l) => l.trim())
             .filter(Boolean)
             .map((l) => {
-              if (/^<\//u.test(l)) depth = Math.max(0, depth - 1);
-              if (/^<(?:ul|ol|table)\b[^>]*>$/u.test(l)) depth++;
+              if (TerraQualityRegex.REGEX_U_REGEX().test(l)) depth = Math.max(0, depth - 1);
+              if (TerraQualityRegex.REGEX_UL_OL_TABLE_B_U_REGEX().test(l)) depth++;
               return `${'\t'.repeat(depth + 3)}${l}`;
             })
             .join('\n')}\n\t\t</${tag}>\n`;
@@ -935,7 +781,7 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
  * @param body - Body content to process.
  * @param md - Markdown source to parse.
  *
- * @returns Serialized docs source, falling back to the original markdown when body content is empty.
+ * @return Serialized docs source, falling back to the original markdown when body content is empty.
  */
 const nestedMd = (body: DocBody | null | undefined, md = ''): string => {
   const content = stringifyDocBody(body).trim();
@@ -949,7 +795,7 @@ const nestedMd = (body: DocBody | null | undefined, md = ''): string => {
  * @param block - Block record to normalize.
  * @param number - Ordered list number for nested list items.
  *
- * @returns Serialized block Markdown, or an empty string when the block cannot be rendered safely.
+ * @return Serialized block Markdown, or an empty string when the block cannot be rendered safely.
  */
 const sBlockMd = (block: unknown, number = 1): string => {
   try {
@@ -972,7 +818,7 @@ const sBlockMd = (block: unknown, number = 1): string => {
  * @param b - Portable Text block to serialize.
  * @param number - Ordered list number for nested list items.
  *
- * @returns Markdown string for the supplied block, including nested custom syntax when present.
+ * @return Markdown string for the supplied block, including nested custom syntax when present.
  */
 const blockMd = (b: DocBlock, number = 1): string => {
   if (b._type === 'block') {
@@ -1041,7 +887,7 @@ const blockMd = (b: DocBlock, number = 1): string => {
         })
         .join(' ')} />\n`;
     case 'heading':
-      return `\n${'#'.repeat(b.depth)} ${b.text}\n`;
+      return `\n${'#'.repeat(b.depth ?? 1)} ${b.text}\n`;
     case 'docImage':
       return `\n![${b.alt}](${b.url}${b.title ? ` "${b.title}"` : ''})\n`;
     case 'math':
@@ -1071,25 +917,26 @@ const blockMd = (b: DocBlock, number = 1): string => {
 };
 
 /**
- * Prefers editor-formatted body content, then falls back to markdown restored from custom blocks.
+ * Escapes template-literal delimiters in embedded DocsTable HTML so the markup is preserved in JSX.
  *
- * @param body - Body content to process.
- * @param md - Markdown source to parse.
+ * @param md - Markdown source that may contain DocsTable HTML templates.
  *
- * @returns Editor Markdown source, using canonical JSX wrappers for nested blocks.
+ * @return Source with DocsTable HTML values escaped for canonical JSX attributes.
  */
 const escDocsTableTemplates = (md: string): string =>
   md.replace(
-    /<DocsTable\b[\s\S]*?html=\{`([\s\S]*?)`\}\s*\/>/g,
+    TerraQualityRegex.REGEX_DOCSTABLE_B_S_S_HTML_S_S_S_G_REGEX(),
     (_match, h: string) =>
-      `<DocsTable html={\`${h.replace(/(?<!\\)`/g, '\\`').replace(/(?<!\\)\$\{/g, '\\${')}\`} />`,
+      `<DocsTable html={\`${h.replace(TerraQualityRegex.REGEX_G_REGEX_21(), '\\`').replace(TerraQualityRegex.REGEX_G_REGEX_19(), '\\${')}\`} />`,
   );
 
 /**
- * Handles editor nested md.
+ * Serializes nested editor content while restoring protected table and rich-block markup.
  *
  * @param body - Structured body used as the serialization source.
  * @param markdown - Markdown fallback used when structured content is unavailable.
+ *
+ * @return Nested source reconstructed from the body, or the supplied Markdown fallback.
  */
 const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string => {
   const tables: string[] = [];
@@ -1097,10 +944,44 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
     (n, t, i) => n.replace(`TERRA_EDITOR_TABLE_${i}`, t),
     escDocsTableTemplates(
       Array.isArray(body) && body.length > 0
-        ? stringifyEditorContentBody(body)
+        ? (() => {
+            trace('serialize.editor.start', { blocks: body.length });
+            void {
+              length: body.length,
+              firstTypes: body
+                .slice(0, 6)
+                .map((b) => (isRec(b) && typeof b._type === 'string' ? b._type : typeof b)),
+            };
+            let md = '';
+            let number = 1;
+            for (let i = 0; i < body.length; i++) {
+              const block = body[i];
+              if (!block) continue;
+              const listNumber =
+                listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
+              const text = editorBlockMd(block, listNumber).trim();
+              void {
+                index: i,
+                type: isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
+                textLength: text.length,
+                textHead: text.slice(0, 120),
+              };
+              if (!text) continue;
+              number = listNumber;
+              if (md) {
+                const prevList = listKind(body[i - 1]);
+                const currList = listKind(block);
+                md += prevList && currList && prevList === currList ? '\n' : '\n\n';
+              }
+              md += text;
+            }
+            const source = escDocsTableTemplates(normDocsSpacing(md));
+            trace('serialize.editor.complete', { length: source.length });
+            return source;
+          })()
         : fromBlockJsx(markdown || '').trim(),
     )
-      .replace(/<DocsTable\s+html=\{`(?:\\.|[^`])*`\}\s*\/>/g, (m) => {
+      .replace(TerraQualityRegex.REGEX_DOCSTABLE_S_HTML_S_G_REGEX(), (m) => {
         tables.push(m);
         return `TERRA_EDITOR_TABLE_${tables.length - 1}`;
       })
@@ -1117,7 +998,7 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
  *
  * @param b - Problem block record to serialize.
  *
- * @returns `ProblemBlock` JSX wrapper, or fallback Markdown when serialization fails.
+ * @return `ProblemBlock` JSX wrapper, or fallback Markdown when serialization fails.
  */
 const problemBlockMd = (b: Record<string, unknown>): string => {
   try {
@@ -1135,7 +1016,7 @@ const problemBlockMd = (b: Record<string, unknown>): string => {
  * @param number - Ordered list number for nested list items.
  * @param mode - Output mode to switch between docs and problem formatting.
  *
- * @returns Editor Markdown block, with tables and problem blocks kept in editor-safe JSX.
+ * @return Editor Markdown block, with tables and problem blocks kept in editor-safe JSX.
  */
 const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs'): string => {
   if (b._type === 'block') {
@@ -1171,9 +1052,13 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
     case 'accordion':
     case 'tabs': {
       if (mode === 'problem') return problemBlockMd({ ...b });
-      const root = b._type === 'tabs' ? 'TabsGroup' : 'AccordionGroup';
-      const item = b._type === 'tabs' ? 'TabsItem' : 'AccordionItem';
-      return `<${root}>\n\n${(Array.isArray(b.items) ? b.items : []).map((e) => `<${item} title=${quote(e.title || 'Section')}>\n\n${editorNestedMd(e.content, e.markdown || '')}\n\n</${item}>`).join('\n\n')}\n\n</${root}>`;
+      const syntax = b._type === 'tabs' ? '|||' : '===';
+      return (Array.isArray(b.items) ? b.items : [])
+        .map((i) => {
+          const content = editorNestedMd(i.content, i.markdown || '').trim();
+          return `${syntax}[${i.title || 'Section'}]\n\n${content ? `${content}\n\n` : ''}${syntax}`;
+        })
+        .join('\n\n');
     }
     case 'callout': {
       const content = editorNestedMd(b.content, b.markdown || '');
@@ -1217,7 +1102,7 @@ EXPORTS
  *
  * @param body - Structured docs content to serialize.
  *
- * @returns Markdown or MDX source for the provided body, or an empty string for empty input.
+ * @return Markdown or MDX source for the provided body, or an empty string for empty input.
  *
  * @remarks
  * Empty bodies return an empty string so callers can short-circuit easily.
@@ -1259,55 +1144,11 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
 };
 
 /**
- * Stringifies the Editor Content Body for the docs.
- *
- * @param body - Structured docs content to serialize.
- *
- * @returns MDX source that MDXEditor can reopen without delimiter-rewrite drift.
- *
- * @remarks
- * Accordions, tabs, and tables are emitted as explicit JSX so nested HTML never relies on regex block rewriting.
- */
-export const stringifyEditorContentBody = (body: DocBody | null | undefined): string => {
-  trace('serialize.editor.start', { blocks: Array.isArray(body) ? body.length : 0 });
-  if (!Array.isArray(body) || body.length === 0) return '';
-  void {
-    length: body.length,
-    firstTypes: body
-      .slice(0, 6)
-      .map((b) => (isRec(b) && typeof b._type === 'string' ? b._type : typeof b)),
-  };
-  let md = '';
-  let number = 1;
-  for (let i = 0; i < body.length; i++) {
-    const block = body[i];
-    const listNumber =
-      listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
-    const text = editorBlockMd(block, listNumber).trim();
-    void {
-      index: i,
-      type: isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
-      textLength: text.length,
-      textHead: text.slice(0, 120),
-    };
-    if (!text) continue;
-    number = listNumber;
-    if (md) {
-      const prevList = listKind(body[i - 1]);
-      const currList = listKind(block);
-      md += prevList && currList && prevList === currList ? '\n' : '\n\n';
-    }
-    md += text;
-  }
-  const src = escDocsTableTemplates(normDocsSpacing(md));
-  trace('serialize.editor.complete', { length: src.length });
-  return src;
-};
-
-/**
- * Handles stringify problem editor content body.
+ * Serializes a problem editor body using the platform's Markdown list and block conventions.
  *
  * @param body - Problem editor body to serialize into Markdown source.
+ *
+ * @return Markdown source for the ordered editor blocks, or an empty string for an empty body.
  */
 export const stringifyProblemEditorContentBody = (body: DocBody | null | undefined): string => {
   if (!Array.isArray(body) || body.length === 0) return '';
@@ -1315,6 +1156,7 @@ export const stringifyProblemEditorContentBody = (body: DocBody | null | undefin
   let number = 1;
   for (let i = 0; i < body.length; i++) {
     const block = body[i];
+    if (!block) continue;
     const list = listKind(block);
     const text = editorBlockMd(
       block,
@@ -1334,7 +1176,7 @@ export const stringifyProblemEditorContentBody = (body: DocBody | null | undefin
  *
  * @param content - Direct `leaf.content` value or a compatibility wrapper around it.
  *
- * @returns Markdown or MDX for the active document body only.
+ * @return Markdown or MDX for the active document body only.
  *
  * @remarks
  * This is the preferred live-doc read path now that leaf content is stored directly.
@@ -1347,19 +1189,14 @@ export const currDocMd = (content: unknown): string => {
       content && typeof content === 'object' && 'content' in (content as Record<string, unknown>),
     ),
   };
-  if (typeof content === 'string') {
+  if (typeof content === 'string')
     return normDocsSpacing(content.trim() === '<Testimonials />' ? TESTIMONIALS_EXPORT : content);
-  }
-  if (Array.isArray(content)) {
-    return normDocsSpacing(stringifyDocBody(content as DocBody));
-  }
-  if (isRec(content) && Array.isArray(content.content)) {
+  if (Array.isArray(content)) return normDocsSpacing(stringifyDocBody(content as DocBody));
+  if (isRec(content) && Array.isArray(content.content))
     return normDocsSpacing(stringifyDocBody(content.content as DocBody));
-  }
-  if (isRec(content) && typeof content.content === 'string') {
+  if (isRec(content) && typeof content.content === 'string')
     return normDocsSpacing(
       content.content.trim() === '<Testimonials />' ? TESTIMONIALS_EXPORT : content.content,
     );
-  }
   return '';
 };

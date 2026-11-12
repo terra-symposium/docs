@@ -1,7 +1,16 @@
-/** Serializes remote mutations through a rate and failure circuit breaker. */
+/**
+ * src/lib/terra/docs/mutations.ts
+ * Serializes remote mutations through a rate and failure circuit breaker.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { clearTransition, setTransition } from './state.js';
 import { toast } from 'sonner';
 import { warn } from '../runtime/runtime.js';
-import { clearTransition, setTransition } from './state.js';
 
 /**
  * Client-side circuit breaker for mutation coordination.
@@ -20,9 +29,7 @@ class CircuitBreaker {
   private readonly MAX_FAILURES = 5;
   private readonly RESET_TIMEOUT_MS = 10000; // 10 seconds
   private readonly MAX_REQS_PER_SEC = 20;
-  /**
-   * Checks check.
-   */
+  /** Enforces the request-rate limit and waits for the cooldown after the breaker opens. */
   public check(): void {
     const now = Date.now();
     // reset the volume counter every second
@@ -42,55 +49,45 @@ class CircuitBreaker {
       throw new Error('Circuit breaker tripped: Rate limit exceeded.');
     }
   }
-  /**
-   * Returns the trip.
-   *
-   * @param now - Timestamp consulted before trip mutates time-sensitive records.
+  /** Opens the breaker until the cooldown expires and records the rejection boundary.
+   * @param now Current timestamp used to calculate the cooldown deadline.
    */
   private trip(now: number): void {
     this.state = 'OPEN';
     this.nextAttempt = now + this.RESET_TIMEOUT_MS;
     warn('CircuitBreaker', 'Tripped OPEN. Network requests blocked.');
   }
-  /**
-   * Record success.
-   */
+  /** Closes a half-open breaker after a successful request and clears its failure count. */
   public recordSuccess(): void {
     if (this.state === 'HALF_OPEN') {
       this.state = 'CLOSED';
       this.failures = 0;
     }
   }
-  /**
-   * Record failure.
-   */
+  /** Opens the breaker after the configured number of consecutive mutation failures. */
   public recordFailure(): void {
     this.failures++;
     if (this.failures >= this.MAX_FAILURES) this.trip(Date.now());
   }
 }
 
-/**
- * Describes the documented declaration.
- *
- * @remarks Caches the shared circuit breaker used for mutation helpers.
- */
+/** Shared circuit breaker for mutation helpers. */
 const breaker = new CircuitBreaker();
 
 /**
- * Executes an async action safely behind a circuit breaker and transition lock.
+ * Runs a mutation while holding the local transition lock and updating the circuit breaker.
  *
- * @param action - Async action executed by the guarded operation.
- * @param fallbackErr - Error value returned when the action cannot complete.
- * @param onStart - Optional callback invoked before the action begins.
- * @param onEnd - Optional callback invoked after the action settles.
+ * @param action - Asynchronous mutation to run.
+ * @param fallbackErr - Message shown when the action rejects with a non-Error value.
+ * @param onStart - Optional callback run after acquiring the transition lock.
+ * @param onEnd - Optional callback run before releasing the transition lock.
  */
 export const runMutation = async (
   action: () => Promise<void>,
   fallbackErr: string,
   onStart?: () => void,
   onEnd?: () => void,
-) => {
+): Promise<void> => {
   breaker.check();
   setTransition('local');
   if (onStart) onStart();

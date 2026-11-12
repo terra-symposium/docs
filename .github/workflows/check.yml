@@ -16,22 +16,12 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run check
-
-  demo-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build:demo
+      - run: pnpm run build
+      - run: pnpm run quality:check
 
   docs-build:
     runs-on: ubuntu-latest
@@ -40,10 +30,11 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm docs:build
+      - run: pnpm run docs
 
   check:
     if: github.event_name == 'pull_request'
@@ -55,10 +46,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version-file: config/.nvmrc
           cache: pnpm
+          cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run build
+      - run: pnpm exec astro build --config config/astro.config.mjs
       - uses: Terra-Symposium/standards/packages/testing@3d782b9dfc4cc5b421ccbe395d65aacec9d8956d
         with:
-          manifest: .terra-tests.json
+          manifest: config/terra-tests.json

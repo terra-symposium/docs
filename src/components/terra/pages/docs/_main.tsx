@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_main.tsx
+ * src/components/terra/pages/docs/_main.tsx
  * Docs scaffold entrypoint, shell, transition ctx, and compiled view/edit surfaces.
  * Folder boundary: page composition and shared Docs state; block rendering, editing, chrome, and navigation remain separate.
  */
@@ -11,6 +10,10 @@ IMPORTS
 
 // API
 import {
+  $cursor,
+  $cursorGhost,
+  $cursorPosition,
+  $cursorTrack,
   $editReadyPath,
   $editorMounts,
   $leafTitle,
@@ -23,12 +26,21 @@ import {
   useAtom,
   useTransitionState,
 } from '../../../../lib/terra/docs/state.js';
-import { keepDeepPath } from '../../../../lib/terra/docs/tree.js';
-import { document } from '../../../../lib/terra/docs/editor-dom.js';
+import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
+import {
+  captureLinearOffset,
+  captureNodePath,
+  codeViewOf,
+  document,
+  getCollapsedRange,
+  htmlToMd,
+  pasteMd,
+} from '../../../../lib/terra/docs/editor-dom.js';
+import { cn, isRec, notify, setDocumentTitle } from '../../../../lib/terra/runtime/runtime.js';
+import { dirname, docsRootPath } from '../../../../lib/terra/runtime/shared.js';
+import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
 import { isDocBody } from '../../../../lib/terra/runtime/types.js';
-import { cn, setDocumentTitle } from '../../../../lib/terra/runtime/runtime.js';
-import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
-import { dirname } from '../../../../lib/terra/runtime/shared.js';
+import { keepDeepPath } from '../../../../lib/terra/docs/tree.js';
 import {
   lazy,
   useCallback,
@@ -39,90 +51,139 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { ReactNode } from 'react';
+import { mdTableToHtml } from '../../../../lib/terra/runtime/content/markdown.js';
+import { components as repoComponents } from '../../../../lib/terra/custom-components.js';
+import { toHeadingId } from '../../editor/docs/heading.js';
+import { toImgAlt, toImgMd } from './_blocks.js';
+import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
 import { toast } from 'sonner';
-import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
-import { docsRootPath } from '../../../../lib/terra/runtime/shared.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import EditProvider, { Loader, TransitionShell } from './_editable.js';
 import Nav from './_sidebar.js';
-import { Suspense } from 'react';
-import { AlertError } from '@terra-symposium/styling/ui/terra-original';
-import { Attachments } from './_attachments.js';
-import { Badge } from '@terra-symposium/styling/ui/terra-original';
-import { Button } from '@terra-symposium/styling/ui/terra-original';
 import {
+  AlertError,
+  Badge,
+  Button,
+  ButtonLink,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@terra-symposium/styling/ui/terra-original';
-import { Toolbar } from './_toolbar.js';
-import { useBlockNav } from './use-block-nav.js';
-import { useMediaPaste } from './use-media-paste.js';
-import { EditStateCtx, EditorSurfaceCtx, TransitionCtx } from '../../../../lib/terra/docs/state.js';
-import { ErrorBoundary } from '../../ui.js';
-import { Input } from '@terra-symposium/styling/ui/terra-original';
-import { Label } from '@terra-symposium/styling/ui/terra-original';
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@terra-symposium/styling/ui/terra-original';
-import {
+  Separator,
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from '@terra-symposium/styling/ui/terra-original';
-import { Separator } from '@terra-symposium/styling/ui/terra-original';
-import { Textarea } from '@terra-symposium/styling/ui/terra-original';
+  Textarea,
+} from '@terra-symposium/styling/ui';
+import { Attachments } from './_attachments.js';
+import { DocsToolbarActions, Toolbar } from './_toolbar.js';
+import { EditStateCtx, EditorSurfaceCtx, TransitionCtx } from '../../../../lib/terra/docs/state.js';
+import { ErrorBoundary } from '../../ui.js';
+import { Suspense } from 'react';
 import { Toaster } from 'sonner';
-const TerraContentEditor = lazy(() =>
-  import('../../editor/TerraContentEditor.js').then((module) => ({
-    default: module.TerraContentEditor,
-  })),
-);
+
+// DATA
+import { IMAGE_TYPES, MIME } from '../../../../lib/terra/runtime/shared.js';
 
 // TYPES
-import type { DocBody, DocVer } from '../../../../lib/terra/runtime/types.js';
 import type {
+  Content as ContentData,
+  DocBody,
+  DocVer,
   DocsPermissionLevel as Permission,
   Draft,
   EditorRefs,
-  EditorSurface,
   Mode,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
-import type { User } from '../../../../lib/terra/runtime/types.js';
-import type { TerraContent as TerraContentData } from '../../../../lib/terra/runtime/types.js';
+import type { DocsBlockOptions } from '../../../blocks.js';
+import type { DocsHostAttachment } from '../../../../lib/host.js';
+import type { JSX, ReactNode } from 'react';
+import type { PortableTextBlock } from '@portabletext/editor';
+
+/**
+ * Loads the shared editor only when Docs mounts its hydrated client surface.
+ *
+ * @returns The lazily loaded content editor component.
+ */
+const ContentEditor = lazy(() =>
+  import('../../editor/ContentEditor.js').then((module) => ({ default: module.ContentEditor })),
+);
+
+/** Matches trailing separators when comparing route roots. */
+const SHARED_REGEX = TerraQualityRegex.REGEX_PATTERN_REGEX_3();
+
+/**
+ * Finds the visible Docs shell whose mode matches the current route query.
+ *
+ * @returns The mounted shell element, or `null` while no route shell is visible.
+ */
+const docsShellOf = (): HTMLElement | null =>
+  Array.from(document.querySelectorAll<HTMLElement>('[data-docs-shell]')).find((e) => {
+    const style = window.getComputedStyle(e);
+    return (
+      e.dataset.docsMode === (new URL(window.location.href).searchParams.get('mode') || 'view') &&
+      style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      e.dataset.loading !== 'true' &&
+      e.querySelector('[data-docs-transition-content]')?.getAttribute('aria-hidden') !== 'true' &&
+      e.getClientRects().length > 0
+    );
+  }) ?? null;
+
+/** Scrolls the active Docs content to a heading and adds its fragment to browser history.
+ *
+ * @param id - Heading fragment identifier to select.
+ * @param text - Heading text used if the rendered element has no matching identifier.
+ */
+const navigateHeading = (id: string, text: string): void => {
+  const shell = docsShellOf();
+  Array.from(
+    (shell?.dataset.docsMode === 'view'
+      ? shell.querySelector<HTMLElement>('[data-docs-view-root], [data-docs-body-content]')
+      : shell?.dataset.docsMode === 'edit'
+        ? shell.querySelector<HTMLElement>('[data-docs-body-editor], [data-docs-body-content]')
+        : null
+    )?.querySelectorAll<HTMLElement>('h2') ?? [],
+  )
+    .find((e) => e.id === id || e.textContent?.trim() === text)
+    ?.scrollIntoView({ behavior: 'auto', block: 'start' });
+  window.history.pushState(null, '', `#${id}`);
+};
+
 /*//////////////////////////////////////////////////
 HOOKS
 //////////////////////////////////////////////////*/
 
 /**
- * Handles DOM keyboard and pointer tracking for custom block els.
+ * Displays the document body in the read-only editor surface and signals when it is ready.
  *
- * @param refs - Refs input supplied to use block nav's operation.
- *
- * @return Selection, keyboard, and pointer handlers used to navigate and position custom editor blocks.
- */
-/**
- * Renders the view component.
- *
- * @param props - Document body and optional reset key used to render the read-only Docs editor surface.
- * @param body - Body input supplied to view's operation.
+ * @param body Portable Text blocks that form the current document body.
+ * @param blocks Block renderer options used to limit which custom blocks can appear in the document.
  * @param resetKey - Key used to reset Terra's editor state for a new document.
  *
  * @return The read-only editor view for the supplied document body.
  */
-function View({ body, resetKey }: { body: DocBody; resetKey?: string }): JSX.Element {
-  const transition = useTransitionState();
+function View({
+  body,
+  blocks,
+  resetKey,
+}: {
+  body: DocBody;
+  blocks?: DocsBlockOptions | undefined;
+  resetKey?: string;
+}): JSX.Element {
   useEffect(() => {
     return ((timer: number) => () => {
       window.clearTimeout(timer);
@@ -133,12 +194,13 @@ function View({ body, resetKey }: { body: DocBody; resetKey?: string }): JSX.Ele
         document.dispatchEvent(new Event('docs:surface-ready'));
       }),
     );
-  }, [resetKey, transition]);
+  }, [resetKey, useTransitionState()]);
   return (
     <Suspense fallback={<div aria-hidden="true" data-docs-view-loading />}>
-      <TerraContentEditor
-        content={body as unknown as any[]}
+      <ContentEditor
+        content={body as unknown as PortableTextBlock[]}
         readOnly
+        {...(blocks ? { blocks } : {})}
         {...(resetKey !== undefined ? { resetKey } : {})}
       />
     </Suspense>
@@ -146,16 +208,7 @@ function View({ body, resetKey }: { body: DocBody; resetKey?: string }): JSX.Ele
 }
 
 /**
- * Reads the editor surface context when a Docs editor provider is present.
- *
- * @return The active editor surface, or `null` when this component is outside an editor provider.
- */
-function useEditorSurfaceOptional(): EditorSurface | null {
-  return useContext(EditorSurfaceCtx);
-}
-
-/**
- * Wraps lexical engine maintaining layout constraints.
+ * Collects the document's view, edit, and header surfaces around shared editor state.
  *
  * @param props - Optional wrapper classes for the editable Lexical editor surface.
  * @param className - Additional CSS classes merged into edit.
@@ -163,11 +216,32 @@ function useEditorSurfaceOptional(): EditorSurface | null {
  * @return The interactive Docs editing surface with its configured toolbar.
  */
 const EditorSurfaces = {
-  Edit({ className }: { className?: string }): JSX.Element {
+  /**
+   * Renders the editable Portable Text surface and waits until its root editor mounts.
+   *
+   * @param blocks Enabled Docs block types available to the editor.
+   * @param className Additional layout classes applied to the editing surface.
+   * @param editable Whether the current permission allows document changes.
+   *
+   * @returns The mounted editable surface or the loading state while its editor initializes.
+   */
+  Edit({
+    blocks,
+    className,
+    editable = false,
+  }: {
+    blocks?: DocsBlockOptions | undefined;
+    className?: string;
+    editable?: boolean;
+  }): JSX.Element {
     // INIT
-    const surface = useEditorSurfaceOptional();
-    const editorRefs = { toolbar: useAtom($toolbar), empty: useRef<EditorRefs>({} as EditorRefs) };
+    const surface = useContext(EditorSurfaceCtx);
+    const editorRefs = {
+      toolbar: useAtom($toolbar),
+      empty: useRef<EditorRefs>({} as EditorRefs),
+    };
     const [init, setInit] = useState(false);
+    const [docsAttachments, setDocsAttachments] = useState<DocsHostAttachment[]>([]);
     const transition = useContext(TransitionCtx);
     useLayoutEffect(() => {
       if (!init) transition?.setLoading(true);
@@ -187,8 +261,9 @@ const EditorSurfaces = {
       if (!body) return;
       let frame = 0;
       const mountObserver = {
+        /** Checks whether the editor root has mounted and updates route readiness from the editor mount registry. */
         check(): void {
-          const root = body.querySelector<HTMLElement>('[data-terra-content-editor]');
+          const root = body.querySelector<HTMLElement>('[data-content-editor]');
           if (root) {
             setEditorMount(surface.path, 'root', true);
             observer.disconnect();
@@ -200,6 +275,7 @@ const EditorSurfaces = {
               mounts.expected.length === mounts.mounted.length,
           );
         },
+        /** Schedules a readiness check after the next DOM mutation frame. */
         queue(): void {
           window.cancelAnimationFrame(frame);
           frame = window.requestAnimationFrame(mountObserver.check);
@@ -214,6 +290,26 @@ const EditorSurfaces = {
         observer.disconnect();
       };
     }, [surface?.path, surface?.parseError, surface?.editor.loaded]);
+    useEffect(() => {
+      let a = true;
+      const path = surface?.path;
+      if (!path) {
+        setDocsAttachments([]);
+        return;
+      }
+      void actions.read.doc.attachments({ path }).then(({ data, error }) => {
+        if (!a) return;
+        if (error) {
+          console.error('[Docs:attachments] load-failed', { path, error });
+          setDocsAttachments([]);
+          return;
+        }
+        setDocsAttachments(Array.isArray(data) ? (data as DocsHostAttachment[]) : []);
+      });
+      return () => {
+        a = false;
+      };
+    }, [surface?.path]);
     useEffect(() => {
       $editReadyPath.set(null);
       $surfaceReady.set(null);
@@ -231,15 +327,1818 @@ const EditorSurfaces = {
       );
     }, [init, surface?.path]);
 
-    // bind keyboard shortcuts and rich media ingestion at the root
-    // these must execute unconditionally to satisfy React hooks rules
-    useBlockNav(surface ? surface.refs : editorRefs.empty);
-    useMediaPaste(
-      surface ? surface.refs : editorRefs.empty,
-      surface?.insert ?? (() => undefined),
-      surface?.uploadImage ?? (async () => ''),
-      surface?.attachFiles ?? (async () => undefined),
-    );
+    // Bind editor navigation and media handlers unconditionally before validation.
+    const editorRefsForRoot = surface ? surface.refs : editorRefs.empty;
+    const mediaInsert = surface?.insert ?? (() => undefined);
+    const mediaUploadFile = surface?.uploadImage ?? (async () => '');
+    const mediaAttachFiles = surface?.attachFiles ?? (async () => undefined);
+
+    // REFS
+    const bCursor = useRef<{
+      dec: HTMLElement;
+      gId: string | null;
+      label: string;
+      side: 'left' | 'right';
+      wrapper: HTMLElement;
+    } | null>(null);
+    const vCursor = useRef(0);
+    const vPending = useRef<{
+      beforeAnchor: Node | null;
+      beforeBlock: Element | null;
+      before: Range | null;
+      beforeRect: { bottom: number; top: number } | null;
+      dec: HTMLElement | null;
+      dir: 'left' | 'right';
+    } | null>(null);
+    const restoreCursor = useRef(0);
+
+    // EFFECTS
+    useEffect(() => {
+      const EDITABLE = [
+        'input',
+        'textarea',
+        'select',
+        '[contenteditable="true"]',
+        '[contenteditable="plaintext-only"]',
+        '.cm-editor',
+        'td',
+        'th',
+      ].join(', ');
+      const INTERACTIVE = [
+        'button',
+        'a[href]',
+        '[role="button"]',
+        '[role="tab"]',
+        '[tabindex]:not([tabindex="-1"])',
+        '[data-tool-cell]',
+      ].join(', ');
+      /** Returns the document body managed by the mounted editor surface.
+       * @returns The editor root, or `null` before the surface is mounted.
+       */
+      const root = (): HTMLElement | null => editorRefsForRoot.current?.body ?? null;
+      /** Returns the active `contenteditable` element inside the document body.
+       * @returns The mounted rich-text editor element, or `null` when unavailable.
+       */
+      const editable = (): HTMLElement | null =>
+        root()?.querySelector<HTMLElement>('[contenteditable="true"]') ?? null;
+
+      /**
+       * Resolves the editable surface that owns the block cursor or current browser selection.
+       *
+       * @return The relevant editable element, falling back to the document editor when selection is outside it.
+       */
+      const getActiveEditable = (): HTMLElement | null => {
+        if (bCursor.current)
+          return (
+            bCursor.current.dec.parentElement?.closest<HTMLElement>(
+              '[contenteditable="true"], [contenteditable="plaintext-only"]',
+            ) ?? editable()
+          );
+        const sel = window.getSelection();
+        if (sel?.anchorNode) {
+          const ce = (
+            sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode.parentElement
+          )?.closest<HTMLElement>('[contenteditable="true"], [contenteditable="plaintext-only"]');
+          if (ce) return ce;
+        }
+        return editable();
+      };
+
+      /** Returns whether a DOM node belongs to the active editor outside a decorator block.
+       * @param node Selection node being checked against the current editor surface.
+       * @returns Whether the node is local text rather than content inside a decorator block.
+       */
+      const isLocalText = (node: Node | null): boolean => {
+        const ce = getActiveEditable();
+        if (!node || !ce) return false;
+        const el = node instanceof Element ? node : node.parentElement;
+        if (!el) return false;
+        const childDec = el.closest<HTMLElement>('[data-lexical-decorator="true"]');
+        return !childDec || !ce.contains(childDec);
+      };
+
+      /**
+       * Adds or clears the marker used to show the editor's block-cursor state.
+       * @param a Whether the current editor should show its block-cursor marker.
+       */
+      const setBlockCursorActive = (a: boolean): void => {
+        if (!editorRefsForRoot.current?.body) return;
+        if (a) editorRefsForRoot.current.body.dataset.docsBlockCursorActive = 'true';
+        else delete editorRefsForRoot.current.body.dataset.docsBlockCursorActive;
+      };
+
+      /** Restores the editor selection from the most recent saved cursor state. */
+      const restoreSavedSelection = (): void => {
+        const saved =
+          editorRefsForRoot.current.selection ??
+          $cursorPosition.get() ??
+          $cursor.get() ??
+          $cursorGhost.get();
+        if (!saved) return;
+        const view = codeViewOf();
+        if (view && view.dom.offsetParent !== null && saved.code) {
+          $cursorTrack.set({
+            anchor: saved.code.from,
+            collapsed: saved.code.from === saved.code.to,
+            focus: saved.code.to,
+            range: [saved.code.from, saved.code.to],
+            visible: true,
+          });
+          $cursorPosition.set({
+            code: { from: saved.code.from, to: saved.code.to },
+            dom: null,
+            visible: true,
+          });
+          $cursor.set({
+            code: { from: saved.code.from, to: saved.code.to },
+            dom: null,
+            visible: true,
+          });
+          $cursorGhost.set({
+            code: { from: saved.code.from, to: saved.code.to },
+            dom: null,
+            visible: true,
+          });
+          editorRefsForRoot.current.selection = {
+            ...saved,
+            code: { from: saved.code.from, to: saved.code.to },
+            dom: null,
+            visible: true,
+          };
+          view.dispatch({
+            selection: { anchor: saved.code.from, head: saved.code.to },
+            scrollIntoView: false,
+          });
+          return;
+        }
+        const body = editorRefsForRoot.current.body;
+        if (!body) return;
+        const sel = window.getSelection();
+        if (!sel) return;
+        /** Resolves a saved child-index path and character offset to a collapsed DOM range.
+         * @param path Child indexes from the editor body to the saved text node.
+         * @param offset Character position within the resolved text node.
+         * @returns A collapsed range at the saved location, or `null` when the path is stale.
+         */
+        const pickPath = (path?: number[], offset?: number): Range | null => {
+          if (!path?.length) return null;
+          let node: Node | null = body;
+          for (const idx of path) {
+            if (!node?.childNodes[idx]) {
+              node = null;
+              break;
+            }
+            node = node.childNodes[idx] ?? null;
+          }
+          if (!(node instanceof Text)) return null;
+          const range = document.createRange();
+          range.setStart(node, Math.min(offset ?? 0, node.textContent?.length ?? 0));
+          range.collapse(true);
+          return range;
+        };
+        /** Finds the first text node containing the saved selection text and restores its offset.
+         * @param text Text captured around the saved selection.
+         * @param offset Character position within the matching text node.
+         * @returns A collapsed range at the saved text position, or `null` when no text matches.
+         */
+        const pickText = (text?: string, offset?: number): Range | null => {
+          if (!text) return null;
+          const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) =>
+              node.textContent?.includes(text) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
+          });
+          let node = walker.nextNode();
+          while (node) {
+            if (node instanceof Text) {
+              const i = node.textContent?.indexOf(text) ?? -1;
+              if (i !== -1) {
+                const range = document.createRange();
+                range.setStart(node, Math.min(i + (offset ?? 0), node.textContent?.length ?? 0));
+                range.collapse(true);
+                return range;
+              }
+            }
+            node = walker.nextNode();
+          }
+          return null;
+        };
+        const n =
+          pickPath(saved.anchorPath ?? undefined, saved.anchorOffset ?? undefined) ??
+          pickText(saved.anchorText, saved.anchorOffset ?? undefined) ??
+          pickPath(saved.focusPath ?? undefined, saved.focusOffset ?? undefined) ??
+          pickText(saved.focusText, saved.focusOffset ?? undefined) ??
+          (saved.dom && body.contains(saved.dom.commonAncestorContainer)
+            ? saved.dom.cloneRange()
+            : null);
+        if (!n) return;
+        sel.removeAllRanges();
+        sel.addRange(n.cloneRange());
+        const rect = n.getBoundingClientRect();
+        const box =
+          rect.width || rect.height
+            ? {
+                height: Math.max(16, rect.height || 0),
+                left: rect.left,
+                top: rect.top,
+                width: Math.max(2, rect.width || 0),
+              }
+            : saved.box;
+        const anchorLinear =
+          typeof saved.anchorLinear === 'number'
+            ? saved.anchorLinear
+            : captureLinearOffset(body, n.startContainer, n.startOffset);
+        const focusLinear =
+          typeof saved.focusLinear === 'number' ? saved.focusLinear : anchorLinear;
+        $cursorTrack.set({
+          anchor: anchorLinear ?? 0,
+          box,
+          collapsed: n.collapsed,
+          focus: focusLinear ?? anchorLinear ?? 0,
+          range: [anchorLinear ?? 0, focusLinear ?? anchorLinear ?? 0],
+          visible: true,
+        });
+        $cursorPosition.set({
+          anchorOffset: saved.anchorOffset,
+          anchorPath: saved.anchorPath,
+          anchorText: saved.anchorText,
+          anchorLinear,
+          box,
+          collapsed: n.collapsed,
+          code: null,
+          dom: n.cloneRange(),
+          focusOffset: saved.focusOffset,
+          focusPath: saved.focusPath,
+          focusText: saved.focusText,
+          focusLinear,
+          text: saved.text,
+          visible: true,
+        });
+        $cursor.set({
+          anchorOffset: saved.anchorOffset,
+          anchorPath: saved.anchorPath,
+          anchorText: saved.anchorText,
+          anchorLinear,
+          box,
+          collapsed: n.collapsed,
+          code: null,
+          dom: n.cloneRange(),
+          focusOffset: saved.focusOffset,
+          focusPath: saved.focusPath,
+          focusText: saved.focusText,
+          focusLinear,
+          text: saved.text,
+          visible: true,
+        });
+        $cursorGhost.set({
+          anchorOffset: saved.anchorOffset,
+          anchorPath: saved.anchorPath,
+          anchorText: saved.anchorText,
+          anchorLinear,
+          box,
+          collapsed: n.collapsed,
+          code: null,
+          dom: n.cloneRange(),
+          focusOffset: saved.focusOffset,
+          focusPath: saved.focusPath,
+          focusText: saved.focusText,
+          focusLinear,
+          text: saved.text,
+          visible: true,
+        });
+        editorRefsForRoot.current.selection = {
+          ...saved,
+          anchorLinear,
+          box,
+          collapsed: n.collapsed,
+          code: null,
+          dom: n.cloneRange(),
+          focusLinear,
+          visible: true,
+        };
+        setBlockCursorActive(Boolean(bCursor.current));
+      };
+
+      /** Identifies controls whose pointer events must preserve the current editor selection.
+       * @param tgt Pointer target considered for selection preservation.
+       * @returns Whether the target is a toolbar, dialog, menu, or popover control.
+       */
+      const isToolbarTgt = (tgt: HTMLElement | null): boolean =>
+        !!tgt?.closest(
+          '[data-docs-main-toolbar], [data-docs-toolbar-frame], [data-toolbar="true"], [role="toolbar"], [role="dialog"], [role="menu"], [role="menuitem"], [data-radix-popper-content-wrapper]',
+        );
+
+      /** Saves the active CodeMirror or DOM selection so toolbar actions can restore it. */
+      const snapshotSelection = (): void => {
+        const sel = window.getSelection();
+        const view = codeViewOf();
+        if (view && view.dom.offsetParent !== null) {
+          editorRefsForRoot.current.selection = {
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          };
+          $cursorTrack.set({
+            anchor: view.state.selection.main.from,
+            collapsed: view.state.selection.main.empty,
+            focus: view.state.selection.main.to,
+            range: [view.state.selection.main.from, view.state.selection.main.to],
+            visible: true,
+          });
+          $cursorPosition.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+          $cursor.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+          $cursorGhost.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+          return;
+        }
+        if (sel?.rangeCount && sel.anchorNode) {
+          const ce = (
+            sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode.parentElement
+          )?.closest<HTMLElement>('[contenteditable="true"], [contenteditable="plaintext-only"]');
+          if (ce && editorRefsForRoot.current.body?.contains(ce)) {
+            const dom = sel.getRangeAt(0).cloneRange();
+            const rect = dom.getBoundingClientRect();
+            const anchorPath = captureNodePath(editorRefsForRoot.current.body, sel.anchorNode);
+            const focusPath = captureNodePath(editorRefsForRoot.current.body, sel.focusNode);
+            const anchorLinear = captureLinearOffset(
+              editorRefsForRoot.current.body,
+              sel.anchorNode,
+              sel.anchorOffset,
+            );
+            const focusLinear = captureLinearOffset(
+              editorRefsForRoot.current.body,
+              sel.focusNode,
+              sel.focusOffset,
+            );
+            $cursorTrack.set({
+              anchor: anchorLinear ?? 0,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              focus: focusLinear ?? anchorLinear ?? 0,
+              range: [anchorLinear ?? 0, focusLinear ?? anchorLinear ?? 0],
+              visible: true,
+            });
+            editorRefsForRoot.current.selection = {
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              anchorLinear,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              focusLinear,
+              text: sel.toString(),
+              visible: true,
+            };
+            $cursorPosition.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              anchorLinear,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              focusLinear,
+              text: sel.toString(),
+              visible: true,
+            });
+            $cursor.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              anchorLinear,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              focusLinear,
+              text: sel.toString(),
+              visible: true,
+            });
+            $cursorGhost.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              anchorLinear,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              focusLinear,
+              text: sel.toString(),
+              visible: true,
+            });
+          }
+        }
+      };
+
+      /** Cancels pending cursor work and removes the active block-cursor marker. */
+      const clear = (): void => {
+        window.cancelAnimationFrame(vCursor.current);
+        vPending.current = null;
+        if (bCursor.current) {
+          bCursor.current.wrapper.removeAttribute('data-docs-block-cursor');
+          setBlockCursorActive(false);
+          bCursor.current = null;
+        }
+      };
+
+      /** Restores the block-cursor overlay to its matching editor block when it still exists.
+       * @returns Whether the previously selected block could be restored in the current editor.
+       */
+      const restore = (): boolean => {
+        const { current: cur } = bCursor;
+        const body = root();
+        if (!cur || !body) return false;
+        const matches = Array.from(
+          body.querySelectorAll<HTMLElement>('[data-docs-editor-block]'),
+        ).filter((w) => w.getAttribute('data-docs-editor-block') === cur.label);
+        const nWrapper =
+          matches.find((w) => {
+            if (!cur.gId) return false;
+            return (
+              (w.matches('[data-docs-focus-group-id]')
+                ? w
+                : w.querySelector<HTMLElement>('[data-docs-focus-group-id]')
+              )?.getAttribute('data-docs-focus-group-id') === cur.gId
+            );
+          }) ?? matches[0];
+        if (!nWrapper) return false;
+        const n = nWrapper.closest<HTMLElement>('[data-lexical-decorator="true"]') ?? nWrapper;
+        nWrapper.dataset.docsBlockCursor = 'true';
+        setBlockCursorActive(true);
+        bCursor.current = { ...cur, dec: n, wrapper: nWrapper };
+        // natively select the node so Lexical restores its internal state
+        const selection = { body: getActiveEditable(), range: window.getSelection() };
+        if (selection.body && selection.range) {
+          const range = document.createRange();
+          range.selectNode(n);
+          selection.range.removeAllRanges();
+          selection.range.addRange(range);
+        }
+        const ghost = document.createRange();
+        ghost.selectNode(n);
+        $cursor.set({ code: null, dom: ghost, visible: true });
+        return true;
+      };
+
+      /** Resolves a focus-group member to its root decorator for block-level keyboard navigation.
+       * @param dec Decorator or focus-group member under the current cursor.
+       * @returns The group's root decorator, or the original element when no group is active.
+       */
+      const gDec = (dec: HTMLElement): HTMLElement => {
+        const body = root();
+        const marker = dec.matches('[data-docs-focus-group-id]')
+          ? dec
+          : dec.querySelector<HTMLElement>('[data-docs-focus-group-id]');
+        const gId = marker?.getAttribute('data-docs-focus-group-id');
+        if (!body || !gId || marker?.getAttribute('data-docs-focus-group') !== 'member') return dec;
+        const gRoot = body.querySelector<HTMLElement>(
+          `[data-docs-focus-group="root"][data-docs-focus-group-id="${gId}"]`,
+        );
+        return gRoot?.closest<HTMLElement>('[data-lexical-decorator="true"]') ?? gRoot ?? dec;
+      };
+
+      /**
+       * Lists top-level editor decorators and standalone blocks in document order.
+       * Focus-group members resolve to their group root so keyboard navigation treats
+       * a grouped block as one target.
+       *
+       * @returns The unique navigable block elements in the active editor.
+       */
+      const gDecs = (): HTMLElement[] => {
+        const ce = getActiveEditable();
+        if (!ce) return [];
+        const seen = new Set<HTMLElement>();
+        return [
+          ...Array.from(ce.querySelectorAll<HTMLElement>('[data-lexical-decorator="true"]')),
+          ...Array.from(ce.querySelectorAll<HTMLElement>('[data-docs-editor-block]')).filter(
+            (b) => !b.closest('[data-lexical-decorator="true"]'),
+          ),
+        ]
+          .filter((e) => {
+            if (
+              e.parentElement?.closest<HTMLElement>(
+                '[contenteditable="true"], [contenteditable="plaintext-only"]',
+              ) !== ce
+            )
+              return false;
+            return true;
+          })
+          .map(gDec)
+          .filter((d) => {
+            if (seen.has(d)) return false;
+            seen.add(d);
+            return true;
+          })
+          .sort((a, b) => {
+            const pos = a.compareDocumentPosition(b);
+            if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+            if (pos & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+            return 0;
+          });
+      };
+
+      /** Focuses an element and places the caret at the requested text edge when it is editable.
+       * @param tgt Element receiving focus and, when editable, the caret.
+       * @param side Text edge to select: `right` enters at the start and `left` at the end.
+       * @returns Whether focus or caret placement succeeded.
+       */
+      const focusTgt = (tgt: HTMLElement, side: 'left' | 'right'): boolean => {
+        tgt.focus({ preventScroll: true });
+        if (!tgt.matches('[contenteditable="true"], [contenteditable="plaintext-only"]'))
+          return document.activeElement === tgt;
+        const sel = window.getSelection();
+        if (!sel) return false;
+        const walker = document.createTreeWalker(tgt, NodeFilter.SHOW_TEXT, {
+          acceptNode: (n) =>
+            n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim()
+              ? NodeFilter.FILTER_ACCEPT
+              : NodeFilter.FILTER_SKIP,
+        });
+        const texts: Text[] = [];
+        let node = walker.nextNode();
+        while (node) {
+          if (node instanceof Text) texts.push(node);
+          node = walker.nextNode();
+        }
+        const range = document.createRange();
+        const text = side === 'right' ? texts[0] : texts[texts.length - 1];
+        if (text) range.setStart(text, side === 'right' ? 0 : (text.textContent?.length ?? 0));
+        else range.selectNodeContents(tgt);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return true;
+      };
+
+      /** Collects connected focus targets, optionally using explicit group-entry markers.
+       * @param wrapper Decorator whose visible descendants are candidates.
+       * @param pref Whether to restrict candidates to explicit focus-entry markers.
+       * @returns Visible, enabled focus targets in document order without duplicates.
+       */
+      const focusables = (wrapper: HTMLElement, pref = false): HTMLElement[] => {
+        const seen = new Set<HTMLElement>();
+        const gId = wrapper.getAttribute('data-docs-focus-group-id');
+        return Array.from(
+          wrapper.querySelectorAll<HTMLElement>(
+            pref ? '[data-docs-focus-entry]' : [EDITABLE, INTERACTIVE].join(', '),
+          ),
+        ).filter((n) => {
+          if (seen.has(n) || !n.isConnected) return false;
+          seen.add(n);
+          if (pref) {
+            const owner = n.closest<HTMLElement>('[data-docs-editor-block]');
+            if (
+              owner &&
+              owner !== wrapper &&
+              (!gId || owner.getAttribute('data-docs-focus-group-id') !== gId)
+            )
+              return false;
+          }
+          if ('disabled' in n && (n as HTMLButtonElement | HTMLInputElement).disabled) return false;
+          if (n.getAttribute('aria-hidden') === 'true' || n.closest('[aria-hidden="true"]'))
+            return false;
+          return !!n.getClientRects().length;
+        });
+      };
+
+      /**
+       * Finds the first block beside the current collapsed text selection.
+       *
+       * @param dir - Whether to search before or after the caret.
+       *
+       * @returns The adjacent navigable block, or `null` when none exists.
+       */
+      const nearestAdjacent = (dir: 'left' | 'right'): HTMLElement | null => {
+        const range = getCollapsedRange();
+        if (!range) return null;
+        const decs = gDecs();
+        if (dir === 'right') {
+          return (
+            decs.find((d) => {
+              const edge = document.createRange();
+              edge.setStartBefore(d);
+              edge.collapse(true);
+              return range.compareBoundaryPoints(Range.START_TO_START, edge) <= 0;
+            }) ?? null
+          );
+        }
+        for (let i = decs.length - 1; i >= 0; i--) {
+          const d = decs[i]!;
+          const edge = document.createRange();
+          edge.setStartAfter(d);
+          edge.collapse(true);
+          if (range.compareBoundaryPoints(Range.START_TO_START, edge) >= 0) return d;
+        }
+        return null;
+      };
+
+      /** Returns the visible caret's top and bottom edge nearest the requested direction.
+       * @param dir Direction of movement used to choose the caret edge.
+       * @returns Caret bounds, or `null` when the selection has no visible geometry.
+       */
+      const caretRect = (dir: 'left' | 'right'): { bottom: number; top: number } | null => {
+        const range = getCollapsedRange();
+        if (!range) return null;
+        const rects = Array.from(range.getClientRects());
+        const rect =
+          (dir === 'right' ? rects[rects.length - 1] : rects[0]) || range.getBoundingClientRect();
+        return rect.width || rect.height ? { bottom: rect.bottom, top: rect.top } : null;
+      };
+
+      /**
+       * Compares the selection before and after native movement with the decorator's edge.
+       * @param dec Decorator boundary the caret may have crossed.
+       * @param dir Arrow-key direction of the native movement.
+       * @param beforeAnchor Selection anchor node before native movement.
+       * @param beforeBlock Text block containing the previous selection anchor.
+       * @param before Collapsed range captured before native movement.
+       * @param aRect Caret top and bottom captured before movement.
+       * @returns Whether the native caret crossed the decorator boundary in `dir`.
+       */
+      const passedDec = (
+        dec: HTMLElement,
+        dir: 'left' | 'right',
+        beforeAnchor: Node | null,
+        beforeBlock: Element | null,
+        before: Range | null,
+        aRect: { bottom: number; top: number } | null,
+      ): boolean => {
+        const select = window.getSelection();
+        if (!select?.rangeCount || !select.isCollapsed || !before || !aRect) return false;
+        const block =
+          (select.anchorNode instanceof Element
+            ? select.anchorNode
+            : select.anchorNode?.parentElement
+          )?.closest('p, li, blockquote, h2, h3, h4, h5, h6, td, th') ?? null;
+        if (select.anchorNode === beforeAnchor && block === beforeBlock) return false;
+        // Ignore if we've escaped local boundary limits during native modification
+        if (block && !isLocalText(block)) return false;
+        const range = select.getRangeAt(0);
+        const edge = document.createRange();
+        const box = dec.getBoundingClientRect();
+        const bRect = caretRect(dir);
+        if (!bRect) return false;
+        if (dir === 'right') edge.setStartAfter(dec);
+        else edge.setStartBefore(dec);
+        edge.collapse(true);
+        const leeway = 10;
+        // prettier-ignore
+        return dir === 'right'
+            ? before.compareBoundaryPoints(Range.START_TO_START, edge) < 0 && range.compareBoundaryPoints(Range.START_TO_START, edge) >= 0 && aRect.bottom < box.top + leeway && bRect.bottom >= box.top - leeway
+            : before.compareBoundaryPoints(Range.START_TO_START, edge) > 0 && range.compareBoundaryPoints(Range.START_TO_START, edge) <= 0 && aRect.top > box.bottom - leeway && bRect.top <= box.bottom + leeway;
+      };
+
+      /**
+       * Resolves the decorator containing the caret to its focus-group root when needed.
+       *
+       * @returns The selected navigable decorator, or `null` when the caret is elsewhere.
+       */
+      const selectedDec = (): HTMLElement | null => {
+        const ce = getActiveEditable();
+        if (!ce) return null;
+        const range = getCollapsedRange();
+        if (!range || !ce.contains(range.startContainer)) return null;
+        const dec = (
+          range.startContainer instanceof Element
+            ? range.startContainer
+            : range.startContainer.parentElement
+        )?.closest<HTMLElement>('[data-lexical-decorator="true"]');
+        if (!dec || !ce.contains(dec) || dec === ce.closest('[data-lexical-decorator="true"]'))
+          return null;
+        return gDec(dec);
+      };
+
+      /** Moves focus into the nearest editable table cell, or to the decorator when none exists.
+       * @param dec Decorator containing the table cells or other interactive content.
+       * @param dir Direction used to choose the first or last editable cell.
+       */
+      const focusBlock = (dec: HTMLElement, dir: 'left' | 'right'): void => {
+        const cells = Array.from(dec.querySelectorAll<HTMLElement>('th, td')).filter(
+          (c) => c.isContentEditable && c.getClientRects().length,
+        );
+        if (cells.length) {
+          clear();
+          const target = dir === 'right' ? cells[0] : cells.at(-1);
+          if (!target) return;
+          focusTgt(target, dir === 'right' ? 'right' : 'left');
+          return;
+        }
+        focus(dec, dir === 'right' ? 'left' : 'right');
+      };
+
+      /** Places the editor caret immediately before or after a navigable decorator.
+       * @param dec Decorator that the caret should move beside.
+       * @param side Edge of the decorator where the caret should be placed.
+       */
+      const focus = (dec: HTMLElement, side: 'left' | 'right'): void => {
+        const tgt = gDec(dec);
+        const wrapper = tgt.querySelector<HTMLElement>('[data-docs-editor-block]') ?? tgt;
+        const cursorMetadata = {
+          marker: wrapper.matches('[data-docs-focus-group-id]')
+            ? wrapper
+            : wrapper.querySelector<HTMLElement>('[data-docs-focus-group-id]'),
+          label: wrapper.getAttribute('data-docs-editor-block') ?? 'Block',
+        };
+        clear();
+        const body = getActiveEditable();
+        const sel = window.getSelection();
+        if (body && sel) {
+          body.focus({ preventScroll: true });
+          const range = document.createRange();
+          if (side === 'left') range.setStartBefore(tgt);
+          else range.setStartAfter(tgt);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        wrapper.dataset.docsBlockCursor = 'true';
+        setBlockCursorActive(true);
+        bCursor.current = {
+          dec: tgt,
+          gId: cursorMetadata.marker?.getAttribute('data-docs-focus-group-id') ?? null,
+          label: cursorMetadata.label,
+          side,
+          wrapper,
+        };
+        document.dispatchEvent(
+          new CustomEvent('docs:block-selected', { detail: { block: wrapper } }),
+        );
+      };
+
+      const eHandlers = {
+        /**
+         * Handles keyboard navigation and activation for custom blocks inside the editor.
+         *
+         * @param e Keyboard event received by the editor body.
+         */
+        onKeyDown(e: KeyboardEvent): void {
+          try {
+            if (e.defaultPrevented || e.altKey) return;
+            const tgt = e.target instanceof HTMLElement ? e.target : null;
+            const closestEditable = tgt?.closest<HTMLElement>('[contenteditable="true"]') ?? null;
+            const key = e.key;
+            const entry = tgt?.closest<HTMLElement>('[data-docs-focus-entry]') ?? null;
+            if (
+              (key === 'Enter' || key === ' ') &&
+              entry?.matches('button, [role="button"], [role="tab"]')
+            ) {
+              e.preventDefault();
+              e.stopPropagation();
+              if (entry.getAttribute('aria-expanded') !== 'true') entry.click();
+              setTimeout(() => {
+                const container =
+                  entry.getAttribute('role') === 'tab'
+                    ? entry.closest<HTMLElement>('[data-docs-focus-group="root"]')
+                    : entry.closest<HTMLElement>('[data-docs-focus-group="member"]');
+                if (container) {
+                  const editors = Array.from(
+                    container.querySelectorAll<HTMLElement>(
+                      '[contenteditable="true"], [contenteditable="plaintext-only"]',
+                    ),
+                  ).filter((e) => {
+                    return window.getComputedStyle(e).display !== 'none' && e.offsetParent !== null;
+                  });
+                  if (editors.length > 0 && editors[0]) {
+                    editors[0].focus({ preventScroll: true });
+                    const sel = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(editors[0]);
+                    range.collapse(true);
+                    sel?.removeAllRanges();
+                    sel?.addRange(range);
+                  }
+                }
+              }, 100);
+              return;
+            }
+            if (bCursor.current && (key === 'Tab' || key === 'Enter')) {
+              e.preventDefault();
+              e.stopPropagation();
+              const cur = bCursor.current;
+              if (!cur) return;
+              const tgt =
+                (e.shiftKey
+                  ? focusables(cur.wrapper, true).at(-1)
+                  : focusables(cur.wrapper, true)[0]) ??
+                (e.shiftKey ? focusables(cur.wrapper).at(-1) : focusables(cur.wrapper)[0]);
+              if (!tgt) {
+                const ce = cur.wrapper.querySelector<HTMLElement>(
+                  '[contenteditable="true"], [contenteditable="plaintext-only"]',
+                );
+                if (ce) {
+                  clear();
+                  ce.focus({ preventScroll: true });
+                }
+                return;
+              }
+              clear();
+              focusTgt(tgt, e.shiftKey ? 'left' : 'right');
+              return;
+            }
+            // If bCursor is active, we let standard copy/cut/paste combos fall completely
+            // through to Lexical to handle natively without intercepting!
+            if (
+              bCursor.current &&
+              (e.metaKey || e.ctrlKey) &&
+              ['c', 'x', 'v'].includes(key.toLowerCase())
+            ) {
+              if (key.toLowerCase() === 'x')
+                requestAnimationFrame(() => {
+                  clear();
+                });
+              return;
+            }
+            const dir =
+              key === 'ArrowLeft' || key === 'ArrowUp' || key === 'Backspace'
+                ? 'left'
+                : key === 'ArrowRight' || key === 'ArrowDown' || key === 'Delete'
+                  ? 'right'
+                  : null;
+            if (!dir) return;
+            if (
+              !bCursor.current &&
+              (tgt?.closest(
+                [
+                  'input',
+                  'textarea',
+                  'select',
+                  '[contenteditable="plaintext-only"]',
+                  '.cm-editor',
+                  'td',
+                  'th',
+                  INTERACTIVE,
+                ].join(', '),
+              ) ||
+                (closestEditable && closestEditable !== getActiveEditable()))
+            )
+              return;
+            if (bCursor.current) {
+              // Lexical will securely handle node deletion for Backspace/Delete, just visually clean up.
+              if (key === 'Backspace' || key === 'Delete') {
+                clear();
+                return;
+              }
+              e.preventDefault();
+              e.stopPropagation();
+              const cur = bCursor.current;
+              if (!cur) return;
+              const dir = key === 'ArrowLeft' || key === 'ArrowUp' ? 'left' : 'right';
+              const decs = gDecs();
+              const i = decs.indexOf(cur.dec);
+              const adjacent = i === -1 ? null : (decs[i + (dir === 'right' ? 1 : -1)] ?? null);
+              if (
+                (key === 'ArrowUp' || key === 'ArrowDown') &&
+                adjacent &&
+                !(() => {
+                  const body = getActiveEditable();
+                  if (!body) return false;
+                  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+                    acceptNode: (n) =>
+                      n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim()
+                        ? NodeFilter.FILTER_ACCEPT
+                        : NodeFilter.FILTER_SKIP,
+                  });
+                  const first =
+                    cur.dec.compareDocumentPosition(adjacent) & Node.DOCUMENT_POSITION_FOLLOWING
+                      ? cur.dec
+                      : adjacent;
+                  let text = walker.nextNode();
+                  while (text) {
+                    if (text instanceof Text && isLocalText(text))
+                      if (
+                        first.compareDocumentPosition(text) & Node.DOCUMENT_POSITION_FOLLOWING &&
+                        (first === cur.dec ? adjacent : cur.dec).compareDocumentPosition(text) &
+                          Node.DOCUMENT_POSITION_PRECEDING
+                      )
+                        return true;
+                    text = walker.nextNode();
+                  }
+                  return false;
+                })()
+              ) {
+                focusBlock(adjacent, dir);
+                return;
+              }
+              const body = getActiveEditable();
+              const selection = window.getSelection();
+              if (body && selection) {
+                const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+                  acceptNode: (n) =>
+                    n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim()
+                      ? NodeFilter.FILTER_ACCEPT
+                      : NodeFilter.FILTER_SKIP,
+                });
+                let candidate: Text | null = null;
+                let node = walker.nextNode();
+                while (node) {
+                  if (node instanceof Text && isLocalText(node)) {
+                    const relation = cur.dec.compareDocumentPosition(node);
+                    if (dir === 'right' && relation & Node.DOCUMENT_POSITION_FOLLOWING) {
+                      candidate = node;
+                      break;
+                    }
+                    if (dir === 'left' && relation & Node.DOCUMENT_POSITION_PRECEDING)
+                      candidate = node;
+                  }
+                  node = walker.nextNode();
+                }
+                body.focus({ preventScroll: true });
+                const range = document.createRange();
+                if (candidate)
+                  range.setStart(
+                    candidate,
+                    dir === 'right' ? 0 : (candidate.textContent?.length ?? 0),
+                  );
+                else if (dir === 'left') range.setStartBefore(cur.dec);
+                else range.setStartAfter(cur.dec);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+              clear();
+              return;
+            }
+            if (
+              key !== 'ArrowLeft' &&
+              key !== 'ArrowRight' &&
+              key !== 'ArrowUp' &&
+              key !== 'ArrowDown'
+            )
+              return;
+            const dec = (() => {
+              const range = getCollapsedRange();
+              if (!range) return null;
+              const decs = gDecs();
+              let exact: HTMLElement | undefined;
+              if (dir === 'right') {
+                exact = decs.find((d) => {
+                  const edge = document.createRange();
+                  edge.setStartBefore(d);
+                  edge.collapse(true);
+                  return (
+                    range.compareBoundaryPoints(Range.START_TO_START, edge) === 0 &&
+                    range.compareBoundaryPoints(Range.END_TO_END, edge) === 0
+                  );
+                });
+              } else {
+                for (let i = decs.length - 1; i >= 0; i--) {
+                  const d = decs[i]!;
+                  const edge = document.createRange();
+                  edge.setStartAfter(d);
+                  edge.collapse(true);
+                  if (
+                    range.compareBoundaryPoints(Range.START_TO_START, edge) === 0 &&
+                    range.compareBoundaryPoints(Range.END_TO_END, edge) === 0
+                  ) {
+                    exact = d;
+                    break;
+                  }
+                }
+              }
+              if (exact) return gDec(exact);
+              const block =
+                (range.startContainer instanceof Element
+                  ? range.startContainer
+                  : range.startContainer.parentElement
+                )?.closest('p, li, blockquote, h2, h3, h4, h5, h6, td, th') ?? null;
+              if (!block || !isLocalText(block)) return null;
+              const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
+                acceptNode: (n) =>
+                  n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim()
+                    ? NodeFilter.FILTER_ACCEPT
+                    : NodeFilter.FILTER_SKIP,
+              });
+              const textNodes: Text[] = [];
+              let text = walker.nextNode();
+              while (text) {
+                if (text instanceof Text) textNodes.push(text);
+                text = walker.nextNode();
+              }
+              const tgt = dir === 'right' ? textNodes[textNodes.length - 1] : textNodes[0];
+              if (!tgt) return null;
+              const textRange = document.createRange();
+              textRange.setStart(tgt, dir === 'right' ? (tgt.textContent?.length ?? 0) : 0);
+              textRange.collapse(true);
+              if (
+                range.compareBoundaryPoints(Range.START_TO_START, textRange) === 0 &&
+                range.compareBoundaryPoints(Range.END_TO_END, textRange) === 0
+              ) {
+                if (dir === 'right') {
+                  return (
+                    decs.find(
+                      (d) => !!(d.compareDocumentPosition(tgt) & Node.DOCUMENT_POSITION_PRECEDING),
+                    ) ?? null
+                  );
+                }
+                for (let i = decs.length - 1; i >= 0; i--) {
+                  const d = decs[i]!;
+                  if (d.compareDocumentPosition(tgt) & Node.DOCUMENT_POSITION_FOLLOWING) return d;
+                }
+              }
+              return null;
+            })();
+            if (key === 'ArrowUp' || key === 'ArrowDown') {
+              if (dec) {
+                e.preventDefault();
+                e.stopPropagation();
+                focusBlock(dec, dir);
+                return;
+              }
+              if (
+                !nearestAdjacent(dir) ||
+                !(window.getSelection() as Selection & { modify?: unknown })?.modify
+              )
+                return;
+              e.preventDefault();
+              e.stopPropagation();
+              const adjacent = nearestAdjacent(dir);
+              if (!adjacent) return;
+              const selection = window.getSelection();
+              const anchor = selection?.anchorNode ?? null;
+              vPending.current = {
+                beforeAnchor: anchor,
+                beforeBlock:
+                  (anchor instanceof Element ? anchor : anchor?.parentElement)?.closest(
+                    'p, li, blockquote, h2, h3, h4, h5, h6, td, th',
+                  ) ?? null,
+                before:
+                  selection?.rangeCount && selection.isCollapsed
+                    ? selection.getRangeAt(0).cloneRange()
+                    : null,
+                beforeRect: caretRect(dir),
+                dec: adjacent,
+                dir,
+              };
+              window.cancelAnimationFrame(vCursor.current);
+              vCursor.current = window.requestAnimationFrame(() => {
+                (
+                  /**
+                   * Retries caret placement after the editor has finished updating the selected block.
+                   *
+                   * @param attempt Number of scheduled layout checks already performed.
+                   */
+                  function settle(attempt = 0): void {
+                    vCursor.current = 0;
+                    const pending = vPending.current;
+                    if (!pending?.dec || bCursor.current) return void (vPending.current = null);
+                    const selected = selectedDec();
+                    if (selected) {
+                      vPending.current = null;
+                      focusBlock(selected, pending.dir);
+                      return;
+                    }
+                    const currSelection = window.getSelection();
+                    if (
+                      currSelection?.anchorNode &&
+                      pending.dec.contains(currSelection.anchorNode)
+                    ) {
+                      vPending.current = null;
+                      focusBlock(pending.dec, pending.dir);
+                      return;
+                    }
+                    if (
+                      pending.dec &&
+                      passedDec(
+                        pending.dec,
+                        pending.dir,
+                        pending.beforeAnchor,
+                        pending.beforeBlock,
+                        pending.before,
+                        pending.beforeRect,
+                      )
+                    ) {
+                      vPending.current = null;
+                      focusBlock(pending.dec, pending.dir);
+                      return;
+                    }
+                    if (attempt >= 5) return void (vPending.current = null);
+                    vCursor.current = window.requestAnimationFrame(() => settle(attempt + 1));
+                  }
+                )(0);
+              });
+              const verticalSelection = window.getSelection() as Selection & {
+                modify?: (alter: 'move', dir: 'backward' | 'forward', granularity: 'line') => void;
+              };
+              if (
+                !verticalSelection?.rangeCount ||
+                !verticalSelection.isCollapsed ||
+                !verticalSelection.modify
+              )
+                return;
+              verticalSelection.modify('move', dir === 'right' ? 'forward' : 'backward', 'line');
+              const pending = vPending.current;
+              if (!pending?.dec) return;
+              const selected = selectedDec();
+              if (selected) {
+                vPending.current = null;
+                focusBlock(selected, dir);
+                return;
+              }
+              if (
+                pending.dec &&
+                passedDec(
+                  pending.dec,
+                  pending.dir,
+                  pending.beforeAnchor,
+                  pending.beforeBlock,
+                  pending.before,
+                  pending.beforeRect,
+                )
+              ) {
+                vPending.current = null;
+                focusBlock(pending.dec, dir);
+              }
+              return;
+            }
+            if (!dec) return;
+            e.preventDefault();
+            e.stopPropagation();
+            focus(dec, dir === 'right' ? 'left' : 'right');
+          } catch (err: unknown) {
+            console.error('[docs:edit] Key down event failed', err);
+          }
+        },
+
+        /**
+         * On selection change.
+         *
+         */
+        onSelectionChange(): void {
+          try {
+            snapshotSelection();
+            const sel = window.getSelection();
+            const p = vPending.current;
+            if (!bCursor.current && p?.dec) {
+              const dec = selectedDec();
+              if (dec) {
+                vPending.current = null;
+                window.cancelAnimationFrame(vCursor.current);
+                focusBlock(dec, p.dir);
+                return;
+              }
+              if (sel?.anchorNode && p.dec.contains(sel.anchorNode)) {
+                vPending.current = null;
+                window.cancelAnimationFrame(vCursor.current);
+                focusBlock(p.dec, p.dir);
+                return;
+              }
+              if (passedDec(p.dec, p.dir, p.beforeAnchor, p.beforeBlock, p.before, p.beforeRect)) {
+                vPending.current = null;
+                window.cancelAnimationFrame(vCursor.current);
+                focusBlock(p.dec, p.dir);
+                return;
+              }
+            }
+            const { current: cur } = bCursor;
+            if (!cur) return;
+            if (!cur.dec.isConnected || !cur.wrapper.isConnected) {
+              if (restore()) return;
+              window.cancelAnimationFrame(restoreCursor.current);
+              restoreCursor.current = window.requestAnimationFrame(() => {
+                (
+                  /**
+                   * Retries restoring the previous selection when a block temporarily leaves the DOM.
+                   *
+                   * @param attempt Number of scheduled restore checks already performed.
+                   */
+                  function retryRestore(attempt = 0): void {
+                    if (restore()) return;
+                    if (attempt >= 12) {
+                      clear();
+                      return;
+                    }
+                    restoreCursor.current = window.requestAnimationFrame(() =>
+                      retryRestore(attempt + 1),
+                    );
+                  }
+                )(0);
+              });
+              return;
+            }
+            if (isToolbarTgt(document.activeElement as HTMLElement | null)) {
+              restoreSavedSelection();
+              return;
+            }
+            if (!sel?.rangeCount) return;
+            if (!sel.isCollapsed) {
+              const range = sel.getRangeAt(0);
+              if (
+                range.startContainer === range.endContainer &&
+                range.endOffset - range.startOffset === 1
+              ) {
+                const selNode = range.startContainer.childNodes[range.startOffset];
+                if (
+                  selNode &&
+                  (selNode === cur.dec ||
+                    cur.dec.contains(selNode) ||
+                    cur.wrapper.contains(selNode))
+                )
+                  return;
+              }
+              if (
+                cur.dec.contains(range.startContainer) ||
+                cur.wrapper.contains(range.startContainer)
+              )
+                return;
+              clear();
+              return;
+            }
+            if (
+              !sel.anchorNode ||
+              (!root()?.contains(sel.anchorNode) && sel.anchorNode !== document.body)
+            )
+              clear();
+          } catch (err: unknown) {
+            console.error('[docs:edit] Selection change event failed', err);
+          }
+        },
+
+        /** Preserves toolbar selection or establishes block-cursor state for the pointer target.
+         * @param e Pointer event used to identify the target and its editor block.
+         */
+        onPointerDown(e: PointerEvent): void {
+          try {
+            const tgt = e.target instanceof HTMLElement ? e.target : null;
+            if (tgt?.closest('[role="combobox"], [data-docs-navigation]')) return;
+            snapshotSelection();
+            if (isToolbarTgt(tgt)) {
+              restoreSavedSelection();
+              return;
+            }
+            const block =
+              tgt
+                ?.closest<HTMLElement>('[data-block-gutter="true"]')
+                ?.parentElement?.querySelector<HTMLElement>(
+                  '[data-docs-editor-block], [data-editor-block], .docs-editor-block',
+                ) ?? tgt?.closest<HTMLElement>('[data-docs-editor-block], [data-editor-block]');
+            const dec =
+              block?.closest<HTMLElement>('[data-lexical-decorator="true"]') ??
+              tgt?.closest<HTMLElement>('[data-lexical-decorator="true"]') ??
+              block;
+            if (!dec || !editorRefsForRoot.current?.body?.contains(dec)) {
+              clear();
+              return;
+            }
+            const eTgt = tgt?.closest<HTMLElement>(EDITABLE);
+            const iTgt = tgt?.closest<HTMLElement>(INTERACTIVE);
+            const wrap = dec.matches('[data-docs-editor-block]')
+              ? dec
+              : (dec.querySelector<HTMLElement>('[data-docs-editor-block]') ?? dec);
+            const wrapState = {
+              box: wrap.getBoundingClientRect(),
+              sameBlock:
+                bCursor.current?.wrapper === wrap ||
+                (bCursor.current?.label === wrap.getAttribute('data-docs-editor-block') &&
+                  bCursor.current?.gId ===
+                    (wrap.matches('[data-docs-focus-group-id]')
+                      ? wrap
+                      : wrap.querySelector<HTMLElement>('[data-docs-focus-group-id]')
+                    )?.getAttribute('data-docs-focus-group-id')),
+            };
+            if ((eTgt && dec.contains(eTgt)) || (iTgt && dec.contains(iTgt))) {
+              if (bCursor.current) clear();
+              return;
+            }
+            const gId =
+              tgt
+                ?.closest<HTMLElement>('[data-docs-focus-group-id]')
+                ?.getAttribute('data-docs-focus-group-id') ?? null;
+            if (gId && bCursor.current?.gId !== gId) {
+              const gRoot = root()?.querySelector<HTMLElement>(
+                `[data-docs-focus-group="root"][data-docs-focus-group-id="${gId}"]`,
+              );
+              const gDec = gRoot?.closest<HTMLElement>('[data-lexical-decorator="true"]') ?? dec;
+              const gBox = (gRoot ?? gDec).getBoundingClientRect();
+              e.preventDefault();
+              e.stopPropagation();
+              focus(gDec, e.clientX - gBox.left > gBox.width / 2 ? 'right' : 'left');
+              return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            if (wrapState.sameBlock) return;
+            focus(dec, e.clientX - wrapState.box.left > wrapState.box.width / 2 ? 'right' : 'left');
+          } catch (err: unknown) {
+            console.error('[docs:edit] Pointer down event failed', err);
+          }
+        },
+        /**
+         * Selects a decorator block from its surrounding interactive ring.
+         *
+         * @param e Ring selection event emitted by the visual block wrapper.
+         *
+         * @return Completion after the decorator becomes the active block selection.
+         */
+        onBlockSelect(e: Event): void {
+          const decorator = (e as CustomEvent<{ decorator?: unknown }>).detail?.decorator;
+          if (
+            !(decorator instanceof HTMLElement) ||
+            !editorRefsForRoot.current.body?.contains(decorator)
+          )
+            return;
+          focus(decorator, decorator.getBoundingClientRect().width > 0 ? 'left' : 'right');
+          const block = decorator.querySelector<HTMLElement>(
+            '[data-docs-editor-block], .docs-math-wrapper, [data-math-code], [data-docs-view-root="true"]',
+          );
+          if (block)
+            document.dispatchEvent(new CustomEvent('docs:block-selected', { detail: { block } }));
+        },
+      };
+      document.addEventListener('keydown', eHandlers.onKeyDown as EventListener, true);
+      document.addEventListener('selectionchange', eHandlers.onSelectionChange);
+      document.addEventListener('pointerdown', eHandlers.onPointerDown as EventListener, true);
+      document.addEventListener('docs:block-select', eHandlers.onBlockSelect);
+      return () => {
+        window.cancelAnimationFrame(restoreCursor.current);
+        window.cancelAnimationFrame(vCursor.current);
+        vPending.current = null;
+        clear();
+        document.removeEventListener('keydown', eHandlers.onKeyDown as EventListener, true);
+        document.removeEventListener('selectionchange', eHandlers.onSelectionChange);
+        document.removeEventListener('pointerdown', eHandlers.onPointerDown as EventListener, true);
+        document.removeEventListener('docs:block-select', eHandlers.onBlockSelect);
+      };
+    }, [editorRefsForRoot]);
+    useEffect(() => {
+      if (!document) return;
+
+      // DROP
+      /** Places the native insertion caret at the drag location when it falls inside the editor.
+       * @param e Drag event carrying the pointer coordinates and transferred payload.
+       */
+      const moveDropCaret = (e: DragEvent): void => {
+        try {
+          const root = editorRefsForRoot.current?.body;
+          const transfer = e.dataTransfer;
+          if (!transfer || !root) return;
+          if (
+            !['Files', 'text/html', 'text/plain', 'text/uri-list'].some((t) =>
+              Array.from(transfer.types ?? []).includes(t),
+            )
+          )
+            return;
+          const range =
+            document.caretRangeFromPoint?.(e.clientX, e.clientY) ??
+            (() => {
+              const pos = document.caretPositionFromPoint?.(e.clientX, e.clientY);
+              if (!pos) return null;
+              const n = document.createRange();
+              n.setStart(pos.offsetNode, pos.offset);
+              n.collapse(true);
+              return n;
+            })();
+          if (!range || !root.contains(range.startContainer)) return;
+          const sel = window.getSelection();
+          if (!sel) return;
+          sel.removeAllRanges();
+          sel.addRange(range);
+          e.preventDefault();
+        } catch (err: unknown) {
+          console.error('[docs:edit] Drop event failed', err);
+        }
+      };
+      /**
+       * Attaches supported files dropped onto the active editor surface.
+       *
+       * @param e - Browser drag event containing the dropped files.
+       */
+      const onDrop = (e: DragEvent): void => {
+        try {
+          const dropped = Array.from(e.dataTransfer?.files ?? []);
+          if (!dropped.length || !editorRefsForRoot.current.body) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const files = dropped.filter((f) => {
+            const ext = f.name.match(TerraQualityRegex.REGEX_PATTERN_REGEX())?.[0].toLowerCase();
+            return Boolean(
+              (f.type && f.type in MIME) ||
+              (ext && Object.values(MIME).includes(ext as (typeof MIME)[keyof typeof MIME])),
+            );
+          });
+          if (!files.length) {
+            notify({
+              error: new Error('Dropped files are not permitted attachments.'),
+              fallback: 'Only permitted file types can be attached.',
+            });
+            return;
+          }
+          void mediaAttachFiles(files).catch((e: unknown) => {
+            notify({
+              error: e instanceof Error ? e : new Error(String(e)),
+              fallback: 'Failed to add dropped attachments.',
+            });
+          });
+        } catch (err: unknown) {
+          console.error('[docs:edit] Attachment drop failed', err);
+        }
+      };
+
+      // PASTE
+      /** Routes clipboard data to Docs paste and attachment handlers, cancelling browser defaults when handled.
+       * @param data Clipboard payload containing text, files, or serialized HTML.
+       * @param e Event methods used to cancel the browser's default paste behavior.
+       */
+      const handleClipboard = (
+        data: DataTransfer,
+        e: Pick<Event, 'preventDefault' | 'stopImmediatePropagation' | 'stopPropagation'>,
+      ): void => {
+        const view = codeViewOf();
+        const sel = window.getSelection();
+        const savedSel =
+          editorRefsForRoot.current.selection ??
+          $cursorPosition.get() ??
+          $cursor.get() ??
+          $cursorGhost.get();
+        if (!editorRefsForRoot.current.selection && view && view.dom.offsetParent !== null) {
+          editorRefsForRoot.current.selection = {
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          };
+          $cursorPosition.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+          $cursor.set({
+            code: { from: view.state.selection.main.from, to: view.state.selection.main.to },
+            collapsed: view.state.selection.main.empty,
+            dom: null,
+            visible: true,
+          });
+        } else if (!editorRefsForRoot.current.selection && sel?.rangeCount && sel.anchorNode) {
+          const ce = (
+            sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode.parentElement
+          )?.closest<HTMLElement>('[contenteditable="true"], [contenteditable="plaintext-only"]');
+          if (ce && editorRefsForRoot.current.body?.contains(ce)) {
+            const dom = sel.getRangeAt(0).cloneRange();
+            const rect = dom.getBoundingClientRect();
+            const anchorPath = captureNodePath(editorRefsForRoot.current.body, sel.anchorNode);
+            const focusPath = captureNodePath(editorRefsForRoot.current.body, sel.focusNode);
+            editorRefsForRoot.current.selection = {
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              text: sel.toString(),
+              visible: true,
+            };
+            $cursorPosition.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              text: sel.toString(),
+              visible: true,
+            });
+            $cursor.set({
+              anchorOffset: sel.anchorOffset,
+              anchorPath,
+              anchorText: sel.anchorNode?.textContent || undefined,
+              box:
+                rect.width || rect.height
+                  ? {
+                      height: Math.max(16, rect.height || 0),
+                      left: rect.left,
+                      top: rect.top,
+                      width: Math.max(2, rect.width || 0),
+                    }
+                  : undefined,
+              collapsed: sel.isCollapsed,
+              code: null,
+              dom,
+              focusOffset: sel.focusOffset,
+              focusPath,
+              focusText: sel.focusNode?.textContent || undefined,
+              text: sel.toString(),
+              visible: true,
+            });
+          }
+        }
+        const html = data.getData('text/html');
+        let plain = data.getData('text/plain');
+        const types = Array.from(data.types ?? []);
+        const richClipboard =
+          /<(?:Code|Testimonials|Leaf|DocsTable|TsDocs|Nodes)\b|<table\b|===|\|\|\||:::/i.test(
+            `${html || ''}\n${plain || ''}`,
+          );
+        // CRITICAL BYPASS: Let Lexical handle pasting its own native blocks.
+        if (
+          (types.includes('application/x-lexical-editor') ||
+            (html && html.includes('data-lexical-decorator'))) &&
+          !richClipboard
+        )
+          return;
+        if (richClipboard) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+        }
+        // Intercept and sanitize triple character blocks inside raw clipboard copies
+        if (plain && plain.includes('|||'))
+          plain = plain
+            .replace(/([^\n])[ \t]*\|\|\|/g, '$1\n\n|||')
+            .replace(/\|\|\|[ \t]*([^\n])/g, '|||\n\n$1');
+        if (richClipboard && plain) {
+          pasteMd(
+            mediaInsert,
+            ((md: string): string => {
+              if (!md) return '';
+              return [
+                ...new Set([
+                  ...repoComponents.map((component) => component.name),
+                  'Aside',
+                  'Code',
+                  'DocsMath',
+                  'DocsTable',
+                  'Embed',
+                  'Leaf',
+                  'Nodes',
+                  'TsDocs',
+                ]),
+              ]
+                .sort((left, right) => right.length - left.length)
+                .reduce(
+                  (v, name) =>
+                    v.replace(
+                      new RegExp(
+                        `(<\\/?\\s*)${name.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}(?=\\b)`,
+                        'gi',
+                      ),
+                      (_, prefix: string) => `${prefix}${name}`,
+                    ),
+                  md,
+                );
+            })(plain),
+            savedSel,
+          );
+          if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+            editorRefsForRoot.current.norm.force = true;
+            editorRefsForRoot.current.norm.replay = true;
+          }
+          return;
+        }
+        if (html && !types.includes('vscode-editor-data')) {
+          const md = htmlToMd(html);
+          if (md && md !== plain) {
+            pasteMd(mediaInsert, md, savedSel);
+            if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+              editorRefsForRoot.current.norm.force = true;
+              editorRefsForRoot.current.norm.replay = true;
+            }
+            return;
+          }
+        }
+        if (plain) {
+          let transformed = plain;
+          let changed = false;
+          if (/^[ \t]*\\`\\`\\`/gm.test(transformed)) {
+            transformed = transformed.replace(/^([ \t]*)\\`\\`\\`/gm, '$1```');
+            changed = true;
+          }
+          if (transformed.includes('&grave;')) {
+            transformed = transformed.replaceAll('&grave;', '&amp;grave;');
+            changed = true;
+          }
+          const table = mdTableToHtml(transformed);
+          if (table) {
+            transformed = table;
+            changed = true;
+          }
+          if (changed) {
+            pasteMd(mediaInsert, transformed, savedSel);
+            if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+              editorRefsForRoot.current.norm.force = true;
+              editorRefsForRoot.current.norm.replay = true;
+            }
+            return;
+          }
+        }
+        const file = Array.from(data.files ?? []).find(
+          (f) => f.type.startsWith('image/') || f.type === 'application/pdf',
+        );
+        if (file && file.size > 0) {
+          const isPdf = file.type === 'application/pdf';
+          const optimistic = URL.createObjectURL(file);
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          const lbl = toImgAlt(file.name || (isPdf ? 'document' : 'image'));
+          pasteMd(
+            mediaInsert,
+            isPdf ? `\n<Embed src="${optimistic}" title="${lbl}" />\n` : toImgMd(optimistic, lbl),
+            savedSel,
+          );
+          void mediaUploadFile(file).catch((e: unknown) => {
+            notify({
+              error: e instanceof Error ? e : new Error(String(e)),
+              fallback: `Failed to upload pasted ${isPdf ? 'PDF' : 'image'}. Local changes were kept.`,
+            });
+          });
+          if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+            editorRefsForRoot.current.norm.force = true;
+            editorRefsForRoot.current.norm.replay = true;
+          }
+          return;
+        }
+        const remote = (() => {
+          /**
+           * Classifies image source values that point to remote URLs or the media endpoint.
+           *
+           * @param val Source string from the Docs image block.
+           *
+           * @returns Whether the value must be loaded through the remote image path.
+           */
+          const isRemote = (val: string): boolean => {
+            const trimmed = val.trim();
+            if (!trimmed) return false;
+            if (trimmed.startsWith('/api/media?')) return true;
+            if (TerraQualityRegex.REGEX_HTTPS_I_REGEX().test(trimmed)) {
+              try {
+                const imgUrl = new URL(trimmed);
+                if (
+                  imgUrl.pathname === '/api/media' ||
+                  /\.(?:avif|gif|jpe?g|png|svg|webp)(?:$|[?#])/i.test(
+                    imgUrl.pathname + imgUrl.search,
+                  )
+                )
+                  return true;
+              } catch {
+                return false;
+              }
+            }
+            try {
+              return (
+                /^https?:$/i.test(new URL(trimmed).protocol) &&
+                new RegExp(
+                  `\\.(${Object.values(IMAGE_TYPES)
+                    .map((extension) => extension.substring(1))
+                    .join('|')})(?:$|[?#])`,
+                  'i',
+                ).test(trimmed)
+              );
+            } catch {
+              return false;
+            }
+          };
+          const html = data.getData('text/html').trim();
+          if (html) {
+            const match = html.match(/<img\b[^>]*\bsrc=(['"])(.*?)\1/i)?.[2]?.trim();
+            if (match && isRemote(match)) return match;
+          }
+          for (const type of ['text/uri-list', 'text/plain']) {
+            const val = data.getData(type).trim();
+            if (val && isRemote(val)) return val;
+          }
+          return null;
+        })();
+        if (!remote) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        pasteMd(
+          mediaInsert,
+          toImgMd(remote, toImgAlt(remote.split('/').at(-1) ?? 'image')),
+          savedSel,
+        );
+        if (editorRefsForRoot.current && editorRefsForRoot.current.norm) {
+          editorRefsForRoot.current.norm.force = true;
+          editorRefsForRoot.current.norm.replay = true;
+        }
+      };
+      /** Handles clipboard paste events through the editor's shared paste router.
+       * @param e Clipboard event dispatched by the document.
+       */
+      const onPaste = (e: ClipboardEvent): void => {
+        try {
+          if (e.clipboardData) handleClipboard(e.clipboardData, e);
+        } catch (err: unknown) {
+          console.error('[docs:edit] Paste event failed', err);
+        }
+      };
+      /** Handles paste-like input events that provide clipboard data without a paste event.
+       * @param e Input event whose type and transfer data determine whether to route a paste.
+       */
+      const onBeforeInput = (e: InputEvent): void => {
+        try {
+          if (e.inputType !== 'insertFromPaste' && e.inputType !== 'insertReplacementText') return;
+          if (!e.dataTransfer) return;
+          handleClipboard(e.dataTransfer, e);
+        } catch (err: unknown) {
+          console.error('[docs:edit] Beforeinput paste event failed', err);
+        }
+      };
+      document.addEventListener('dragover', moveDropCaret, true);
+      document.addEventListener('drop', onDrop, true);
+      document.addEventListener('paste', onPaste, true);
+      document.addEventListener('beforeinput', onBeforeInput, true);
+      return () => {
+        document.removeEventListener('dragover', moveDropCaret, true);
+        document.removeEventListener('drop', onDrop, true);
+        document.removeEventListener('paste', onPaste, true);
+        document.removeEventListener('beforeinput', onBeforeInput, true);
+      };
+    }, [mediaAttachFiles, mediaInsert, editorRefsForRoot, mediaUploadFile]);
 
     // VALIDATION
     if (!surface)
@@ -283,18 +2182,29 @@ const EditorSurfaces = {
           </>
         ) : (
           <Suspense fallback={<div aria-hidden="true" data-docs-editor-loading />}>
-            <TerraContentEditor
+            <ContentEditor
               content={
                 (isDocBody(editor.draft.content)
                   ? editor.draft.content
-                  : undefined) as unknown as TerraContentData
+                  : undefined) as unknown as ContentData
               }
-              docsAttachments={[]}
-              memberProfile="docs"
+              docsAttachments={docsAttachments}
+              {...(blocks === undefined ? {} : { blocks })}
+              readOnly={!editable}
+              toolbarActions={
+                <DocsToolbarActions
+                  activeMode="edit"
+                  editable={editable}
+                  size="sm"
+                  toolbar={editorRefs.toolbar}
+                />
+              }
               onChange={(c) => {
                 surface.onBodyChange(
                   toPortableBody(
-                    c.map((b) => (b._type === 'terraBlock' ? { ...b, _type: 'block' } : b)),
+                    c.map((b) =>
+                      isRec(b) && b._type === 'terraBlock' ? { ...b, _type: 'block' } : b,
+                    ),
                   ),
                 );
               }}
@@ -307,19 +2217,17 @@ const EditorSurfaces = {
   },
 
   /**
-   * Renders the head component.
+   * Displays or edits document title and description, with contributor and update metadata.
    *
-   * @param props - Compact layout, editability, page metadata, contributors, and timestamps displayed in the Docs page header.
-   * @param full - Whether the page is rendered in full mode.
-   * @param contributors - Contributors input supplied to head's operation.
-   * @param updatedAt - Updated at input supplied to head's operation.
+   * @param compact Uses the compact title and description spacing for the edit toolbar layout.
+   * @param description Initial document description used when no draft is active.
    * @param editable - Editability flag controlling whether head accepts changes.
-   * @param description - Supporting text shown in head.
-   * @param title - Heading text shown in head.
+   * @param title Initial document title used when no draft is active.
+   * @param full - Whether the page is rendered in full mode.
+   * @param initContributors Names shown as document contributors beneath the title.
+   * @param updatedAt ISO timestamp displayed as the document's last-modified date.
    *
-   * @return The page head block.
-   *
-   * @remarks Renders the docs page head metadata and edit controls.
+   * @return The document heading with editable fields and metadata.
    */
 
   Head({
@@ -332,28 +2240,127 @@ const EditorSurfaces = {
     updatedAt,
   }: {
     compact?: boolean;
-    description?: string;
+    description?: string | undefined;
     editable: boolean;
     title: string;
     full: boolean;
-    contributors?: string[] | null;
-    updatedAt?: string;
+    contributors?: string[] | null | undefined;
+    updatedAt?: string | undefined;
   }): JSX.Element {
     // STATES
     const edit = useContext(EditStateCtx);
-    const draft: Pick<Draft, 'description' | 'title'> = edit?.draft ?? { description, title };
+    const draft: Pick<Draft, 'description' | 'title'> = edit?.draft ?? {
+      description,
+      title,
+    };
     const contributors = initContributors ?? [];
+    const titleRef = useRef<HTMLInputElement>(null);
+    const descriptionRef = useRef<HTMLTextAreaElement>(null);
+    useLayoutEffect(() => {
+      const input = titleRef.current;
+      const context = window.document.createElement('canvas').getContext('2d');
+      if (!input || !context) return;
+      let a = true;
+      /**
+       *
+       */
+      const fitTitle = (): void => {
+        if (!a) return;
+        // Restore the responsive Tailwind size first so repeated resizes never
+        // compound a previous shrink. Then scale only titles that exceed the
+        // available content width.
+        input.style.removeProperty('font-size');
+        const styles = window.getComputedStyle(input);
+        const baseSize = Number.parseFloat(styles.fontSize);
+        const available =
+          input.clientWidth -
+          Number.parseFloat(styles.paddingLeft || '0') -
+          Number.parseFloat(styles.paddingRight || '0');
+        const text = input.value || input.placeholder;
+        if (!text || !Number.isFinite(baseSize) || available <= 0) return;
+        context.font = `${styles.fontStyle} ${styles.fontWeight} ${baseSize}px ${styles.fontFamily}`;
+        const textWidth =
+          context.measureText(text).width +
+          Math.max(text.length - 1, 0) * (Number.parseFloat(styles.letterSpacing) || 0);
+        if (textWidth > available) {
+          input.style.fontSize = `${Math.max(12, (baseSize * (available - 1)) / textWidth)}px`;
+        }
+      };
+      fitTitle();
+      void window.document.fonts.ready.then(fitTitle);
+      window.document.fonts.addEventListener('loadingdone', fitTitle);
+      const parent = input.parentElement;
+      let previousWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
+      /**
+       *
+       */
+      const resize = (): void => {
+        const nWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
+        if (nWidth === previousWidth) return;
+        previousWidth = nWidth;
+        fitTitle();
+      };
+      const observer = new ResizeObserver(resize);
+      if (parent) observer.observe(parent);
+      window.addEventListener('resize', resize);
+      return () => {
+        a = false;
+        observer.disconnect();
+        window.document.fonts.removeEventListener('loadingdone', fitTitle);
+        window.removeEventListener('resize', resize);
+      };
+    }, [draft.title]);
+    useLayoutEffect(() => {
+      const textarea = descriptionRef.current;
+      if (!textarea) return;
+      let a = true;
+      /**
+       *
+       */
+      const resize = (): void => {
+        if (!a) return;
+        // The original shared Textarea variant fixes this field at h-10 (40px).
+        // Measure that CSS height without the previous inline measurement, then
+        // grow only when the wrapped description needs more room.
+        textarea.style.removeProperty('height');
+        textarea.style.height = `${Math.max(
+          textarea.getBoundingClientRect().height,
+          ((textarea.style.height = 'auto'), textarea.scrollHeight),
+        )}px`;
+      };
+      resize();
+      const fonts = document.fonts;
+      void fonts.ready.then(resize);
+      fonts.addEventListener('loadingdone', resize);
+      let previousWidth = textarea.parentElement?.getBoundingClientRect().width;
+      const observer = new ResizeObserver(() => {
+        const nWidth = textarea.parentElement?.getBoundingClientRect().width;
+        if (nWidth !== previousWidth) {
+          previousWidth = nWidth;
+          resize();
+        }
+      });
+      if (textarea.parentElement) observer.observe(textarea.parentElement);
+      window.addEventListener('resize', resize);
+      return () => {
+        a = false;
+        observer.disconnect();
+        fonts.removeEventListener('loadingdone', resize);
+        window.removeEventListener('resize', resize);
+      };
+    }, [draft.description]);
 
     // RENDER
     // prettier-ignore
     return (
-			<header className='terra-docs-document-header relative z-10 w-full print:!mb-8 print:border-none'>
-				<div className={cn('mx-auto w-full px-6 transition-opacity duration-200 md:px-10 print:!pb-3', compact ? 'pb-3 pt-5' : 'pb-10 pt-7', full ? 'max-w-none' : 'max-w-5xl')}>
+			<header className='docs-document-header relative z-10 w-full print:!mb-8 print:border-none'>
+				<div className={cn('mx-auto w-full px-6 transition-opacity duration-200 md:px-10 print:!pb-3', compact ? 'pb-3 pt-5' : 'pb-10 pt-7', full ? 'max-w-none' : 'max-w-7xl')}>
 					<div>
 						<Label htmlFor='docs-title' className='sr-only'>
 							Title
 						</Label>
 						<Input
+							ref={titleRef}
 							id='docs-title'
 							value={draft.title}
 							onChange={e => {
@@ -374,19 +2381,21 @@ const EditorSurfaces = {
 							Description
 						</Label>
 						<Textarea
+							ref={descriptionRef}
 							id='docs-description'
+							rows={1}
 							value={draft.description}
 							onChange={e => edit?.update({ description: e.currentTarget.value })}
-							placeholder='Add a description...'
+							placeholder={editable ? 'Add a description...' : undefined}
 							disabled={!editable}
-							className='min-h-0 resize-none border-none bg-transparent p-0 text-base text-pretty text-primary-11 shadow-none focus-visible:ring-0 disabled:cursor-default disabled:opacity-100 dark:bg-transparent'
+							className='min-h-0 resize-none overflow-hidden border-none bg-transparent p-0 text-base text-pretty text-primary-11 shadow-none focus-visible:ring-0 disabled:cursor-default disabled:opacity-100 dark:bg-transparent'
 							suppressHydrationWarning
 						/>
 					</div>
 					{(updatedAt || contributors.length > 0) && (
 						<div className='mt-4 flex flex-wrap items-center gap-2 text-sm text-primary-11'>
 							{updatedAt && <span>Last modified {new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(updatedAt))}</span>}
-							{contributors.map(c => <Badge key={c} size='sm' title='Contributing author' variant='secondary'>{c}</Badge>)}
+							{contributors.map(c => <Badge key={c} size='sm' title='Contributing author' variant='secondary-tonal'>{c}</Badge>)}
 						</div>
 					)}
 				</div>
@@ -396,24 +2405,28 @@ const EditorSurfaces = {
 };
 
 /**
- * Renders the scaffold component.
+ * Composes the Docs navigation, document surfaces, and controls from host-supplied route and permission state.
  *
- * @param props - Tree, route, user, document content, edit permission, metadata, and display mode for the Docs page shell.
- * @param tree - Tree input supplied to scaffold's operation.
- * @param pathname - Pathname input supplied to scaffold's operation.
- * @param permission - Permission input supplied to scaffold's operation.
- * @param userData - user record supplied to scaffold.
- * @param description - Supporting text shown in scaffold.
- * @param contributors - Contributors input supplied to scaffold's operation.
- * @param updatedAt - Updated at input supplied to scaffold's operation.
- * @param full - Full input supplied to scaffold's operation.
- * @param standalone - Standalone input supplied to scaffold's operation.
- * @param path - Source or route path resolved for scaffold.
- * @param compiledMDX - Compiled mdx input supplied to scaffold's operation.
- * @param title - Heading text shown in scaffold.
- * @param source - Source node identifier for the connection drawn by scaffold.
- * @param content - Content input supplied to scaffold's operation.
- * @param mode - Mode input supplied to scaffold's operation.
+ * @param tree Navigation branches and leaves used to resolve the current document and sidebar.
+ * @param initPathname Browser pathname used to select the current document route.
+ * @param permission Read or write access granted by the host for the current Docs surface.
+ * @param userData Signed-in user metadata shown by the sidebar, or `null` when the viewer is signed out.
+ * @param initDesc Initial document description displayed or edited in the page header.
+ * @param initContributors Initial contributor names associated with the document.
+ * @param initUpdatedAt Last-modified timestamp displayed in the page header.
+ * @param full Whether the content area expands beyond its usual maximum width.
+ * @param standalone Whether to omit navigation and render only the document surface.
+ * @param initPath Canonical document path used for storage and route transitions.
+ * @param initMdx Precompiled Markdown content supplied by a static host.
+ * @param initTitle Initial document title shown in the page header.
+ * @param initSrc Initial Markdown source used to seed the editor draft.
+ * @param initContent Initial structured body used when a host supplies Portable Text content.
+ * @param initialMode Mode requested by the host before the workspace's stored mode is loaded.
+ * @param viewContent Optional host-rendered body that replaces the default read-only editor.
+ * @param staticContent Whether static content is already hydrated and may render without client setup.
+ * @param beforeContent Optional host-rendered content placed before the document body.
+ * @param afterContent Optional host-rendered content placed after the document body.
+ * @param docsBlocks Per-document enablement map for custom block renderers.
  *
  * @return The Docs scaffold with its navigation tree, content surface, and page controls.
  */
@@ -434,29 +2447,43 @@ export default function Scaffold({
   content: initContent,
   mode: initialMode,
   viewContent,
+  staticContent = false,
+  beforeContent,
+  afterContent,
+  blocks: docsBlocks,
 }: {
   tree: TreeType[];
   pathname: string;
   permission: Permission;
-  userData: User | null;
-  description?: string;
+  userData: {
+    _id?: string;
+    _type?: string;
+    [key: string]: unknown;
+  } | null;
+  description?: string | undefined;
   full?: boolean;
   standalone?: boolean;
-  path?: string;
-  compiledMDX?: string;
+  path?: string | undefined;
+  compiledMDX?: string | undefined;
   title: string;
-  source?: string;
-  content?: string | DocVer[] | DocBody;
-  contributors?: string[];
-  updatedAt?: string;
-  mode?: Mode;
-  viewContent?: ReactNode;
+  source?: string | undefined;
+  content?: string | DocVer[] | DocBody | undefined;
+  contributors?: string[] | undefined;
+  updatedAt?: string | undefined;
+  mode?: Mode | undefined;
+  viewContent?: ReactNode | undefined;
+  staticContent?: boolean | undefined;
+  beforeContent?: ReactNode | undefined;
+  afterContent?: ReactNode | undefined;
+  blocks?: DocsBlockOptions | undefined;
 }): JSX.Element {
+  const host = getDocsHostAdapter();
+
   // STATES
-  const navigationState = { open: useAtom($sidebar), leafTitle: useAtom($leafTitle) };
   // Match the original Docs shell: only render the Portable Text editor after hydration.
   // Its external store is not SSR-safe, and rendering it in the initial HTML causes React #419.
-  const [hydrated, setHydrated] = useState<boolean>(standalone);
+  const [hydrated, setHydrated] = useState<boolean>(standalone || staticContent);
+  const shellState = { hydrated, sidebarOpen: useAtom($sidebar) };
   const toolbar = useAtom($toolbar);
   const stored = useAtom($mode);
   const writable = permission === 'write';
@@ -511,7 +2538,7 @@ export default function Scaffold({
       };
       destRes.current?.({
         path: `${destPath.base}/${destPath.slug}.mdx`,
-        parentId: dest.newSection ? undefined : sel?.origName,
+        ...(!dest.newSection && sel?.origName ? { parentId: sel.origName } : {}),
         title: dest.title.trim() || 'Untitled',
       });
       destRes.current = null;
@@ -521,6 +2548,49 @@ export default function Scaffold({
 
   // prettier-ignore
   const [currDoc, setCurrDoc] = useState({ pathname: initPathname, path: initPath, title: initTitle, description: initDesc, contributors, updatedAt: initUpdatedAt, source: initSrc || (typeof initContent === 'string' ? initContent : ''), content: toPortableBody(initContent), compiledMDX: initMdx, versions: [] as DocVer[] });
+  const [tocState, setTocState] = useState<{
+    active: string | null;
+    headings: { id: string; text: string }[];
+    path: string;
+  }>({ active: null, headings: [], path: initPathname });
+
+  // The shared Docs index route opens the first readable leaf in the first section
+  // that contains one, so each Docs host gets a useful landing page without
+  // needing a separately authored index document.
+  useEffect(() => {
+    if (standalone || staticContent) return;
+    if (
+      ((initPathname || '').replace(SHARED_REGEX, '') || '/') !==
+      (docsRootPath().replace(SHARED_REGEX, '') || '/')
+    )
+      return;
+    for (const section of tree) {
+      if (section.type !== 'branch') continue;
+      const leaf = (
+        /**
+         * Finds the first routeable leaf beneath a section for the initial Docs navigation.
+         *
+         * @param nodes Navigation descendants searched in display order.
+         *
+         * @returns The first leaf with a URL, or `null` if the section contains no routeable page.
+         */
+        function firstLeaf(nodes: TreeType[]): Extract<TreeType, { type: 'leaf' }> | null {
+          for (const node of nodes) {
+            if (node.type === 'leaf' && node.url) return node;
+            if (node.type === 'branch' && node.children?.length) {
+              const leaf = firstLeaf(node.children);
+              if (leaf) return leaf;
+            }
+          }
+          return null;
+        }
+      )(section.children ?? []);
+      if (leaf?.url && leaf.url !== initPathname) {
+        window.location.replace(leaf.url);
+        return;
+      }
+    }
+  }, [initPathname, standalone, staticContent, tree]);
 
   // 1. ASTRO VIEW TRANSITION / HMR PROP SYNC
   // Force component state to update if Astro swaps the underlying page and injects new props into this instance.
@@ -528,6 +2598,7 @@ export default function Scaffold({
     const content = toPortableBody(initContent);
     const src = initSrc || (typeof initContent === 'string' ? initContent : '');
     setCurrDoc((p) => {
+      const existingContributors = Array.isArray(p.contributors) ? p.contributors : [];
       if (
         p.pathname === initPathname &&
         p.path === initPath &&
@@ -536,8 +2607,9 @@ export default function Scaffold({
         p.updatedAt === initUpdatedAt &&
         p.source === src &&
         p.compiledMDX === initMdx &&
-        p.contributors.length === contributors.length &&
-        p.contributors.every((c, i) => c === contributors[i]) &&
+        Array.isArray(p.contributors) &&
+        existingContributors.length === contributors.length &&
+        existingContributors.every((c, i) => c === contributors[i]) &&
         JSON.stringify(p.content) === JSON.stringify(content)
       )
         return p;
@@ -567,10 +2639,8 @@ export default function Scaffold({
     initMdx,
   ]);
   useEffect(() => {
-    /**
-     * Handles rename.
-     *
-     * @param e - Pointer event received from the editor control.
+    /** Updates the visible document title from the active rename event.
+     * @param e Custom rename event whose detail contains the active title.
      */
     const rename = (e: Event) => {
       if (
@@ -578,10 +2648,11 @@ export default function Scaffold({
         typeof (e as CustomEvent<{ isActive?: boolean; title?: string }>).detail.title !== 'string'
       )
         return;
-      setCurrDoc((p) => ({
-        ...p,
-        title: (e as CustomEvent<{ isActive?: boolean; title?: string }>).detail.title!,
-      }));
+      setCurrDoc(
+        ((title: string) => (p: typeof currDoc) => ({ ...p, title }))(
+          (e as CustomEvent<{ isActive?: boolean; title?: string }>).detail.title!,
+        ),
+      );
     };
     document.addEventListener('docs:rename', rename);
     return () => {
@@ -589,19 +2660,10 @@ export default function Scaffold({
     };
   }, []);
   useEffect(() => {
-    if (currDoc.path) $leafTitle.set({ path: currDoc.path, title: currDoc.title });
+    setDocumentTitle(currDoc.title);
   }, [currDoc.path, currDoc.title]);
   useEffect(() => {
-    setDocumentTitle(
-      navigationState.leafTitle?.path === currDoc.path
-        ? (navigationState.leafTitle?.title ?? currDoc.title)
-        : currDoc.title,
-    );
-  }, [currDoc.path, currDoc.title, navigationState.leafTitle]);
-  useEffect(() => {
-    /**
-     * Handles update favicon.
-     */
+    /** Recolors the inline favicon with the active Docs theme and refreshes it on hue changes. */
     const updateFavicon = () => {
       const favicon = document.getElementById('favicon') as HTMLLinkElement | null;
       if (!favicon) return;
@@ -631,9 +2693,11 @@ export default function Scaffold({
   // Only updates the state, letting React naturally handle side effects.
   useEffect(() => {
     /**
-     * Handles handle nav.
+     * Applies a navigation event to the current document while validating incoming content.
      *
-     * @param e - Keyboard or pointer event received from the editor control.
+     * @param e - Custom navigation event emitted by the Docs host or client-side router.
+     *
+     * @returns Nothing; updates the current document from the event's validated route details.
      */
     const handleNav = (e: Event) => {
       setCurrDoc((previous) => {
@@ -644,19 +2708,25 @@ export default function Scaffold({
             : typeof detail.url === 'string'
               ? detail.url
               : previous.pathname || '';
+        const pathname = keepDeepPath(
+          previous.pathname || '',
+          rawPathname ? rawPathname.split('?')[0] || '' : previous.pathname || '',
+        );
         return {
           ...previous,
           ...detail,
+          contributors: Array.isArray(detail.contributors)
+            ? detail.contributors.filter((value): value is string => typeof value === 'string')
+            : pathname === previous.pathname && Array.isArray(previous.contributors)
+              ? previous.contributors
+              : [],
           source:
             Object.prototype.hasOwnProperty.call(detail, 'source') &&
             typeof detail.source === 'string'
               ? detail.source
               : previous.source || '',
           content: isDocBody(detail.content) ? detail.content : previous.content,
-          pathname: keepDeepPath(
-            previous.pathname || '',
-            rawPathname ? rawPathname.split('?')[0] || '' : previous.pathname || '',
-          ),
+          pathname,
           compiledMDX:
             Object.prototype.hasOwnProperty.call(detail, 'compiledMDX') &&
             detail.compiledMDX !== undefined
@@ -671,9 +2741,11 @@ export default function Scaffold({
 
     // Handle 403/404 Soft-Redirect Intercepts
     /**
-     * Handles handle err redirect.
+     * Removes permission and not-found query flags and routes missing documents to a fallback page.
      *
-     * @param e - Change event received from the active Docs input.
+     * @param e - Redirect event containing the `403` or `404` status to handle.
+     *
+     * @returns Nothing; replaces the current history entry and emits navigation when needed.
      */
     const handleErrRedirect = (e: Event) => {
       const type = ((e as CustomEvent).detail || {}).type; // '403' or '404'
@@ -689,30 +2761,37 @@ export default function Scaffold({
         return;
       }
       // find first leaf to fall back to securely
-      /**
-       * Handles get first leaf.
-       *
-       * @param nodes - Docs tree nodes being rendered in the navigation.
-       */
-      const cFallback = (
-        (function firstLeaf(nodes: TreeType[]): string | null {
-          for (const n of nodes) {
-            if (n.type === 'leaf') return n.url || null;
-            if (n.type === 'branch' && n.children) {
-              const found = firstLeaf(n.children);
-              if (found) return found;
+      const cFallback =
+        (
+          (
+            /**
+             * Finds the first leaf route used when a requested route is missing.
+             *
+             * @param nodes Docs navigation descendants searched in display order.
+             *
+             * @returns The first leaf URL, or `null` when no leaf can be selected.
+             */
+            function firstLeaf(nodes: TreeType[]): string | null {
+              for (const n of nodes) {
+                if (n.type === 'leaf') return n.url || null;
+                if (n.type === 'branch' && n.children) {
+                  const found = firstLeaf(n.children);
+                  if (found) return found;
+                }
+              }
+              return null;
             }
-          }
-          return null;
-        })(tree) || docsRootPath()
-      ).split('?')[0];
+          )(tree) || docsRootPath()
+        ).split('?')[0] ?? docsRootPath();
       const url = new URL(window.location.href);
       url.pathname = cFallback;
       url.searchParams.delete('403');
       url.searchParams.delete('404');
       window.history.replaceState(null, '', url.toString());
       document.dispatchEvent(
-        new CustomEvent('docs:navigate', { detail: { url: cFallback, pathname: cFallback } }),
+        new CustomEvent('docs:navigate', {
+          detail: { url: cFallback, pathname: cFallback },
+        }),
       );
     };
     document.addEventListener('docs:error:redirect', handleErrRedirect);
@@ -758,11 +2837,24 @@ export default function Scaffold({
   useEffect(() => {
     const url = new URL(window.location.href);
     const cCurrPath = currDoc.pathname?.split('?')[0];
-    const nPath = cCurrPath ? keepDeepPath(url.pathname, cCurrPath) : '';
+    if (!cCurrPath) return;
+
+    // Local repository adapters can address pages by #id while sharing `/`.
+    // Keep the id in the hash instead of encoding `#` into the URL pathname.
+    const routeUrl = new URL(cCurrPath, url.origin);
+    if (routeUrl.hash) {
+      if (url.pathname !== routeUrl.pathname || url.hash !== routeUrl.hash) {
+        url.pathname = routeUrl.pathname;
+        url.hash = routeUrl.hash;
+        window.history.replaceState(null, '', url.toString());
+      }
+      return;
+    }
+    const nPath = keepDeepPath(url.pathname, routeUrl.pathname);
     if (nPath && url.pathname !== nPath) {
       console.info('[Docs:url-sync]', {
         current: url.pathname,
-        next: cCurrPath,
+        next: routeUrl.pathname,
         path: currDoc.path,
         resolved: nPath,
       });
@@ -783,7 +2875,196 @@ export default function Scaffold({
     isSaving: toolbar?.busy === 'saving' && !toolbar?.optimistic,
     transition: useTransitionState(),
   };
-  const isLoading = !hydrated || loadingState.isSaving || loadingState.transition !== 'idle';
+  const isLoading =
+    !shellState.hydrated ||
+    (!staticContent && (loadingState.isSaving || loadingState.transition !== 'idle'));
+  const tocEnabled = !standalone && hydrated && (staticContent || !loadingState.isSaving);
+  const tocHeadings = tocState.path === currDoc.pathname ? tocState.headings : [];
+  useEffect(() => {
+    /**
+     * Updates the table of contents only when its path, active heading, or heading list changed.
+     *
+     * @param update Replacement TOC state or a function deriving it from the previous state.
+     *
+     * @returns Nothing; preserves the prior object when the TOC values are unchanged.
+     */
+    const setTocStateIfChanged = (
+      update: typeof tocState | ((previous: typeof tocState) => typeof tocState),
+    ): void => {
+      setTocState((previous) => {
+        const n = typeof update === 'function' ? update(previous) : update;
+        return previous.active === n.active &&
+          previous.path === n.path &&
+          previous.headings.length === n.headings.length &&
+          previous.headings.every(
+            (heading, index) =>
+              heading.id === n.headings[index]?.id && heading.text === n.headings[index]?.text,
+          )
+          ? previous
+          : n;
+      });
+    };
+    if (!tocEnabled) {
+      setTocStateIfChanged({ active: null, headings: [], path: currDoc.pathname });
+      return;
+    }
+    const syncState = {
+      frame: 0,
+      tries: 0,
+      els: [] as HTMLElement[],
+      observedRoot: null as HTMLElement | null,
+      threshold: 0,
+    };
+    const surfaceObserver = new MutationObserver(() => syncLifecycle.sync());
+    const bodyObserver = new MutationObserver(() => {
+      syncLifecycle.sync();
+      if (syncState.observedRoot) bodyObserver.disconnect();
+    });
+    const syncLifecycle = {
+      syncActive: (): void => {
+        if (!syncState.els.length) {
+          setTocStateIfChanged((previous) => ({
+            active: null,
+            headings: previous.path === currDoc.pathname ? previous.headings : [],
+            path: currDoc.pathname,
+          }));
+          return;
+        }
+        syncState.threshold = window.innerWidth >= 768 ? 160 : 112;
+        for (let index = syncState.els.length - 1; index >= 0; index--) {
+          const element = syncState.els[index];
+          if (element && element.getBoundingClientRect().top <= syncState.threshold) {
+            setTocStateIfChanged((previous) => ({
+              active: element.id,
+              headings: previous.path === currDoc.pathname ? previous.headings : [],
+              path: currDoc.pathname,
+            }));
+            return;
+          }
+        }
+        setTocStateIfChanged((previous) => ({
+          active: syncState.els[0]?.id ?? null,
+          headings: previous.path === currDoc.pathname ? previous.headings : [],
+          path: currDoc.pathname,
+        }));
+      },
+      queueActive: (): void => {
+        cancelAnimationFrame(syncState.frame);
+        syncState.frame = requestAnimationFrame(syncLifecycle.syncActive);
+      },
+      sync: (): void => {
+        try {
+          const seen = new Set<string>();
+          let root: HTMLElement | null = null;
+          for (const element of document.querySelectorAll<HTMLElement>(
+            docsShellOf()?.dataset.docsMode === 'view'
+              ? '[data-docs-view-root], [data-docs-body-content]'
+              : '[data-docs-body-editor], [data-docs-body-content]',
+          )) {
+            const style = window.getComputedStyle(element);
+            if (
+              style.display !== 'none' &&
+              style.visibility !== 'hidden' &&
+              element.getClientRects().length > 0
+            ) {
+              root = element;
+              break;
+            }
+          }
+          if (!root) return;
+          if (root !== syncState.observedRoot) {
+            surfaceObserver.disconnect();
+            surfaceObserver.observe(root, {
+              childList: true,
+              characterData: true,
+              subtree: true,
+            });
+            syncState.observedRoot = root;
+          }
+          const lowerTitle = currDoc.title ? currDoc.title.toLowerCase() : null;
+          const validEls: HTMLElement[] = [];
+          const headings: { id: string; text: string }[] = [];
+          for (const element of Array.from(root.querySelectorAll<HTMLElement>('h2') ?? [])) {
+            if (
+              element.closest('[data-placeholder], [data-tabs-placeholder]') ||
+              element.closest('[hidden]')
+            )
+              continue;
+            let text = '';
+            for (const child of Array.from(element.childNodes)) {
+              if (child instanceof Element && child.classList.contains('heading-anchor-icon'))
+                continue;
+              text += child.textContent || '';
+            }
+            text = text.trim();
+            if (lowerTitle && text.toLowerCase() === lowerTitle) continue;
+            const id = element.id || (element.id = toHeadingId(text));
+            if (!id || seen.has(id)) continue;
+            seen.add(id);
+            validEls.push(element);
+            headings.push({ id, text });
+          }
+          syncState.els = validEls;
+          if (!syncState.els.length) {
+            setTocStateIfChanged({ active: null, headings: [], path: currDoc.pathname });
+            return;
+          }
+          setTocStateIfChanged((previous) => ({
+            active: previous.path === currDoc.pathname ? previous.active : null,
+            headings,
+            path: currDoc.pathname,
+          }));
+          syncLifecycle.queueActive();
+        } catch {
+          /* ignore */
+        }
+      },
+      pump: (): void => {
+        syncLifecycle.sync();
+        if (syncState.els.length || syncState.tries++ >= 60) return;
+        syncState.frame = requestAnimationFrame(syncLifecycle.pump);
+      },
+      navigate: (event: MouseEvent): void => {
+        const link =
+          event.target instanceof Element
+            ? event.target.closest<HTMLElement>('[data-docs-toc-heading]')
+            : null;
+        const id = link?.dataset.docsTocId;
+        const text = link?.dataset.docsTocHeading;
+        if (!id || !text) return;
+        event.preventDefault();
+        navigateHeading(id, text);
+      },
+    };
+    syncLifecycle.pump();
+    if (!syncState.observedRoot)
+      bodyObserver.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('click', syncLifecycle.navigate, true);
+    document.addEventListener('docs:surface-ready', syncLifecycle.sync);
+    document.addEventListener('astro:after-swap', syncLifecycle.sync);
+    window.addEventListener('hashchange', syncLifecycle.sync);
+    window.addEventListener('resize', syncLifecycle.queueActive);
+    window.addEventListener('scroll', syncLifecycle.queueActive, { passive: true });
+    return () => {
+      window.removeEventListener('click', syncLifecycle.navigate, true);
+      document.removeEventListener('docs:surface-ready', syncLifecycle.sync);
+      document.removeEventListener('astro:after-swap', syncLifecycle.sync);
+      window.removeEventListener('hashchange', syncLifecycle.sync);
+      window.removeEventListener('resize', syncLifecycle.queueActive);
+      window.removeEventListener('scroll', syncLifecycle.queueActive);
+      bodyObserver.disconnect();
+      surfaceObserver.disconnect();
+      cancelAnimationFrame(syncState.frame);
+    };
+  }, [tocEnabled, currDoc.pathname, currDoc.title]);
+  useEffect(() => {
+    if (!tocEnabled) return;
+    if (tocState.path !== currDoc.pathname) return;
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+    const heading = tocState.headings.find((i) => i.id === id);
+    if (heading) navigateHeading(id, heading.text);
+  }, [tocEnabled, currDoc.pathname, tocState.path, tocState.headings]);
   useEffect(() => {
     setHydrated(true);
     if (!writable && stored === 'edit') $mode.set('view');
@@ -809,7 +3090,7 @@ export default function Scaffold({
           <div className={cn('mx-auto w-full px-6 md:px-10', full ? 'max-w-none' : 'max-w-5xl')}>
             <div data-docs-body className="relative h-full min-h-[50vh] text-primary-12">
               <div
-                className="prose max-w-none pb-40 pt-8 transition-opacity duration-200"
+                className="prose !max-w-none pb-40 pt-8 transition-opacity duration-200"
                 data-docs-body-content
                 data-docs-view-root="true"
               >
@@ -836,8 +3117,8 @@ export default function Scaffold({
   }
   return (
     <SidebarProvider
-      className="terra-docs-workspace font-sans"
-      open={hydrated ? navigationState.open : true}
+      className="docs-workspace font-docs"
+      open={shellState.hydrated ? shellState.sidebarOpen : true}
       onOpenChange={(n) => {
         $sidebar.set(n);
       }}
@@ -847,10 +3128,18 @@ export default function Scaffold({
         docs={tree}
         pathname={currDoc.pathname}
         permission={permission}
-        userData={userData ?? null}
-        siteTitle={getDocsHostAdapter()?.siteTitle ?? 'Terra Symposium'}
-        siteDescription={getDocsHostAdapter()?.siteDescription}
-        homePath={getDocsHostAdapter()?.homePath ?? docsRootPath()}
+        {...(userData
+          ? {
+              userData: {
+                ...(typeof userData.name === 'string' ? { name: userData.name } : {}),
+                ...(typeof userData.email === 'string' ? { email: userData.email } : {}),
+                ...(typeof userData.image === 'string' ? { image: userData.image } : {}),
+              },
+            }
+          : {})}
+        siteTitle={host?.siteTitle ?? 'Terra Symposium'}
+        {...(host?.siteDescription === undefined ? {} : { siteDescription: host.siteDescription })}
+        homePath={host?.homePath ?? docsRootPath()}
       />
       {/* NAV SIDEBAR; larger than sm */}
       <SidebarInset className="relative flex min-h-svh min-w-0 flex-col print:min-h-0">
@@ -859,16 +3148,14 @@ export default function Scaffold({
           <header className="flex h-14 shrink-0 items-center border-b border-primary-6 bg-primary-2 px-5 md:hidden print:hidden">
             <SidebarTrigger />
             <Separator orientation="vertical" className="mx-2 h-4" />
-            <span className="font-serif text-lg">
-              {getDocsHostAdapter()?.siteTitle ?? 'Terra Symposium'}
-            </span>
+            <span className="font-serif text-lg">{host?.siteTitle ?? 'Terra Symposium'}</span>
           </header>
         </ErrorBoundary>
         <div
           className={cn('relative flex min-h-0 flex-1 flex-col', isLoading && 'overflow-hidden')}
         >
           {/* CONTENT SHELL */}
-          {hydrated && !loadingState.isSaving && (
+          {hydrated && (staticContent || !loadingState.isSaving) && (
             <TransitionShell
               className={cn(
                 'size-full min-w-0 max-w-none overflow-visible text-inherit print:m-0 print:h-auto print:min-h-0 print:w-full print:overflow-visible print:p-0',
@@ -879,9 +3166,19 @@ export default function Scaffold({
                     : 'block',
               )}
               mode={a}
-              path={currDoc.path}
+              {...(currDoc.path === undefined ? {} : { path: currDoc.path })}
+              staticContent={staticContent}
             >
-              <EditProvider key={currDoc.pathname} permission={permission} {...currDoc}>
+              <EditProvider
+                key={currDoc.pathname}
+                pathname={currDoc.pathname}
+                permission={permission}
+                title={currDoc.title}
+                {...(currDoc.path === undefined ? {} : { path: currDoc.path })}
+                {...(currDoc.description === undefined ? {} : { description: currDoc.description })}
+                content={isDocBody(currDoc.content) ? currDoc.content : []}
+                source={typeof currDoc.source === 'string' ? currDoc.source : ''}
+              >
                 <div className="w-full">
                   {/* HEAD */}
                   <EditorSurfaces.Head
@@ -889,57 +3186,113 @@ export default function Scaffold({
                     editable={writable && a !== 'view'}
                     title={currDoc.title}
                     full={full}
-                    {...(currDoc.description !== undefined && { description: currDoc.description })}
-                    contributors={currDoc.contributors}
-                    updatedAt={currDoc.updatedAt}
+                    {...(currDoc.description !== undefined && {
+                      description: currDoc.description,
+                    })}
+                    {...(currDoc.contributors === undefined
+                      ? {}
+                      : { contributors: currDoc.contributors })}
+                    {...(currDoc.updatedAt === undefined ? {} : { updatedAt: currDoc.updatedAt })}
                   />
                   {/* MAIN */}
                   <div className="w-full">
-                    <div
-                      className={cn(
-                        'mx-auto w-full px-6 md:px-10',
-                        full ? 'max-w-none' : 'max-w-5xl',
-                      )}
-                    >
+                    <div className={cn('mx-auto w-full', full ? 'max-w-none' : 'max-w-7xl')}>
                       {/* root; must be relative and fill height to constrain absolute overlay */}
                       <div data-docs-body className="relative h-full min-h-[50vh] text-primary-12">
-                        {/* Keep the document mode and formatting controls in one shared toolbar in every mode. */}
-                        <Toolbar toolbar={toolbar} activeMode={a} editable={writable} />
-                        {/* content */}
+                        {/* View and attachment modes use the document toolbar; Edit owns its original in-editor toolbar. */}
+                        {a !== 'edit' && (
+                          <Toolbar toolbar={toolbar} activeMode={a} editable={writable} />
+                        )}
                         <div
                           className={cn(
-                            'prose max-w-none pb-40 transition-opacity duration-200',
-                            a === 'edit' ? 'pt-2' : 'pt-8',
+                            'mx-auto w-full px-6 md:px-10',
+                            full ? 'max-w-none' : 'max-w-7xl',
                           )}
-                          data-docs-body-content
-                          data-docs-view-root={a === 'view' ? 'true' : undefined}
                         >
-                          <ErrorBoundary
-                            name="EditorBody"
-                            resetKey={`${a}:${currDoc.path ?? ''}`}
-                            fallback={() => (
-                              <div className="p-8">
-                                <AlertError
-                                  title="Editor Surface Crashed"
-                                  description="The workspace editor canvas encountered a rendering crash. You can safely switch to attachments view to recover."
-                                />
+                          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_16rem]">
+                            <div className="order-2 min-w-0 xl:order-1">
+                              {/* content */}
+                              <div
+                                className={cn(
+                                  'prose !max-w-none pb-40 transition-opacity duration-200',
+                                  a === 'edit' ? 'pt-2' : 'pt-8',
+                                )}
+                                data-docs-body-content
+                                data-docs-view-root={a === 'view' ? 'true' : undefined}
+                              >
+                                <ErrorBoundary
+                                  name="EditorBody"
+                                  resetKey={`${a}:${currDoc.path ?? ''}`}
+                                  fallback={() => (
+                                    <div className="p-8">
+                                      <AlertError
+                                        title="Editor Surface Crashed"
+                                        description="The workspace editor canvas encountered a rendering crash. You can safely switch to attachments view to recover."
+                                      />
+                                    </div>
+                                  )}
+                                >
+                                  {hydrated &&
+                                    (a === 'view' ? (
+                                      <>
+                                        {beforeContent}
+                                        {viewContent ?? (
+                                          <View
+                                            body={isDocBody(currDoc.content) ? currDoc.content : []}
+                                            {...(docsBlocks === undefined
+                                              ? {}
+                                              : { blocks: docsBlocks })}
+                                            resetKey={currDoc.path ?? currDoc.pathname}
+                                          />
+                                        )}
+                                        {afterContent}
+                                      </>
+                                    ) : a === 'edit' ? (
+                                      <EditorSurfaces.Edit
+                                        {...(docsBlocks === undefined
+                                          ? {}
+                                          : { blocks: docsBlocks })}
+                                        editable={writable}
+                                      />
+                                    ) : a === 'attachments' ? (
+                                      <Attachments dPath={currDoc.path ?? ''} tree={tree} />
+                                    ) : null)}
+                                </ErrorBoundary>
                               </div>
-                            )}
-                          >
-                            {hydrated &&
-                              (a === 'view' ? (
-                                (viewContent ?? (
-                                  <View
-                                    body={isDocBody(currDoc.content) ? currDoc.content : []}
-                                    resetKey={currDoc.path ?? currDoc.pathname}
-                                  />
-                                ))
-                              ) : a === 'edit' ? (
-                                <EditorSurfaces.Edit />
-                              ) : a === 'attachments' ? (
-                                <Attachments dPath={currDoc.path ?? ''} tree={tree} />
-                              ) : null)}
-                          </ErrorBoundary>
+                            </div>
+                            <aside className="order-1 max-h-[35vh] min-w-0 overflow-y-auto overscroll-contain rounded-lg border border-primary-6 bg-primary-2/50 p-3 xl:sticky xl:top-24 xl:order-2 xl:max-h-[calc(100svh-9rem)] xl:self-start xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0">
+                              {tocHeadings.length > 0 && (
+                                <nav aria-label="On this page" className="space-y-1">
+                                  <p className="m-0 px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-primary-11">
+                                    On this page
+                                  </p>
+                                  <ol className="m-0 flex list-none flex-col gap-y-0 p-0">
+                                    {tocHeadings.map((h) => (
+                                      <li key={h.id} className="h-fit py-0">
+                                        <ButtonLink
+                                          data-docs-toc-id={h.id}
+                                          data-docs-toc-heading={h.text}
+                                          href={`#${h.id}`}
+                                          variant="ghost"
+                                          size="xs"
+                                          aria-label={`Jump to ${h.text}`}
+                                          className={cn(
+                                            'relative h-fit min-h-0 w-full justify-start gap-0.5 truncate py-0 pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
+                                            tocState.path === currDoc.pathname &&
+                                              tocState.active === h.id
+                                              ? 'text-primary-12 before:bg-current'
+                                              : 'text-primary-11 before:bg-primary-11 before:opacity-0 hover:before:opacity-100',
+                                          )}
+                                        >
+                                          {h.text}
+                                        </ButtonLink>
+                                      </li>
+                                    ))}
+                                  </ol>
+                                </nav>
+                              )}
+                            </aside>
+                          </div>
                         </div>
                       </div>
                     </div>

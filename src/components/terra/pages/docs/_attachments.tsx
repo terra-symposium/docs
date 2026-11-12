@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_attachments.tsx
+ * src/components/terra/pages/docs/_attachments.tsx
  * Docs attachment collection, uploads, and attachment-specific context menus.
  */
 
@@ -9,24 +8,15 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
+import { $attachmentFilter } from '../../../../lib/terra/docs/attachments.js';
 import {
   $surfaceReady,
   $transition,
   clearTransition,
   useAtom,
 } from '../../../../lib/terra/docs/state.js';
-import { $attachmentFilter } from '../../../../lib/terra/docs/attachments.js';
-import { sanitizeName } from '../../../../lib/terra/docs/tree.js';
-import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
-import {
-  cn,
-  error as logError,
-  errorLog,
-  isRec,
-  notify,
-  warn,
-} from '../../../../lib/terra/runtime/runtime.js';
+import { cn, isRec, logErr, notify, warn } from '../../../../lib/terra/runtime/runtime.js';
 import {
   createElement,
   createElement as __terraQualityCreateElement,
@@ -39,7 +29,10 @@ import {
 } from 'react';
 import { currLeafSrc } from '../../../../lib/terra/runtime/leaf.js';
 import { dirname, docsPath, isDocsPath } from '../../../../lib/terra/runtime/shared.js';
+import { sanitizeName } from '../../../../lib/terra/docs/tree.js';
 import { toast } from 'sonner';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
@@ -58,68 +51,78 @@ import {
   TrashCan as TrashIcon,
   Upload as UploadIcon,
 } from '@carbon/icons-react';
-import { Button } from '@terra-symposium/styling/ui/terra-original';
 import {
+  Button,
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@terra-symposium/styling/ui/terra-original';
-import { CodeBlock } from '../../editor/docs/_CodeBlock.js';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@terra-symposium/styling/ui/terra-original';
-import { ErrorBoundary } from '../../ui.js';
-import { Empty } from '../../ui.js';
-import { Input } from '@terra-symposium/styling/ui/terra-original';
-import { Label } from '@terra-symposium/styling/ui/terra-original';
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@terra-symposium/styling/ui/terra-original';
-import { Textarea } from '@terra-symposium/styling/ui/terra-original';
+  Textarea,
+} from '@terra-symposium/styling/ui';
+import { CodeBlock } from '../../editor/docs/_CodeBlock.js';
+import { Empty, ErrorBoundary } from '../../ui.js';
 import { TsDocsSelect } from './_blocks.js';
 
 // DATA
 import { ATTCH_TYPES } from '../../../../lib/terra/docs/attachments.js';
 
 // TYPES
-import type { AttchType, DocsTreeMenuAction, Sister } from '../../../../lib/terra/runtime/types.js';
-import type { Leaf as LeafNode, Tree as TreeType } from '../../../../lib/terra/runtime/types.js';
-import type { Md } from '../../../../lib/terra/runtime/types.js';
+import type {
+  AttchType,
+  DocsTreeMenuAction,
+  Leaf as LeafNode,
+  Md,
+  Sister,
+  Tree as TreeType,
+} from '../../../../lib/terra/runtime/types.js';
+import type { JSX } from 'react';
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Handles latest content.
+ * Gets the Markdown source for a Docs value used in an attachment preview.
  *
- * @param content - Docs content whose attachment references should be collected.
+ * @param content Markdown source or a Docs value containing Portable Text content.
+ *
+ * @return Existing Markdown or serialized Portable Text; returns a string value or empty text if serialization fails.
  */
 const latestContent = (content: unknown): string => {
   try {
-    return currLeafSrc(content, '_attachments.latestContent');
-  } catch (_err) {
+    return currLeafSrc(content);
+  } catch {
     return typeof content === 'string' ? content : '';
   }
 };
 
 /**
- * Handles text asset.
+ * Identifies text-based attachments that can be inspected in the Docs attachment browser.
  *
  * @param sis - Attachment records to normalize for the Docs editor.
+ *
+ * @return `true` when the attachment name, title, or path ends in a supported text extension.
  */
-const textAsset = (sis: Sister): boolean =>
-  /\.(?:csv|json|log|md|mdx|text|txt|xml|ya?ml)$/i.test(sis.name || sis.path.split('?')[0] || '');
+const textAsset = (sis: Sister): boolean => {
+  return [sis.name, sis.title, sis.path].some(
+    (c) =>
+      typeof c === 'string' &&
+      /\.(?:csv|json|log|md|mdx|text|txt|xml|ya?ml)(?:[?#].*)?$/i.test(c.trim()),
+  );
+};
 
 /*//////////////////////////////////////////////////
 COMPONENTS
@@ -128,7 +131,8 @@ COMPONENTS
 /**
  * Renders the document attachment manager for filtering, selecting, uploading, and organizing assets.
  *
- * @param props - The document path and current Docs tree used to scope and display its attachments.
+ * @param dPath Source path of the document whose attachment list is being managed.
+ * @param tree Navigation tree used to resolve document and ancestor attachment scopes.
  *
  * @return The attachment manager and its upload, selection, and organization controls.
  */
@@ -161,10 +165,15 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   } | null>(null);
   const [transferTgt, setTransferTgt] = useState<string>('');
   const [transferring, setTransferring] = useState(false);
-  const [mergePdfState, setMergePdfState] = useState<{ pdfs: File[]; others: File[] } | null>(null);
-  const [ctxAttachment, setCtxAttachment] = useState<{ item: Sister; x: number; y: number } | null>(
-    null,
-  );
+  const [mergePdfState, setMergePdfState] = useState<{
+    pdfs: File[];
+    others: File[];
+  } | null>(null);
+  const [ctxAttachment, setCtxAttachment] = useState<{
+    item: Sister;
+    x: number;
+    y: number;
+  } | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement | null>(null);
   const sistersMap = useMemo(() => {
     const map = new Map<string, Sister>();
@@ -206,7 +215,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       if (s.type === 'youtube') cat = 'youtube';
       else if (
         s.name.toLowerCase().endsWith('.pdf') ||
-        s.path.toLowerCase().split('?')[0].endsWith('.pdf') ||
+        (s.path.toLowerCase().split('?')[0] ?? '').endsWith('.pdf') ||
         s.isMd ||
         s.type === 'document'
       )
@@ -254,7 +263,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       .attachments({ path: docId })
       .then(async ({ data: d, error: err }) => {
         if (err) {
-          errorLog('Attachments', 'Action returned an error', logError(err));
+          logErr('Attachments', 'Action returned an error', err);
           return;
         }
         if (!a) return;
@@ -265,7 +274,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         setSisters(d as Sister[]);
       })
       .catch((_err) => {
-        errorLog('Attachments', 'Fetch threw an exception', logError(_err));
+        logErr('Attachments', 'Fetch threw an exception', _err);
       })
       .finally(() => {
         if (a) setLoading(false);
@@ -276,18 +285,23 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   }, [docId]);
 
   // ATTACHMENT ACTION HANDLERS
-  /**
-   * Handles view asset.
-   *
-   * @param sis - Attachment records being filtered for the active document.
+  /** Opens the viewer and loads a persisted text attachment's content for preview.
+   * @param sis Attachment selected for preview.
    */
   const viewAsset = async (sis: Sister): Promise<void> => {
-    if (!textAsset(sis) || !sis.path.startsWith('http')) {
+    if (!textAsset(sis) || !sis.path || sis.path.startsWith('temp-')) {
       setViewDlg(sis);
       return;
     }
     try {
-      const res = await fetch(sis.path);
+      const res = await fetch(
+        /^(?:\.\.?(?:\/|$))/.test(sis.path)
+          ? new URL(
+              sis.path,
+              new URL(dPath.startsWith('/') ? dPath : `/${dPath}`, window.location.origin),
+            ).toString()
+          : sis.path,
+      );
       if (!res.ok) throw new Error(`Attachment preview failed (${res.status}).`);
       setViewDlg({ ...sis, content: await res.text() });
     } catch (err) {
@@ -299,23 +313,19 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     }
   };
 
-  /**
-   * Handles process upload.
-   *
-   * @param file - File selected for upload or attachment.
-   * @param tempId - Temporary identifier assigned before persistence.
-   * @param isMdFile - Whether the file should be treated as Markdown content.
+  /** Uploads one file in chunks and replaces its temporary list entry with persisted metadata.
+   * @param file File selected for upload.
+   * @param tempId Temporary row ID replaced after the upload succeeds.
+   * @param isMdFile Whether the uploaded file should be treated as a document.
    */
   const processUpload = async (file: File, tempId: string, isMdFile: boolean) => {
     try {
       const finalAsset = await uploadAssetChunked(file, docId, {
-        onProgress: ({ currentChunk: currChunk, totalChunks, message: msg }) => {
-          if (msg) setSisters((p) => p.map((s) => (s.id === tempId ? { ...s, name: msg } : s)));
-          else if (totalChunks > 1)
+        onProgress: ({ currentChunk: c, totalChunks: t, message: m }) => {
+          if (m) setSisters((p) => p.map((s) => (s.id === tempId ? { ...s, name: m } : s)));
+          else if (t > 1)
             setSisters((p) =>
-              p.map((s) =>
-                s.id === tempId ? { ...s, name: `Uploading (${currChunk}/${totalChunks})...` } : s,
-              ),
+              p.map((s) => (s.id === tempId ? { ...s, name: `Uploading (${c}/${t})...` } : s)),
             );
         },
       });
@@ -324,6 +334,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
           s.id === tempId
             ? {
                 ...s,
+                ...(finalAsset.id ? { id: finalAsset.id } : {}),
                 path: finalAsset.path || finalAsset.src || tempId,
                 name: finalAsset.name || file.name,
                 isMd: isMdFile,
@@ -333,7 +344,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         ),
       );
     } catch (_err: unknown) {
-      errorLog('Attachments:Upload', `Failed '${file.name}'`, logError(_err));
+      logErr('Attachments:Upload', `Failed '${file.name}'`, _err);
       setSisters((p) => p.filter((s) => s.id !== tempId));
       toast.error(_err instanceof Error ? _err.message : `Failed to upload ${file.name}.`);
       notify({
@@ -386,7 +397,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         urls.map(async (u, i) => {
           let aType = t;
           if (t === 'other') {
-            if (u.toLowerCase().split('?')[0].endsWith('.pdf')) aType = 'document';
+            if ((u.toLowerCase().split('?')[0] ?? '').endsWith('.pdf')) aType = 'document';
             else if (
               TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(
                 u.toLowerCase().split('?')[0] ?? '',
@@ -411,7 +422,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                 path: u,
                 name: `${title} Video`,
                 isMd: false,
-                title,
+                ...(title === undefined ? {} : { title }),
                 type: 'youtube',
                 sourceUrl: u,
               };
@@ -426,7 +437,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
               const { data: docData, error: wErr } = await actions.write.doc.editor({
                 path: nPath,
                 source: text,
-                title,
+                ...(title === undefined ? {} : { title }),
                 type: 'website',
                 sourceUrl: u,
               });
@@ -436,10 +447,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                 path: nPath,
                 name: nPath.split('/').pop() || '',
                 isMd: true,
-                title,
+                ...(title === undefined ? {} : { title }),
                 type: 'website',
                 sourceUrl: u,
-                source: text,
+                ...(text === undefined ? {} : { source: text }),
               };
             } else if (aType === 'tsdocs') {
               const fmtUrl = u.startsWith('http')
@@ -482,11 +493,26 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                 id,
                 path: assetPath,
                 name,
-              } = data as { title: string; id: string; path: string; name: string };
-              item = { id, path: assetPath, name, isMd: false, title, type: aType, sourceUrl: u };
+              } = data as {
+                title: string;
+                id: string;
+                path: string;
+                name: string;
+              };
+              item = {
+                id,
+                path: assetPath,
+                name,
+                isMd: false,
+                title,
+                type: aType,
+                sourceUrl: u,
+              };
             }
-            setSisters((p) => p.map((s) => (s.id === tmpId ? item : s)));
-          } catch (_err) {
+            setSisters((p) =>
+              item ? p.map((s) => (s.id === tmpId ? item : s)) : p.filter((s) => s.id !== tmpId),
+            );
+          } catch {
             setSisters((p) => p.filter((s) => s.id !== tmpId));
             toast.error(`Failed to process ${u}`);
           }
@@ -498,10 +524,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     [docId],
   );
   useEffect(() => {
-    /**
-     * Handles handle paste.
-     *
-     * @param e - Input event carrying the selected attachment files.
+    /** Adds supported pasted URLs or files when paste occurs outside a text input.
+     * @param e Document paste event whose clipboard contents are classified.
      */
     const handlePaste = (e: ClipboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -520,8 +544,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
             ),
           );
           const docUrls = [
-            ...urls.filter((u) => u.toLowerCase().split('?')[0].endsWith('.pdf')),
-            ...urls.filter((u) => u.toLowerCase().split('?')[0].endsWith('.json')),
+            ...urls.filter((u) => (u.toLowerCase().split('?')[0] ?? '').endsWith('.pdf')),
+            ...urls.filter((u) => (u.toLowerCase().split('?')[0] ?? '').endsWith('.json')),
           ];
           const webUrls = urls.filter(
             (u) =>
@@ -548,10 +572,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     };
   }, [addRemote, add]);
 
-  /**
-   * Handles rename attch.
-   *
-   * @param nName - Proposed attachment name displayed in the editor.
+  /** Renames the selected attachment while preserving its extension and current directory.
+   * @param nName New basename entered by the user.
    */
   const renameAttch = async (nName: string) => {
     if (!renameDlg) return;
@@ -563,7 +585,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         p.map((s) => (s.path === path ? { ...s, path: nPath, name: nFilename } : s)),
       );
       if (isMd) {
-        const { error: err } = await actions.write.doc.commit({ cur: path, next: nPath });
+        const { error: err } = await actions.write.doc.commit({
+          cur: path,
+          next: nPath,
+        });
         if (err) throw err;
       } else if (id)
         await actions.write.attachment.rename({
@@ -573,7 +598,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
         });
       toast.success('Renamed successfully');
     } catch (_err) {
-      errorLog('Attachments:Rename', 'Rename failed', logError(_err));
+      logErr('Attachments:Rename', 'Rename failed', _err);
       setSisters((p) =>
         p.map((s) =>
           s.path === renameDlg.path ? { ...s, path: renameDlg.path, name: renameDlg.name } : s,
@@ -586,10 +611,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     }
   };
 
-  /**
-   * Handles remove.
-   *
-   * @param items - Attachment items rendered by the list.
+  /** Confirms deletion, removes selected entries optimistically, and dispatches each document or asset write.
+   * @param items Selected document and attachment records to delete.
    */
   const remove = async (items: Sister[]) => {
     if (!window.confirm(`Are you sure you want to delete ${items.length} items?`)) return;
@@ -600,9 +623,17 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     try {
       await Promise.allSettled(
         items.map(async (i) => {
-          if (i.isMd) await actions.write.doc.rm({ assets: false, path: i.path, type: 'doc' });
+          if (i.isMd)
+            await actions.write.doc.rm({
+              assets: false,
+              path: i.path,
+              type: 'doc',
+            });
           else if (i.id) {
-            await actions.write.attachment.rm({ docPath: docId, attachmentKey: i.id });
+            await actions.write.attachment.rm({
+              docPath: docId,
+              attachmentKey: i.id,
+            });
             if (i.path.startsWith('http')) await actions.write.asset.delete({ url: i.path });
           }
         }),
@@ -616,7 +647,6 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       });
     }
   };
-
   const isDialogOpen =
     !!mergePdfState ||
     !!viewDlg ||
@@ -626,10 +656,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 
   // GLOBAL KEYBOARD SHORTCUTS
   useEffect(() => {
-    /**
-     * Handles handle key down.
-     *
-     * @param e - Keyboard event used to operate the attachment panel.
+    /** Deletes selected attachments on Backspace or Delete when no input or dialog owns the key.
+     * @param e Keyboard event used to recognize and claim the deletion shortcut.
      */
     const handleKeyDown = (e: KeyboardEvent) => {
       if (loading || uploading || isDialogOpen || selItems.length === 0) return;
@@ -809,13 +837,20 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                         }}
                         onContextMenu={(e) => {
                           e.preventDefault();
-                          setCtxAttachment({ item: v, x: e.clientX, y: e.clientY });
+                          setCtxAttachment({
+                            item: v,
+                            x: e.clientX,
+                            y: e.clientY,
+                          });
                         }}
                       >
                         <CardHeader>
                           {__terraQualityCreateElement(
                             /* prettier-ignore */ v.type === 'youtube' ? YouTubeIcon : v.type === 'website' ? LinkIcon : v.type === 'image' ? ImageIcon : v.type === 'tsdocs' ? CatalogIcon : v.type === 'other' ? BoxIcon : DocumentIcon,
-                            { className: 'size-6 text-primary-10', 'aria-hidden': 'true' },
+                            {
+                              className: 'size-6 text-primary-10',
+                              'aria-hidden': 'true',
+                            },
                           )}
                           <CardTitle className="truncate text-base">{v.title || v.name}</CardTitle>
                           <CardDescription className="truncate">
@@ -835,6 +870,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
           ref={fileRef}
           type="file"
           className="hidden"
+          aria-label="Select files to upload as attachments"
           multiple
           onChange={(e) => void add(e.currentTarget.files)}
           disabled={uploading || loading}
@@ -855,16 +891,26 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                   {
                     icon: <CopyIcon />,
                     label: `Copy ${sel.length} items`,
-                    onSelect: () => setTransferDlg({ open: true, action: 'copy', items: selItems }),
+                    onSelect: () =>
+                      setTransferDlg({
+                        open: true,
+                        action: 'copy',
+                        items: selItems,
+                      }),
                   },
                   {
                     icon: <PopOutIcon />,
                     label: `Move ${sel.length} items`,
-                    onSelect: () => setTransferDlg({ open: true, action: 'cut', items: selItems }),
+                    onSelect: () =>
+                      setTransferDlg({
+                        open: true,
+                        action: 'cut',
+                        items: selItems,
+                      }),
                   },
                   ...(selItems.every(
                     (s) =>
-                      s.path.toLowerCase().split('?')[0].endsWith('.pdf') ||
+                      (s.path.toLowerCase().split('?')[0] ?? '').endsWith('.pdf') ||
                       s.name.toLowerCase().endsWith('.pdf'),
                   )
                     ? [
@@ -925,7 +971,12 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                 );
                                 setSisters((p) =>
                                   p.map((s) =>
-                                    s.id === tmpId ? { ...s, name: 'Uploading Merged PDF...' } : s,
+                                    s.id === tmpId
+                                      ? {
+                                          ...s,
+                                          name: 'Uploading Merged PDF...',
+                                        }
+                                      : s,
                                   ),
                                 );
                                 const finalAsset = await uploadAssetChunked(mergedFile, docId, {
@@ -957,6 +1008,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                     s.id === tmpId
                                       ? {
                                           ...s,
+                                          ...(finalAsset.id ? { id: finalAsset.id } : {}),
                                           path: fPath,
                                           name: fPath.split('/').pop() || mergedFile.name,
                                         }
@@ -977,16 +1029,18 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                         attachmentKey: i.id,
                                       });
                                       if (i.path.startsWith('http'))
-                                        await actions.write.asset.delete({ url: i.path });
+                                        await actions.write.asset.delete({
+                                          url: i.path,
+                                        });
                                     }
                                   }),
                                 );
                                 toast.success('PDFs merged successfully.');
                               } catch (_err) {
-                                errorLog(
+                                logErr(
                                   'Attachments:Merge',
                                   'Fatal exception caught during PDF merge',
-                                  logError(_err),
+                                  _err,
                                 );
                                 toast.error('Failed to merge PDFs.');
                                 setSisters([...sisters]);
@@ -1022,7 +1076,9 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                               path: ctxAttachment.item.path,
                               name: ctxAttachment.item.name,
                               isMd: ctxAttachment.item.isMd || false,
-                              id: ctxAttachment.item.id,
+                              ...(ctxAttachment.item.id === undefined
+                                ? {}
+                                : { id: ctxAttachment.item.id }),
                             });
                           },
                           icon: <EditIcon />,
@@ -1034,13 +1090,21 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                     icon: <CopyIcon />,
                     label: 'Copy to...',
                     onSelect: () =>
-                      setTransferDlg({ open: true, action: 'copy', items: [ctxAttachment.item] }),
+                      setTransferDlg({
+                        open: true,
+                        action: 'copy',
+                        items: [ctxAttachment.item],
+                      }),
                   },
                   {
                     icon: <PopOutIcon />,
                     label: 'Move to...',
                     onSelect: () =>
-                      setTransferDlg({ open: true, action: 'cut', items: [ctxAttachment.item] }),
+                      setTransferDlg({
+                        open: true,
+                        action: 'cut',
+                        items: [ctxAttachment.item],
+                      }),
                   },
                   ...(ctxAttachment.item.isMd
                     ? [
@@ -1099,11 +1163,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                         },
                                       ]);
                                     } catch (_err: unknown) {
-                                      errorLog(
-                                        'Attachments:Duplicate',
-                                        'Duplicate failed',
-                                        logError(_err),
-                                      );
+                                      logErr('Attachments:Duplicate', 'Duplicate failed', _err);
                                       notify({
                                         error:
                                           _err instanceof Error
@@ -1154,8 +1214,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       )}
       <Dialog
         open={isDialogOpen}
-        onOpenChange={(open) => {
-          if (open) return;
+        onOpenChange={(o) => {
+          if (o) return;
           if (viewDlg) setViewDlg(null);
           if (renameDlg?.open) {
             setRenameDlg(null);
@@ -1190,7 +1250,13 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                     const tmpId = `temp-${Date.now()}-${i}`;
                     setSisters((p) => [
                       ...p,
-                      { id: tmpId, path: tmpId, name: f.name, isMd: isMdFile, type: 'document' },
+                      {
+                        id: tmpId,
+                        path: tmpId,
+                        name: f.name,
+                        isMd: isMdFile,
+                        type: 'document',
+                      },
                     ]);
                     void processUpload(f, tmpId, isMdFile);
                   });
@@ -1208,10 +1274,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                   try {
                     const { PDFDocument } = await import('pdf-lib');
                     const mergedPdf = await PDFDocument.create();
-                    for (let i = 0; i < mergePdfState.pdfs.length; i++) {
-                      const pdfDoc = await PDFDocument.load(
-                        await mergePdfState.pdfs[i].arrayBuffer(),
-                      );
+                    for (const pdf of mergePdfState.pdfs) {
+                      const pdfDoc = await PDFDocument.load(await pdf.arrayBuffer());
                       (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach((p) =>
                         mergedPdf.addPage(p),
                       );
@@ -1228,15 +1292,21 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                       const tmpId = `temp-${Date.now()}-${i}`;
                       setSisters((p) => [
                         ...p,
-                        { id: tmpId, path: tmpId, name: f.name, isMd: isMdFile, type: 'document' },
+                        {
+                          id: tmpId,
+                          path: tmpId,
+                          name: f.name,
+                          isMd: isMdFile,
+                          type: 'document',
+                        },
                       ]);
                       void processUpload(f, tmpId, isMdFile);
                     });
                   } catch (_err) {
-                    errorLog(
+                    logErr(
                       'Attachments:UploadMerge',
                       'Fatal exception caught during PDF merge',
-                      logError(_err),
+                      _err,
                     );
                     toast.error('Failed to merge PDFs.');
                   } finally {
@@ -1290,10 +1360,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                           if (!viewDlg) return;
                           try {
                             if (viewDlg.type === 'tsdocs') {
-                              const scopeMatch = viewDlg.path.match(
-                                TerraQualityRegex.REGEX_DOCS_TSDOCS_REGEX(),
-                              );
-                              const scope = scopeMatch ? scopeMatch[1] : viewDlg.path;
+                              const scope =
+                                viewDlg.path.match(
+                                  TerraQualityRegex.REGEX_DOCS_TSDOCS_REGEX(),
+                                )?.[1] ?? viewDlg.path;
                               const { data, error } = await actions.read.tsdocs({ scope });
                               if (!error && data?.docs) {
                                 const url = URL.createObjectURL(
@@ -1316,7 +1386,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                 );
                                 const a = document.createElement('a');
                                 a.href = url;
-                                a.download = `${sanitizeName(scope.replace(TerraQualityRegex.REGEX_G_REGEX_10(), '-'))}.json`;
+                                a.download = `${sanitizeName((scope ?? 'docs').replace(TerraQualityRegex.REGEX_G_REGEX_10(), '-'))}.json`;
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
@@ -1361,13 +1431,14 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                             a.click();
                             document.body.removeChild(a);
                             URL.revokeObjectURL(url);
-                          } catch (_err) {
+                          } catch {
                             toast.error('Failed to download asset.');
                           }
                         })();
                       }}
                     >
-                      <DownloadIcon className="mr-2 size-4" /> Download Asset
+                      <DownloadIcon className={DOCS_LAYOUT_CLASSES.iconBeforeLabel} /> Download
+                      Asset
                     </Button>
                   )}
                 </div>
@@ -1482,7 +1553,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 											setSel([]);
 											toast.success(`Successfully ${transferDlg.action === 'copy' ? 'copied' : 'moved'} attachments.`);
 										} catch (_err) {
-											errorLog('Attachments:Transfer', 'Transfer failed', logError(_err));
+											logErr('Attachments:Transfer', 'Transfer failed', _err);
 											toast.error(`Failed to ${transferDlg.action} attachments.`);
 										} finally {
 											setTransferring(false);
@@ -1540,7 +1611,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className={DOCS_LAYOUT_CLASSES.spacedStack}>
                   {!['youtube', 'website', 'tsdocs'].includes(dialogMode) && (
                     <Button
                       variant="outline"
@@ -1627,5 +1698,4 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     </ErrorBoundary>
   );
 }
-
 Attachments.displayName = 'DocsAttachments';

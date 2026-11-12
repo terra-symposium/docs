@@ -1,14 +1,40 @@
-/** DOM selection, clipboard, and HTML conversion for the Docs editor. */
+/**
+ * src/lib/terra/docs/editor-dom.ts
+ * DOM selection, clipboard, and HTML conversion for the Docs editor.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { warn } from '../runtime/runtime.js';
+
+// COMPONENTS
 import * as TerraQualityRegex from '../regex.mjs';
+
+// TYPES
 import type { EditorSel } from '../runtime/types.js';
 import type { EditorView } from '@codemirror/view';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 export const document: Document =
   typeof globalThis !== 'undefined' && typeof globalThis.document !== 'undefined'
     ? globalThis.document
     : (undefined as unknown as Document);
 
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Reads the browser's current selection when it is a collapsed caret.
+ *
+ * @return The active zero-width selection range, or `null` when there is no browser selection or it spans text.
+ */
 export function getCollapsedRange(): Range | null {
   if (typeof window === 'undefined') return null;
   const sel = window.getSelection();
@@ -66,38 +92,11 @@ export function captureLinearOffset(
 }
 
 /**
- * Finds the DOM caret range at a character offset in the editor's text flow.
- *
- * @param root - Editor element whose text nodes should be traversed.
- * @param i - Character offset from the start of the editor.
- *
- * @return A collapsed range at the requested offset, or `null` for an invalid or out-of-range offset.
- */
-export function resolveLinearOffset(root: HTMLElement, i?: number): Range | null {
-  if (typeof i !== 'number' || i < 0) return null;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let cur = walker.nextNode();
-  let remaining = i;
-  while (cur) {
-    const len = cur.textContent?.length ?? 0;
-    if (remaining <= len) {
-      const range = document.createRange();
-      range.setStart(cur, Math.min(remaining, len));
-      range.collapse(true);
-      return range;
-    }
-    remaining -= len;
-    cur = walker.nextNode();
-  }
-  return null;
-}
-
-/**
- * Handles paste md.
- *
- * @param insert - Insert input supplied to paste md's operation.
- * @param md - Md input supplied to paste md's operation.
- * @param selection - Selection input supplied to paste md's operation.
+ * Waits for the editor to settle across two animation frames before inserting Markdown in a browser.
+ * Outside a browser, insertion runs immediately.
+ * @param insert Editor operation that inserts the prepared Markdown.
+ * @param md Markdown source to insert.
+ * @param selection Saved editor selection to restore before insertion, when available.
  */
 export function pasteMd(
   insert: (md: string, rootEnd?: boolean, selection?: EditorSel | null) => void,
@@ -115,14 +114,19 @@ export function pasteMd(
   insert(md, false, selection ?? null);
 }
 
+/**
+ * Finds the CodeMirror view belonging to the currently focused Docs code block.
+ *
+ * @return The active embedded CodeMirror view, or `null` when focus is elsewhere or the editor is not mounted.
+ */
 export function codeViewOf(): EditorView | null {
   if (typeof document === 'undefined') return null;
-  const active =
-    document.activeElement instanceof Element
-      ? document.activeElement.closest<HTMLElement>('.docs-code-block .cm-editor')
-      : null;
   return (
-    (active as (HTMLElement & { cmView?: { view?: EditorView } }) | null)?.cmView?.view ?? null
+    (
+      (document.activeElement instanceof Element
+        ? document.activeElement.closest<HTMLElement>('.docs-code-block .cm-editor')
+        : null) as (HTMLElement & { cmView?: { view?: EditorView } }) | null
+    )?.cmView?.view ?? null
   );
 }
 
@@ -138,7 +142,6 @@ export function htmlToMd(html: string): string {
     warn('htmlToMd', 'Window context unavailable; returning raw markup.');
     return html;
   }
-
   const root = new DOMParser().parseFromString(html, 'text/html').body;
   const rendered = new Map<Node, string>();
   const pending: Array<{ node: Node; visited: boolean }> = [{ node: root, visited: false }];
@@ -147,7 +150,8 @@ export function htmlToMd(html: string): string {
     if (curr.node.nodeType === Node.TEXT_NODE) {
       let text = curr.node.textContent || '';
       // Preserve embedded leaf structure tokens as separate Markdown blocks.
-      if (text.includes('|||')) text = text.replace(/\|\|\|/g, '\n\n|||\n\n');
+      if (text.includes('|||'))
+        text = text.replace(TerraQualityRegex.REGEX_G_REGEX_33(), '\n\n|||\n\n');
       rendered.set(curr.node, text);
       continue;
     }
@@ -166,7 +170,7 @@ export function htmlToMd(html: string): string {
     }
     const tag = element.tagName.toLowerCase();
     const children = Array.from(element.childNodes)
-      .map((child) => rendered.get(child) || '')
+      .map((c) => rendered.get(c) || '')
       .join('');
     let text = children;
     switch (tag) {
@@ -176,13 +180,13 @@ export function htmlToMd(html: string): string {
       case 'tfoot':
       case 'tr':
         text = `<${tag}${Array.from(element.attributes)
-          .map((attribute) => ` ${attribute.name}="${attribute.value}"`)
+          .map((a) => ` ${a.name}="${a.value}"`)
           .join('')}>\n${children}\n</${tag}>`;
         break;
       case 'th':
       case 'td':
         text = `<${tag}${Array.from(element.attributes)
-          .map((attribute) => ` ${attribute.name}="${attribute.value}"`)
+          .map((a) => ` ${a.name}="${a.value}"`)
           .join('')}>\n${children.trim()}\n</${tag}>`;
         break;
       case 'h1':

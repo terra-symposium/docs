@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_sidebar.tsx
+ * src/components/terra/pages/docs/_sidebar.tsx
  * Docs sidebar entrypoint, state management, and unified dialog orchestrators.
  * Folder boundary: sidebar navigation and its dialogs; the recursive tree structure remains in `_tree.tsx`.
  */
@@ -18,20 +17,7 @@ import {
   memoryDrafts,
   useAtom,
 } from '../../../../lib/terra/docs/state.js';
-import {
-  extractAllNodeIds,
-  getSiblings as getSibs,
-  parseDocsRoute as route,
-  getStableKey,
-  sanitizeName,
-} from '../../../../lib/terra/docs/tree.js';
-import { navigateDocs as navigate } from '../../../../lib/terra/docs/navigation.js';
-import { runMutation } from '../../../../lib/terra/docs/mutations.js';
-import { getHue } from '@terra-symposium/styling';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
-import { archiveDocs } from '../../../../lib/terra/docs/archive.js';
-import { ManageAttachmentsDialog } from './_manage-attachments-dialog.js';
-import { useRenderTripwire } from './use-render-tripwire.js';
 import {
   bName,
   buildRoute as buildRoute,
@@ -39,87 +25,109 @@ import {
   dirname,
   docsPath,
   docsRootPath,
-  FILES,
+  isDocsPath,
   toNodeLabel,
   toPaths,
 } from '../../../../lib/terra/runtime/shared.js';
-import { cn, createTrace, notify } from '../../../../lib/terra/runtime/runtime.js';
-import { isDevOrigin } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, createTrace, errorMessage, notify } from '../../../../lib/terra/runtime/runtime.js';
 import { components as repoComponents } from '../../../../lib/terra/custom-components.js';
 import { currLeafSrc } from '../../../../lib/terra/runtime/leaf.js';
+import {
+  extractAllNodeIds,
+  getSiblings as getSibs,
+  getStableKey,
+  isIndexFile,
+  parseDocsRoute as route,
+  sanitizeName,
+} from '../../../../lib/terra/docs/tree.js';
+import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
+import { getHue } from '@terra-symposium/styling';
+import { navigateDocs as navigate } from '../../../../lib/terra/docs/navigation.js';
+import { runMutation } from '../../../../lib/terra/docs/mutations.js';
 import { toast } from 'sonner';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
+import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
+import type { JSX } from 'react';
+import type { DocsHostUser } from '../../../../lib/host.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 import Tree, { Menu } from './_tree.js';
-import User from '../../ui.js';
 import {
   Add as AddIcon,
+  ArrowLeft as LeftArrowIcon,
   ArrowUpRight as PopOutIcon,
   Box as BoxIcon,
+  Catalog as CatalogIcon,
   ColorPalette as ColorIcon,
+  Doc as DocumentIcon,
   Download as DownloadIcon,
   Edit as EditIcon,
+  Image as ImageIcon,
   Link as LinkIcon,
-  OverflowMenuVertical as OverflowMenuIcon,
+  LogoYoutube as YouTubeIcon,
+  MagicWand as MagicIcon,
+  Search as SearchIcon,
   TrashCan as TrashIcon,
+  Upload as UploadIcon,
 } from '@carbon/icons-react';
-import { AlertError } from '@terra-symposium/styling/ui/terra-original';
-import { Button } from '@terra-symposium/styling/ui/terra-original';
 import {
+  AlertError,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Button,
+  Card,
   ContextMenu,
   ContextMenuContent,
   ContextMenuTrigger,
-} from '@terra-symposium/styling/ui/terra-original';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@terra-symposium/styling/ui/terra-original';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@terra-symposium/styling/ui/terra-original';
-import { ErrorBoundary } from '../../ui.js';
-import { ExportDialog as SharedExportDialog } from './_export-dialog.js';
-import { Input } from '@terra-symposium/styling/ui/terra-original';
-import { Label } from '@terra-symposium/styling/ui/terra-original';
-import {
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@terra-symposium/styling/ui/terra-original';
-import { Separator } from '@terra-symposium/styling/ui/terra-original';
-import {
+  Separator,
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarRail,
-} from '@terra-symposium/styling/ui/terra-original';
-import { Slider } from '@terra-symposium/styling/ui/terra-original';
+  Slider,
+  Spinner,
+  Textarea,
+} from '@terra-symposium/styling/ui';
+import { Empty, ErrorBoundary } from '../../ui.js';
+import { ExportDialog as SharedExportDialog } from './_export-dialog.js';
+import { TsDocsSelect } from './_blocks.js';
 
 // TYPES
-import type { ActionRes, Md } from '../../../../lib/terra/runtime/types.js';
-import type { AttchTgt, DelTgt, PromptState } from '../../../../lib/terra/runtime/types.js';
-import type { DocsTreeMenuAction as MenuAction } from '../../../../lib/terra/runtime/types.js';
 import type {
+  ActionRes,
+  AttchType,
   Branch,
+  DelTgt,
+  DocsTreeMenuAction as MenuAction,
+  DragState,
+  DocsExportOpts as ExportOptions,
   Leaf as LeafNode,
+  Md,
+  PromptState,
+  ReorderDropState,
+  Sister,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
-import type { DragState } from '../../../../lib/terra/runtime/types.js';
-import type { ReorderDropState } from '../../../../lib/terra/runtime/types.js';
+import type { PDFDocument, PDFImage } from 'pdf-lib';
 
 // prettier-ignore
 
@@ -128,46 +136,31 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 /**
- * SANITY MANY-TO-MANY ROUTING ARCHITECTURE
- *
- * Parses explicit Sanity IDs directly from the URL.
- * A single leaf or group can belong to multiple parents. Canonical routing keeps the active
- * section anchored to the first path segment so the sidebar select never drifts.
- *
- * @param pathname - Current browser pathname used to mark the active route.
- */
-/**
  * Reads the typed detail payload from a DOM event.
  *
  * @param e - DOM event carrying the custom payload.
- * @returns The event detail payload.
+ *
+ * @return The event detail payload.
  */
 const eDetail = <T,>(e: Event): T => (e as CustomEvent<T>).detail;
 
 /**
- * Handles latest content.
+ * Reads the latest Markdown source from the content model for sidebar preview state.
  *
  * @param content - Docs content used to derive the sidebar structure.
+ *
+ * @return The source text, or an empty string when the model has no text content.
  */
 const latestContent = (content: Md['content']): string => {
   if (typeof content === 'string') return content;
-  return Array.isArray(content) ? currLeafSrc(content, 'sidebar.latestContent') : '';
+  return Array.isArray(content) ? currLeafSrc(content) : '';
 };
 
 /*//////////////////////////////////////////////////
-FUNCTIONS
+HELPERS
 //////////////////////////////////////////////////*/
 
-/**
- * Handles archive.
- *
- * @param v - Paths input supplied to archive's operation.
- * @param r - Root dir input supplied to archive's operation.
- * @param f - Filename base input supplied to archive's operation.
- * @param o - Opts input supplied to archive's operation.
- * @param d - Callback invoked for progress.
- * @param n - Node ids input supplied to archive's operation.
- */
+/** Dialog implementations assigned below for the sidebar's typed component registry. */
 const SidebarComponents = {} as {
   PromptDialog: (props: {
     state: PromptState;
@@ -182,173 +175,155 @@ const SidebarComponents = {} as {
   }) => JSX.Element | null;
 };
 
-/**
- * RENDER TRIPWIRE
- * A diagnostic tool to catch and analyze React infinite loops.
- *
- * @param componentName - Component name input supplied to use render tripwire's operation.
- * @param trackedVars - Tracked vars input supplied to use render tripwire's operation.
- */
 /*//////////////////////////////////////////////////
 COMPONENTS
 //////////////////////////////////////////////////*/
 
-/*
- * Dialog component for selecting and managing all attachments across a section tree.
- *
- * @param props - Active attachment target, state setter, disabled state, and Docs tree for browsing and managing related assets.
- * @param tgt - The specific target node (Leaf, Group, or Section) receiving the attachment modifications.
- * @param setTgt - State dispatcher to clear or update the active target boundary, closing the dialog.
- * @param disabled - Master lock preventing interactions while network mutations or animations are active.
- * @param tree - Tree input supplied to manage attchs dialog's operation.
- *
- * @return The interactive modal overlay containing the attachment dashboard.
- *
- * @remarks
- * Provides a unified interface for uploading raw media, scraping external web links, linking YouTube videos,
- * and directly associating existing or new internal documentation pages as relational attachments.
- */
-SidebarComponents.PromptDialog = function PromptDialog({
-  state: s,
-  setState: setS,
-  disabled,
-}: {
-  state: PromptState;
-  setState: (v: PromptState) => void;
-  disabled: boolean;
-}): JSX.Element | null {
-  if (!s) return null;
-  return (
-    <Dialog
-      open={s.open}
-      onOpenChange={(o) => {
-        if (!o) {
-          s.onCancel?.();
-          setS(null);
-        }
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{s.title}</DialogTitle>
-          <DialogDescription>
-            {s.description || `Enter a new ${s.label.toLowerCase()}.`}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <Input
-            autoFocus
-            aria-label={s.label}
-            value={s.value}
-            onChange={(e) => {
-              setS({ ...s, value: e.target.value });
-            }}
-            className="w-full focus:ring-0"
-            disabled={disabled}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
+SidebarComponents.PromptDialog =
+  /**
+   * Prompts for a new sidebar operation and reports the user's choice to the owning component.
+   *
+   * @param s Current prompt details, or `null` when no prompt should be shown.
+   * @param setS Updates the prompt state after a save or cancel action.
+   * @param disabled Whether the enclosing sidebar operation currently blocks dialog actions.
+   *
+   * @return The prompt dialog while a prompt is active, or `null` when no prompt is open.
+   */
+  function PromptDialog({
+    state: s,
+    setState: setS,
+    disabled,
+  }: {
+    state: PromptState;
+    setState: (v: PromptState) => void;
+    disabled: boolean;
+  }): JSX.Element | null {
+    if (!s) return null;
+    return (
+      <Dialog
+        open={s.open}
+        onOpenChange={(o) => {
+          if (!o) {
+            s.onCancel?.();
+            setS(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{s.title}</DialogTitle>
+            <DialogDescription>
+              {s.description || `Enter a new ${s.label.toLowerCase()}.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              autoFocus
+              aria-label={s.label}
+              value={s.value}
+              onChange={(e) => {
+                setS({ ...s, value: e.target.value });
+              }}
+              className="w-full focus:ring-0"
+              disabled={disabled}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (s.value.trim()) {
+                    s.onSave(s.value.trim());
+                    setS(null);
+                  }
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              disabled={disabled || !s.value.trim()}
+              onClick={() => {
                 if (s.value.trim()) {
                   s.onSave(s.value.trim());
                   setS(null);
                 }
-              }
-            }}
-          />
-        </div>
-        <DialogFooter>
-          <Button
-            disabled={disabled || !s.value.trim()}
-            onClick={() => {
-              if (s.value.trim()) {
-                s.onSave(s.value.trim());
-                setS(null);
-              }
-            }}
-          >
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-/*
- * Renders the delete dialog component.
- *
- * @param props - The selected deletion target, state setter, confirmation callback, and disabled state for the delete confirmation.
- * @param setTgt - Clears or updates the active target.
- * @param tgt - Tgt input supplied to delete dialog's operation.
- * @param disabled - Disabled state controlling whether delete dialog accepts interaction.
- * @param onConfirm - Callback invoked for confirm.
- *
- * @return The delete dialog or nothing when no target is selected.
- *
- * @remarks Renders the delete confirmation dialog for sidebar content.
- */
-SidebarComponents.DeleteDialog = function DeleteDialog({
-  tgt,
-  setTgt,
-  onConfirm,
-  disabled,
-}: {
-  tgt: DelTgt;
-  setTgt: (v: DelTgt) => void;
-  onConfirm: () => void;
-  disabled: boolean;
-}): JSX.Element | null {
-  if (!tgt) return null;
-  return (
-    <Dialog
-      open={!!tgt}
-      onOpenChange={(o) => {
-        if (!o) setTgt(null);
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            Delete {tgt.kind === 'leaf' ? 'page' : tgt.kind === 'branch' ? 'group' : 'section'}?
-          </DialogTitle>
-          <DialogDescription>
-            Delete <code>{tgt.title || tgt.path}</code>{' '}
-            {tgt.kind !== 'leaf' ? ' and its nested docs.' : '.'} This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="destructive"
-            disabled={disabled}
-            onClick={() => {
-              onConfirm();
-            }}
-          >
-            Delete
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+SidebarComponents.DeleteDialog =
+  /**
+   * Confirms deletion of the selected page, group, or section before invoking the caller's action.
+   *
+   * @param tgt Page, group, or section selected for deletion, or `null` when the dialog is closed.
+   * @param setTgt Clears the selected target when the user cancels the dialog.
+   * @param onConfirm Performs the deletion after the user confirms.
+   * @param disabled Whether the enclosing operation currently blocks deletion.
+   *
+   * @return The confirmation dialog while a target is selected, or `null` otherwise.
+   */
+  function DeleteDialog({
+    tgt,
+    setTgt,
+    onConfirm,
+    disabled,
+  }: {
+    tgt: DelTgt;
+    setTgt: (v: DelTgt) => void;
+    onConfirm: () => void;
+    disabled: boolean;
+  }): JSX.Element | null {
+    if (!tgt) return null;
+    return (
+      <Dialog
+        open={!!tgt}
+        onOpenChange={(o) => {
+          if (!o) setTgt(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Delete {tgt.kind === 'leaf' ? 'page' : tgt.kind === 'branch' ? 'group' : 'section'}?
+            </DialogTitle>
+            <DialogDescription>
+              Delete <code>{tgt.title || tgt.path}</code>{' '}
+              {tgt.kind !== 'leaf' ? ' and its nested docs.' : '.'} This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="destructive"
+              disabled={disabled}
+              onClick={() => {
+                onConfirm();
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 /**
- * Renders the top collapsed header boundary on mobile-view structurally isolating context safely cleanly.
+ * Coordinates the Docs sidebar's route selection, navigation tree, dialogs, and user actions.
  *
- * @return {JSX.Element} Visual mobile heading frame.
+ * @param items Navigation tree supplied by the Docs host.
+ * @param pathname Browser path used to determine the active section and document.
+ * @param permission Read or write capability granted to the current viewer.
+ * @param userData Signed-in user details displayed in the sidebar, or `null` if signed out.
+ * @param siteTitle Optional site name shown above sidebar navigation.
+ * @param siteDescription Optional short description shown below the site name.
+ * @param homePath Host route used for links back to the site's root.
+ * @param sidebarAttrs Additional sidebar attributes and focus handlers forwarded to the root component.
+ *
+ * @return The Docs sidebar and its navigation controls for the active host route.
  */
-/**
- * Main sidebar controller connecting context providers natively driving application visual trees.
- *
- * @param {object} props - Input definitions matching specific nav tree routes.
- * @param docs - Docs input supplied to nav's operation.
- * @param pathname - Pathname input supplied to nav's operation.
- * @param permission - Permission input supplied to nav's operation.
- * @param userData - user record supplied to nav.
- *
- * @return {JSX.Element} Fully formatted UI sidebar assembly correctly binding handlers.
- */
-export default (function Nav({
+function Nav({
   docs: items,
   pathname,
   permission,
@@ -356,15 +331,15 @@ export default (function Nav({
   siteTitle = 'Terra Symposium',
   siteDescription,
   homePath = '/',
-  ...props
+  ...sidebarAttrs
 }: {
   docs: TreeType[];
   pathname: string;
   permission: import('../../../../lib/terra/runtime/types.js').DocsPermissionLevel;
-  userData?: import('../../../../lib/terra/runtime/types.js').User | null;
-  siteTitle?: string;
-  siteDescription?: string;
-  homePath?: string;
+  userData?: DocsHostUser | null | undefined;
+  siteTitle?: string | undefined;
+  siteDescription?: string | undefined;
+  homePath?: string | undefined;
 }): JSX.Element {
   // STATES
   const leafTitle = useAtom($leafTitle);
@@ -375,6 +350,9 @@ export default (function Nav({
   const [drag, setDrag] = useState<DragState | null>(null);
   const [dState, setDState] = useState<ReorderDropState | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+
+  // MANY-TO-MANY ROUTE ANCHOR
+  // Resolve the first route segment as the active section because leaves and groups can have multiple parents.
   const [cPathname, setCPathname] = useState(() => route(pathname || '').pathname);
   const urlIds = useMemo(() => route(cPathname), [cPathname]);
   const [viewedSecId, setViewedSecId] = useState<string | null>(
@@ -387,7 +365,12 @@ export default (function Nav({
   const [lastSel, setLastSel] = useState<string | null>(null);
 
   // DIALOG STATES
-  const [manageAttTgt, setManageAttTgt] = useState<AttchTgt | null>(null);
+  const [manageAttTgt, setManageAttTgt] = useState<{
+    path: string;
+    title: string;
+    scope: 'section' | 'group' | 'leaf';
+    node: TreeType;
+  } | null>(null);
   const [exportTgt, setExportTgt] = useState<{
     paths: string[];
     rootDir: string;
@@ -395,7 +378,10 @@ export default (function Nav({
     title: string;
     nodeIds?: string[];
   } | null>(null);
-  const [assetTgt, setAssetTgt] = useState<{ path: string; title: string } | null>(null);
+  const [assetTgt, setAssetTgt] = useState<{
+    path: string;
+    title: string;
+  } | null>(null);
   const [assetDialogOpen, setAssetDialogOpen] = useState(false);
   const [assetBusy, setAssetBusy] = useState(false);
   const [assetComponent, setAssetComponent] = useState(
@@ -403,13 +389,15 @@ export default (function Nav({
       repoComponents[0]?.name ??
       '',
   );
-  const [hueDlg, setHueDlg] = useState<{ open: boolean; hue: number; section: TreeType } | null>(
-    null,
-  );
+  const [hueDlg, setHueDlg] = useState<{
+    open: boolean;
+    hue: number;
+    section: TreeType;
+  } | null>(null);
   const [inputDlg, setInputDlg] = useState<{
     open: boolean;
     title: string;
-    description?: string;
+    description?: string | undefined;
     label: string;
     value: string;
     onSave: (val: string) => void;
@@ -426,7 +414,7 @@ export default (function Nav({
   } | null>(null);
 
   // INJECT TRIPWIRE TO CATCH STATE THRASHING
-  useRenderTripwire('Nav', {
+  const navTripwireTrackedVars = {
     curMode,
     transitioning,
     creating,
@@ -447,12 +435,48 @@ export default (function Nav({
     hueDlgOpen: hueDlg?.open,
     inputDlgOpen: inputDlg?.open,
     delTargetPresent: !!delTgt,
-  });
+  };
+  const navTripwireNow = performance.now();
+  const navTripwireRenders = useRef(0);
+  const navTripwirePrevVars = useRef(navTripwireTrackedVars);
+  const navTripwireWindowStart = useRef(navTripwireNow);
+  if (navTripwireNow - navTripwireWindowStart.current > 500) {
+    navTripwireWindowStart.current = navTripwireNow;
+    navTripwireRenders.current = 0;
+  }
+  navTripwireRenders.current++;
+  if (navTripwireRenders.current > 50) {
+    const navTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
+    for (const key of Object.keys(
+      navTripwireTrackedVars,
+    ) as (keyof typeof navTripwireTrackedVars)[])
+      if (navTripwireTrackedVars[key] !== navTripwirePrevVars.current[key])
+        navTripwireDiff[key] = {
+          old: navTripwirePrevVars.current[key],
+          new: navTripwireTrackedVars[key],
+        };
+    console.error(`🚨 [TRIPWIRE TRIGGERED] Infinite Loop in Nav 🚨`);
+    console.error(
+      `Detected 50 renders in rapid succession. Average delta: ${(navTripwireNow - navTripwireWindowStart.current).toFixed(2)}ms`,
+    );
+    console.error(
+      'State Differences (What is causing the thrash):',
+      JSON.stringify(navTripwireDiff),
+    );
+    console.trace(`Trace for Nav infinite loop`);
+    throw new Error(`Render Tripwire killed infinite loop in Nav. Check console for state diffs.`);
+  }
+  navTripwirePrevVars.current = navTripwireTrackedVars;
 
-  // Sync viewed section with URL on navigation
+  // Keep both the active tree route and section selector aligned with host
+  // navigation. Repository adapters can route every page through `/#id`, so
+  // parsing the cached cPathname can temporarily resolve the previous section.
+  // Resolve the incoming pathname itself before updating both pieces of state.
   useEffect(() => {
-    if (urlIds.sectionId) setViewedSecId(urlIds.sectionId);
-  }, [urlIds.sectionId]);
+    const currentRoute = route(pathname || '');
+    setCPathname(currentRoute.pathname);
+    if (currentRoute.sectionId) setViewedSecId(currentRoute.sectionId);
+  }, [pathname]);
   const sects = useMemo(() => {
     let s = Array.isArray(tree) ? tree.filter((d): d is Branch => d.type === 'branch') : [];
     // 1. Deduplicate by origName to prevent React key collisions and redundant entries
@@ -466,26 +490,35 @@ export default (function Nav({
     const nestedBranchIds = new Set<string>();
     s.forEach((n) => {
       if (n.children)
-        (function walk(children: TreeType[]) {
-          children.forEach((c) => {
-            if (c.type === 'branch') {
-              nestedBranchIds.add(c.origName);
-              if (c.children) walk(c.children);
-            }
-          });
-        })(n.children);
+        (
+          /**
+           * Collects nested branch IDs so child groups are not duplicated as top-level sections.
+           *
+           * @param children Child navigation nodes under the current section.
+           *
+           * @return Nothing; branch IDs are added to `nestedBranchIds` during traversal.
+           */
+          function walk(children: TreeType[]) {
+            children.forEach((c) => {
+              if (c.type === 'branch') {
+                nestedBranchIds.add(c.origName);
+                if (c.children) walk(c.children);
+              }
+            });
+          }
+        )(n.children);
     });
     s = s.filter((n) => !nestedBranchIds.has(n.origName));
 
     // prettier-ignore
     if (/**
-		 * SIMULATED SECTION WRAPPER
-		 *
-		 * If a user accesses a group directly (e.g., via granular permission /docs/{groupId}/{leafId}),
-		 * the nav tree will return Groups as the top-level branches instead of Sections.
-		 * The sidebar structurally expects Sections at the top level. We intercept this and wrap
-		 * the Groups in a simulated "Shared Context" Section to render the tree seamlessly.
-	 */ (s.length > 0 && s.every(b => b.children?.every(c => c.type === 'leaf'))) && s[0]?.origName !== urlIds.sectionId) s = [{ type: 'branch', origName: urlIds.sectionId, permission: 'read', simulated: true, title: s[0]?.title || 'Shared Context', url: docsPath(urlIds.sectionId), children: s }];
+     * SIMULATED SECTION WRAPPER
+     *
+     * If a user accesses a group directly (e.g., via granular permission /docs/{groupId}/{leafId}),
+     * the nav tree will return Groups as the top-level branches instead of Sections.
+     * The sidebar structurally expects Sections at the top level. We intercept this and wrap
+     * the Groups in a simulated "Shared Context" Section to render the tree seamlessly.
+   */ (s.length > 0 && s.every(b => b.children?.every(c => c.type === 'leaf'))) && s[0]?.origName !== urlIds.sectionId) s = [{ type: 'branch', origName: urlIds.sectionId, permission: 'read', simulated: true, title: s[0]?.title || 'Shared Context', url: docsPath(urlIds.sectionId), children: s }];
     // prettier-ignore
     if (s.length === 0 && permission === 'write') s.push({ type: 'branch', origName: 'new-section', permission: 'read', simulated: true, url: docsPath('new-section'), children: [{ type: 'leaf', origName: 'index', path: 'index.mdx', url: docsRootPath(), permission: 'read', title: 'Untitled', fileType: 'mdx' }]});
     return s;
@@ -517,9 +550,6 @@ export default (function Nav({
       prevTree.current = items;
     }
   }, [items]);
-  useEffect(() => {
-    setCPathname(route(pathname).pathname);
-  }, [pathname]);
   const refreshTree = useCallback(async (): Promise<void> => {
     try {
       const { data, error: err } = (await actions.read.doc.list({
@@ -533,53 +563,81 @@ export default (function Nav({
     }
   }, []);
   useEffect(() => {
-    /*
-     * Handles update sidebar node title.
-     *
-     * @param nodes - Sidebar nodes containing the document to rename.
-     * @param targetPath - Path of the document whose title should change.
-     * @param newTitle - New title assigned to the matching document.
-     */
+    // Match normalized paths first, then use a unique basename to sync the saved leaf title.
     if (leafTitle?.path)
-      setTree((c) =>
-        (function updateSidebarNodeTitle(
-          nodes: TreeType[],
-          tgtPath: string,
-          newTitle: string,
-        ): TreeType[] {
-          /**
-           * Normalizes a sidebar asset path for comparisons by removing draft and file-extension markers.
-           *
-           * @param val - Sidebar document path or basename to normalize before matching a title update.
-           */
-          const cPath = (val: string): string =>
-            val
-              .replace(TerraQualityRegex.REGEX_DRAFTS_REGEX(), '')
-              .replace(TerraQualityRegex.REGEX_MD_MDX_PDF_I_REGEX(), '');
-          return nodes.map((n) => {
-            const nodePath = n.type === 'leaf' ? n.path || '' : '';
+      setTree((nodes) => {
+        /**
+         * Normalizes stored paths before matching a local title update.
+         *
+         * @param value Host path, storage path, or route fragment.
+         *
+         * @return A slash-delimited path without draft markers, extensions, or query fragments.
+         */
+        const cPath = (value: string): string =>
+          value
+            .replace(/\\/g, '/')
+            .split(TerraQualityRegex.REGEX_PATTERN_REGEX_4(), 1)[0]!
+            .replace(TerraQualityRegex.REGEX_DRAFTS_REGEX(), '')
+            .replace(TerraQualityRegex.REGEX_MD_MDX_PDF_I_REGEX(), '')
+            .replace(TerraQualityRegex.REGEX_G_REGEX_35(), '');
+        const targetPath = cPath(leafTitle.path);
+        const targetBasename = targetPath.split('/').at(-1)?.toLowerCase() ?? '';
+        let basenameCount = 0;
+        const basenameCandidates = [...nodes];
+        while (basenameCandidates.length > 0 && basenameCount < 2) {
+          const node = basenameCandidates.pop()!;
+          if (node.type === 'leaf')
+            basenameCount += Number(
+              cPath(node.path || '')
+                .split('/')
+                .at(-1)
+                ?.toLowerCase() === targetBasename,
+            );
+          else if (node.children) for (const child of node.children) basenameCandidates.push(child);
+        }
+        // Many repository documents are named index.md. A basename fallback
+        // would rename every such leaf, so only allow it for a unique filename.
+        const updated: TreeType[] = [];
+        const updateFrames: {
+          source: TreeType[];
+          target: TreeType[];
+          index: number;
+        }[] = [{ source: nodes, target: updated, index: 0 }];
+        while (updateFrames.length > 0) {
+          const frame = updateFrames[updateFrames.length - 1]!;
+          if (frame.index >= frame.source.length) {
+            updateFrames.pop();
+            continue;
+          }
+          const node = frame.source[frame.index++]!;
+          if (node.type === 'leaf') {
+            const nodePath = node.path || '';
+            const normNodePath = cPath(nodePath);
             if (
-              n.type === 'leaf' &&
-              (nodePath === tgtPath ||
-                n.origName === tgtPath ||
-                cPath(nodePath) === cPath(tgtPath) ||
-                cPath(nodePath.split('/').at(-1) || nodePath) ===
-                  cPath(tgtPath.split('/').at(-1) || tgtPath))
-            )
-              return { ...n, title: newTitle };
-            if (n.type === 'branch' && n.children)
-              return { ...n, children: updateSidebarNodeTitle(n.children, tgtPath, newTitle) };
-            return n;
-          });
-        })(c, leafTitle.path, leafTitle.title),
-      );
+              nodePath === leafTitle.path ||
+              node.origName === leafTitle.path ||
+              normNodePath === targetPath ||
+              (targetBasename !== 'index' &&
+                targetBasename !== '' &&
+                basenameCount === 1 &&
+                normNodePath.split('/').at(-1)?.toLowerCase() === targetBasename)
+            ) {
+              frame.target.push({ ...node, title: leafTitle.title });
+            } else frame.target.push(node);
+            continue;
+          }
+          if (node.type === 'branch' && node.children) {
+            const children: TreeType[] = [];
+            frame.target.push({ ...node, children });
+            updateFrames.push({ source: node.children, target: children, index: 0 });
+            continue;
+          }
+          frame.target.push(node);
+        }
+        return updated;
+      });
   }, [leafTitle]);
   useEffect(() => {
-    /**
-     * Handles rename event.
-     *
-     * @param e - Rename event carrying the updated document path.
-     */
     const ES = [
       {
         handler: (e: Event): void => {
@@ -593,15 +651,27 @@ export default (function Nav({
             }) & { isActive?: boolean }
           >(e);
           if (!d?.path || !d.nfilepath) return;
-          createTrace('DOCS:shared', isDevOrigin(globalThis.location?.origin ?? ''))(
-            'rename.start',
-            { next: d.nfilepath, previous: d.path },
-          );
+          createTrace(
+            'DOCS:shared',
+            (() => {
+              const origin = globalThis.location?.origin ?? '';
+              const isDevelopmentOrigin = getDocsHostAdapter()?.isDevelopmentOrigin;
+              if (isDevelopmentOrigin) return isDevelopmentOrigin(String(origin));
+              try {
+                const host = new URL(origin).hostname;
+                return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+              } catch {
+                return false;
+              }
+            })(),
+          )('rename.start', { next: d.nfilepath, previous: d.path });
           setTree((current) => {
             const renamed: TreeType[] = [];
-            const pending: { source: TreeType[]; target: TreeType[]; index: number }[] = [
-              { source: current, target: renamed, index: 0 },
-            ];
+            const pending: {
+              source: TreeType[];
+              target: TreeType[];
+              index: number;
+            }[] = [{ source: current, target: renamed, index: 0 }];
             while (pending.length > 0) {
               const frame = pending[pending.length - 1]!;
               if (frame.index >= frame.source.length) {
@@ -610,22 +680,27 @@ export default (function Nav({
               }
               const node = frame.source[frame.index++]!;
               if (node.type === 'leaf' && node.path === d.path) {
-                const slug = d.nfilepath
-                  .replace(TerraQualityRegex.REGEX_PATTERN_REGEX_6(), '')
-                  .replace(FILES.markdown, '')
-                  .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX(), '');
                 frame.target.push({
                   ...node,
                   path: d.nfilepath,
                   title: d.title ?? node.title,
-                  url: docsPath(slug),
+                  url: docsPath(
+                    d.nfilepath
+                      .replace(TerraQualityRegex.REGEX_PATTERN_REGEX_6(), '')
+                      .replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2(), '')
+                      .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX(), ''),
+                  ),
                 });
                 continue;
               }
               if (node.type === 'branch') {
                 const children: TreeType[] = [];
                 frame.target.push({ ...node, children });
-                pending.push({ source: node.children ?? [], target: children, index: 0 });
+                pending.push({
+                  source: node.children ?? [],
+                  target: children,
+                  index: 0,
+                });
                 continue;
               }
               frame.target.push(node);
@@ -672,17 +747,21 @@ export default (function Nav({
           const anchor = lastSel || findActiveLeaf(tree, cPathname)?.path;
           if (anchor) {
             const allLeaves: string[] = [];
-            /*
-             * Handles walk.
-             *
-             * @param nodes - Sidebar nodes traversed while collecting leaf paths.
-             */
-            (function walk(nodes: TreeType[]) {
-              nodes.forEach((n) => {
-                if (n.type === 'leaf' && n.path) allLeaves.push(n.path);
-                if (n.type === 'branch' && n.children) walk(n.children);
-              });
-            })(tree);
+            (
+              /**
+               * Collects leaf paths in the same order they appear in the navigation tree.
+               *
+               * @param nodes Navigation nodes to traverse.
+               *
+               * @return Nothing; each discovered leaf path is appended to `allLeaves`.
+               */
+              function walk(nodes: TreeType[]) {
+                nodes.forEach((n) => {
+                  if (n.type === 'leaf' && n.path) allLeaves.push(n.path);
+                  if (n.type === 'branch' && n.children) walk(n.children);
+                });
+              }
+            )(tree);
             const i1 = allLeaves.indexOf(anchor);
             const i2 = allLeaves.indexOf(v);
             if (i1 !== -1 && i2 !== -1)
@@ -712,13 +791,23 @@ export default (function Nav({
   const mergeLeaves = useCallback(
     (v: string[]) => {
       const leafOrder = new Map<string, number>();
-      (function walk(nodes: TreeType[], order = 0): number {
-        for (const node of nodes) {
-          if (node.type === 'leaf' && node.path) leafOrder.set(node.path, order++);
-          if (node.type === 'branch' && node.children) order = walk(node.children, order);
+      (
+        /**
+         * Records each leaf's traversal index so merged pages retain sidebar order.
+         *
+         * @param nodes Navigation subtree to index.
+         * @param order Next traversal index to assign.
+         *
+         * @return The next index after this subtree has been visited.
+         */
+        function walk(nodes: TreeType[], order = 0): number {
+          for (const node of nodes) {
+            if (node.type === 'leaf' && node.path) leafOrder.set(node.path, order++);
+            if (node.type === 'branch' && node.children) order = walk(node.children, order);
+          }
+          return order;
         }
-        return order;
-      })(tree);
+      )(tree);
       const orderedPaths = Array.from(new Set(v)).sort(
         (a, b) =>
           (leafOrder.get(a) ?? Number.MAX_SAFE_INTEGER) -
@@ -739,12 +828,13 @@ export default (function Nav({
 								const [firstPath, ...restPaths] = orderedPaths;
 								if (!firstPath) throw new Error('Not enough valid documents to merge');
 								setTree(v => {
-														/*
-									 * Handles prune.
-																		 *
-																											 * @param items - Sidebar items being pruned from the tree.
-									 */
-									return (function prune(items: TreeType[]): TreeType[] {
+                  /**
+                   * Removes merged pages and empty branches from the optimistic sidebar tree.
+                   *
+                   * @param items - Navigation nodes to retain or prune recursively.
+                   * @returns The tree with merged leaf paths removed.
+                   */
+                  const prune = (items: TreeType[]): TreeType[] => {
 						const n: TreeType[] = [];
 						for (const node of items) {
 							if (node.type === 'leaf') {
@@ -760,7 +850,8 @@ export default (function Nav({
 							if (children.length > 0) n.push({ ...node, children });
 						}
 						return n;
-					})(v);
+					};
+					return prune(v);
 								});
 				const pages = (await Promise.all(orderedPaths.map(p => actions.read.doc.get({ path: p }))))
 					.map((r, i) => ({ path: orderedPaths[i]!, doc: r?.data as Md | undefined }))
@@ -858,7 +949,7 @@ export default (function Nav({
 							window.history.pushState(null, '', tgtUrl.toString());
 							document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: url, pathname: url, path: dPath, title: 'Untitled', description: '', source: '', content: [], compiledMDX: '' } }),);
 							const { data, error } = await actions.write.doc.createSection({ title: name });
-							if (error || !data) throw new Error(error?.message || 'Failed to create section.');
+							if (error || !data) throw new Error(errorMessage(error, 'Failed to create section.'));
 							setTimeout(() => {
 								void refreshTree();
 							}, 2500);
@@ -956,7 +1047,10 @@ export default (function Nav({
         async () => {
           const tgtSectId = hueDlg.section.origName;
           // Apply hue mutation to Sanity
-          const { error: err } = await actions.write.doc.hue({ id: tgtSectId, hue: hueDlg.hue });
+          const { error: err } = await actions.write.doc.hue({
+            id: tgtSectId,
+            hue: hueDlg.hue,
+          });
           if (err) throw err;
           // 1. Optimistically update our local tree state so the sidebar dot updates immediately
           setTree((p) => {
@@ -989,7 +1083,7 @@ export default (function Nav({
               if (inlineMatch) document.documentElement.style.cssText = inlineMatch[1] || '';
               else window.location.reload();
             }
-          } catch (_e) {
+          } catch {
             window.location.reload();
           }
         },
@@ -1030,8 +1124,11 @@ export default (function Nav({
           : `${nPrefix.replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '')}${currPath.slice(currPrefix.length)}` ||
             nPrefix;
       try {
-        const { error: err } = await actions.write.doc.rm({ path: s, type: 'folder' });
-        if (err && !err.message?.includes('folder not found')) throw err;
+        const { error: err } = await actions.write.doc.rm({
+          path: s,
+          type: 'folder',
+        });
+        if (err && !errorMessage(err, '').includes('folder not found')) throw err;
         await refreshTree();
         if (redirect && redirect !== cPathname) navigate({ href: redirect, mode: 'view' });
       } catch (err) {
@@ -1059,9 +1156,13 @@ export default (function Nav({
         const { error: err } = await actions.write.doc.rm(
           isIdx ? { path: tgtPath, type: tgtType } : { assets: a, path: tgtPath, type: tgtType },
         );
-        if (err && !err.message?.includes('folder not found')) throw err;
+        if (err && !errorMessage(err, '').includes('folder not found')) throw err;
         await refreshTree();
-        if (a) navigate({ href: docsPath(dirname(p).replace(/^\.\/?/, '')), mode: 'view' });
+        if (a)
+          navigate({
+            href: docsPath(dirname(p).replace(/^\.\/?/, '')),
+            mode: 'view',
+          });
       } catch (err) {
         setTree(prevTree);
         throw err;
@@ -1069,7 +1170,6 @@ export default (function Nav({
     },
     [refreshTree],
   );
-
   const openCreate = useCallback(
     (p: string, v: string): void => {
       if ($transition.get()) return;
@@ -1087,7 +1187,7 @@ export default (function Nav({
             try {
 							const { data: res, error: resErr } = await actions.read.doc.resolvePath({ path: p, title: name });
 							if (resErr || !res) throw resErr || new Error('Failed to resolve path');
-							const dPath = (res).path;
+							const dPath = res.path;
 							const tLeafId = `temp_l_${Date.now()}`;
 							const sectId = urlIds.sectionId;
 							let url = '';
@@ -1105,7 +1205,14 @@ export default (function Nav({
 							url = aParentId === sectId ? buildRoute(sectId, undefined, tLeafId) : buildRoute(sectId, aParentId, tLeafId);
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
-								(function insertLeaf(nodes: TreeType[], tgtId: string): boolean {
+                /**
+                 * Inserts a new temporary page under its target branch if it is not already present.
+                 *
+                 * @param nodes - Navigation nodes searched for the target branch.
+                 * @param tgtId - Branch identifier that should receive the new page.
+                 * @returns Whether the target branch was found and updated.
+                 */
+                const insertLeaf = (nodes: TreeType[], tgtId: string): boolean => {
 									for (const n of nodes) {
 										if (n.type === 'branch') {
 											if (n.origName === tgtId) {
@@ -1119,7 +1226,8 @@ export default (function Nav({
 										}
 									}
 									return false;
-								})(nTree, aParentId);
+								};
+					insertLeaf(nTree, aParentId);
 								return nTree;
 							});
 							memoryDrafts.set(url, { source: '', draft: { content: [], description: '', path: dPath, title: name }, metadata: { path: dPath, title: name, description: '', pathname: url } });
@@ -1171,15 +1279,22 @@ export default (function Nav({
 							const gUrl = buildRoute(rootId, tGrpId);
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
-								(function insertGroup(nodes: TreeType[], tgtId: string): boolean {
+                /**
+                 * Adds a temporary group and its index page beneath the target branch.
+                 *
+                 * @param nodes - Navigation nodes searched for the target branch.
+                 * @param tgtId - Branch identifier that should receive the group.
+                 * @returns Whether the target branch was found and updated.
+                 */
+                const insertGroup = (nodes: TreeType[], tgtId: string): boolean => {
 									for (const n of nodes) {
 										if (n.type === 'branch') {
 											if (n.origName === tgtId) {
 												if (!n.children) n.children = [];
 												if (!n.children.find(c => c.type === 'branch' && 'url' in c && c.url === gUrl))
 													n.children.push({
-													 type: 'branch', origName: tGrpId, permission: 'write', title: name, url: gUrl,
-													 children: [{ type: 'leaf', fileType: 'mdx', origName: tLeafId, path: dPath, permission: 'write', title: 'Untitled', description: '', url, source: '' }],
+                           type: 'branch', origName: tGrpId, permission: 'write', title: name, url: gUrl,
+                           children: [{ type: 'leaf', fileType: 'mdx', origName: tLeafId, path: dPath, permission: 'write', title: 'Untitled', description: '', url, source: '' }],
 												});
 												return true;
 											}
@@ -1187,7 +1302,8 @@ export default (function Nav({
 										}
 									}
 									return false;
-								})(nTree, rootId);
+								};
+					insertGroup(nTree, rootId);
 								return nTree;
 							});
 							memoryDrafts.set(url, { source: '', draft: { content: [], description: '', path: dPath, title: 'Untitled' }, metadata: { path: dPath, title: 'Untitled', description: '', pathname: url } });
@@ -1219,7 +1335,7 @@ export default (function Nav({
   const mvLeaf = useCallback(
     async ({
       path: p,
-      tTarget: tTgt,
+      tTarget: t,
       tpath: v,
       tPosition: r,
     }: {
@@ -1228,36 +1344,45 @@ export default (function Nav({
       tpath: string;
       tPosition?: 'after' | 'before';
     }): Promise<void> => {
-      console.warn('[docs:mv-leaf]', { path: p, tTarget: tTgt, tpath: v, tPosition: r });
+      console.warn('[docs:mv-leaf]', {
+        path: p,
+        tTarget: t,
+        tpath: v,
+        tPosition: r,
+      });
       const prevTree = JSON.parse(JSON.stringify(tree)) as TreeType[];
       let _nPath = p;
       try {
-        /**
-         * Handles find parent path.
-         *
-         * @param nodes - Sidebar nodes searched for the target document.
-         * @param tgtPath - Target document path being resolved.
-         * @param currPath - Current traversal path accumulated during the search.
-         */
         const pPath =
-          (function findParentPath(
-            nodes: TreeType[],
-            tgtPath: string,
-            currPath = '',
-          ): string | null {
-            for (const n of nodes) {
-              if (n.type === 'leaf' && n.path === tgtPath) return currPath || '.';
-              if (n.type === 'branch' && n.children) {
-                const found = findParentPath(
-                  n.children,
-                  tgtPath,
-                  currPath ? `${currPath}/${n.origName}` : n.origName,
-                );
-                if (found) return found;
+          (
+            /**
+             * Finds the containing branch path for a leaf before moving it.
+             *
+             * @param nodes Navigation subtree to search.
+             * @param tgtPath Storage path of the leaf being moved.
+             * @param currPath Branch path accumulated during traversal.
+             *
+             * @return Parent branch path, or `null` when the leaf is absent.
+             */
+            function findParentPath(
+              nodes: TreeType[],
+              tgtPath: string,
+              currPath = '',
+            ): string | null {
+              for (const n of nodes) {
+                if (n.type === 'leaf' && n.path === tgtPath) return currPath || '.';
+                if (n.type === 'branch' && n.children) {
+                  const found = findParentPath(
+                    n.children,
+                    tgtPath,
+                    currPath ? `${currPath}/${n.origName}` : n.origName,
+                  );
+                  if (found) return found;
+                }
               }
+              return null;
             }
-            return null;
-          })(tree, p) || '';
+          )(tree, p) || '';
         const isMovingBranch = pPath !== v;
         const nTree = JSON.parse(JSON.stringify(tree)) as TreeType[];
         const oldSibs = getSibs(nTree, pPath);
@@ -1266,11 +1391,11 @@ export default (function Nav({
         if (sIdx !== -1) movedNode = oldSibs.splice(sIdx, 1)[0];
         const tgtSibs = getSibs(nTree, v);
         let iIdx = tgtSibs.length;
-        if (tTgt) {
+        if (t) {
           const tgtIdx = tgtSibs.findIndex((n) =>
             n.type === 'leaf'
-              ? n.path === tTgt
-              : n.type === 'branch' && [v, n.origName].filter(Boolean).join('/') === tTgt,
+              ? n.path === t
+              : n.type === 'branch' && [v, n.origName].filter(Boolean).join('/') === t,
           );
           if (tgtIdx !== -1) iIdx = (r ?? 'before') === 'before' ? tgtIdx : tgtIdx + 1;
         }
@@ -1302,8 +1427,11 @@ export default (function Nav({
             _nPath = (movedDoc as Md | undefined)?.path || nPath;
             if (error) {
               setTree(prevTree);
-              toast.error(error.message || 'Move failed');
-              notify({ error: new Error(error.message), fallback: 'Failed to move docs page.' });
+              toast.error(errorMessage(error, 'Move failed'));
+              notify({
+                error: new Error(errorMessage(error, 'Move failed')),
+                fallback: 'Failed to move docs page.',
+              });
               return;
             }
           }
@@ -1321,7 +1449,10 @@ export default (function Nav({
                   : 'groups',
               items: tgtSibs
                 .filter((s) => s.type === 'leaf')
-                .map((s) => ({ _type: 'reference', _ref: s === movedNode ? _nPath : s.origName })),
+                .map((s) => ({
+                  _type: 'reference',
+                  _ref: s === movedNode ? _nPath : s.origName,
+                })),
             });
             if (error) throw error;
           }
@@ -1359,7 +1490,7 @@ export default (function Nav({
       pPath: p,
       tpath: t,
       tPosition: v,
-      tTarget: tTgt,
+      tTarget: r,
     }: {
       fPath: string;
       pPath: string;
@@ -1379,7 +1510,7 @@ export default (function Nav({
         const tgtSibs = getSibs(nTree, t);
         let iIdx = tgtSibs.length;
         const tIdx = tgtSibs.findIndex(
-          (n) => n.type === 'branch' && [t, n.origName].filter(Boolean).join('/') === tTgt,
+          (n) => n.type === 'branch' && [t, n.origName].filter(Boolean).join('/') === r,
         );
         if (tIdx !== -1) iIdx = (v ?? 'before') === 'before' ? tIdx : tIdx + 1;
         if (movedNode) tgtSibs.splice(iIdx, 0, movedNode);
@@ -1416,7 +1547,10 @@ export default (function Nav({
     () =>
       repoComponents
         .filter((c) => c.name !== 'Leaf' && c.name !== 'Visualize')
-        .map((c) => ({ label: c.name.replace(/([a-z])([A-Z])/g, '$1 $2'), name: c.name })),
+        .map((c) => ({
+          label: c.name.replace(/([a-z])([A-Z])/g, '$1 $2'),
+          name: c.name,
+        })),
     [],
   );
   useEffect(() => {
@@ -1550,6 +1684,7 @@ export default (function Nav({
     [permission, actionDisabled, triggerRenameSection],
   );
   const getTree = useCallback(() => tree, [tree]);
+  const userLabel = userData?.name ?? userData?.email ?? 'Signed out';
 
   // CONTEXT
   const treeCtx = useMemo(
@@ -1593,7 +1728,522 @@ export default (function Nav({
     // prettier-ignore
     [creating, transitioning, drag, dState, curMode, mvBranch, mvLeaf, cPathname, refreshTree, permission, openCreate, addGroup, uploadAsLeaf, rmBranch, rmLeaf, hovered, selLeaves, handleSelect, clearSelection, mergeLeaves, getTree],
   );
+  const disabled = loading || transitioning;
+  const [atts, setAtts] = useState<Record<string, Sister[]>>({});
+  const [attachmentDialogLoading, setAttachmentDialogLoading] = useState(false);
+  const [a, setActive] = useState<{
+    title: string;
+    fullTitle: string;
+    id: string;
+    path: string;
+    type: string;
+  } | null>(null);
+  const [addMode, setAddMode] = useState<AttchType | 'select' | 'page' | null>(null);
+  const [url, setUrl] = useState('');
+  const [query, setQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [selAtts, setSelAtts] = useState<{ docPath: string; a: Sister }[]>([]);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const attachmentTripwireTrackedVars = {
+    tgt: manageAttTgt,
+    disabled,
+    tree,
+    atts,
+    loading: attachmentDialogLoading,
+    active: a,
+    addMode,
+    url,
+    query,
+    isCreating,
+    selectedAtts: selAtts,
+  };
+  const attachmentTripwireNow = performance.now();
+  const attachmentTripwireRenders = useRef(0);
+  const attachmentTripwirePrevVars = useRef(attachmentTripwireTrackedVars);
+  const attachmentTripwireWindowStart = useRef(attachmentTripwireNow);
+  if (attachmentTripwireNow - attachmentTripwireWindowStart.current > 500) {
+    attachmentTripwireWindowStart.current = attachmentTripwireNow;
+    attachmentTripwireRenders.current = 0;
+  }
+  attachmentTripwireRenders.current++;
+  if (attachmentTripwireRenders.current > 50) {
+    const attachmentTripwireDiff: Record<string, { old: unknown; new: unknown }> = {};
+    for (const key of Object.keys(
+      attachmentTripwireTrackedVars,
+    ) as (keyof typeof attachmentTripwireTrackedVars)[])
+      if (attachmentTripwireTrackedVars[key] !== attachmentTripwirePrevVars.current[key])
+        attachmentTripwireDiff[key] = {
+          old: attachmentTripwirePrevVars.current[key],
+          new: attachmentTripwireTrackedVars[key],
+        };
+    console.error(`🚨 [TRIPWIRE TRIGGERED] Infinite Loop in ManageAttachmentsDialog 🚨`);
+    console.error(
+      `Detected 50 renders in rapid succession. Average delta: ${(attachmentTripwireNow - attachmentTripwireWindowStart.current).toFixed(2)}ms`,
+    );
+    console.error(
+      'State Differences (What is causing the thrash):',
+      JSON.stringify(attachmentTripwireDiff),
+    );
+    console.trace(`Trace for ManageAttachmentsDialog infinite loop`);
+    throw new Error(
+      `Render Tripwire killed infinite loop in ManageAttachmentsDialog. Check console for state diffs.`,
+    );
+  }
+  attachmentTripwirePrevVars.current = attachmentTripwireTrackedVars;
+  const nodeGroups = useMemo(() => {
+    if (!manageAttTgt) return [];
+    const n = manageAttTgt.node;
+    if (manageAttTgt.scope === 'leaf') {
+      const lTitle = cTitle(toNodeLabel(manageAttTgt.title)) || manageAttTgt.title;
+      return [
+        {
+          groupTitle: 'Page',
+          nodes: [
+            {
+              title: lTitle,
+              fullTitle: lTitle,
+              id: (n as LeafNode).origName,
+              path: (n as LeafNode).path || '',
+              type: 'Page' as const,
+              node: n,
+            },
+          ],
+        },
+      ];
+    }
+    if (manageAttTgt.scope === 'group') {
+      const gNodes = [];
+      const gTitle = cTitle(toNodeLabel(manageAttTgt.title));
+      gNodes.push({
+        title: `${gTitle} (Index)`,
+        fullTitle: gTitle,
+        id: (n as Branch).origName,
+        path: 'url' in n && n.url ? n.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '',
+        type: 'Index' as const,
+        node: n,
+      });
+      (n as Branch).children?.forEach((c) => {
+        if (c.type === 'leaf') {
+          const lTitle = cTitle(toNodeLabel(c.title || c.origName));
+          gNodes.push({
+            title: lTitle,
+            fullTitle: `${gTitle} / ${lTitle}`,
+            id: c.origName,
+            path: c.path || '',
+            type: 'Page' as const,
+            node: c,
+          });
+        }
+      });
+      return [{ groupTitle: gTitle, nodes: gNodes }];
+    }
+    if (manageAttTgt.scope === 'section') {
+      const groups: {
+        groupTitle: string;
+        nodes: {
+          title: string;
+          fullTitle: string;
+          id: string;
+          path: string;
+          type: 'Index' | 'Page';
+          node: TreeType;
+        }[];
+      }[] = [];
+      const sectTitle = cTitle(toNodeLabel(manageAttTgt.title));
+      // prettier-ignore
+      groups.push({ groupTitle: 'Section Root', nodes: [{ title: `${sectTitle} (Index)`, fullTitle: sectTitle, id: (n as Branch).origName, path: 'url' in n && n.url ? n.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: n },] });
+      (n as Branch).children?.forEach((c) => {
+        if (c.type === 'branch') {
+          const gTitle = cTitle(toNodeLabel(c.title || c.origName));
+          const gNodes = [];
+          // prettier-ignore
+          gNodes.push({ title: `${gTitle} (Index)`, fullTitle: `${sectTitle} / ${gTitle}`, id: c.origName, path: 'url' in c && c.url ? c.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: c });
+          c.children?.forEach((l) => {
+            if (l.type === 'leaf') {
+              const lTitle = cTitle(toNodeLabel(l.title || l.origName));
+              gNodes.push({
+                title: lTitle,
+                fullTitle: `${sectTitle} / ${gTitle} / ${lTitle}`,
+                id: l.origName,
+                path: l.path || '',
+                type: 'Page' as const,
+                node: l,
+              });
+            }
+          });
+          groups.push({ groupTitle: gTitle, nodes: gNodes });
+        } else if (c.type === 'leaf') {
+          const lTitle = cTitle(toNodeLabel(c.title || c.origName));
+          groups[0]?.nodes.push({
+            title: lTitle,
+            fullTitle: `${sectTitle} / ${lTitle}`,
+            id: c.origName,
+            path: c.path || '',
+            type: 'Page' as const,
+            node: c,
+          });
+        }
+      });
+      return groups;
+    }
+    return [];
+  }, [manageAttTgt]);
+  const filteredLeaves = useMemo(() => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) return [];
+    const lowerQuery = trimmedQuery.toLowerCase();
+    const leaves: { path: string; title: string; breadcrumb: string }[] = [];
+    (
+      /**
+       * Collects document leaves whose title or path matches the current sidebar search.
+       *
+       * @param nodes Tree nodes searched at the current hierarchy level.
+       * @param pathStr Ancestor route prefix used when constructing each matching leaf path.
+       *
+       * @returns Nothing; appends matching leaf metadata to the enclosing search result list.
+       */
+      function walk(nodes: TreeType[], pathStr: string): void {
+        nodes.forEach((n) => {
+          const currTitle = n.title || n.origName;
+          if (n.type === 'leaf') {
+            if (
+              currTitle.toLowerCase().includes(lowerQuery) ||
+              (n.path ? n.path.toLowerCase() : '').includes(lowerQuery)
+            ) {
+              leaves.push({
+                path: n.path!,
+                title: currTitle,
+                breadcrumb: pathStr,
+              });
+            }
+          } else if (n.type === 'branch' && n.children)
+            walk(n.children, pathStr ? `${pathStr} / ${currTitle}` : currTitle);
+        });
+      }
+    )(tree, '');
+    return leaves;
+  }, [query, tree]);
+  useEffect(() => {
+    if (manageAttTgt?.scope === 'leaf') {
+      const lTitle = cTitle(toNodeLabel(manageAttTgt.title)) || manageAttTgt.title;
+      setActive({
+        title: lTitle,
+        fullTitle: lTitle,
+        id: (manageAttTgt.node as LeafNode).origName,
+        path: (manageAttTgt.node as LeafNode).path || '',
+        type: 'Page',
+      });
+    } else setActive(null);
+    setAddMode(null);
+    setUrl('');
+    setQuery('');
+    setSelAtts([]);
+  }, [manageAttTgt]);
+  const fetchAtts = useCallback(async () => {
+    if (!manageAttTgt) return;
+    setAttachmentDialogLoading(true);
+    setAtts(
+      Object.fromEntries(
+        await Promise.all(
+          [
+            ...new Set(
+              (a
+                ? [a.id]
+                : nodeGroups.flatMap((group) => group.nodes.map((node) => node.id))
+              ).filter((path): path is string => typeof path === 'string' && path.length > 0),
+            ),
+          ].map(async (path) => {
+            const { data, error: err } = await actions.read.doc.attachments({ path });
+            const attachments = Array.isArray(data)
+              ? data.map((attachment): Sister => {
+                  const sister = attachment as Sister;
+                  return {
+                    ...attachment,
+                    isMd:
+                      typeof sister.isMd === 'boolean'
+                        ? sister.isMd
+                        : TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(attachment.path),
+                  };
+                })
+              : [];
+            return [path, err ? [] : attachments] as const;
+          }),
+        ),
+      ),
+    );
+    setAttachmentDialogLoading(false);
+  }, [manageAttTgt, a, nodeGroups]);
+  useEffect(() => {
+    void fetchAtts();
+  }, [fetchAtts]);
 
+  // DRAG AND DROP
+  // SELECTION
+  /** Toggles an attachment in the multi-selection, or replaces selection without a modifier key.
+   *
+   * @param e Mouse event whose modifier keys determine additive selection.
+   * @param docPath Document path that owns the attachment.
+   * @param a Attachment record to add or remove from the selection.
+   *
+   * @returns Nothing; updates the selected attachment set and stops its click from navigating.
+   */
+  const toggleSel = (e: React.MouseEvent, docPath: string, a: Sister) => {
+    e.stopPropagation();
+    if (e.metaKey || e.ctrlKey) {
+      setSelAtts((v) => {
+        if (v.find((p) => (p.a.id || p.a.path) === (a.id || a.path)))
+          return v.filter((p) => (p.a.id || p.a.path) !== (a.id || a.path));
+        return [...v, { docPath, a }];
+      });
+    } else {
+      setSelAtts([{ docPath, a }]);
+    }
+  };
+
+  // ACTIONS
+  const handleKeyboardDelete = useCallback(async () => {
+    if (!selAtts.length) return;
+    // 1. Snapshot for rollback
+    const originalSel = [...selAtts];
+    // 2. Optimistic UI updates
+    setAtts((v) => {
+      const n = { ...v };
+      for (const { docPath, a } of originalSel) {
+        n[docPath] = (n[docPath] || []).filter(
+          (
+            (key: string) => (p: Sister) =>
+              (p.id || p.path) !== key
+          )(a.id || a.path),
+        );
+      }
+      return n;
+    });
+    setSelAtts([]);
+    // 3. Background network operation
+    try {
+      for (const { docPath, a } of originalSel) {
+        if (a.isMd)
+          await actions.write.doc.rm({
+            path: a.path,
+            type: 'doc',
+            assets: false,
+          });
+        else if (a.id) {
+          await actions.write.attachment.rm({ docPath, attachmentKey: a.id });
+          if (a.path.startsWith('http')) await actions.write.asset.delete({ url: a.path });
+        }
+      }
+      // Background sync just to ensure external alignment
+      void fetchAtts();
+    } catch {
+      // 4. Failure rollback
+      setAtts({ ...atts });
+      setSelAtts(originalSel);
+      toast.error(`Failed to delete ${originalSel.length === 1 ? 'attachment' : 'attachments'}`);
+    }
+  }, [atts, selAtts, fetchAtts]);
+
+  // GLOBAL KEYBOARD SHORTCUTS
+  useEffect(() => {
+    if (!manageAttTgt) return;
+    /**
+     * Deletes the selected attachments when the user presses Backspace or Delete.
+     *
+     * @param e - Keyboard event received by the attachment manager.
+     */
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (attachmentDialogLoading || disabled || selAtts.length === 0) return;
+      const tgt = e.target as HTMLElement;
+      if (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable) return;
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        void handleKeyboardDelete();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [manageAttTgt, attachmentDialogLoading, disabled, selAtts, handleKeyboardDelete]);
+
+  /**
+   * Adds remote URLs, package references, or an internal Docs page as attachments.
+   *
+   * @param v - One or more newline-separated URLs or route references.
+   * @param type - Attachment category chosen by the user.
+   * @param tgtPath - Document path receiving the new attachments.
+   * @param titleOverride - Optional title for a newly created Docs page.
+   */
+  const addRemote = async (
+    v: string,
+    type: AttchType | 'page',
+    tgtPath: string,
+    titleOverride?: string,
+  ) => {
+    if (!tgtPath || !v.trim()) return;
+    const urls = v
+      .split(TerraQualityRegex.REGEX_N_S_REGEX())
+      .filter((u) =>
+        type === 'tsdocs'
+          ? u.trim().length > 0
+          : u.startsWith('http') || isDocsPath(u) || u.startsWith('/tsdocs') || type === 'page',
+      );
+    if (!urls.length) return;
+    void runMutation(
+      async () => {
+        await Promise.allSettled(
+          urls.map(async (u) => {
+            let t = type;
+            if (t === 'other')
+              t = (u.toLowerCase().split('?')[0] ?? '').endsWith('.pdf')
+                ? 'document'
+                : TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(
+                      u.toLowerCase().split('?')[0] ?? '',
+                    )
+                  ? 'image'
+                  : t;
+            if (t === 'page') {
+              // directly inject a strict Sanity reference to the existing document
+              // prettier-ignore
+              await actions.write.attachment.docRef({
+								path: tgtPath,
+								refId: u, // u is the pure Sanity path/id
+								title: titleOverride || u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Page',
+							});
+            } else if (t === 'youtube') {
+              await actions.write.attachment.youtube({ path: tgtPath, url: u });
+            } else if (t === 'website') {
+              const { data: w } = await actions.read.external.website({
+                url: u,
+              });
+              if (!w) throw new Error('Website import returned no content.');
+              const dir = dirname(tgtPath);
+              await actions.write.doc.editor({
+                path: `${dir === '.' ? '' : `${dir}/`}${sanitizeName(w.title || 'website')}.mdx`,
+                source: w.text,
+                title: w.title,
+                type: 'website',
+                sourceUrl: u,
+              });
+            } else if (t === 'tsdocs') {
+              // prettier-ignore
+              await actions.write.attachment.link({ path: tgtPath, url: u.startsWith('http') ? u : u.startsWith('/') ? `${window.location.origin}${u}` : `${window.location.origin}${docsPath(`tsdocs/${u}`)}`, type: 'tsdocs', title: u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Reference' });
+            } else
+              await actions.write.attachment.remoteFile({
+                path: tgtPath,
+                url: u,
+                type: t as AttchType,
+              });
+          }),
+        );
+        await fetchAtts();
+        setAddMode(null);
+        setUrl('');
+      },
+      'Failed to attach',
+      () => {
+        setAttachmentDialogLoading(true);
+      },
+      () => {
+        setAttachmentDialogLoading(false);
+      },
+    );
+  };
+
+  /** Creates a temporary leaf or refreshes an existing leaf after the host saves a page.
+   *
+   * @param path - Document path being created or edited.
+   * @param isNew - Whether the path represents a new document.
+   * @param customTitle - Optional title supplied by the editor.
+   *
+   * @returns Nothing; creates or updates the sidebar leaf for the saved document.
+   */
+  const attachPage = async (path: string, isNew = false, customTitle?: string) => {
+    if (!a) return;
+    let finalPath = path;
+    let finalTitle = customTitle || path;
+    if (isNew) {
+      setIsCreating(true);
+      try {
+        const newId = `temp_l_${Date.now()}`;
+        finalPath = newId;
+        // Anchor document structurally inside the group to bypass verifyWrite 404
+        let parentId = a.id;
+        if (a.type === 'Page') {
+          let groupId: string | undefined;
+          // 1. Primary Fallback: Extract from the current docs route
+          if (typeof window !== 'undefined') {
+            try {
+              const curr = route(window.location.pathname + window.location.search);
+              groupId = curr.groupId || curr.sectionId || undefined;
+            } catch {
+              // Tree lookup below provides the fallback group.
+            }
+          }
+          // 2. Secondary Fallback: Tree Search (for established documents)
+          if (!groupId) {
+            (
+              /**
+               * Finds the containing group for a selected leaf in the navigation tree.
+               *
+               * @param nodes Tree nodes searched at this level.
+               * @param tgtLeafId Leaf ID or path being resolved.
+               * @param currGroupId Group ID inherited from the current branch.
+               *
+               * @returns `true` when the leaf is found and its parent group is assigned.
+               */
+              function findGroup(
+                nodes: TreeType[],
+                tgtLeafId: string,
+                currGroupId?: string,
+              ): boolean {
+                for (const n of nodes) {
+                  if (n.type === 'leaf' && (n.origName === tgtLeafId || n.path === tgtLeafId)) {
+                    groupId = currGroupId;
+                    return true;
+                  }
+                  if (n.type === 'branch' && n.children)
+                    if (findGroup(n.children, tgtLeafId, n.origName)) return true;
+                }
+                return false;
+              }
+            )(tree, a.id);
+          }
+          if (groupId) parentId = groupId;
+        }
+        const writeRes = await actions.write.doc
+          .editor({
+            path: newId,
+            title: query,
+            source: 'This page is empty.',
+            parentId,
+          })
+          .catch((e) => ({ data: null, error: e }));
+        if (writeRes.error) throw writeRes.error;
+        if (
+          writeRes.data &&
+          typeof writeRes.data === 'object' &&
+          'path' in writeRes.data &&
+          typeof writeRes.data.path === 'string'
+        )
+          finalPath = writeRes.data.path;
+        finalTitle = query;
+        await new Promise((r) => setTimeout(r, 1500));
+      } catch (err) {
+        notify({
+          error: err instanceof Error ? err : new Error('Creation failed'),
+          fallback: 'Failed to create leaf.',
+        });
+        setIsCreating(false);
+        return;
+      }
+      setIsCreating(false);
+    }
+    // Pass the exact path without forcing it into a fake `/docs/` URL structure
+    await addRemote(finalPath, 'page', a.id, finalTitle);
+    setAddMode(null);
+    setQuery('');
+  };
   // RENDERS
   return (
     <ErrorBoundary
@@ -1608,7 +2258,7 @@ export default (function Nav({
       )}
     >
       <Sidebar
-        {...props}
+        {...sidebarAttrs}
         sticky
         className="not-prose bg-primary-2 p-2"
         onClick={() => {
@@ -1625,23 +2275,1155 @@ export default (function Nav({
           target={exportTgt}
           setTarget={setExportTgt}
           disabled={loading || transitioning}
-          onExport={(target, options, progress) =>
-            archiveDocs(
-              target.paths,
-              target.rootDir,
-              target.filename,
-              options,
-              progress,
-              target.nodeIds || [],
-            )
-          }
+          onExport={async (t, s, a) => {
+            const v = t.paths;
+            const r = t.rootDir;
+            const f = t.filename;
+            const o = s;
+            const d = a;
+            const n = t.nodeIds || [];
+            console.info('[archive] start', {
+              paths: v,
+              rootDir: r,
+              filenameBase: f,
+              opts: o,
+              nodeIds: n,
+            });
+            if (!v?.length && !r) throw new Error('No docs files found to download.');
+            let allPaths: string[] = v && v.length > 0 ? [...v] : [];
+            const isMdFile = TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(r) || !r.includes('.');
+            if (allPaths.length === 0) {
+              if (isMdFile) {
+                if (isIndexFile(r)) {
+                  const dir = dirname(r);
+                  const { data: entries, error: listErr } = await actions.read.doc.list({
+                    type: 'folderEntries',
+                    path: dir === '.' ? '' : dir,
+                  });
+                  if (listErr || !entries)
+                    throw listErr || new Error('Failed to fetch structural archive entries.');
+                  allPaths = (entries as string[]).filter((p) => p === r || dirname(p) === dir);
+                } else allPaths = [r];
+              } else {
+                const { data: entries, error: listErr } = await actions.read.doc.list({
+                  type: 'folderEntries',
+                  path: r === '.' ? '' : r,
+                });
+                if (listErr || !entries)
+                  throw listErr || new Error('Failed to fetch structural archive entries.');
+                allPaths = entries as string[];
+              }
+            }
+            if (isMdFile && !allPaths.includes(r)) allPaths.push(r);
+            const attchPaths: string[] = [];
+            const assetNameMap = new Map<string, string>();
+
+            // Create a combined list of paths explicitly for fetching attachments
+            await Promise.allSettled(
+              [...new Set([...allPaths, ...n])].map(async (p) => {
+                const c = p.split('?')[0] || p;
+                if (TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(c) || !c.includes('.')) {
+                  try {
+                    const { data: atts, error: err } = await actions.read.doc.attachments({
+                      path: p,
+                    });
+                    if (!err && Array.isArray(atts)) {
+                      for (const att of atts) {
+                        if (
+                          att &&
+                          typeof att === 'object' &&
+                          'path' in att &&
+                          typeof att.path === 'string'
+                        ) {
+                          if ('name' in att && typeof att.name === 'string') {
+                            assetNameMap.set(att.path, att.name);
+                            assetNameMap.set(att.path.split('?')[0] || att.path, att.name);
+                          }
+                          if (!allPaths.includes(att.path) && !attchPaths.includes(att.path))
+                            attchPaths.push(att.path);
+                        }
+                      }
+                    } else if (err)
+                      console.warn(`[archive] Error fetching attachments for ${p}:`, err);
+                  } catch (e) {
+                    console.error(`[archive] Exception fetching attachments for ${p}:`, e);
+                  }
+                }
+              }),
+            );
+            if (attchPaths.length > 0) {
+              allPaths.push(...attchPaths);
+              allPaths = [...new Set(allPaths)];
+            }
+            console.info('[archive] discovered paths', {
+              allPaths,
+              attachmentPaths: attchPaths,
+              assetNames: [...assetNameMap.entries()],
+            });
+            const zip = new (await import('jszip')).default();
+            let mergedPdf: PDFDocument | null = null;
+            const wantsPdfMerge =
+              (o.filters.pdfs && o.merges.pdfs) ||
+              (o.filters.images && o.merges.images) ||
+              (o.filters.pages && o.merges.pages && o.format === 'pdf');
+            console.info('[archive] merge plan', {
+              wantsPdfMerge,
+              textMerge: o.filters.pages && o.merges.pages && o.format === 'raw',
+              pdfMerge: o.filters.pdfs && o.merges.pdfs,
+            });
+            if (wantsPdfMerge) {
+              const { PDFDocument } = await import('pdf-lib');
+              mergedPdf = await PDFDocument.create();
+            }
+            const gJson: Record<
+              string,
+              { title: string; source: string; description?: string; [key: string]: unknown }[]
+            > = {};
+            const textJson: { path: string; filename: string; value: string }[] = [];
+            const failures: { filename: string; path: string; reason: string }[] = [];
+
+            // Helper to accurately identify file types, prioritizing Sanity's explicit filename when available
+            /** Matches an extension against the path or Sanity's mapped asset filename.
+             * @param p Asset URL or path being classified.
+             * @param regex Extension pattern to test against the URL or mapped filename.
+             * @returns Whether either available name matches the requested extension.
+             */
+            const isExtMatch = (p: string, regex: RegExp) => {
+              if (regex.test(p.split('?')[0] || p)) return true;
+              const filename = assetNameMap.get(p.split('?')[0] || p);
+              if (filename && regex.test(filename)) return true;
+              return false;
+            };
+            const mdPaths: string[] = [];
+            const textPaths: string[] = [];
+            const pdfPaths: string[] = [];
+            const imgPaths: string[] = [];
+            const ytPaths: string[] = [];
+            const refPaths: string[] = [];
+            const otherPaths: string[] = [];
+            for (const p of allPaths) {
+              const c = p.split('?')[0] || p;
+              const isTsDoc = p.includes(`${docsRootPath()}/tsdocs/`);
+              const isHttp = p.startsWith('http');
+              const noDot = !assetNameMap.has(p) && !c.includes('.');
+              if (
+                !isHttp &&
+                !isTsDoc &&
+                (TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(c) || noDot)
+              )
+                mdPaths.push(p);
+              let matched = false;
+              if (
+                !isHttp &&
+                !isTsDoc &&
+                (/\.(md|mdx|txt|json|cpp|c|h|hpp|js|jsx|ts|tsx|astro|yaml|yml|xml|csv|html|css|scss|sh|py|java|rs|go|rb|swift)$/i.test(
+                  assetNameMap.get(c) || c,
+                ) ||
+                  noDot)
+              ) {
+                textPaths.push(p);
+                matched = true;
+              }
+              if (isExtMatch(p, TerraQualityRegex.REGEX_PDF_I_REGEX())) {
+                pdfPaths.push(p);
+                matched = true;
+              }
+              if (isExtMatch(p, TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2())) {
+                imgPaths.push(p);
+                matched = true;
+              }
+              if (
+                p.endsWith('youtube_transcripts.json') ||
+                p.includes('youtube.com/') ||
+                p.includes('youtu.be/')
+              ) {
+                ytPaths.push(p);
+                matched = true;
+              }
+              if (isTsDoc) {
+                refPaths.push(p);
+                matched = true;
+              }
+              if (!matched) otherPaths.push(p);
+            }
+            const tasks: { path: string; type: keyof ExportOptions['filters'] }[] = [];
+            if (o.filters.pages) textPaths.forEach((p) => tasks.push({ path: p, type: 'pages' }));
+            if (o.filters.pdfs) pdfPaths.forEach((p) => tasks.push({ path: p, type: 'pdfs' }));
+            if (o.filters.images) imgPaths.forEach((p) => tasks.push({ path: p, type: 'images' }));
+            if (o.filters.youtube) ytPaths.forEach((p) => tasks.push({ path: p, type: 'youtube' }));
+            if (o.filters.tsdocs) refPaths.forEach((p) => tasks.push({ path: p, type: 'tsdocs' }));
+            if (o.filters.other) otherPaths.forEach((p) => tasks.push({ path: p, type: 'other' }));
+            console.info('[archive] classified tasks', {
+              total: tasks.length,
+              tasks,
+              textPaths,
+              pdfPaths,
+              imgPaths,
+              otherPaths,
+            });
+            if (tasks.length === 0) throw new Error('No files match the selected filters.');
+            let completed = 0;
+            /**
+             * Updates the update Progress for the docs.
+             *
+             */
+            const updateProgress = () => {
+              completed++;
+              console.info('[archive] progress', {
+                completed,
+                total: tasks.length,
+                percent: Math.round((completed / tasks.length) * 100),
+              });
+              if (d) d(Math.round((completed / tasks.length) * 100));
+            };
+
+            /**
+             * Converts a source path or URL into a safe local filename.
+             *
+             * @param p - Source path or URL being normalized.
+             * @param forceExt - Optional file extension to apply to the result.
+             *
+             * @returns A normalized relative filename, falling back to `untitled-file` when needed.
+             */
+            const resolvePath = (p: string, forceExt?: string) => {
+              let rel = p;
+              if (assetNameMap.has(p.split('?')[0] || p))
+                rel = assetNameMap.get(p.split('?')[0] || p)!;
+              else if (rel.startsWith('http://') || rel.startsWith('https://')) {
+                // prettier-ignore
+                try {
+                    const urlObj = new URL(rel);
+                    let baseName = urlObj.pathname.split('/').pop() || 'downloaded-file';
+                    if (urlObj.search) {
+                      const sQuery = urlObj.search.replace(/[^a-zA-Z0-9]/g, '-').replace(TerraQualityRegex.REGEX_G_REGEX_3(), '-').replace(TerraQualityRegex.REGEX_G_REGEX_20(), '');
+                      if (sQuery) baseName = `${baseName}-${sQuery}`;
+                    }
+                    rel = baseName;
+                  } catch {
+                    rel = rel.split('/').pop()?.replace(/[^a-zA-Z0-9.-]/g, '-') || 'downloaded-file';
+                  }
+              } else {
+                if (!isMdFile && p.startsWith(`${r}/`)) rel = p.slice(r.length + 1);
+                else if (isMdFile) rel = p.split('/').pop() || p;
+              }
+              if (o.flatten) {
+                if (/(?:\/|^)index\.[^.]+$/i.test(p) && p.includes('/')) {
+                  const parts = p.split('/');
+                  rel = `${parts[parts.length - 2]}${p.match(TerraQualityRegex.REGEX_PATTERN_REGEX())?.[0] || ''}`;
+                } else rel = p.split('/').pop() || rel;
+              }
+              if (forceExt) {
+                if (rel.match(TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2()))
+                  rel = rel.replace(TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2(), forceExt);
+                else rel = `${rel}${forceExt}`;
+              }
+              return rel || 'untitled-file';
+            };
+
+            /**
+             * Loads an asset's bytes and content type from the local host or a remote URL.
+             *
+             * @param p - Local asset path or remote URL to fetch.
+             *
+             * @returns The asset bytes and response content type, or `null` when loading fails.
+             */
+            const fetchAssetData = async (
+              p: string,
+            ): Promise<{ buffer: ArrayBuffer; contentType: string } | null> => {
+              if (TerraQualityRegex.REGEX_HTTPS_I_REGEX().test(p)) {
+                try {
+                  console.info('[archive] fetching remote asset directly', { path: p });
+                  const res = await fetch(p, { signal: AbortSignal.timeout(20_000) });
+                  if (res.ok) {
+                    const buffer = await res.arrayBuffer();
+                    console.info('[archive] remote asset fetched directly', {
+                      path: p,
+                      bytes: buffer.byteLength,
+                    });
+                    return { buffer, contentType: res.headers.get('content-type') || '' };
+                  }
+                  console.warn('[archive] direct remote asset fetch failed; trying server proxy', {
+                    path: p,
+                    status: res.status,
+                  });
+                } catch (err) {
+                  console.warn('[archive] direct remote asset fetch threw; trying server proxy', {
+                    path: p,
+                    err,
+                  });
+                }
+              }
+              const { data, error } = await actions.read.asset.get({ path: p });
+              if (error || !data) {
+                console.error('[archive] Failed to fetch asset through Docs read action', {
+                  path: p,
+                  error,
+                });
+                throw error || new Error('Failed to read asset');
+              }
+              console.info('[archive] asset fetched', { path: p, bytes: data.byteLength });
+              return { buffer: data, contentType: '' };
+            };
+            for (const task of tasks) {
+              const { path: p, type } = task;
+              console.info('[archive] processing task', {
+                path: p,
+                type,
+                filename: assetNameMap.get(p.split('?')[0] || p),
+                merge: o.merges[type as keyof typeof o.merges],
+              });
+              if (type === 'pages' && !mdPaths.includes(p)) {
+                try {
+                  const res = await fetchAssetData(p);
+                  if (res) {
+                    if (o.merges.pages)
+                      textJson.push({
+                        path: p,
+                        filename: resolvePath(p),
+                        value: new TextDecoder().decode(res.buffer),
+                      });
+                    else zip.file(resolvePath(p), res.buffer);
+                    console.info('[archive] text attachment processed', {
+                      path: p,
+                      filename: resolvePath(p),
+                      bytes: res.buffer.byteLength,
+                      merged: o.merges.pages,
+                    });
+                  }
+                } catch (e) {
+                  console.error(`[archive] Error fetching text attachment for ${p}:`, e);
+                  failures.push({
+                    filename: assetNameMap.get(p.split('?')[0] || p) || resolvePath(p),
+                    path: p,
+                    reason: e instanceof Error ? e.message : String(e),
+                  });
+                }
+              } else if (type === 'pages') {
+                if (o.format === 'pdf') {
+                  try {
+                    const { data: routeData } = await actions.read.util.pathname({ path: p });
+                    if (routeData) {
+                      const url = `${window.location.origin}${routeData}`;
+                      const { data, error } = await actions.read.external.pdf({ url });
+                      if (!error && data && data.pdfBase64) {
+                        const byteChars = atob(data.pdfBase64);
+                        const byteNums = new Array(byteChars.length);
+                        for (let i = 0; i < byteChars.length; i++)
+                          byteNums[i] = byteChars.charCodeAt(i);
+                        const byteArray = new Uint8Array(byteNums);
+                        if (o.merges.pages && mergedPdf) {
+                          const { PDFDocument } = await import('pdf-lib');
+                          const pdfDoc = await PDFDocument.load(byteArray);
+                          (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach(
+                            (p) => mergedPdf.addPage(p),
+                          );
+                        } else {
+                          zip.file(resolvePath(p, '.pdf'), byteArray);
+                        }
+                      } else if (error)
+                        console.error(`[archive] PDF Conversion Error for ${url}:`, error);
+                    }
+                  } catch (e) {
+                    console.error(`[archive] Pages -> PDF exception for ${p}:`, e);
+                  }
+                } else {
+                  const { data, error } = await actions.read.doc.get({ path: p });
+                  if (!error && data) {
+                    const doc = data as Md;
+                    const fm = ['---'];
+                    if (doc.title)
+                      fm.push(
+                        `title: "${doc.title.replace(TerraQualityRegex.REGEX_G_REGEX_5(), '\\"')}"`,
+                      );
+                    if (doc.description)
+                      fm.push(
+                        `description: "${doc.description.replace(TerraQualityRegex.REGEX_G_REGEX_5(), '\\"')}"`,
+                      );
+                    fm.push('---');
+                    let localSrc = typeof doc.source === 'string' ? doc.source : '';
+                    localSrc = localSrc.replace(/\]\((http[^)]+)\)/g, (m, l) => {
+                      const basename = l.split('/').pop()?.split('?')[0];
+                      return basename ? `](${basename})` : m;
+                    });
+                    localSrc = localSrc.replace(/src=["'](http[^"']+)["']/g, (m, l) => {
+                      const basename = l.split('/').pop()?.split('?')[0];
+                      return basename ? `src="${basename}"` : m;
+                    });
+                    if (o.merges.pages) {
+                      let relPath = p;
+                      if (!isMdFile && p.startsWith(`${r}/`)) relPath = p.slice(r.length + 1);
+                      else if (isMdFile) relPath = p.split('/').pop() || p;
+                      const dir = relPath.includes('/')
+                        ? relPath.substring(0, relPath.lastIndexOf('/'))
+                        : '.';
+                      const fname = relPath.split('/').pop() || '';
+                      const key =
+                        dir === '.'
+                          ? fname.replace(TerraQualityRegex.REGEX_PATTERN_REGEX(), '')
+                          : dir;
+                      if (!gJson[key]) gJson[key] = [];
+                      let src = typeof doc.source === 'string' ? doc.source : '';
+                      src = src.replace(/\]\((?!http|#)([^)]+)\)/g, (m, l) => {
+                        const basename = l.split('/').pop();
+                        return basename ? `](${basename})` : m;
+                      });
+                      src = src.replace(/src=["'](?!http|#)([^"']+)["']/g, (m, l) => {
+                        const basename = l.split('/').pop();
+                        return basename ? `src="${basename}"` : m;
+                      });
+                      gJson[key].push({
+                        title: fname,
+                        ...(doc.description !== undefined ? { description: doc.description } : {}),
+                        source: src,
+                      });
+                    } else {
+                      zip.file(resolvePath(p, '.mdx'), `${fm.join('\n')}\n\n${localSrc}`);
+                    }
+                  } else if (error)
+                    console.error(`[archive] Error fetching doc content for ${p}:`, error);
+                }
+              } else if (type === 'pdfs') {
+                try {
+                  const res = await fetchAssetData(p);
+                  if (res && res.buffer) {
+                    if (o.merges.pdfs && mergedPdf) {
+                      try {
+                        const { PDFDocument } = await import('pdf-lib');
+                        const pdfDoc = await PDFDocument.load(res.buffer);
+                        const copiedPages = await mergedPdf.copyPages(
+                          pdfDoc,
+                          pdfDoc.getPageIndices(),
+                        );
+                        copiedPages.forEach((p) => mergedPdf.addPage(p));
+                        console.info('[archive] PDF merged', {
+                          path: p,
+                          pages: copiedPages.length,
+                        });
+                      } catch (err) {
+                        console.error('[archive] PDF merge failed; preserving standalone PDF', {
+                          path: p,
+                          err,
+                        });
+                        zip.file(resolvePath(p, '.pdf'), res.buffer);
+                      }
+                    } else {
+                      zip.file(resolvePath(p, '.pdf'), res.buffer);
+                    }
+                  }
+                } catch (e) {
+                  console.error(`[archive] Exception processing PDF ${p}:`, e, {
+                    filename: assetNameMap.get(p.split('?')[0] || p),
+                    merge: o.merges.pdfs,
+                  });
+                  failures.push({
+                    filename: assetNameMap.get(p.split('?')[0] || p) || resolvePath(p),
+                    path: p,
+                    reason: e instanceof Error ? e.message : String(e),
+                  });
+                }
+              } else if (type === 'images') {
+                try {
+                  const res = await fetchAssetData(p);
+                  if (res && res.buffer) {
+                    if (o.merges.images && mergedPdf) {
+                      try {
+                        let img: PDFImage | undefined;
+                        if (p.match(/\.(jpe?g)$/i)) img = await mergedPdf.embedJpg(res.buffer);
+                        else if (p.match(/\.(png)$/i)) img = await mergedPdf.embedPng(res.buffer);
+                        if (img) {
+                          mergedPdf
+                            .addPage([img.width, img.height])
+                            .drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+                        } else {
+                          console.warn(
+                            `[archive] Unsupported image type for PDF merge, zipping standalone: ${p}`,
+                          );
+                          zip.file(resolvePath(p), res.buffer);
+                        }
+                      } catch (e) {
+                        console.error(
+                          `[archive] Failed to embed image ${p} into PDF, zipping instead:`,
+                          e,
+                        );
+                        zip.file(resolvePath(p), res.buffer);
+                      }
+                    } else {
+                      zip.file(resolvePath(p), res.buffer);
+                    }
+                  }
+                } catch (e) {
+                  console.error(`[archive] Exception processing Image ${p}:`, e);
+                  failures.push({
+                    filename: assetNameMap.get(p.split('?')[0] || p) || resolvePath(p),
+                    path: p,
+                    reason: e instanceof Error ? e.message : String(e),
+                  });
+                }
+              } else if (type === 'youtube') {
+                try {
+                  if (p.includes('youtube.com/') || p.includes('youtu.be/')) {
+                    const { data: ytData, error: ytErr } = await actions.read.external.youtube({
+                      url: p,
+                    });
+                    if (!ytErr && ytData) {
+                      const cTitle = ytData.title || 'video';
+                      if (o.merges.youtube) {
+                        if (!gJson['youtube']) gJson['youtube'] = [];
+                        gJson['youtube'].push({
+                          title: cTitle as string,
+                          source: (ytData.transcript as string) || '',
+                        });
+                      } else {
+                        zip.file(
+                          resolvePath(`${sanitizeName(cTitle as string)}.txt`),
+                          (ytData.transcript as string) || '',
+                        );
+                      }
+                    } else if (ytErr)
+                      console.error(`[archive] Error fetching YouTube transcript for ${p}:`, ytErr);
+                  } else {
+                    const res = await fetchAssetData(p);
+                    if (res && res.buffer) {
+                      const videos = JSON.parse(new TextDecoder().decode(res.buffer)) as {
+                        title?: string;
+                        sourceUrl?: string;
+                      }[];
+                      if (Array.isArray(videos)) {
+                        for (const video of videos) {
+                          if (video.sourceUrl) {
+                            const { data: ytData, error: ytErr } =
+                              await actions.read.external.youtube({
+                                url: video.sourceUrl,
+                              });
+                            if (!ytErr && ytData) {
+                              const cTitle = ytData.title || video.title || 'video';
+                              if (o.merges.youtube) {
+                                if (!gJson['youtube']) gJson['youtube'] = [];
+                                gJson['youtube'].push({
+                                  title: cTitle as string,
+                                  source: (ytData.transcript as string) || '',
+                                });
+                              } else {
+                                zip.file(
+                                  resolvePath(`${sanitizeName(cTitle as string)}.txt`),
+                                  (ytData.transcript as string) || '',
+                                );
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                } catch (e) {
+                  console.error(`[archive] Exception processing YouTube resource ${p}:`, e);
+                }
+              } else if (type === 'tsdocs') {
+                try {
+                  const scope = p.match(TerraQualityRegex.REGEX_DOCS_TSDOCS_REGEX())?.[1] ?? p;
+                  const { data: tsData, error: tsErr } = await actions.read.tsdocs({ scope });
+                  if (!tsErr && tsData && tsData.docs) {
+                    const items = tsData.docs as { slug: string; title: string; body: string }[];
+                    if (o.merges.tsdocs) {
+                      gJson['tsdocs'] = [
+                        ...(Array.isArray(gJson['tsdocs']) ? gJson['tsdocs'] : []),
+                        ...items.map((d) => ({ title: d.title, slug: d.slug, source: d.body })),
+                      ];
+                    } else {
+                      // prettier-ignore
+                      zip.file(resolvePath(`${sanitizeName(scope.replace(TerraQualityRegex.REGEX_G_REGEX_10(), '-'))}.json`), JSON.stringify(items.map(d => ({ title: d.title, slug: d.slug, source: d.body })), null, 2));
+                    }
+                  } else if (tsErr)
+                    console.error(`[archive] Error fetching TSDocs for scope ${scope}:`, tsErr);
+                } catch (e) {
+                  console.error(`[archive] Exception processing TSDocs ${p}:`, e);
+                }
+              } else {
+                try {
+                  const res = await fetchAssetData(p);
+                  if (res && res.buffer) {
+                    let tgtPath = resolvePath(p);
+                    if (!TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2().test(tgtPath)) {
+                      let forcedExt = '';
+                      if (res.contentType.includes('application/pdf')) forcedExt = '.pdf';
+                      else if (res.contentType.includes('image/jpeg')) forcedExt = '.jpg';
+                      else if (res.contentType.includes('image/png')) forcedExt = '.png';
+                      else if (res.contentType.includes('image/webp')) forcedExt = '.webp';
+                      else if (res.contentType.includes('application/json')) forcedExt = '.json';
+                      else {
+                        const arr = new Uint8Array(res.buffer.slice(0, 4));
+                        if (
+                          arr[0] === 0x25 &&
+                          arr[1] === 0x50 &&
+                          arr[2] === 0x44 &&
+                          arr[3] === 0x44
+                        )
+                          forcedExt = '.pdf';
+                      }
+                      if (forcedExt) tgtPath = resolvePath(p, forcedExt);
+                      if (forcedExt === '.pdf' && o.merges.pdfs && mergedPdf) {
+                        const { PDFDocument } = await import('pdf-lib');
+                        const pdfDoc = await PDFDocument.load(res.buffer);
+                        (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach((p) =>
+                          mergedPdf.addPage(p),
+                        );
+                        updateProgress();
+                        continue;
+                      }
+                    }
+                    zip.file(tgtPath, res.buffer);
+                  }
+                } catch (e) {
+                  console.error(`[archive] Exception processing Other attachment ${p}:`, e);
+                  failures.push({
+                    filename: assetNameMap.get(p.split('?')[0] || p) || resolvePath(p),
+                    path: p,
+                    reason: e instanceof Error ? e.message : String(e),
+                  });
+                }
+              }
+              updateProgress();
+            }
+
+            // FINALISE MERGES
+            // Write distinct JSON files for merged categories to prevent structural collisions
+            // and isolate domain concerns when consumed by external tools.
+            if (o.merges.tsdocs && gJson['tsdocs']) {
+              zip.file(`${f}-tsdocs.json`, JSON.stringify(gJson['tsdocs'], null, 2));
+              delete gJson['tsdocs'];
+            }
+            if (o.merges.youtube && gJson['youtube']) {
+              zip.file(`${f}-youtube.json`, JSON.stringify(gJson['youtube'], null, 2));
+              delete gJson['youtube'];
+            }
+            if (o.merges.pages && o.format === 'raw' && Object.keys(gJson).length > 0)
+              zip.file(`${f}-mdx.json`, JSON.stringify(gJson, null, 2));
+            if (o.merges.pages && textJson.length > 0)
+              zip.file(`${f}-text.json`, JSON.stringify(textJson, null, 2));
+            console.info('[archive] merged text summary', {
+              count: textJson.length,
+              files: textJson.map((i) => i.filename),
+            });
+            if (failures.length) {
+              console.warn('[archive] export completed with failures', {
+                count: failures.length,
+                failures,
+              });
+              toast.warning(
+                `${failures.length} attachment${failures.length === 1 ? '' : 's'} failed. See the browser console for details.`,
+              );
+            } else toast.success('Export completed.');
+            if (wantsPdfMerge && mergedPdf && mergedPdf.getPageCount() > 0) {
+              try {
+                const mergedPdfBytes = await mergedPdf.save();
+                zip.file(`${f}-merged.pdf`, mergedPdfBytes);
+                console.info('[archive] merged PDF finalized', {
+                  pages: mergedPdf.getPageCount(),
+                  bytes: mergedPdfBytes.length,
+                });
+              } catch (e) {
+                console.error(`[archive] Error generating Master PDF:`, e);
+              }
+            }
+            const href = URL.createObjectURL(await zip.generateAsync({ type: 'blob' }));
+            const link = document.createElement('a');
+            link.href = href;
+            link.download = `${f}.zip`;
+            link.click();
+            URL.revokeObjectURL(href);
+          }}
         />
-        <ManageAttachmentsDialog
-          tgt={manageAttTgt}
-          setTgt={setManageAttTgt}
-          disabled={loading || transitioning}
-          tree={tree}
-        />
+        {manageAttTgt ? (
+          <Dialog
+            open={!!manageAttTgt}
+            onOpenChange={(o) => {
+              if (!o) {
+                setManageAttTgt(null);
+                setActive(null);
+                setAddMode(null);
+                setSelAtts([]);
+              }
+            }}
+          >
+            <DialogContent size="xl">
+              {/* HEADER */}
+              <DialogHeader>
+                {a ? (
+                  <>
+                    <DialogTitle>
+                      {manageAttTgt.scope !== 'leaf' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Back to target list"
+                          onClick={() => {
+                            setActive(null);
+                            setAddMode(null);
+                            setSelAtts([]);
+                          }}
+                        >
+                          <LeftArrowIcon className="size-5 text-primary-11" aria-hidden="true" />
+                        </Button>
+                      )}
+                      <span className="truncate">{a.fullTitle || a.title}</span>
+                      {addMode && (
+                        <span className="shrink-0 font-normal text-primary-11">
+                          / {addMode === 'select' ? 'Add Attachment' : `Add ${addMode}`}
+                        </span>
+                      )}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                      Manage attachments for {a.fullTitle || a.title}
+                    </DialogDescription>
+                  </>
+                ) : (
+                  <>
+                    <DialogTitle>
+                      Manage Attachments — {cTitle(toNodeLabel(manageAttTgt.title))}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Select a target layer or drag and drop attachments to move them between nodes.
+                    </DialogDescription>
+                  </>
+                )}
+              </DialogHeader>
+              {/* BODY*/}
+              <div
+                className="min-h-96 flex-1 overflow-y-auto py-4 outline-none"
+                tabIndex={-1}
+                onClick={() => {
+                  setSelAtts([]);
+                }}
+              >
+                {attachmentDialogLoading || disabled ? (
+                  <div className="flex h-64 items-center justify-center">
+                    <Spinner className="size-8 text-primary-10" />
+                  </div>
+                ) : !a ? (
+                  <div className="flex flex-col gap-6">
+                    {nodeGroups.map((g, i) => (
+                      <div key={g.groupTitle + i} className="space-y-3">
+                        {nodeGroups.length > 1 && (
+                          <h4 className="text-sm font-semibold uppercase tracking-wider text-primary-11">
+                            {g.groupTitle}
+                          </h4>
+                        )}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {/* Dropping a chip on a card moves it to that card's document. */}
+                          {g.nodes.map((n) => (
+                            <Card
+                              key={n.id}
+                              className="flex h-full flex-col transition-colors hover:border-primary-8 hover:bg-primary-3/30"
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const sPath = e.dataTransfer.getData('application/source-path');
+                                const id = e.dataTransfer.getData('application/attachment-id');
+                                if (!sPath || !id || sPath === n.id) return;
+                                const srcList = atts[sPath] || [];
+                                const match = srcList.find((a) => a.id === id);
+                                if (!match) return;
+                                setAtts((p) => ({
+                                  ...p,
+                                  [sPath]: srcList.filter((a) => a.id !== id),
+                                  [n.id]: [...(p[n.id] || []), match],
+                                }));
+                                void actions.write.attachment
+                                  .move({
+                                    sourceDocPath: sPath,
+                                    targetDocPath: n.id,
+                                    attachmentKey: id,
+                                  })
+                                  .then(({ error: err }) => {
+                                    if (err) {
+                                      setAtts({ ...atts });
+                                      toast.error('Move failed');
+                                      notify({
+                                        error: new Error(errorMessage(err, 'Move failed')),
+                                        fallback:
+                                          'Failed to relocate attachment relational schema node.',
+                                      });
+                                    }
+                                  });
+                              }}
+                            >
+                              <button
+                                type="button"
+                                aria-label={`Open ${n.title}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActive(n);
+                                }}
+                                className="flex w-full items-center justify-between border-b border-primary-6 bg-primary-3/30 p-3 text-left transition-colors hover:bg-primary-4/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
+                              >
+                                <p className="flex items-center text-sm font-medium">
+                                  {n.type === 'Page' ? (
+                                    <DocumentIcon
+                                      className="mr-2 size-4 text-primary-10"
+                                      aria-hidden="true"
+                                    />
+                                  ) : (
+                                    <CatalogIcon
+                                      className="mr-2 size-4 text-primary-10"
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                  {n.title}
+                                </p>
+                              </button>
+                              <div className="flex flex-1 flex-wrap content-start gap-2 p-4">
+                                {(atts[n.id] || []).length === 0 ? (
+                                  <div className="flex h-12 w-full items-center justify-center opacity-50">
+                                    <UploadIcon
+                                      className="size-6 text-primary-8"
+                                      aria-hidden="true"
+                                    />
+                                  </div>
+                                ) : (
+                                  (atts[n.id] || []).map((a) => {
+                                    const isSelected = selAtts.some(
+                                      (s) => (s.a.id || s.a.path) === (a.id || a.path),
+                                    );
+                                    return (
+                                      <button
+                                        key={a.id || a.path}
+                                        type="button"
+                                        aria-pressed={isSelected}
+                                        aria-label={`Select attachment ${a.name}`}
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.dataTransfer.setData('application/source-path', n.id);
+                                          e.dataTransfer.setData(
+                                            'application/attachment-id',
+                                            a.id || '',
+                                          );
+                                          e.dataTransfer.effectAllowed = 'move';
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            toggleSel(e as unknown as React.MouseEvent, n.id, a);
+                                          }
+                                        }}
+                                        onClick={(e) => {
+                                          toggleSel(e, n.id, a);
+                                        }}
+                                        className={cn(
+                                          'flex cursor-grab items-center gap-2 rounded-md border px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8',
+                                          isSelected
+                                            ? 'border-primary-9 bg-primary-5 ring-1 ring-primary-8'
+                                            : 'border-primary-6 bg-primary-3',
+                                        )}
+                                      >
+                                        <DocumentIcon
+                                          className="size-3 shrink-0 text-primary-10"
+                                          aria-hidden="true"
+                                        />
+                                        <span className="max-w-[100px] truncate">{a.name}</span>
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {addMode ? (
+                      <div className="flex flex-col gap-6">
+                        {addMode === 'select' ? (
+                          <>
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                              {[
+                                { Icon: DocumentIcon, text: 'Page', type: 'page' },
+                                {
+                                  Icon: DocumentIcon,
+                                  text: 'Document',
+                                  type: 'document',
+                                },
+                                { Icon: ImageIcon, text: 'Image', type: 'image' },
+                                {
+                                  Icon: YouTubeIcon,
+                                  text: 'YouTube',
+                                  type: 'youtube',
+                                },
+                                { Icon: LinkIcon, text: 'Website', type: 'website' },
+                                { Icon: CatalogIcon, text: 'TsDocs', type: 'tsdocs' },
+                                { Icon: BoxIcon, text: 'Other', type: 'other' },
+                              ].map(({ Icon: i, text: t, type: v }) => (
+                                <button
+                                  key={t}
+                                  type="button"
+                                  aria-label={`Add ${t}`}
+                                  className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-primary-6 bg-transparent p-4 transition-colors hover:border-primary-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAddMode(v as AttchType | 'page');
+                                    setUrl('');
+                                    setQuery('');
+                                  }}
+                                >
+                                  <React.Fragment>
+                                    {React.createElement(i, {
+                                      className: 'size-5 text-primary-11',
+                                      'aria-hidden': 'true',
+                                    })}
+                                  </React.Fragment>
+                                  <span className="mt-2 text-sm font-medium text-primary-11">
+                                    {t}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        ) : addMode === 'page' ? (
+                          <div
+                            className={DOCS_LAYOUT_CLASSES.spacedStack}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <Input
+                              autoFocus
+                              placeholder="Search or type to create..."
+                              value={query}
+                              onChange={(e) => {
+                                setQuery(e.target.value);
+                              }}
+                            />
+                            <div className="flex max-h-64 min-h-24 flex-col overflow-y-auto pr-2">
+                              {!query.trim() &&
+                                tree.map((n) => (
+                                  <Button
+                                    key={n.origName}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="mt-0.5 h-auto w-full justify-start py-1.5 pl-6 text-left font-normal text-primary-11 hover:text-primary-12"
+                                    onClick={() =>
+                                      void attachPage(
+                                        n.type === 'leaf' ? n.path || '' : '',
+                                        false,
+                                        n.title || n.origName,
+                                      )
+                                    }
+                                  >
+                                    <span className="truncate">{n.title || n.origName}</span>
+                                  </Button>
+                                ))}
+                              {query.trim() && (
+                                <div className="flex flex-col gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    className="mb-2 h-auto w-full justify-start border border-dashed border-primary-6 py-2 text-left text-primary-10 hover:border-primary-8 hover:text-primary-12"
+                                    onClick={() => void attachPage('', true)}
+                                    disabled={isCreating}
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className={DOCS_LAYOUT_CLASSES.controlTitle}>
+                                        {isCreating ? 'Creating...' : `Create "${query}"`}
+                                      </span>
+                                      <span className="text-xs opacity-70">
+                                        Create page and attach
+                                      </span>
+                                    </div>
+                                  </Button>
+                                  {filteredLeaves.length > 0 &&
+                                    filteredLeaves.map((r) => (
+                                      <Button
+                                        key={r.path}
+                                        variant="ghost"
+                                        className="h-auto w-full justify-start py-2 text-left"
+                                        onClick={() => void attachPage(r.path, false, r.title)}
+                                      >
+                                        <div className="flex flex-col">
+                                          <span className={DOCS_LAYOUT_CLASSES.controlTitle}>
+                                            {r.title}
+                                          </span>
+                                          <span className="text-xs text-primary-11 opacity-70">
+                                            {r.breadcrumb ? `${r.breadcrumb} / ${r.path}` : r.path}
+                                          </span>
+                                        </div>
+                                      </Button>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            className={DOCS_LAYOUT_CLASSES.spacedStack}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            {!['youtube', 'website', 'tsdocs'].includes(addMode) && (
+                              <Button
+                                variant="outline"
+                                className="w-full border-dashed py-8"
+                                onClick={() => fileRef.current?.click()}
+                              >
+                                <UploadIcon className="mr-2 size-5" aria-hidden="true" /> Select
+                                Files
+                              </Button>
+                            )}
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase text-primary-11">
+                                Import via URL
+                              </Label>
+                              {addMode === 'tsdocs' ? (
+                                <TsDocsSelect
+                                  variant="inline"
+                                  multiple
+                                  value={url ? url.split('\n').filter(Boolean) : []}
+                                  onChange={(v) => {
+                                    setUrl(Array.isArray(v) ? v.join('\n') : v);
+                                  }}
+                                />
+                              ) : (
+                                <Textarea
+                                  autoFocus
+                                  placeholder="https://..."
+                                  value={url}
+                                  onChange={(e) => {
+                                    setUrl(e.target.value);
+                                  }}
+                                  rows={3}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      void addRemote(url, addMode, a.id);
+                                    }
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex min-h-24 flex-wrap content-start gap-3 rounded-md border border-primary-6 bg-primary-2 p-4">
+                          {(atts[a.id] || []).length === 0 ? (
+                            <Empty variant="compact">No attachments yet.</Empty>
+                          ) : (
+                            (atts[a.id] || []).map((v) => (
+                              <ContextMenu key={v.id || v.path}>
+                                <ContextMenuTrigger
+                                  className={cn(
+                                    'flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-xs shadow-sm outline-none transition-colors',
+                                    selAtts.some((s) => (s.a.id || s.a.path) === (v.id || v.path))
+                                      ? 'border-primary-9 bg-primary-5 ring-1 ring-primary-8'
+                                      : 'border-primary-6 bg-primary-3',
+                                  )}
+                                  onClick={(e) => {
+                                    toggleSel(e, a.id, v);
+                                  }}
+                                >
+                                  <DocumentIcon className="size-3 shrink-0 text-primary-10" />
+                                  <span className="max-w-[200px] truncate font-medium">
+                                    {v.name}
+                                  </span>
+                                </ContextMenuTrigger>
+                                <ContextMenuContent>
+                                  <Menu
+                                    actions={[
+                                      {
+                                        label: 'Copy URL',
+                                        icon: <LinkIcon />,
+                                        onSelect: () => {
+                                          void navigator.clipboard.writeText(
+                                            `${window.location.origin}${docsPath(v.path)}`,
+                                          );
+                                          toast.success('URL copied');
+                                        },
+                                      },
+                                      ...(v.isMd
+                                        ? [
+                                            {
+                                              icon: <MagicIcon />,
+                                              label: 'Synthesize Content',
+                                              onSelect: () => {
+                                                document.dispatchEvent(
+                                                  new CustomEvent('docs:synthesize', {
+                                                    detail: {
+                                                      path: v.path,
+                                                      name: v.name,
+                                                    },
+                                                  }),
+                                                );
+                                              },
+                                            },
+                                          ]
+                                        : []),
+                                    ]}
+                                  />
+                                </ContextMenuContent>
+                              </ContextMenu>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    )}
+                    {/* Uploads the selected local files as attachments to the active document. */}
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      className="hidden"
+                      aria-label={`Select files to attach to ${a.title}`}
+                      multiple
+                      onChange={(e) => {
+                        const files = e.currentTarget.files;
+                        const tgtPath = a.id;
+                        void (async () => {
+                          if (!files || files.length === 0 || !tgtPath) return;
+                          void runMutation(
+                            async () => {
+                              const arr = Array.from(files);
+                              for (let i = 0; i < arr.length; i++) {
+                                const f = arr[i];
+                                if (!f) continue;
+                                await uploadAssetChunked(f, tgtPath);
+                              }
+                              await fetchAtts();
+                              setAddMode(null);
+                              if (fileRef.current) fileRef.current.value = '';
+                            },
+                            'Upload failed',
+                            () => {
+                              setAttachmentDialogLoading(true);
+                            },
+                            () => {
+                              setAttachmentDialogLoading(false);
+                            },
+                          );
+                        })();
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              {/* FOOTER */}
+              {/* prettier-ignore */}
+              <DialogFooter className='flex shrink-0 items-center justify-end gap-2 pt-4'>
+					{a && !addMode && <Button onClick={() => { setAddMode('select'); }}><AddIcon className={DOCS_LAYOUT_CLASSES.iconBeforeLabel} aria-hidden='true' /> Add Attachment</Button>}
+					{a && addMode === 'select' && <Button variant='ghost' onClick={() => { setAddMode(null); }}>Cancel</Button>}
+					{a && addMode === 'page' && <Button variant='ghost' onClick={() => { setAddMode('select'); setQuery(''); }}>Back</Button>}
+					{a && addMode && addMode !== 'select' && addMode !== 'page' && (
+						<>
+							<Button variant='ghost' onClick={() => { setAddMode('select'); }}>Back</Button>
+							<Button disabled={!url.trim()} onClick={() => void addRemote(url, addMode, a.id)}>Attach</Button>
+						</>
+					)}
+				</DialogFooter>
+            </DialogContent>
+          </Dialog>
+        ) : null}
         {/* prettier-ignore */}
         <Dialog
 					open={assetDialogOpen}
@@ -1699,7 +3481,7 @@ export default (function Nav({
                     path: sectionPath,
                     type: 'folder',
                   });
-                  if (err && !err.message?.includes('folder not found')) {
+                  if (err && !errorMessage(err, '').includes('folder not found')) {
                     setTree(prev);
                     throw err;
                   }
@@ -1731,6 +3513,7 @@ export default (function Nav({
               </DialogDescription>
             </DialogHeader>
             <Slider
+              aria-label="Hue"
               min={0}
               max={360}
               step={1}
@@ -1741,7 +3524,9 @@ export default (function Nav({
               disabled={loading || transitioning}
               className="my-6 w-full [&_[data-slot=slider-range]]:bg-[color:var(--slider-color)] [&_[data-slot=slider-thumb]]:border-[color:var(--slider-color)] [&_[data-slot=slider-thumb]]:bg-[color:var(--slider-color)]"
               style={
-                { '--slider-color': `hsl(${hueDlg?.hue ?? 0} 65% 55%)` } as React.CSSProperties
+                {
+                  '--slider-color': `hsl(${hueDlg?.hue ?? 0} 65% 55%)`,
+                } as React.CSSProperties
               }
             />
             <DialogFooter>
@@ -1775,22 +3560,17 @@ export default (function Nav({
         </Dialog>
         {/* HEADER */}
         <SidebarHeader className="print:hidden" data-docs-navigation="true">
-          {/* logo */}
-          <div className="mb-4 space-y-1 border-b border-primary-6 pb-4">
-            <a className="font-serif text-2xl hover:italic hover:tracking-tight" href={homePath}>
-              {siteTitle}
-            </a>
-            {siteDescription && <p className="m-0 text-sm text-primary-11">{siteDescription}</p>}
-          </div>
-          {/* sects */}
-          <div className="mt-2">
-            <Label
-              htmlFor="docs-section-picker"
-              className="mb-1 block text-[10px] font-semibold tracking-[0.12em] text-primary-10"
-            >
-              SECTION
-            </Label>
-            <div className="flex items-center gap-1">
+          {/* Keep the original single-brand header; site description is optional. */}
+          <a className="font-serif text-2xl italic hover:tracking-tight" href={homePath}>
+            {siteTitle}
+          </a>
+          {siteDescription && (
+            <p className="m-0 mt-1 line-clamp-1 text-sm text-primary-11">{siteDescription}</p>
+          )}
+          {/* Keep section management available in editable workspaces. Read-only docs
+              need no selector when their navigation has only one section. */}
+          {(sects.length > 1 || permission === 'write') && (
+            <div className="mt-2 flex items-center">
               <div className={cn('block min-w-0 flex-1 rounded-md transition-opacity')}>
                 <Select
                   disabled={transitioning}
@@ -1808,18 +3588,26 @@ export default (function Nav({
                     setViewedSecId(v);
                   }}
                 >
-                  <SelectTrigger
-                    id="docs-section-picker"
-                    className="w-full"
-                    aria-label="Section"
-                    data-docs-navigation="true"
-                    onPointerDown={(e) => {
-                      if (e.button === 0) setSectionOpen(true);
-                    }}
-                  >
-                    <SelectValue placeholder="Section" />
-                  </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <SelectTrigger
+                        className="w-full"
+                        aria-label="Section"
+                        data-docs-navigation="true"
+                        onPointerDown={(e) => {
+                          if (e.button === 0) setSectionOpen(true);
+                        }}
+                      >
+                        <SelectValue placeholder="Section" />
+                      </SelectTrigger>
+                    </ContextMenuTrigger>
+                    {aViewed && (
+                      <ContextMenuContent>
+                        <Menu actions={SidebarActions.renderSects!(aViewed)} />
+                      </ContextMenuContent>
+                    )}
+                  </ContextMenu>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
                     {sects.map((s) => {
                       if (s.simulated) {
                         return (
@@ -1841,20 +3629,24 @@ export default (function Nav({
                           </SelectItem>
                         );
                       }
-                      // prettier-ignore
                       return (
-												<SelectItem
-											key={s.origName}
-													value={s.origName}
-													icon={<span aria-hidden='true' className='size-3.5 rounded-[3px]' style={{ backgroundColor: `hsl(${hueDlg?.open && hueDlg.section.origName === s.origName ? hueDlg.hue : getHue(s.title || s.origName, s.hue)} 65% 55%)` }} />}
-													className='data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12'
-												>
-													<ContextMenu>
-												<ContextMenuTrigger className='flex w-full items-center justify-between'><span className='line-clamp-1'>{cTitle(toNodeLabel(s.title || s.origName))}</span></ContextMenuTrigger>
-													<ContextMenuContent><Menu actions={SidebarActions.renderSects!(s)} /></ContextMenuContent>
-													</ContextMenu>
-												</SelectItem>
-											);
+                        <SelectItem
+                          key={s.origName}
+                          value={s.origName}
+                          icon={
+                            <span
+                              aria-hidden="true"
+                              className="size-3.5 rounded-[3px]"
+                              style={{
+                                backgroundColor: `hsl(${hueDlg?.open && hueDlg.section.origName === s.origName ? hueDlg.hue : getHue(s.title || s.origName, s.hue)} 65% 55%)`,
+                              }}
+                            />
+                          }
+                          className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
+                        >
+                          {cTitle(toNodeLabel(s.title || s.origName))}
+                        </SelectItem>
+                      );
                     })}
                     {permission === 'write' && (
                       <>
@@ -1871,42 +3663,13 @@ export default (function Nav({
                   </SelectContent>
                 </Select>
               </div>
-              {aViewed && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      aria-label={`Actions for section ${aViewed.title || aViewed.origName}`}
-                      className="h-8 w-8 shrink-0 px-1"
-                    >
-                      <OverflowMenuIcon size={16} />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {(SidebarActions.renderSects?.(aViewed) ?? []).map((action, index) => (
-                      <DropdownMenuItem
-                        key={`${action.label}-${index}`}
-                        disabled={action.disabled}
-                        onSelect={() => action.onSelect?.()}
-                        className={
-                          action.destructive ? 'text-destructive focus:text-destructive' : undefined
-                        }
-                      >
-                        {action.icon}
-                        {action.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
             </div>
-          </div>
+          )}
         </SidebarHeader>
         {/* TOC */}
         <ContextMenu>
           <ContextMenuTrigger className="flex min-h-0 flex-1 flex-col outline-none">
-            <SidebarContent className="min-h-0 flex-1 overflow-y-auto">
+            <SidebarContent className={DOCS_LAYOUT_CLASSES.flexScrollArea}>
               <SidebarMenu>
                 {children.map((n) => (
                   <Tree
@@ -1943,12 +3706,52 @@ export default (function Nav({
           )}
         </ContextMenu>
         {/* USER */}
-        <SidebarFooter>
-          {userData && <User user={userData} className="mr-auto pl-0" />}
+        <SidebarFooter className="!flex-row justify-between">
+          <div
+            className="mr-auto flex min-w-0 items-center gap-2 pl-0 text-sm text-primary-11"
+            title={userLabel}
+          >
+            <Avatar size="sm" aria-label={userLabel}>
+              {userData?.image ? <AvatarImage src={userData.image} alt={userLabel} /> : null}
+              <AvatarFallback>
+                {userData ? (
+                  (userData.name ?? userData.email ?? '?')
+                    .split(/[\s@._-]+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((p) => p[0]?.toUpperCase())
+                    .join('') || '?'
+                ) : (
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none">
+                    <circle cx="12" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.6" />
+                    <path
+                      d="M5.5 20c.55-3.6 2.9-5.5 6.5-5.5s5.95 1.9 6.5 5.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </AvatarFallback>
+            </Avatar>
+            <span className="min-w-0 truncate">{userLabel}</span>
+          </div>
+          <Button
+            variant="primary-underline"
+            aria-label="Search ⌘K"
+            title="Search (⌘K)"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new Event('docs:open-search'));
+            }}
+          >
+            <SearchIcon /> Search
+          </Button>
         </SidebarFooter>
         {/* RAIL */}
         <SidebarRail />
       </Sidebar>
     </ErrorBoundary>
   );
-});
+}
+export default Nav;

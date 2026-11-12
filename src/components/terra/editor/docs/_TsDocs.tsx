@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/_TsDocs.tsx
+ * src/components/terra/editor/docs/_TsDocs.tsx
  */
 
 /*//////////////////////////////////////////////////
@@ -13,25 +12,23 @@ import { cn } from '../../../../lib/terra/runtime/runtime.js';
 import { useEffect, useState } from 'react';
 
 // COMPONENTS
-import { AlertError } from '@terra-symposium/styling/ui/terra-original';
-import { ErrorBoundary } from '../../ui.js';
-import { Empty } from '../../ui.js';
-import { TerraContentEditor } from '../TerraContentEditor.js';
+import { AlertError } from '@terra-symposium/styling/ui';
+import { Empty, ErrorBoundary } from '../../ui.js';
+import { TerraContentEditor } from './_editor.js';
 
 // TYPES
+import type { Content as ContentData, TsDocsItem } from '../../../../lib/terra/runtime/types.js';
 import type { DocsBlock } from '../types.js';
-import type { TerraContent as TerraContentData } from '../../../../lib/terra/runtime/types.js';
-import type { TsDocsItem } from '../../../../lib/terra/runtime/types.js';
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
-/** Loads and renders TypeScript documentation for a selected scope. */
 /**
- * Renders the TsDocsRenderer component.
+ * Loads and renders TypeScript documentation for a selected scope.
  *
- * @param props - Optional API documentation scope and styling class used to load the reference panel.
+ * @param scope Package or symbol scope whose TypeScript reference entries should be loaded.
+ * @param className Additional class applied to the rendered reference panel.
  *
  * @return The API reference panel, or `null` when no scope is selected.
  */
@@ -54,7 +51,9 @@ function TsDocsRenderer({
           data: d,
           error: e,
         }: {
-          data?: { docs?: Array<{ slug: string; title: string; body: string }> } | null;
+          data?: {
+            docs?: Array<{ slug: string; title: string; body: string }>;
+          } | null;
           error?: unknown;
         }) => {
           if (e || !d?.docs) throw e || new Error('Failed to fetch tsdocs');
@@ -123,9 +122,8 @@ function TsDocsRenderer({
           <section key={d.slug} id={d.slug.replaceAll('/', '-')}>
             {items.length > 1 && <h2>{d.title}</h2>}
             <TerraContentEditor
-              content={d.body as unknown as TerraContentData}
+              content={d.body as unknown as ContentData}
               docsAttachments={[]}
-              memberProfile="docs"
               nested
               readOnly
             />
@@ -135,14 +133,13 @@ function TsDocsRenderer({
     </ErrorBoundary>
   );
 }
-Object.assign(TsDocsRenderer, { displayName: 'TsDocsRenderer' });
 
 /**
- * Renders the ts docs component.
+ * Selects the TypeScript API scope whose entries the reference renderer loads and displays.
  *
- * @param props - TypeScript documentation block data and rendering props.
+ * @param block TypeScript Docs block selecting the API scope to display.
  *
- * @return Rendered TypeScript documentation content.
+ * @return The selected API reference, or `null` when the block has no scope.
  */
 export function TsDocs({
   block,
@@ -155,4 +152,5 @@ export function TsDocs({
     </ErrorBoundary>
   );
 }
+Object.assign(TsDocsRenderer, { displayName: 'TsDocsRenderer' });
 Object.assign(TsDocs, { displayName: 'TsDocs' });

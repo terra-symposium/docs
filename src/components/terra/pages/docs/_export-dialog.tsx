@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_export-dialog.tsx
+ * src/components/terra/pages/docs/_export-dialog.tsx
  */
 
 /*//////////////////////////////////////////////////
@@ -11,19 +10,19 @@ IMPORTS
 import { useState } from 'react';
 
 // COMPONENTS
-import { Button } from '@terra-symposium/styling/ui/terra-original';
-import { Checkbox } from '@terra-symposium/styling/ui/terra-original';
 import {
+  Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@terra-symposium/styling/ui/terra-original';
+  Label,
+  Progress,
+} from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../../ui.js';
-import { Label } from '@terra-symposium/styling/ui/terra-original';
-import { Progress } from '@terra-symposium/styling/ui/terra-original';
 
 // TYPES
 import type {
@@ -44,11 +43,14 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the export dialog component.
+ * Lets the user select export formats and options for the current Docs target.
  *
- * @param props - Export target, document data, and dialog state callbacks.
+ * @param tgt Selected section, branch, or leaf whose content is exported.
+ * @param setTgt Opens or closes the dialog by changing the selected export target.
+ * @param disabled Disables controls when the host cannot start an export.
+ * @param onExport Performs the export and reports progress while it runs.
  *
- * @return Dialog for exporting documentation content.
+ * @return The export dialog for the selected target, or `null` when no target is selected.
  */
 export function ExportDialog({
   target: tgt,
@@ -68,8 +70,21 @@ export function ExportDialog({
   const [opts, setOpts] = useState<ExportOptions>({
     flatten: false,
     format: 'raw',
-    filters: { pages: true, pdfs: true, images: true, youtube: true, tsdocs: true, other: true },
-    merges: { pages: false, pdfs: false, images: false, youtube: false, tsdocs: false },
+    filters: {
+      pages: true,
+      pdfs: true,
+      images: true,
+      youtube: true,
+      tsdocs: true,
+      other: true,
+    },
+    merges: {
+      pages: false,
+      pdfs: false,
+      images: false,
+      youtube: false,
+      tsdocs: false,
+    },
   });
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -116,7 +131,10 @@ export function ExportDialog({
                       checked={opts.filters[i.key]}
                       disabled={disabled || busy}
                       onCheckedChange={(c) => {
-                        setOpts((p) => ({ ...p, filters: { ...p.filters, [i.key]: !!c } }));
+                        setOpts((p) => ({
+                          ...p,
+                          filters: { ...p.filters, [i.key]: !!c },
+                        }));
                       }}
                     />
                     <Label htmlFor={`filter-${i.key}`}>{i.label}</Label>
@@ -138,7 +156,10 @@ export function ExportDialog({
                         checked={opts.merges[i.key] && opts.filters[i.key]}
                         disabled={disabled || busy || !opts.filters[i.key]}
                         onCheckedChange={(c) => {
-                          setOpts((p) => ({ ...p, merges: { ...p.merges, [i.key]: !!c } }));
+                          setOpts((p) => ({
+                            ...p,
+                            merges: { ...p.merges, [i.key]: !!c },
+                          }));
                         }}
                       />
                       <Label

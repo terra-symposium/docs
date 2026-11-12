@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/pages/docs/_tree.tsx
+ * src/components/terra/pages/docs/_tree.tsx
  * Recursively rendering branch nodes composing the sidebar UI tree structure, alongside leaves and menus.
  * Folder boundary: recursive sidebar tree presentation only; sidebar state and dialogs remain in `_sidebar.tsx`.
  */
@@ -18,14 +17,6 @@ import {
   setTransition,
   useAtom,
 } from '../../../../lib/terra/docs/state.js';
-import {
-  extractAllNodeIds,
-  getStableKey,
-  isIndexFile,
-  sanitizeName,
-} from '../../../../lib/terra/docs/tree.js';
-import { runMutation } from '../../../../lib/terra/docs/mutations.js';
-import { download, uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
 import {
   bName,
@@ -36,10 +27,18 @@ import {
   toNodeLabel,
   toPaths,
 } from '../../../../lib/terra/runtime/shared.js';
-import { cn, notify } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, notify, warn } from '../../../../lib/terra/runtime/runtime.js';
+import {
+  extractAllNodeIds,
+  getStableKey,
+  isIndexFile,
+  sanitizeName,
+} from '../../../../lib/terra/docs/tree.js';
+import { getDocsHostAdapter } from '../../../../lib/host-runtime.js';
+import { runMutation } from '../../../../lib/terra/docs/mutations.js';
 import { toPortableBody } from '../../../../lib/terra/runtime/leaf.js';
-import { Toc } from './_toc.js';
 import { toast } from 'sonner';
+import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 import { useEffect, useRef, useState } from 'react';
 
 // COMPONENTS
@@ -56,11 +55,10 @@ import {
   Edit as EditIcon,
   Link as LinkIcon,
   MagicWand as MagicIcon,
-  OverflowMenuVertical as OverflowMenuIcon,
   TrashCan as TrashIcon,
 } from '@carbon/icons-react';
-import { Button } from '@terra-symposium/styling/ui/terra-original';
 import {
+  Button,
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -69,38 +67,30 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from '@terra-symposium/styling/ui/terra-original';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@terra-symposium/styling/ui/terra-original';
-import { ErrorBoundary } from '../../ui.js';
-import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@terra-symposium/styling/ui/terra-original';
+} from '@terra-symposium/styling/ui';
+import { ErrorBoundary } from '../../ui.js';
 
 // DATA
 import { REORDER } from '../../../../lib/terra/runtime/shared.js';
 
 // TYPES
-import type { ActionRes, Md } from '../../../../lib/terra/runtime/types.js';
-import type { DocsTreeMenuAction as MenuAction } from '../../../../lib/terra/runtime/types.js';
-import type { DragState } from '../../../../lib/terra/runtime/types.js';
 import type {
+  ActionRes,
+  DocsTreeMenuAction as MenuAction,
+  DragState,
   Leaf as LeafNode,
+  Md,
   Mode,
+  ReorderDropState,
   Tree as ITree,
   Tree as TreeType,
 } from '../../../../lib/terra/runtime/types.js';
-import type { ReorderDropState } from '../../../../lib/terra/runtime/types.js';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
 /*//////////////////////////////////////////////////
@@ -123,11 +113,11 @@ MENU COMPONENTS
 /**
  * Renders a standard ContextMenu with support for nested sub-actions and separators.
  *
- * @param props - Ordered menu actions, including labels, optional icons, disabled state, separators, and nested sub-actions.
+ * @param actions Ordered menu actions, including labels, optional icons, disabled state, separators, and nested sub-actions.
  *
  * @return The context menu with the supplied actions and any nested menus.
  */
-export function Menu({ actions }: { actions: MenuAction[] }): JSX.Element {
+export function Menu({ actions }: { actions: MenuAction[] }): React.JSX.Element {
   // prettier-ignore
   return <ErrorBoundary name='Menu'>{actions.map((a, i) => (
 				<Fragment key={a.label + i}>
@@ -143,19 +133,17 @@ export function Menu({ actions }: { actions: MenuAction[] }): JSX.Element {
 }
 
 /**
- * Renders the link component.
+ * Renders a sidebar row with its navigation target, unsaved state, and current interaction state.
  *
- * @param props - Tree node state, display mode, navigation context, and optional trailing control for one sidebar link.
- * @param active - Boolean flag controlling link's active behaviour.
- * @param contexting - Contexting input supplied to link's operation.
- * @param dragging - Dragging input supplied to link's operation.
- * @param renaming - Renaming input supplied to link's operation.
- * @param node - Node input supplied to link's operation.
- * @param trailing - Trailing input supplied to link's operation.
- * @param mode - Mode input supplied to link's operation.
- * @param transitioning - Transitioning input supplied to link's operation.
- *
- * @return The interactive sidebar link with its current selection and drag/rename states.
+ * @param a Whether this row is selected as the current route.
+ * @param contexting Whether the row is currently under a context menu.
+ * @param dragging Whether a drag operation is moving this row.
+ * @param renaming Whether the row is in its inline rename state.
+ * @param node Leaf or branch data rendered by the row.
+ * @param trailing Optional controls displayed at the row's trailing edge.
+ * @param mode Sidebar mode that determines the available navigation behavior.
+ * @param transitioning Whether route navigation is currently in progress.
+ * @return The navigation row with asset/PDF targets opening separately from document routes.
  */
 function Link({
   active: a,
@@ -175,7 +163,7 @@ function Link({
   trailing?: ReactNode;
   mode: Mode;
   transitioning?: boolean;
-}): JSX.Element {
+}): React.JSX.Element {
   const unsaved = useAtom($unsavedDrafts);
   const asset = node.type === 'leaf' && node.asset === true;
   const isDirty =
@@ -220,13 +208,17 @@ function Link({
           onClick={async (e: ReactMouseEvent<HTMLAnchorElement>) => {
             if (asset || (node.type === 'leaf' && node.fileType === 'pdf')) return;
             if (e.button !== 0 || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+            if (getDocsHostAdapter()?.navigationMode === 'document') return;
             e.preventDefault();
             if (a || transitioning || !('url' in node) || !node.url) return;
             if (node.type !== 'leaf') return;
             setTransition('local');
             let data: Md | undefined;
             try {
-              const result = (await actions.read.doc.get({ path: node.path })) as ActionRes<Md>;
+              const result = (await actions.read.doc.get({
+                id: node.origName,
+                pathname: node.url,
+              })) as ActionRes<Md>;
               if (!result.error) data = result.data;
             } catch {
               // Keep the current document visible when its replacement cannot be loaded.
@@ -236,7 +228,6 @@ function Link({
               toast.error('Failed to load document.');
               return;
             }
-            const content = toPortableBody(data.content);
             resetEditorMounts(node.path, ['root']);
             await new Promise<void>((resolve) =>
               requestAnimationFrame(() =>
@@ -253,8 +244,9 @@ function Link({
             else url.searchParams.delete('mode');
             // PIPELINE: sidebar navigation carries stored JSON; View never compiles Markdown.
             window.history.pushState(null, '', url.toString());
+            const route = `${url.pathname}${url.search}${url.hash}`;
             // prettier-ignore
-            document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: url.pathname + url.search, pathname: url.pathname + url.search, path: node.path, title: data.title || node.title, description: data.description ?? node.description, contributors: node.contributors, updatedAt: node.updatedAt, source: data.source, content, compiledMDX: '' } }));
+            document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: route, pathname: route, path: node.path, title: data.title || node.title, description: data.description ?? node.description, ...(Array.isArray(node.contributors) ? { contributors: node.contributors } : {}), ...(node.updatedAt ? { updatedAt: node.updatedAt } : {}), source: data.source, content: toPortableBody(data.content), compiledMDX: '' } }));
           }}
         >
           {isDirty && (
@@ -283,7 +275,6 @@ COMPONENTS
  * Encapsulates the drag handler button for consistent visual implementation
  * across branch and leaf levels to reduce boilerplate logic.
  *
- * @param props - Drag availability, visibility, and start/end callbacks for the branch or leaf reorder handle.
  * @param disabled - Disabled state controlling whether drag handle accepts interaction.
  * @param isVisible - Boolean flag controlling drag handle's is visible behaviour.
  * @param onDragStart - Callback invoked for drag start.
@@ -333,12 +324,7 @@ TOC COMPONENTS
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the toc component.
- *
- * @param props - Optional heading override used while collecting the document's navigable section headings.
- * @param title - Heading text shown in toc.
- *
- * @return A table of contents for discovered headings, or `null` when there are no headings to navigate.
+ * Shared renderers for leaf and branch entries in the recursive sidebar tree.
  */
 const TREE_COMPONENTS = {
   /*//////////////////////////////////////////////////
@@ -346,16 +332,13 @@ LEAF COMPONENTS
 //////////////////////////////////////////////////*/
 
   /**
-   * Renders the leaf component.
-   *
-   * @param props - Leaf metadata, parent path, sibling nodes, and tree interaction handlers for rendering a document entry.
-   * @param active - Boolean flag controlling leaf's active behaviour.
-   * @param bPath - B path input supplied to leaf's operation.
-   * @param node - Node input supplied to leaf's operation.
-   * @param ctx - Ctx input supplied to leaf's operation.
-   * @param siblings - Siblings input supplied to leaf's operation.
-   *
-   * @return The document row with its navigation, selection, rename, attachment, export, and reorder controls.
+   * Renders a leaf row with its navigation, selection, rename, attachment, export, and reorder controls.
+   * @param a Whether this leaf is selected as the current route.
+   * @param bPath Path of the containing branch used to build tree navigation targets.
+   * @param node Leaf metadata and actions rendered by the row.
+   * @param ctx Shared sidebar state and operations for creating, uploading, moving, and refreshing entries.
+   * @param siblings Neighboring tree entries used to calculate this leaf's reorder position.
+   * @returns The interactive sidebar row and its leaf-specific controls.
    */
   Leaf({
     active: a,
@@ -439,7 +422,7 @@ LEAF COMPONENTS
       setTree: React.Dispatch<React.SetStateAction<TreeType[]>>;
       refreshTree: () => Promise<void>;
     };
-  }): JSX.Element {
+  }): React.JSX.Element {
     // STATES
     const { creating, drag, dState, mode, shellPermission, hovered } = ctx;
     const [contexting, setContexting] = useState(false);
@@ -449,12 +432,6 @@ LEAF COMPONENTS
     const fileRef = useRef<HTMLInputElement | null>(null);
     const leafRef = useRef<HTMLLIElement | null>(null);
     const permission = shellPermission === 'write' ? 'write' : node.permission;
-    /**
-     * Checks whether editable file.
-     *
-     * @param path - Path to process.
-     * @param fileType - Value passed to the helper.
-     */
     const editable =
       permission === 'write' && !!node.path && (node.fileType === 'md' || node.fileType === 'mdx');
     const path = node.path ?? '';
@@ -462,7 +439,13 @@ LEAF COMPONENTS
     const disabled = creating || renaming || progress !== null;
     const isIdx = isIndexFile(path);
     const [sis, setSis] = useState<
-      { id?: string; path: string; name: string; title?: string; isMd: boolean }[]
+      {
+        id?: string;
+        path: string;
+        name: string;
+        title?: string;
+        isMd: boolean;
+      }[]
     >([]);
     const [sisLoading, setSisLoading] = useState(false);
     const isSimulated = (node as LeafNode & { simulated?: boolean }).url === docsRootPath();
@@ -471,9 +454,7 @@ LEAF COMPONENTS
     // SCROLL ACTIVE TO VIEWPORT TOP
     useEffect(() => {
       if (!a || !leafRef.current) return;
-      /**
-       * Returns the raise.
-       */
+      /** Scrolls the active leaf into view after the sidebar finishes laying out. */
       const raise = () => {
         const el = leafRef.current;
         if (!el) return;
@@ -522,7 +503,7 @@ LEAF COMPONENTS
                 sisList.push({
                   name: bName(p),
                   path: p,
-                  title: sNode && sNode.type === 'leaf' ? sNode.title : undefined,
+                  ...(sNode && sNode.type === 'leaf' && sNode.title ? { title: sNode.title } : {}),
                   isMd,
                 });
               }
@@ -543,10 +524,6 @@ LEAF COMPONENTS
     }, [contexting, editable, path, siblings, isIdx]);
 
     // HANDLERS
-    /**
-     * Returns the rename page.
-     *
-     */
     const pageActions = {
       renamePage: (): void => {
         if (renaming || !node.path) return;
@@ -573,7 +550,9 @@ LEAF COMPONENTS
               });
               if (resErr || !res) throw resErr || new Error('Failed to resolve path');
               const nPath = res.path;
-              const { data: optRouteRes } = await actions.read.util.pathname({ path: nPath });
+              const { data: optRouteRes } = await actions.read.util.pathname({
+                path: nPath,
+              });
               const optRoute =
                 (optRouteRes as string) || ('url' in node ? node.url : docsRootPath());
               // optimistic UI updates
@@ -585,7 +564,9 @@ LEAF COMPONENTS
                 window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
               }
               if (nPath !== node.path!) {
-                const { data: docData } = await actions.read.doc.get({ path: node.path! });
+                const { data: docData } = await actions.read.doc.get({
+                  path: node.path!,
+                });
                 const { error: err } = await actions.write.doc.commit({
                   cur: node.path!,
                   next: nPath,
@@ -625,17 +606,13 @@ LEAF COMPONENTS
         });
       },
 
-      /*
-       * Returns the duplicate.
-       *
-       * @param mode - Value passed to the helper.
-       */
-      duplicate: (mode: 'reference' | 'content'): void => {
+      /* Creates a sibling page by reference or by copying the current Markdown source. */
+      duplicate: (m: 'reference' | 'content'): void => {
         if (creating || !node.path) return;
         // prettier-ignore
         ctx.setInputDlg({
 			open: true,
-			title: mode === 'reference' ? 'Duplicate by Reference' : 'Duplicate by Content',
+			title: m === 'reference' ? 'Duplicate by Reference' : 'Duplicate by Content',
 			label: 'New page name',
 			value: `${path.split('/').at(-1)?.replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX(), '') ?? ''}-copy`,
 			onCancel: () => {},
@@ -646,7 +623,7 @@ LEAF COMPONENTS
 					const nPath = `${bPath}/${sanitizeName(t)}.mdx`;
 					// MDX natively acts as a reference symlink when imported
 					let finalSrc = cur.source as string;
-					if (mode === 'reference') {
+					if (m === 'reference') {
 						finalSrc = `import Reference from './${path.split('/').pop()}';\n\n<Reference />`;
 					}
 					// find the parent ID directly from bPath to prevent orphaned docs
@@ -670,6 +647,7 @@ LEAF COMPONENTS
 							}
 							const n = frame.nodes[frame.index];
 							frame.index += 1;
+              if (!n) continue;
 							if (n.type === 'leaf' && n.path === path) {
 								// GUARANTEE ORIGINAL KEY: Fallback to a highly unique temp ID so React doesn't share state
 								// prettier-ignore
@@ -710,10 +688,8 @@ LEAF COMPONENTS
       },
     };
 
-    /**
-     * Returns the add.
-     *
-     * @param files - Value passed to the helper.
+    /** Uploads selected files as attachments and updates each file's visible progress.
+     * @param files Files chosen for attachment to this leaf.
      */
     const add = async (files: FileList | File[] | null): Promise<void> => {
       if (creating || !files || files.length === 0 || !node.path) return;
@@ -721,7 +697,10 @@ LEAF COMPONENTS
         async () => {
           let totalSize = 0;
           let uploadedSize = 0;
-          for (let i = 0; i < files.length; i++) if (files[i]) totalSize += files[i].size;
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file) totalSize += file.size;
+          }
           for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (!file) continue;
@@ -759,13 +738,7 @@ LEAF COMPONENTS
     };
 
     // SISTER ACTION HANDLERS
-    /**
-     * Rename sister.
-     *
-     * @param s - Value passed to the helper.
-     *
-     * @returns True when the helper predicate succeeds.
-     */
+    /** Opens a rename prompt and moves the document or asset while keeping the list optimistic. */
     const sisterActions = {
       renameSister: (s: { path: string; name: string; isMd: boolean }) => {
         ctx.setInputDlg({
@@ -790,7 +763,9 @@ LEAF COMPONENTS
               ctx.setInputDlg(null);
               try {
                 if (s.isMd) {
-                  const { data: docData } = await actions.read.doc.get({ path: s.path });
+                  const { data: docData } = await actions.read.doc.get({
+                    path: s.path,
+                  });
                   const { error } = await actions.write.doc.commit({
                     cur: s.path,
                     next: nPath,
@@ -813,7 +788,11 @@ LEAF COMPONENTS
                     path: nPath,
                   });
                   if (writeErr) throw writeErr;
-                  await actions.write.doc.rm({ path: s.path, type: 'asset', assets: false });
+                  await actions.write.doc.rm({
+                    path: s.path,
+                    type: 'asset',
+                    assets: false,
+                  });
                 }
                 toast.success('Renamed successfully');
               } catch (err) {
@@ -827,13 +806,7 @@ LEAF COMPONENTS
         });
       },
 
-      /*
-       * Duplicates the duplicate Sister.
-       *
-       * @param s - Value passed to the helper.
-       *
-       * @returns True when the helper predicate succeeds.
-       */
+      /* Copies a Markdown attachment to a sibling path and appends the new entry to the list. */
       duplicateSister: async (s: { path: string; name: string; isMd: boolean }) => {
         ctx.setInputDlg({
           open: true,
@@ -844,7 +817,9 @@ LEAF COMPONENTS
           onSave: (n) =>
             runMutation(async () => {
               const tgt = { path: s.path, stem: sanitizeName(n) };
-              const { data: docData, error: err } = await actions.read.doc.get({ path: tgt.path });
+              const { data: docData, error: err } = await actions.read.doc.get({
+                path: tgt.path,
+              });
               if (err || !docData) throw err || new Error('Failed to read doc.');
               const nPath = `${dirname(tgt.path)}/${tgt.stem}.mdx`;
               const { data, error: wErr } = await actions.write.doc.save({
@@ -866,20 +841,19 @@ LEAF COMPONENTS
               };
               setSis((p) => [
                 ...p,
-                { path: nPath, name: sisterDetails.name, isMd: true, title: sisterDetails.title },
+                {
+                  path: nPath,
+                  name: sisterDetails.name,
+                  isMd: true,
+                  ...(sisterDetails.title === undefined ? {} : { title: sisterDetails.title }),
+                },
               ]);
               ctx.setInputDlg(null);
             }, 'Failed to duplicate.'),
         });
       },
 
-      /*
-       * Deletes the delete Sister.
-       *
-       * @param s - Value passed to the helper.
-       *
-       * @returns True when the helper predicate succeeds.
-       */
+      /* Removes an attachment after confirmation and restores its list entry if deletion fails. */
       deleteSister: async (s: { path: string; name: string; isMd: boolean }) => {
         if (!window.confirm(`Are you sure you want to delete ${s.name}?`)) return;
         const deletion = {
@@ -903,15 +877,13 @@ LEAF COMPONENTS
         }, 'Failed to delete attachment.');
       },
 
-      /*
-       * Synthesize sister.
-       *
-       * @param s - Value passed to the helper.
-       */
+      /* Notifies the host that this attachment should be converted into a document. */
       synthesizeSister: (s: { path: string; name: string }): void => {
         try {
           document.dispatchEvent(
-            new CustomEvent('docs:synthesize', { detail: { path: s.path, name: s.name } }),
+            new CustomEvent('docs:synthesize', {
+              detail: { path: s.path, name: s.name },
+            }),
           );
         } catch (err) {
           console.error('Synthesis failed', err);
@@ -929,6 +901,7 @@ LEAF COMPONENTS
               ref={fileRef}
               type="file"
               className="hidden"
+              aria-label={`Select files to add to ${node.origName || node.path}`}
               multiple
               onChange={(e) => void add(e.currentTarget.files)}
               disabled={disabled}
@@ -1129,7 +1102,27 @@ LEAF COMPONENTS
 											void actions.read.doc
 												.get({ path: s.path })
 												.then(({ data: d }) => {
-												download(s.name, d && typeof d === 'object' && 'source' in d && typeof d.source === 'string' ? d.source : '', 'text/markdown');
+																if (typeof window === 'undefined' || typeof document === 'undefined') {
+																	warn('download', 'Bypass requested execution; environment window context is dead.');
+																	return;
+																}
+																let dlName = s.name;
+																if (
+																	!dlName.toLowerCase().endsWith('.md') &&
+																	!dlName.toLowerCase().endsWith('.mdx')
+																)
+																	dlName += '.mdx';
+																const href = URL.createObjectURL(
+																	new Blob(
+																		[d && typeof d === 'object' && 'source' in d && typeof d.source === 'string' ? d.source : ''],
+																		{ type: 'text/markdown' },
+																	),
+																);
+																const link = document.createElement('a');
+																link.href = href;
+																link.download = dlName;
+																link.click();
+																URL.revokeObjectURL(href);
 																			})
 																			.catch(() => { notify({ error: new Error('Failed to download file.'), fallback: 'Failed to download file.' }); });
 																	} else {
@@ -1174,7 +1167,6 @@ LEAF COMPONENTS
         ) : (
           <Link active={a} node={node} mode={mode} />
         )}
-        {a && <Toc title={node.title} />}
       </SidebarMenuItem>
     );
   },
@@ -1184,15 +1176,14 @@ TREE COMPONENTS
 //////////////////////////////////////////////////*/
 
   /**
-   * Main recursive tree mapping structural layers evaluating context dependencies natively.
+   * Renders a branch and its recursive children while sharing the current tree interaction state.
    *
-   * @param props - Tree path, current node, sibling list, and shared navigation/mutation state for recursively rendering sidebar levels.
-   * @param {TreeType[]} [props.siblings] - Sibling nodes within the same local directory layer.
-   * @param bPath - B path input supplied to tree's operation.
-   * @param node - Node input supplied to tree's operation.
-   * @param ctx - Ctx input supplied to tree's operation.
+   * @param bPath Canonical path of the parent branch.
+   * @param node Branch or leaf represented by this entry.
+   * @param ctx Shared selection, permission, drag, and mutation state for the tree.
+   * @param sibs Sibling entries when the parent already has them available.
    *
-   * @return {JSX.Element} The rendered SidebarGroup bounding nested leaves and child trees.
+   * @return {React.JSX.Element} The rendered SidebarGroup bounding nested leaves and child trees.
    */
   Tree({
     bPath,
@@ -1286,7 +1277,7 @@ TREE COMPONENTS
       >;
       setAssetTarget: React.Dispatch<React.SetStateAction<{ path: string; title: string } | null>>;
     };
-  }): JSX.Element {
+  }): React.JSX.Element {
     // STATES
     const { creating, drag, dState, pathname, shellPermission, setDState, setHovered, hovered } =
       ctx;
@@ -1301,10 +1292,6 @@ TREE COMPONENTS
     const disabled = creating || renaming;
 
     // HANDLERS
-    /**
-     * Returns the rename node.
-     *
-     */
     const treeActions = {
       renameNode: (): void => {
         if (renaming || node.type !== 'branch') return;
@@ -1341,6 +1328,7 @@ TREE COMPONENTS
                 const idx = frame.index;
                 const curr = frame.nodes[idx];
                 frame.index += 1;
+                if (!curr) continue;
                 if (curr.type !== 'branch') continue;
                 if (curr.origName === node.origName) {
                   frame.nodes[idx] = { ...curr, title: nName };
@@ -1374,9 +1362,7 @@ TREE COMPONENTS
       },
 
       /*
-       * Handles drag over.
-       *
-       * @param e - Value passed to the helper.
+       * Shows a drop target when the pointer carries supported files or a movable Docs node.
        */
       handleDragOver: (e: React.DragEvent<HTMLElement>): void => {
         if (permission !== 'write') return;
@@ -1401,9 +1387,7 @@ TREE COMPONENTS
       },
 
       /*
-       * Handles drag leave.
-       *
-       * @param e - Value passed to the helper.
+       * Clears the drop target after the pointer leaves the branch and its descendants.
        */
       handleDragLeave: (e: React.DragEvent<HTMLElement>): void => {
         if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
@@ -1421,82 +1405,17 @@ TREE COMPONENTS
             bPath={bPath}
             node={node}
             ctx={ctx}
-            siblings={sibs}
+            {...(sibs === undefined ? {} : { siblings: sibs })}
           />
         </ErrorBoundary>
       );
     // branch
-    const branchActions: MenuAction[] = [
-      {
-        disabled,
-        icon: <LinkIcon />,
-        label: 'Copy link',
-        onSelect: () => {
-          void navigator.clipboard.writeText(`${window.location.origin}${nodeUrl}`);
-          toast.success('Link copied');
-        },
-      },
-      {
-        disabled,
-        icon: <AddIcon />,
-        label: 'Add page',
-        onSelect: () => {
-          ctx.openCreate(fPath, node.origName);
-        },
-      },
-      {
-        disabled,
-        icon: <BoxIcon />,
-        label: 'Manage attachments',
-        onSelect: () => {
-          ctx.setManageAttTgt({
-            path: slugPath,
-            title: node.title || slugPath,
-            scope: 'group',
-            node,
-          });
-        },
-      },
-      {
-        disabled,
-        icon: <DownloadIcon />,
-        label: 'Download group',
-        onSelect: () => {
-          ctx.setExportTarget({
-            paths: toPaths(node.children),
-            rootDir: slugPath,
-            filename: sanitizeName(
-              cTitle(toNodeLabel(node.title || node.origName)) || node.origName,
-            ),
-            title: `${cTitle(toNodeLabel(node.title || node.origName))} docs`,
-            nodeIds: extractAllNodeIds([node]),
-          });
-        },
-      },
-      { disabled, icon: <EditIcon />, label: 'Rename group', onSelect: treeActions.renameNode },
-      {
-        separator: true,
-        destructive: true,
-        disabled,
-        icon: <TrashIcon />,
-        label: 'Delete group',
-        onSelect: () => {
-          ctx.setDelTarget({
-            kind: 'branch',
-            path: fPath,
-            bPath,
-            slugPath,
-            title: node.title || slugPath,
-          });
-        },
-      },
-    ];
     const label = (
       <SidebarGroupLabel asChild className="p-0">
         <div
           data-docs-drop={drop}
           className={cn(
-            'group flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-primary-11',
+            'flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-primary-11',
             dState?.key === drop && dState.position === 'before' && REORDER.before,
             dState?.key === drop && dState.position === 'after' && REORDER.after,
             contexting && UI.open,
@@ -1538,7 +1457,12 @@ TREE COMPONENTS
             const rect = e.currentTarget.getBoundingClientRect();
             const tPos = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
             if (move.kind === 'leaf')
-              void ctx.mvLeaf({ path: move.path, tPosition: tPos, tTarget: fPath, tpath: bPath });
+              void ctx.mvLeaf({
+                path: move.path,
+                tPosition: tPos,
+                tTarget: fPath,
+                tpath: bPath,
+              });
             else
               void ctx.mvBranch({
                 fPath: move.fPath,
@@ -1570,38 +1494,6 @@ TREE COMPONENTS
               }}
             />
           )}
-          {permission === 'write' && !node.simulated && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  aria-label={`Actions for group ${cTitle(toNodeLabel(node.title || node.origName))}`}
-                  className="h-6 w-6 shrink-0 px-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <OverflowMenuIcon size={16} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {branchActions.map((action, index) => (
-                  <Fragment key={`${action.label}-${index}`}>
-                    {action.separator && <DropdownMenuSeparator />}
-                    <DropdownMenuItem
-                      disabled={action.disabled}
-                      onSelect={() => action.onSelect?.()}
-                      className={
-                        action.destructive ? 'text-destructive focus:text-destructive' : undefined
-                      }
-                    >
-                      {action.icon}
-                      {action.label}
-                    </DropdownMenuItem>
-                  </Fragment>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
       </SidebarGroupLabel>
     );
@@ -1613,7 +1505,78 @@ TREE COMPONENTS
             <ContextMenu onOpenChange={setContexting}>
               <ContextMenuTrigger asChild>{label}</ContextMenuTrigger>
               <ContextMenuContent>
-                <Menu actions={branchActions} />
+                <Menu
+                  actions={[
+                    {
+                      disabled,
+                      icon: <LinkIcon />,
+                      label: 'Copy link',
+                      onSelect: () => {
+                        void navigator.clipboard.writeText(`${window.location.origin}${nodeUrl}`);
+                        toast.success('Link copied');
+                      },
+                    },
+                    {
+                      disabled,
+                      icon: <AddIcon />,
+                      label: 'Add page',
+                      onSelect: () => {
+                        ctx.openCreate(fPath, node.origName);
+                      },
+                    },
+                    {
+                      disabled,
+                      icon: <BoxIcon />,
+                      label: 'Manage attachments',
+                      onSelect: () => {
+                        ctx.setManageAttTgt({
+                          path: slugPath,
+                          title: node.title || slugPath,
+                          scope: 'group',
+                          node,
+                        });
+                      },
+                    },
+                    {
+                      disabled,
+                      icon: <DownloadIcon />,
+                      label: 'Download group',
+                      onSelect: () => {
+                        ctx.setExportTarget({
+                          paths: toPaths(node.children),
+                          rootDir: slugPath,
+                          filename: sanitizeName(
+                            cTitle(toNodeLabel(node.title || node.origName)) || node.origName,
+                          ),
+                          title: `${cTitle(toNodeLabel(node.title || node.origName))} docs`,
+                          nodeIds: extractAllNodeIds([node]),
+                        });
+                      },
+                    },
+                    {
+                      disabled,
+                      icon: <EditIcon />,
+                      label: 'Rename group',
+                      onSelect: treeActions.renameNode,
+                    },
+                    {
+                      separator: true,
+                      destructive: true,
+                      disabled,
+                      icon: <TrashIcon />,
+                      label: 'Delete group',
+                      onSelect: () => {
+                        ctx.setDelTarget({
+                          kind: 'branch',
+                          path: fPath,
+                          bPath,
+                          slugPath,
+                          title: node.title || slugPath,
+                        });
+                      },
+                    },
+                  ]}
+                />
               </ContextMenuContent>
             </ContextMenu>
           ) : (
@@ -1639,6 +1602,5 @@ TREE COMPONENTS
     );
   },
 };
-
 export const { Tree } = TREE_COMPONENTS;
 export default TREE_COMPONENTS.Tree;

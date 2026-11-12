@@ -1,5 +1,5 @@
 /**
- * astro/src/actions/docs/nodes.ts
+ * src/lib/terra/runtime/nodes.ts
  * Pure utility functions for parsing and rendering node blocks.
  * Extracted from the React component to prevent circular dependencies.
  */
@@ -16,8 +16,7 @@ import { parse as fromYaml } from 'yaml';
 import * as TerraQualityRegex from '../regex.mjs';
 
 // TYPES
-import type { DocsNodesDraft as Draft, Field } from './types.js';
-import type { Md } from './types.js';
+import type { Field, Md } from './types.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -34,10 +33,8 @@ trace('module.loaded');
  */
 export const EMPTY_NODES = `\n\n<Nodes\n  node_data={[\n    { id: 'start', type: 'origin', data: { title: 'Start' } }\n  ]}\n  edges_data={[]}\n  direction="TB"\n  height={400}\n/>\n\n`;
 
-/**
- * Handles the nodes route.
- */
-export const NODES = {
+/** Defines the editor defaults and field controls for the Docs Nodes block. */
+const NODES = {
   empty: EMPTY_NODES,
   jsx: EMPTY_NODES,
   fields:
@@ -119,14 +116,79 @@ export const NODES = {
     tag: /<Nodes\b[\s\S]*?\/>/g,
     meta: /\b(nodes|edges|direction|height|nodeSep|rankSep|proximityConnect)=\{metadata\.([A-Za-z0-9_$]+)\}/g,
   },
-  inline: (content: string, meta: Md = {}): string => {
-    trace('inline.start', { length: content.length });
-    const n = content
+  inline: (r: string, m: Md = {}): string => {
+    trace('inline.start', { length: r.length });
+    const n = r
       ?.replace(NODES.rx.import, '')
       ?.replace(NODES.rx.tag, (c) => {
-        const vals: Draft = Object.fromEntries(
-          Object.entries(properties(c)).map(([k, v]) => [k, `${v ?? ''}`]),
-        );
+        const vals: Record<string, boolean | string | undefined> = {};
+        let i = c.indexOf('Nodes') + 5;
+        while (i < c.length) {
+          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
+          if (c.slice(i).startsWith('/>') || c[i] === '>') break;
+          const name = c.slice(i).match(TerraQualityRegex.REGEX_A_ZA_Z_W_U_REGEX())?.[0];
+          if (!name) {
+            i++;
+            continue;
+          }
+          i += name.length;
+          const field = FIELDS.get(name);
+          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
+          if (c[i] !== '=') {
+            if (field?.kind === 'boolean') vals[field.key] = true;
+            continue;
+          }
+          i++;
+          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
+          if (!field) continue;
+          if (c[i] === '{') {
+            i++;
+            let depth = 1;
+            let value = '';
+            let quote: '"' | "'" | '`' | null = null;
+            for (; i < c.length; i++) {
+              const char = c[i];
+              if (!char) break;
+              if (quote) {
+                value += char;
+                if (char === '\\') {
+                  value += c[i + 1] ?? '';
+                  i++;
+                  continue;
+                }
+                if (char === quote) quote = null;
+                continue;
+              }
+              if (char === '"' || char === "'" || char === '`') {
+                quote = char;
+                value += char;
+                continue;
+              }
+              if (char === '{') {
+                depth++;
+                value += char;
+                continue;
+              }
+              if (char === '}') {
+                depth--;
+                if (!depth) break;
+                value += char;
+                continue;
+              }
+              value += char;
+            }
+            vals[field.key] = value.trim();
+            i++;
+            continue;
+          }
+          const marker = c[i];
+          if (marker !== '"' && marker !== "'") continue;
+          i++;
+          const end = c.indexOf(marker, i);
+          if (end === -1) break;
+          vals[field.key] = c.slice(i, end);
+          i = end + 1;
+        }
         const result: Record<string, unknown> = {};
         for (const field of NODES.fields) {
           const content = Object.hasOwn(vals, field.key) ? vals[field.key] : undefined;
@@ -138,7 +200,7 @@ export const NODES = {
             const trimmed = content.trim();
             const key = trimmed.match(/^metadata\.([A-Za-z0-9_$]+)$/)?.[1];
             if (key) {
-              result[NODES.keys[field.key]] = meta[key];
+              result[NODES.keys[field.key]] = m[key];
             } else result[NODES.keys[field.key]] = scalar(trimmed);
           }
         }
@@ -172,8 +234,8 @@ export const NODES = {
 				let i = 0;
 				while (i < line.length) {
 					const el = line.slice(i).match(/^([A-Za-z_$][\w$]*)\s*=\s*/u);
-					const attributeName = el?.[1];
-					if (!el || !attributeName) break;
+					const attrName = el?.[1];
+					if (!el || !attrName) break;
 					i += el[0].length;
 					let v = '';
 					let depth = 0;
@@ -214,7 +276,7 @@ export const NODES = {
 						i++;
 					}
 					const trimmed = v.trim();
-						assignmentVals[attributeName] = scalar((trimmed.match(/^\{([^{}\n]+)\}$/u)?.[1]?.trim() ?? (/^\{[-\w.'"`$]+\}$/u.test(trimmed) ? trimmed.slice(1, -1).trim() : null)) ?? trimmed);
+						assignmentVals[attrName] = scalar((trimmed.match(/^\{([^{}\n]+)\}$/u)?.[1]?.trim() ?? (/^\{[-\w.'"`$]+\}$/u.test(trimmed) ? trimmed.slice(1, -1).trim() : null)) ?? trimmed);
 						while (i < line.length && TerraQualityRegex.REGEX_S_U_REGEX().test(line[i] ?? '')) i++;
 				}
 			}
@@ -255,7 +317,7 @@ export const NODES = {
         );
       });
     trace('inline.complete', {
-      inputLength: content.length,
+      inputLength: r.length,
       outputLength: n?.length ?? 0,
       hasNodes: n?.includes('<Nodes'),
     });
@@ -266,11 +328,13 @@ export const NODES = {
 /**
  * Encodes node payload arrays into a serializer-safe string literal.
  *
+ * @param val - Node or edge array to encode for serializer round-tripping.
+ *
+ * @return Backtick-wrapped array literal with characters escaped for MDX attribute round-tripping; non-arrays encode as an empty array.
+ *
  * @remarks
  * A template literal keeps the payload readable while preventing mdxeditor from compacting the
  * payload back into a raw array expression during code/edit round-trips.
- *
- * @param value - Node or edge array to encode for safe serializer round-tripping.
  */
 export const encodeNodesPayload = (val: unknown): string =>
   `\`${(Array.isArray(val) ? `[\n${val.map((i) => `    ${literal(i)}`).join(',\n')}\n  ]` : '[]')
@@ -281,10 +345,12 @@ export const encodeNodesPayload = (val: unknown): string =>
 /**
  * Decodes a serializer-safe node payload back into arrays.
  *
+ * @param val - Raw array or serialized node payload in JSON or quoted-literal form.
+ *
+ * @return Parsed array payload, or an empty array for blank, malformed, or non-array input.
+ *
  * @remarks
  * Accepts raw arrays, JSON strings, backtick-wrapped literals, and the newer quoted payload.
- *
- * @param value - Serialized node payload in array, JSON, or quoted literal form.
  */
 export const decodeNodesPayload = (val: unknown): unknown[] => {
   if (Array.isArray(val)) return val;
@@ -310,39 +376,6 @@ export const decodeNodesPayload = (val: unknown): unknown[] => {
     return [];
   }
 };
-
-/**
- * Reflows serialized `Nodes` tags into a stable multiline attribute shell.
- *
- * @param source - MDX source that may contain one or more `Nodes` tags.
- *
- * @returns Source with `Nodes` tags rewritten to a multiline layout.
- *
- * @remarks
- * This keeps the code view stable even when the MDX editor would otherwise compact the shell.
- */
-export const fmtNodesSrc = (src: string): string => {
-  trace('format.start', { length: src.length });
-  const n = src.replace(NODES.rx.tag, (t) => {
-    return `<Nodes\n${NODES.fields
-      .flatMap((f) => {
-        const content = properties(t)[f.key];
-        if (validateType(['undefined'], content) || content === null || content === '') return [];
-        if (f.kind === 'boolean') return content === true || content === 'true' ? [f.key] : [];
-        if (f.key === 'nodes' || f.key === 'edges')
-          return [`${f.key}={${encodeNodesPayload(nodesPayload(content))}}`];
-        if (f.kind === 'string')
-          return typeof content === 'string' ? [`${f.key}=${JSON.stringify(content)}`] : [];
-        if (['height', 'nodeSep', 'rankSep'].includes(f.key))
-          return [`${f.key}={${typeof content === 'string' ? content.trim() : String(content)}}`];
-        return [`${f.key}={${JSON.stringify(content)}}`];
-      })
-      .map((a) => `  ${a}`)
-      .join('\n')}\n/>`;
-  });
-  trace('format.complete', { length: n.length });
-  return n;
-};
 const FIELDS = new Map<string, Field>(NODES.fields.map((f) => [f.key, f]));
 
 /*//////////////////////////////////////////////////
@@ -354,18 +387,17 @@ FUNCTIONS
  *
  * @param v - Value to stringify.
  *
- * @returns A one-line literal that stays readable inside MDX attribute shells.
+ * @return A one-line literal that stays readable inside MDX attribute shells.
  *
  * @remarks Keeps serialized node metadata compact enough to embed inside MDX attributes.
  */
 const literal = (v: unknown): string => {
   if (Array.isArray(v)) return `[${v.map(literal).join(', ')}]`;
-  if (v && typeof v === 'object') {
+  if (v && typeof v === 'object')
     return `{ ${Object.entries(v as Record<string, unknown>)
       .sort(([l], [r]) => l.localeCompare(r))
       .map(([k, e]) => `${JSON.stringify(k)}: ${literal(e)}`)
       .join(', ')} }`;
-  }
   if (typeof v === 'string') return JSON.stringify(v);
   if (typeof v === 'number' || typeof v === 'boolean') return `${v}`;
   if (v === null) return 'null';
@@ -373,13 +405,13 @@ const literal = (v: unknown): string => {
 };
 
 /**
- * Interprets a plain scalar string without forcing object or array parsing.
+ * Parses JavaScript-like scalar, array, and object literals while preserving ordinary text as a string.
  *
- * @param value - Scalar text to interpret.
+ * @param val - Source text containing a scalar literal or plain text.
  *
- * @returns Scalar value, or the original string when it should remain a literal label.
+ * @return The parsed value, or the original input string if parsing fails.
  *
- * @remarks The scalar path preserves plain strings unless they clearly parse as another primitive.
+ * @remarks Bracketed and braced values use the loose-literal parser; quoted and reserved literals are parsed directly.
  */
 const scalar = (val: string): unknown => {
   const trimmed = val.trim();
@@ -401,92 +433,11 @@ const scalar = (val: string): unknown => {
 };
 
 /**
- * Parses the raw attribute shell on a `Nodes` tag into a field map of editor keys and raw values.
- *
- * @param content - Raw `Nodes` tag source.
- *
- * @returns Parsed field values keyed by editor field name.
- *
- * @remarks This parser reads one inline `Nodes` tag at a time and preserves only recognized fields.
- */
-const properties = (content: string): Draft => {
-  const vals: Draft = {};
-  let i = content.indexOf('Nodes') + 5;
-  while (i < content.length) {
-    while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
-    if (content.slice(i).startsWith('/>') || content[i] === '>') break;
-    const name = content.slice(i).match(TerraQualityRegex.REGEX_A_ZA_Z_W_U_REGEX())?.[0];
-    if (!name) {
-      i++;
-      continue;
-    }
-    i += name.length;
-    const field = FIELDS.get(name);
-    while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
-    if (content[i] !== '=') {
-      if (field?.kind === 'boolean') vals[field.key] = true;
-      continue;
-    }
-    i++;
-    while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
-    if (!field) continue;
-    if (content[i] === '{') {
-      i++;
-      let depth = 1;
-      let v = '';
-      let mQuote: '"' | "'" | '`' | null = null;
-      for (; i < content.length; i++) {
-        const char = content[i];
-        if (!char) break;
-        if (mQuote) {
-          v += char;
-          if (char === '\\') {
-            v += content[i + 1] ?? '';
-            i++;
-            continue;
-          }
-          if (char === mQuote) mQuote = null;
-          continue;
-        }
-        if (char === '"' || char === "'" || char === '`') {
-          mQuote = char;
-          v += char;
-          continue;
-        }
-        if (char === '{') {
-          depth++;
-          v += char;
-          continue;
-        }
-        if (char === '}') {
-          depth--;
-          if (!depth) break;
-          v += char;
-          continue;
-        }
-        v += char;
-      }
-      vals[field.key] = v.trim();
-      i++;
-      continue;
-    }
-    const qmarker = content[i];
-    if (qmarker !== '"' && qmarker !== "'") continue;
-    i++;
-    const end = content.indexOf(qmarker, i);
-    if (end === -1) break;
-    vals[field.key] = content.slice(i, end);
-    i = end + 1;
-  }
-  return vals;
-};
-
-/**
  * Serializes a node payload into the `Nodes` JSX form used in docs.
  *
  * @param vals - Normalized node payload.
  *
- * @returns Rendered `Nodes` JSX string used by the editor and source view.
+ * @return Rendered `Nodes` JSX string used by the editor and source view.
  *
  * @remarks The rendered tag shape matches the editor-side `Nodes` component contract.
  */
@@ -498,9 +449,27 @@ const jsx = (vals: Record<string, unknown>): string => {
       if (f.kind === 'boolean') return content === true ? [f.key] : [];
       if (f.kind === 'string')
         return typeof content === 'string' ? [`${f.key}=${JSON.stringify(content)}`] : [];
-      return [
-        `${f.key}={${f.key === 'nodes' || f.key === 'edges' ? encodeNodesPayload(nodesPayload(content)) : literal(content)}}`,
-      ];
+      if (f.key === 'nodes' || f.key === 'edges') {
+        const decoded = decodeNodesPayload(content);
+        void {
+          rawType: Array.isArray(content) ? 'array' : typeof content,
+          rawLength: Array.isArray(content)
+            ? content.length
+            : typeof content === 'string'
+              ? content.length
+              : 0,
+          decodedLength: decoded.length,
+          decodedHead: decoded.length > 0 ? JSON.stringify(decoded[0]).slice(0, 200) : '',
+          preview:
+            typeof content === 'string'
+              ? content.slice(0, 160)
+              : Array.isArray(content)
+                ? JSON.stringify(content.slice(0, 1)).slice(0, 160)
+                : '',
+        };
+        return [`${f.key}={${encodeNodesPayload(decoded)}}`];
+      }
+      return [`${f.key}={${literal(content)}}`];
     })
     .join(' ')} />`;
 };
@@ -510,7 +479,7 @@ const jsx = (vals: Record<string, unknown>): string => {
  *
  * @param x - String value to quote if needed.
  *
- * @returns Original string when it is already safe, otherwise a JSON-quoted literal.
+ * @return Original string when it is already safe, otherwise a JSON-quoted literal.
  *
  * @remarks Plain identifiers are preserved so the generated YAML stays readable.
  */
@@ -530,7 +499,7 @@ const quote = (x: string): string => {
  *
  * @param body - Raw node block source.
  *
- * @returns Source with bare scalar values quoted so YAML does not misread them.
+ * @return Source with bare scalar values quoted so YAML does not misread them.
  *
  * @remarks This pass quotes bare values that would otherwise be misread as JS expressions.
  */
@@ -578,32 +547,6 @@ const loose = (body: string): string => {
     i = end;
   }
   return name;
-};
-
-/**
- * Normalizes a raw nodes payload before JSX emission.
- *
- * @param value - Raw attribute payload.
- *
- * @returns Decoded node payload ready for JSX emission.
- *
- * @remarks The payload may already be encoded as a backtick-wrapped string during a previous round-trip.
- */
-const nodesPayload = (val: unknown): unknown[] => {
-  const decoded = decodeNodesPayload(val);
-  void {
-    rawType: Array.isArray(val) ? 'array' : typeof val,
-    rawLength: Array.isArray(val) ? val.length : typeof val === 'string' ? val.length : 0,
-    decodedLength: decoded.length,
-    decodedHead: decoded.length > 0 ? JSON.stringify(decoded[0]).slice(0, 200) : '',
-    preview:
-      typeof val === 'string'
-        ? val.slice(0, 160)
-        : Array.isArray(val)
-          ? JSON.stringify(val.slice(0, 1)).slice(0, 160)
-          : '',
-  };
-  return decoded;
 };
 
 /*//////////////////////////////////////////////////

@@ -1,5 +1,16 @@
-import { configureDocsActionProxy } from './terra/runtime/action-proxy.js';
-import { setDocsCustomComponents } from './terra/custom-components.js';
+/**
+ * src/lib/host-runtime.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { actionProxy } from './terra/runtime/action-proxy.js';
+import { components } from './terra/custom-components.js';
+
+// TYPES
 import type {
   DocsActionOperation,
   DocsActionResult,
@@ -7,30 +18,44 @@ import type {
   DocsHostAdapter,
 } from './host.js';
 
-let activeHost: DocsHostAdapter | undefined;
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
 
+/**
+ * Returns the host adapter configured for the current Docs surface, if one is installed.
+ *
+ * @return The configured adapter, or `undefined` before a host installs one.
+ */
 export function getDocsHostAdapter(): DocsHostAdapter | undefined {
-  return activeHost;
+  return aHost;
 }
 
-/** Install host-owned storage and capability checks before mounting the Docs surface. */
+/**
+ * Install host-owned storage and capability checks before mounting the Docs surface.
+ *
+ * @param host - Host adapter that owns Docs operations and capability checks.
+ * @param customBlocks - Host-provided block renderers registered for this Docs surface.
+ */
 export function configureDocsHost(
   host: DocsHostAdapter,
   customBlocks: DocsCustomBlock[] = [],
 ): void {
-  activeHost = host;
-  setDocsCustomComponents(customBlocks);
-  configureDocsActionProxy(
-    async <T>(operation: DocsActionOperation, input?: unknown): Promise<DocsActionResult<T>> => {
-      if (operation.startsWith('write.') && !host.capabilities.write)
-        return { error: new Error('This Docs instance is read-only.') };
-      if (operation.startsWith('write.attachment.') && !host.capabilities.attachments)
-        return { error: new Error('Attachment changes are disabled for this Docs instance.') };
-      if (operation.startsWith('write.doc.reorder') && !host.capabilities.reorder)
-        return { error: new Error('Reordering is disabled for this Docs instance.') };
-      if (operation.includes('.versions.') && !host.capabilities.history)
-        return { error: new Error('History is disabled for this Docs instance.') };
-      return host.invoke<T>(operation, input);
-    },
-  );
+  aHost = host;
+  components.splice(0, components.length, ...customBlocks);
+  actionProxy.invoke = async <T>(
+    op: DocsActionOperation,
+    input?: unknown,
+  ): Promise<DocsActionResult<T>> => {
+    if (op.startsWith('write.') && !host.capabilities.write)
+      return { error: new Error('This Docs instance is read-only.') };
+    if (op.startsWith('write.attachment.') && !host.capabilities.attachments)
+      return { error: new Error('Attachment changes are disabled for this Docs instance.') };
+    if (op.startsWith('write.doc.reorder') && !host.capabilities.reorder)
+      return { error: new Error('Reordering is disabled for this Docs instance.') };
+    if (op.includes('.versions.') && !host.capabilities.history)
+      return { error: new Error('History is disabled for this Docs instance.') };
+    return host.invoke<T>(op, input);
+  };
 }
+let aHost: DocsHostAdapter | undefined;

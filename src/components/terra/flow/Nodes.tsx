@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/flow/Nodes.tsx
+ * src/components/terra/flow/Nodes.tsx
  */
 
 /*//////////////////////////////////////////////////
@@ -18,15 +17,17 @@ import {
 import {
   cn,
   createTrace,
-  errorLog,
   isRec,
+  logErr,
   validateType,
   warn as logWarn,
 } from '../../../lib/terra/runtime/runtime.js';
-import { getCustomPos, getGroupId, getNodeSize, layoutGraph, useEditor } from './_chrome.js';
+import { getGroupId, getNodeSize } from './_chrome.js';
+import { toPng } from 'html-to-image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // COMPONENTS
+import Dagre from '@dagrejs/dagre';
 import React from 'react';
 import {
   AlignHorizontalCenter as AlignHorizontalCenterIcon,
@@ -45,7 +46,9 @@ import {
   DistributeVerticalCenter as DistributeVerticalCenterIcon,
   DistributeVerticalTop as DistributeVerticalTopIcon,
   Document as NoteIcon,
+  Download as DownloadIcon,
   Edit as EditIcon,
+  FitToScreen as FitToScreenIcon,
   MagicWand as WandIcon,
   Maximize as MaximizeIcon,
   ObjectStorage as GroupIcon,
@@ -57,6 +60,8 @@ import {
   Task as ProcessIcon,
   TrashCan as TrashIcon,
   Undo as UndoIcon,
+  ZoomIn as ZoomInIcon,
+  ZoomOut as ZoomOutIcon,
 } from '@carbon/icons-react';
 import {
   Background,
@@ -67,9 +72,9 @@ import {
   ReactFlow,
   ReactFlowProvider,
 } from '@xyflow/react';
-import { Button } from '@terra-symposium/styling/ui/terra-original';
-import { ButtonGroup } from '@terra-symposium/styling/ui/terra-original';
 import {
+  Button,
+  ButtonGroup,
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -78,16 +83,15 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from '@terra-symposium/styling/ui/terra-original';
+} from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../ui.js';
-import { Handles, SkeletonCard, ZoomControls } from './_chrome.js';
+import { Handles, SkeletonCard } from './_chrome.js';
 
 // TYPES
 import type {
   Connection,
   EdgeChange,
   EdgeMarkerType,
-  EdgeProps,
   Node as XyNode,
   NodeChange,
   NodeProps,
@@ -95,13 +99,12 @@ import type {
 } from '@xyflow/react';
 import type {
   Edge,
-  FlowEdgeData,
   FlowNode,
+  GroupNodeData,
   NodeData,
+  NodesProps,
   Pos,
 } from '../../../lib/terra/runtime/types.js';
-import type { GroupNodeData, NodesProps } from '../../../lib/terra/runtime/types.js';
-import type { FlowMenuContext } from './menuContext.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -185,43 +188,6 @@ NODE TYPES
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the container node used to group related flowchart nodes.
- *
- * @param props - Flow node props.
- * @param data - Group node data and resize hooks.
- * @param selected - Boolean flag controlling group node's selected behaviour.
- *
- * @return Resizable group frame, title bar, and group handles.
- */
-export function GroupNode({ data, selected }: NodeProps<XyNode<GroupNodeData>>): React.JSX.Element {
-  return (
-    <ErrorBoundary name="GroupNode">
-      <NodeResizer
-        color="#ef4444"
-        isVisible={selected && data.editable === true}
-        minWidth={160}
-        minHeight={100}
-        onResizeEnd={(_e, p): void => {
-          if (data.id) data.onResizeEnd?.(data.id, p);
-        }}
-      />
-      <div
-        className={cn(
-          'size-full text-primary-11 transition-all',
-          selected && `rounded-lg ${NODE_CLASS.selected}`,
-          data.isDragTarget && 'ring-dashed rounded-lg bg-primary-3/20 ring-2 ring-primary-6',
-        )}
-      >
-        <div className="border-b border-primary-6 pb-2 text-lg font-bold text-primary-12">
-          {data.title}
-        </div>
-        <Handles editable={data.editable === true} {...data.requiredHandles} />
-      </div>
-    </ErrorBoundary>
-  );
-}
-
-/**
  * Creates a higher-order flowchart node renderer with specified styling.
  *
  * @param className - CSS classes applied to the shell container.
@@ -233,12 +199,19 @@ function createNode(
   className: string,
   inner?: string,
 ): (props: NodeProps<XyNode<NodeData>>) => React.JSX.Element {
-  return function NodeCard({ data, selected }: NodeProps<XyNode<NodeData>>): React.JSX.Element {
+  /**
+   * Renders a flow node as a link, action button, or inert container from its data.
+   * @param nodeProps React Flow selection state and node data for this diagram item.
+   * @returns The styled node shell with its title and configured connection handles.
+   */
+  const NodeCard = (nodeProps: NodeProps<XyNode<NodeData>>): React.JSX.Element => {
+    const { data, selected } = nodeProps;
     const Element = data.onClick ? 'button' : data.href ? 'a' : 'div';
     return (
       <Element
         {...(Element === 'button' ? { type: 'button' } : {})}
         {...(Element === 'a' ? { href: data.href } : {})}
+        {...(Element === 'a' ? { 'data-docs-flow-node-link': '' } : {})}
         onClick={data.onClick}
         className={cn(
           'relative block min-w-40 text-pretty p-2 text-center text-sm font-normal !no-underline shadow-md transition-shadow',
@@ -255,132 +228,182 @@ function createNode(
       </Element>
     );
   };
-}
-
-/**
- * Renders a sticky-note style node in the flowchart.
- *
- * @param props - Flow node props.
- * @param id - Unique clipping mask identifier.
- * @param data - Sticky note text and resize hooks.
- * @param selected - Boolean flag controlling note node's selected behaviour.
- *
- * @return Sticky note styled container.
- */
-export function NoteNode({
-  id,
-  data,
-  selected,
-}: NodeProps<XyNode<GroupNodeData>>): React.JSX.Element {
-  return (
-    <ErrorBoundary name="NoteNode">
-      <NodeResizer
-        color="#ef4444"
-        isVisible={selected && data.editable === true}
-        minWidth={128}
-        minHeight={128}
-        onResizeEnd={(_e, p): void => {
-          if (data.id) data.onResizeEnd?.(data.id, p);
-        }}
-      />
-      <div
-        className={cn(
-          "relative size-full min-h-32 min-w-32 before:absolute before:left-[5px] before:top-[30%] before:h-3/4 before:w-[90%] before:bg-black/25 before:shadow-[rgba(0,0,0,0.5)_-2px_2px_15px] before:content-['']",
-          selected && NODE_CLASS.selected,
-        )}
-      >
-        <svg width="0" height="0" className="absolute">
-          <defs>
-            <clipPath id={`sticky-${id}`} clipPathUnits="objectBoundingBox">
-              <path d="M 1 0 Q 1 0.69, 0.97 0.96 0.97 0.96, 0 0.96 Q 0.04 0.69, 0.04 0 0.04 0, 1 0" />
-            </clipPath>
-          </defs>
-        </svg>
-        <div
-          className="relative flex size-full min-h-32 min-w-32 items-center justify-center bg-yellow-300 p-5 pt-3 text-center text-sm font-normal text-yellow-950 shadow-md"
-          style={{ clipPath: `url(#sticky-${id})` }}
-        >
-          {data.title}
-        </div>
-      </div>
-    </ErrorBoundary>
-  );
+  return NodeCard;
 }
 export const NODE_TYPES = {
-  erd: function ErdNode({ data, selected }: NodeProps<XyNode<NodeData>>): React.JSX.Element {
-    const compact = data.compact === true;
-    const Element = data.onClick ? 'button' : data.href ? 'a' : 'div';
-    return (
-      <Element
-        type={Element === 'button' ? 'button' : undefined}
-        href={Element === 'a' ? data.href : undefined}
-        onClick={data.onClick}
-        className={cn(
-          'block max-h-96 w-full overflow-y-scroll rounded-md border-2 border-primary-6 bg-primary-2 text-primary-12 !no-underline shadow-lg transition-shadow',
-          compact ? 'text-xs' : 'text-sm',
-          selected && NODE_CLASS.selected,
-        )}
-      >
-        <div
+  erd:
+    /**
+     * Renders an entity-relationship node with its typed attribute rows and positional handles.
+     *
+     * @param d Entity name, fields, compact-view preference, and optional navigation action.
+     * @param s Whether React Flow currently marks this node as selected.
+     * @returns The entity card, including math-rendered attribute types when authored.
+     */
+    function ErdNode({ data: d, selected: s }: NodeProps<XyNode<NodeData>>): React.JSX.Element {
+      const compact = d.compact === true;
+      const Element = d.onClick ? 'button' : d.href ? 'a' : 'div';
+      return (
+        <Element
+          type={Element === 'button' ? 'button' : undefined}
+          href={Element === 'a' ? d.href : undefined}
+          data-docs-flow-node-link={Element === 'a' ? '' : undefined}
+          onClick={d.onClick}
           className={cn(
-            'border-b-2 border-primary-6 bg-primary-3 text-center font-bold text-primary-12',
-            compact ? 'px-2 py-0.5 text-sm' : 'px-3 py-2 text-lg',
+            'block max-h-96 w-full overflow-y-scroll rounded-md border-2 border-primary-6 bg-primary-2 text-primary-12 !no-underline shadow-lg transition-shadow',
+            compact ? 'text-xs' : 'text-sm',
+            s && NODE_CLASS.selected,
           )}
         >
-          {data.title}
-        </div>
-        {data.attributes && data.attributes.length > 0 && (
-          <ul className={cn('my-0', compact ? 'gap-y-0.5 p-0.5 px-1.5' : 'p-2')}>
-            {data.attributes.map((a) => (
-              <li
-                key={a.name}
-                className={cn(
-                  'grid grid-cols-[auto,1fr] font-mono',
-                  compact ? 'my-0 gap-x-2 leading-tight' : 'gap-x-3 gap-y-0',
-                )}
-              >
-                <span className="shrink-0">{a.name}</span>
-                {(() => {
-                  const inlineMath = a.type.match(/^\$(?!\$)([\s\S]+)\$$/);
-                  const displayMath = a.type.match(/^\$\$([\s\S]+)\$\$$/);
-                  if (!inlineMath && !displayMath)
-                    return <span className={NODE_CLASS.attribute}>{a.type}</span>;
-                  return (
-                    <span
-                      className={`${NODE_CLASS.attribute} [&_.katex-display]:m-0 [&_.katex]:text-inherit`}
-                      dangerouslySetInnerHTML={{
-                        __html: katex.renderToString(
-                          (displayMath?.[1] ?? inlineMath?.[1] ?? '').trim(),
-                          {
-                            displayMode: Boolean(displayMath),
-                            throwOnError: false,
-                            strict: 'ignore',
-                          },
-                        ),
-                      }}
-                    />
-                  );
-                })()}
-              </li>
-            ))}
-          </ul>
-        )}
-        <Handles
-          editable={data.editable === true}
-          sources={data.requiredHandles?.sources ?? []}
-          tgts={data.requiredHandles?.tgts ?? []}
-        />
-      </Element>
-    );
-  },
+          <div
+            className={cn(
+              'border-b-2 border-primary-6 bg-primary-3 text-center font-bold text-primary-12',
+              compact ? 'px-2 py-0.5 text-sm' : 'px-3 py-2 text-lg',
+            )}
+          >
+            {d.title}
+          </div>
+          {d.attributes && d.attributes.length > 0 && (
+            <ul className={cn('my-0', compact ? 'gap-y-0.5 p-0.5 px-1.5' : 'p-2')}>
+              {d.attributes.map((a) => (
+                <li
+                  key={a.name}
+                  className={cn(
+                    'grid grid-cols-[auto,1fr] font-mono',
+                    compact ? 'my-0 gap-x-2 leading-tight' : 'gap-x-3 gap-y-0',
+                  )}
+                >
+                  <span className="shrink-0">{a.name}</span>
+                  {(() => {
+                    const attrType = a.type ?? '';
+                    const inlineMath = attrType.match(/^\$(?!\$)([\s\S]+)\$$/);
+                    const displayMath = attrType.match(/^\$\$([\s\S]+)\$\$$/);
+                    if (!inlineMath && !displayMath)
+                      return <span className={NODE_CLASS.attribute}>{a.type}</span>;
+                    return (
+                      <span
+                        className={`${NODE_CLASS.attribute} [&_.katex-display]:m-0 [&_.katex]:text-inherit`}
+                        dangerouslySetInnerHTML={{
+                          __html: katex.renderToString(
+                            (displayMath?.[1] ?? inlineMath?.[1] ?? '').trim(),
+                            {
+                              displayMode: Boolean(displayMath),
+                              throwOnError: false,
+                              strict: 'ignore',
+                            },
+                          ),
+                        }}
+                      />
+                    );
+                  })()}
+                </li>
+              ))}
+            </ul>
+          )}
+          <Handles
+            editable={d.editable === true}
+            sources={d.requiredHandles?.sources ?? []}
+            tgts={d.requiredHandles?.tgts ?? []}
+          />
+        </Element>
+      );
+    },
   process: createNode(NODE_STYLES.process),
   terminator: createNode(NODE_STYLES.terminator),
   origin: createNode(NODE_STYLES.origin),
   terminal: createNode(NODE_STYLES.terminal),
   decision: createNode(NODE_STYLES.decision),
   data: createNode(NODE_STYLES.data, 'block skew-x-12'),
-  note: NoteNode,
-  group: GroupNode,
+  note:
+    /**
+     * Renders a resizable sticky note and forwards its final size to the graph owner.
+     *
+     * @param i Unique React Flow node ID used to scope the note's clipped paper shape.
+     * @param v Note text, editability, handles, and optional resize callback.
+     * @param s Whether the node is selected and should expose its resize affordance.
+     * @returns The note surface, resize control, and connection handles.
+     */
+    function NoteNode({
+      id: i,
+      data: v,
+      selected: s,
+    }: NodeProps<XyNode<GroupNodeData>>): React.JSX.Element {
+      return (
+        <ErrorBoundary name="NoteNode">
+          <NodeResizer
+            color="#ef4444"
+            isVisible={s && v.editable === true}
+            minWidth={128}
+            minHeight={128}
+            onResizeEnd={(_e, p): void => {
+              if (v.id) v.onResizeEnd?.(v.id, p);
+            }}
+          />
+          <div
+            className={cn(
+              "relative size-full min-h-32 min-w-32 before:absolute before:left-[5px] before:top-[30%] before:h-3/4 before:w-[90%] before:bg-black/25 before:shadow-[rgba(0,0,0,0.5)_-2px_2px_15px] before:content-['']",
+              s && NODE_CLASS.selected,
+            )}
+          >
+            <Handles
+              editable={v.editable === true}
+              sources={v.requiredHandles?.sources ?? []}
+              tgts={v.requiredHandles?.tgts ?? []}
+            />
+            <svg width="0" height="0" className="absolute">
+              <defs>
+                <clipPath id={`sticky-${i}`} clipPathUnits="objectBoundingBox">
+                  <path d="M 1 0 Q 1 0.69, 0.97 0.96 0.97 0.96, 0 0.96 Q 0.04 0.69, 0.04 0 0.04 0, 1 0" />
+                </clipPath>
+              </defs>
+            </svg>
+            <div
+              className="relative flex size-full min-h-32 min-w-32 items-center justify-center bg-yellow-300 p-5 pt-3 text-center text-sm font-normal text-yellow-950 shadow-md"
+              style={{ clipPath: `url(#sticky-${i})` }}
+            >
+              {v.title}
+            </div>
+          </div>
+        </ErrorBoundary>
+      );
+    },
+  group:
+    /**
+     * Renders a group boundary that can receive child nodes and be resized while selected.
+     *
+     * @param d Group title, drag-target state, editability, and resize callback.
+     * @param s Whether the group is selected and may show its resize affordance.
+     * @returns The group container and its connection handles.
+     */
+    function GroupNode({
+      data: d,
+      selected: s,
+    }: NodeProps<XyNode<GroupNodeData>>): React.JSX.Element {
+      return (
+        <ErrorBoundary name="GroupNode">
+          <NodeResizer
+            color="#ef4444"
+            isVisible={s && d.editable === true}
+            minWidth={160}
+            minHeight={100}
+            onResizeEnd={(_e, p): void => {
+              if (d.id) d.onResizeEnd?.(d.id, p);
+            }}
+          />
+          <div
+            className={cn(
+              'size-full text-primary-11 transition-all',
+              s && `rounded-lg ${NODE_CLASS.selected}`,
+              d.isDragTarget && 'ring-dashed rounded-lg bg-primary-3/20 ring-2 ring-primary-6',
+            )}
+          >
+            <div className="border-b border-primary-6 pb-2 text-lg font-bold text-primary-12">
+              {d.title}
+            </div>
+            <Handles editable={d.editable === true} {...d.requiredHandles} />
+          </div>
+        </ErrorBoundary>
+      );
+    },
 };
 
 /*//////////////////////////////////////////////////
@@ -392,11 +415,11 @@ CANVAS
  *
  * @param v - Flow nodes to sync.
  * @param r - Flow edges to sync.
- * @param dir - Whether nodes rank top-to-bottom (`TB`) or left-to-right (`LR`).
- * @param proximityConnect - Connection rule that lets nearby graph nodes link automatically in sync graph.
- * @param editable - Editability flag controlling whether sync graph accepts changes.
- * @param arcControls - Arc controls input supplied to sync graph's operation.
- * @param onResizeEnd - Callback fired after a group node resize is committed.
+ * @param d - Whether nodes rank top-to-bottom (`TB`) or left-to-right (`LR`).
+ * @param p - Connection rule that lets nearby graph nodes link automatically in sync graph.
+ * @param c - Editability flag controlling whether sync graph accepts changes.
+ * @param a - Whether nodes use named Arc handles instead of positional handles.
+ * @param o - Callback fired after a group node resize is committed.
  *
  * @return Node and edge arrays after layout, handle assignment, and grouping metadata are applied.
  *
@@ -406,14 +429,11 @@ CANVAS
 function syncGraph(
   v: FlowNode[],
   r: Edge[],
-  dir: 'TB' | 'LR',
-  proximityConnect: boolean,
-  editable: boolean,
-  arcControls: boolean,
-  onResizeEnd?: (
-    id: string,
-    params: { x: number; y: number; width: number; height: number },
-  ) => void,
+  d: 'TB' | 'LR',
+  p: boolean,
+  c: boolean,
+  a: boolean,
+  o?: (id: string, params: { x: number; y: number; width: number; height: number }) => void,
 ): { nodes: FlowNode[]; edges: Edge[] } {
   const sNodes = Array.isArray(v) ? v : [];
   const nodesById = new Map(sNodes.map((_node) => [_node.id, _node]));
@@ -422,7 +442,12 @@ function syncGraph(
     edges: (Array.isArray(r) ? r : [])
       .filter((_e) => nodesById.has(_e.source) && nodesById.has(_e.target))
       .map((e) => {
-        const edgeData: FlowEdgeData = e.data ?? {};
+        const edgeData: Record<string, unknown> & {
+          color?: string;
+          label?: string;
+          srcHandleOverride?: string;
+          tgtHandleOverride?: string;
+        } = e.data ?? {};
         const l = isRec(e) ? (e as Record<string, unknown>) : {};
         const arrowHead = edgeData.arrowHead ?? (l['arrowHead'] as boolean) ?? false;
         const srcOverride = edgeData.srcHandleOverride ?? (l['srcHandleOverride'] as Pos);
@@ -433,12 +458,12 @@ function syncGraph(
           : undefined;
         let srcHandle: string;
         let tgtHandle: string;
-        if (arcControls) {
+        if (a) {
           // Arc nodes use named ports, not the positional ports used by docs flowcharts.
           srcHandle =
             e.sourceHandle && !HANDLES.includes(e.sourceHandle as Pos) ? e.sourceHandle : 'default';
           tgtHandle = 'inbound';
-        } else if (proximityConnect) {
+        } else if (p) {
           const dx =
             (nodesById.get(e.target)!.position?.x ?? 0) -
             (nodesById.get(e.source)!.position?.x ?? 0);
@@ -448,18 +473,24 @@ function syncGraph(
           const horizontal = Math.abs(dx) > Math.abs(dy);
           srcHandle = horizontal ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'bottom' : 'top';
           tgtHandle = horizontal ? (dx > 0 ? 'left' : 'right') : dy > 0 ? 'top' : 'bottom';
-        } else if (!proximityConnect && dir === 'TB') {
+        } else if (!p && d === 'TB') {
           srcHandle = srcOverride ?? 'bottom';
           tgtHandle = tgtOverride ?? 'top';
         } else {
-          srcHandle = srcOverride ?? (dir === 'LR' ? 'right' : 'bottom');
-          tgtHandle = tgtOverride ?? (dir === 'LR' ? 'left' : 'top');
+          srcHandle = srcOverride ?? (d === 'LR' ? 'right' : 'bottom');
+          tgtHandle = tgtOverride ?? (d === 'LR' ? 'left' : 'top');
         }
-        if (!arcControls) {
+        if (!a) {
           if (!handlesByNodeId.has(e.source))
-            handlesByNodeId.set(e.source, { sources: new Set(), tgts: new Set() });
+            handlesByNodeId.set(e.source, {
+              sources: new Set(),
+              tgts: new Set(),
+            });
           if (!handlesByNodeId.has(e.target))
-            handlesByNodeId.set(e.target, { sources: new Set(), tgts: new Set() });
+            handlesByNodeId.set(e.target, {
+              sources: new Set(),
+              tgts: new Set(),
+            });
           handlesByNodeId.get(e.source)!.sources.add(srcHandle as Pos);
           handlesByNodeId.get(e.target)!.tgts.add(tgtHandle as Pos);
         }
@@ -488,7 +519,6 @@ function syncGraph(
       const resGroupId = getGroupId(n);
       return {
         ...n,
-        parentId: undefined, // enforce flat absolute structure globally
         className: cn(
           validateType(['string'], n.className) || Array.isArray(n.className)
             ? n.className
@@ -497,16 +527,16 @@ function syncGraph(
             'rounded-lg border !border-primary-6 !bg-primary-2 !text-primary-12',
         ),
         zIndex: n.type === 'group' ? -10 : 10,
-        nodeOrigin: n.type === 'group' ? [0, 0] : [0.5, 0.5],
+        nodeOrigin: n.type === 'group' ? ([0, 0] as const) : ([0.5, 0.5] as const),
         data: {
           ...(n.data && validateType(['object'], n.data) ? n.data : { title: '', attributes: [] }),
           id: n.id,
-          editable,
+          editable: c,
           ...(resGroupId ? { groupId: resGroupId } : {}),
-          ...(onResizeEnd ? { onResizeEnd } : {}),
+          ...(o ? { onResizeEnd: o } : {}),
           requiredHandles: {
-            sources: editable ? HANDLES : Array.from(handles?.sources ?? []),
-            targets: editable ? HANDLES : Array.from(handles?.tgts ?? []),
+            sources: c ? HANDLES : Array.from(handles?.sources ?? []),
+            targets: c ? HANDLES : Array.from(handles?.tgts ?? []),
           },
         },
       };
@@ -520,52 +550,45 @@ function syncGraph(
     edges: syncedGraph.edges,
   };
 }
-
 const FLOW_COMPONENTS = {
   nodeTypes: NODE_TYPES,
   /**
-   * Renders the interactive flow canvas and context menus for n editing, grouping, and layout.
+   * Renders the React Flow canvas and forwards graph events to the supplied handlers.
    *
-   * @param props - Flow nodes and edges, node/edge renderers, graph callbacks, context-menu actions, and canvas display options.
-   * @param _onEdgeDoubleClick - Edge double-click handler.
-   * @param nodeTypes - Node renderer map that draws graph nodes in canvas.
-   * @param edgeTypes - Edge renderer map that draws graph connections in canvas.
-   * @param nodeLabels - Node label map shown alongside canvas's graph nodes.
-   * @param onNodeClick - Callback invoked when a user selects a node in canvas.
-   * @param onEdgeDoubleClick - Callback invoked for edge double click.
-   * @param onAddContent - Callback invoked for add content.
-   * @param lockedTypes - Node types that canvas must keep read-only.
-   * @param allowedTypes - Node types that canvas permits users to create.
-   * @param onReady - Callback invoked when canvas finishes initialising its graph surface.
-   * @param height - Viewport height reserved for canvas's graph surface.
-   * @param arcControls - Arc controls input supplied to canvas's operation.
-   * @param readyWhenEmpty - Readiness rule that lets canvas finish with no graph nodes.
-   * @param flow - Flow graph data rendered into canvas's canvas.
-   * @param interactive - Interaction flag that controls whether canvas accepts graph input.
-   * @param editable - Editability flag controlling whether canvas accepts changes.
-   * @param isFocused - Boolean flag controlling canvas's is focused behaviour.
-   * @param onNodesChange - Callback invoked with the updated node changes from canvas.
-   * @param onEdgesChange - Callback invoked with the updated edge changes from canvas.
-   * @param onConnect - Callback invoked with a new connection created in canvas.
-   * @param onAddNode - Callback invoked for add node.
-   * @param onGroupNodes - Callback invoked for group nodes.
-   * @param onUngroupNodes - Callback invoked for ungroup nodes.
-   * @param onDeleteSelected - Callback invoked for delete selected.
-   * @param onAlignNodes - Callback invoked for align nodes.
-   * @param onDistributeNodes - Callback invoked for distribute nodes.
-   * @param onRenameNode - Callback invoked for rename node.
-   * @param onChangeNodeType - Callback invoked for change node type.
-   * @param onChangeEdgeStyle - Callback invoked for change edge style.
-   * @param onDeleteEdge - Callback invoked for delete edge.
-   * @param onAutoLayout - Callback invoked for auto layout.
-   * @param showBg - Visibility flag for canvas's graph background.
-   * @param showCtrls - Visibility flag for canvas's graph controls.
+   * @param flow Graph nodes and edges displayed by the canvas.
+   * @param nodeTypes React Flow node renderer map, including the built-in node types.
+   * @param edgeTypes Optional React Flow edge renderer map.
+   * @param nodeLabels Labels displayed for node types in the canvas controls.
+   * @param onNodeClick Optional callback receiving a clicked graph node.
+   * @param onNodesChange Callback receiving React Flow node changes.
+   * @param onEdgesChange Callback receiving React Flow edge changes.
+   * @param onConnect Callback receiving a new edge connection.
+   * @param onEdgeDoubleClick Callback invoked when a graph edge is double-clicked.
+   * @param onAddNode Callback that creates a node of the selected type at the supplied position.
+   * @param onAddContent Optional callback that adds Docs content at a canvas position.
+   * @param lockedTypes Node types whose nodes cannot be edited.
+   * @param allowedTypes Node types available for creation in the canvas controls.
+   * @param onGroupNodes Callback receiving the group node, its selected children, and its position.
+   * @param onUngroupNodes Callback receiving the nodes to remove from a group.
+   * @param onDeleteSelected Callback receiving the selected nodes to delete.
+   * @param onAlignNodes Callback receiving the selected nodes and alignment direction.
+   * @param onDistributeNodes Callback receiving the selected nodes and distribution direction.
+   * @param onRenameNode Callback receiving the identifier of the node to rename.
+   * @param onChangeNodeType Callback receiving a node identifier and its replacement type.
+   * @param onChangeEdgeStyle Callback receiving an edge identifier and its replacement style.
+   * @param onDeleteEdge Callback receiving the identifier of the edge to delete.
+   * @param onAutoLayout Callback that requests automatic layout of the graph.
+   * @param onReady Optional callback invoked when the canvas is ready to use.
+   * @param interactive Whether the canvas allows interactive graph gestures such as node dragging.
+   * @param editable Whether graph operations may update and commit the graph data.
+   * @param isFocused Whether the canvas currently owns keyboard focus.
+   * @param height Height of the React Flow viewport in pixels.
+   * @param showBg Whether to render the canvas background grid.
+   * @param showCtrls Whether to render the React Flow controls.
+   * @param arcControls Whether the controls include the graph's edge-editing actions.
+   * @param readyWhenEmpty Whether an empty graph can be reported as ready.
    *
-   * @return Interactive React Flow canvas and its context-menu actions.
-   *
-   * @remarks
-   * This component stays intentionally thin and delegates all graph mutation logic to the helper
-   * functions above.
+   * @return The React Flow canvas configured with this graph and its interaction handlers.
    */
   Canvas({
     flow,
@@ -603,7 +626,7 @@ const FLOW_COMPONENTS = {
   }: {
     flow: { nodes: FlowNode[]; edges: Edge[] };
     nodeTypes: Record<string, React.ComponentType<NodeProps<FlowNode>>>;
-    edgeTypes?: Record<string, React.ComponentType<EdgeProps<Edge>>>;
+    edgeTypes?: NodesProps['edgeTypes'];
     nodeLabels: Partial<Record<keyof typeof NODE_TYPES, string>>;
     onNodeClick?: (n: FlowNode) => void;
     onNodesChange: (changes: NodeChange<FlowNode>[]) => void;
@@ -640,10 +663,14 @@ const FLOW_COMPONENTS = {
     // STATES
     const {
       fitView,
+      getViewport,
       screenToFlowPosition: screenToFlowPos,
       getIntersectingNodes,
+      setViewport,
       updateNodeData,
       getNodes,
+      zoomIn,
+      zoomOut,
     } = useReactFlow();
     const nodesInit = useNodesInitialized();
     const hasInitialLayout = useRef(false);
@@ -652,8 +679,15 @@ const FLOW_COMPONENTS = {
     const dragTgtGroup = useRef<string | null>(null);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [ready, setReady] = useState(readyWhenEmpty && flow.nodes.length === 0);
+    const [isExporting, setIsExporting] = useState(false);
     const notified = useRef(false);
-    const [menuCtx, setMenuCtx] = useState<FlowMenuContext>({ type: 'pane', id: null });
+    const [menuCtx, setMenuCtx] = useState<{
+      type: 'pane' | '_node' | 'e';
+      id: string | null;
+    }>({
+      type: 'pane',
+      id: null,
+    });
 
     // INIT
     useEffect(() => {
@@ -694,16 +728,16 @@ const FLOW_COMPONENTS = {
       [nodesMap, menuCtx.type, menuCtx.id],
     );
 
-    /**
-     * Checks whether the n is locked.
-     *
-     * @param n - Value passed to the helper.
-     *
-     * @returns True when the n is missing or its type is blocked from editing.
+    /** Returns `true` for a missing node or a node type that cannot be edited.
+     * @param n Node resolved from the current flow menu, if it still exists.
+     * @returns Whether editing actions should be blocked for this node.
      */
     const locked = (n: FlowNode | undefined): boolean => {
       if (!n) {
-        logWarn('AuthNodes', 'menu.n-missing', { menuCtx, nodeCount: flow.nodes.length });
+        logWarn('AuthNodes', 'menu.n-missing', {
+          menuCtx,
+          nodeCount: flow.nodes.length,
+        });
         return true;
       }
       return lockedTypes.includes(n.type as keyof typeof NODE_TYPES);
@@ -711,11 +745,65 @@ const FLOW_COMPONENTS = {
     const isTgtLocked = React.useMemo(() => {
       if (menuCtx.type !== '_node' || menuCtx.id === null) return false;
       if (!tgtNode) {
-        logWarn('AuthNodes', 'menu.n-missing', { menuCtx, nodeCount: flow.nodes.length });
+        logWarn('AuthNodes', 'menu.n-missing', {
+          menuCtx,
+          nodeCount: flow.nodes.length,
+        });
         return true;
       }
       return locked(tgtNode);
     }, [flow.nodes.length, lockedTypes, menuCtx, tgtNode]);
+    const exportAction = {
+      disabled: isExporting || !ready,
+      run: useCallback(async (): Promise<void> => {
+        const wrapper = reactFlowWrapper.current;
+        if (!wrapper || isExporting || !ready) return;
+        const restore: {
+          viewport: ReturnType<typeof getViewport>;
+          handleVisibility: string[];
+        } = { viewport: getViewport(), handleVisibility: [] };
+        const handles = wrapper.querySelectorAll<HTMLElement>('.flow-node-handle');
+        restore.handleVisibility = Array.from(handles, (handle) => handle.style.visibility);
+        setIsExporting(true);
+        try {
+          await fitView({ padding: 0.15, duration: 0 });
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          handles.forEach((handle) => {
+            handle.style.visibility = 'hidden';
+          });
+          ((dataUrl: string) => {
+            const link = document.createElement('a');
+            link.download = 'diagram.png';
+            link.href = dataUrl;
+            link.click();
+          })(
+            await toPng(wrapper, {
+              cacheBust: true,
+              pixelRatio: 2,
+              backgroundColor: '#fff',
+              style: { backgroundColor: '#fff', color: '#111827' },
+              filter: (node) =>
+                ![
+                  'react-flow__controls',
+                  'react-flow__background',
+                  'react-flow__attribution',
+                  'react-flow__handle',
+                ].some((className) => node.classList?.contains(className)),
+            }),
+          );
+        } catch (err) {
+          logErr('Nodes', 'export.failed', err);
+        } finally {
+          handles.forEach((handle, i) => {
+            handle.style.visibility = restore.handleVisibility[i] ?? '';
+          });
+          await setViewport(restore.viewport, { duration: 0 }).catch((error) => {
+            logErr('Nodes', 'export.viewport-restore.failed', error);
+          });
+          setIsExporting(false);
+        }
+      }, [fitView, getViewport, isExporting, ready, setViewport]),
+    };
 
     // RENDER
     return (
@@ -769,32 +857,35 @@ const FLOW_COMPONENTS = {
                 setMenuCtx({ type: 'e', id: v.id });
               }}
               onPaneContextMenu={() => {
-                trace('menu.pane', { nodeCount: flow.nodes.length, edgeCount: flow.edges.length });
+                trace('menu.pane', {
+                  nodeCount: flow.nodes.length,
+                  edgeCount: flow.edges.length,
+                });
                 setMenuCtx({ type: 'pane', id: null });
               }}
-              onNodeDrag={(_e, _node, draggedNodes) => {
+              onNodeDrag={(_e, _node, d) => {
                 if (!editable) return;
-                const primaryNode = draggedNodes[0] || _node;
+                const primaryNode = d[0] || _node;
                 if (primaryNode.type === 'group') return;
                 const groupId =
                   getIntersectingNodes(primaryNode).find((n) => n.type === 'group')?.id ?? null;
                 if (groupId !== dragTgtGroup.current) {
                   if (dragTgtGroup.current)
-                    updateNodeData(dragTgtGroup.current, { isDragTarget: false });
+                    updateNodeData(dragTgtGroup.current, {
+                      isDragTarget: false,
+                    });
                   if (groupId) updateNodeData(groupId, { isDragTarget: true });
                   dragTgtGroup.current = groupId;
                 }
               }}
-              onNodeDragStop={(_e, _node, draggedNodes) => {
+              onNodeDragStop={(_e, _node, d) => {
                 if (!editable) return;
                 if (dragTgtGroup.current) {
                   const tgtGroupId = dragTgtGroup.current;
                   updateNodeData(tgtGroupId, { isDragTarget: false });
                   dragTgtGroup.current = null;
                   const groupNode = getNodes().find((n) => n.id === tgtGroupId);
-                  const nodesToGroup = draggedNodes.filter(
-                    (n) => n.type !== 'group' && n.id !== tgtGroupId,
-                  );
+                  const nodesToGroup = d.filter((n) => n.type !== 'group' && n.id !== tgtGroupId);
                   if (groupNode && nodesToGroup.length > 0)
                     onGroupNodes(
                       groupNode as FlowNode,
@@ -803,9 +894,7 @@ const FLOW_COMPONENTS = {
                       groupNode.position.y,
                     );
                 } else {
-                  const nodesToUngroup = draggedNodes.filter(
-                    (n) => getGroupId(n) && n.type !== 'group',
-                  );
+                  const nodesToUngroup = d.filter((n) => getGroupId(n) && n.type !== 'group');
                   if (nodesToUngroup.length > 0) onUngroupNodes(nodesToUngroup);
                 }
               }}
@@ -872,7 +961,47 @@ const FLOW_COMPONENTS = {
                       </Button>
                     </ButtonGroup>
                   </Controls>
-                  <ZoomControls position="bottom-right" />
+                  <ErrorBoundary name="ZoomControls">
+                    <Controls
+                      position="bottom-right"
+                      showZoom={false}
+                      showFitView={false}
+                      showInteractive={false}
+                    >
+                      <ButtonGroup>
+                        {(
+                          [
+                            {
+                              label: 'Zoom in',
+                              icon: <ZoomInIcon aria-hidden="true" />,
+                              onClick: zoomIn,
+                            },
+                            {
+                              label: 'Zoom out',
+                              icon: <ZoomOutIcon aria-hidden="true" />,
+                              onClick: zoomOut,
+                            },
+                            {
+                              label: 'Fit view',
+                              icon: <FitToScreenIcon aria-hidden="true" />,
+                              onClick: fitView,
+                            },
+                          ] as const
+                        ).map(({ label: l, icon: i, onClick: o }) => (
+                          <Button
+                            key={l}
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={l}
+                            title={l}
+                            onClick={() => void o()}
+                          >
+                            {i}
+                          </Button>
+                        ))}
+                      </ButtonGroup>
+                    </Controls>
+                  </ErrorBoundary>
                 </>
               ) : (
                 showCtrls && (
@@ -901,6 +1030,16 @@ const FLOW_COMPONENTS = {
                     >
                       <MaximizeIcon aria-hidden="true" />
                     </ControlButton>
+                    {!editable && (
+                      <ControlButton
+                        aria-label="Export diagram as PNG"
+                        title="Export diagram as PNG"
+                        disabled={exportAction.disabled}
+                        onClick={() => void exportAction.run()}
+                      >
+                        <DownloadIcon aria-hidden="true" />
+                      </ControlButton>
+                    )}
                   </Controls>
                 )
               )}
@@ -981,7 +1120,11 @@ const FLOW_COMPONENTS = {
                         type: 'group',
                         position: { x: gX, y: gY },
                         style: { width: gWidth, height: gHeight },
-                        data: { attributes: [], customPosition: { x: gX, y: gY }, title: 'Group' },
+                        data: {
+                          attributes: [],
+                          customPosition: { x: gX, y: gY },
+                          title: 'Group',
+                        },
                       },
                       selNodes,
                       gX,
@@ -1104,7 +1247,7 @@ const FLOW_COMPONENTS = {
                             if (t === 'process' && onAddContent) onAddContent(pos);
                             else onAddNode(t, pos);
                           } catch (err: unknown) {
-                            errorLog('AuthNodes', `menu.add.failed: ${t}`, {
+                            logErr('AuthNodes', `menu.add.failed: ${t}`, {
                               error: err instanceof Error ? err.message : String(err),
                             });
                           }
@@ -1124,47 +1267,45 @@ const FLOW_COMPONENTS = {
     );
   },
 };
+/** Supported node keys shared by the node renderer registry and flow controls. */
+type FlowNodeType = keyof typeof NODE_TYPES;
 
 /*//////////////////////////////////////////////////
 COMPONENT
 //////////////////////////////////////////////////*/
 
 /**
- * Renders the flow editor wrapper used by docs diagrams.
+ * Renders a Docs flow diagram and coordinates its graph state, layout, selection, and editing controls.
  *
- * @param props - Initial nodes and edges, layout configuration, interactions, change callbacks, and display settings for the problem graph.
- * @param className - Extra classes applied to the outer flow wrapper.
- * @param onCommit - Callback that receives the fully normalised flow after each change.
- * @param nodes - Graph nodes rendered and updated by nodes.
- * @param edges - Graph connections rendered and updated by nodes.
- * @param nodeSep - Horizontal gap between graph nodes in nodes.
- * @param rankSep - Vertical gap between graph ranks in nodes.
- * @param height - Viewport height reserved for nodes's graph surface.
- * @param onAddContent - Callback invoked for add content.
- * @param onNodeClick - Callback invoked when a user selects a node in nodes.
- * @param nodeTypes - Node renderer map that draws graph nodes in nodes.
- * @param nodeLabels - Node label map shown alongside nodes's graph nodes.
- * @param lockedTypes - Node types that nodes must keep read-only.
- * @param allowedTypes - Node types that nodes permits users to create.
- * @param disabled - Disabled state controlling whether nodes accepts interaction.
- * @param clipboardKey - Clipboard key that enables graph copy and paste in nodes.
- * @param arcControls - Arc controls input supplied to nodes's operation.
- * @param edgeTypes - Edge renderer map that draws graph connections in nodes.
- * @param readyWhenEmpty - Readiness rule that lets nodes finish with no graph nodes.
- * @param onReady - Callback invoked when nodes finishes initialising its graph surface.
- * @param style - Inline style values merged into nodes.
- * @param rest - Rest input supplied to nodes's operation.
- * @param direction - Layout direction that arranges nodes's graph.
- * @param interactive - Interaction flag that controls whether nodes accepts graph input.
- * @param editable - Editability flag controlling whether nodes accepts changes.
- * @param proximityConnect - Connection rule that lets nearby graph nodes link automatically in nodes.
- * @param showBg - Visibility flag for nodes's graph background.
- * @param showCtrls - Visibility flag for nodes's graph controls.
+ * @param initialNodes Nodes used to initialize the graph and synchronize it when the input changes.
+ * @param initialEdges Edges used to initialize the graph and synchronize it when the input changes.
+ * @param className Additional classes applied to the outer canvas container.
+ * @param dir Dagre layout direction: top-to-bottom (`TB`) or left-to-right (`LR`).
+ * @param nodeSep Separation between sibling nodes in automatic layout.
+ * @param rankSep Separation between ranks in automatic layout.
+ * @param proximityConnect Whether automatic layout may connect eligible nearby nodes.
+ * @param interactive Whether users can interact with the canvas, including dragging nodes.
+ * @param height Optional canvas height in pixels; the measured height is used when omitted.
+ * @param onCommit Callback receiving the normalized node and edge arrays after a graph edit.
+ * @param onAddContent Optional callback that inserts Docs content at a canvas position.
+ * @param onNodeClick Optional callback receiving the clicked graph node.
+ * @param customNodeTypes Custom node renderers that extend or override the built-in node types.
+ * @param nodeLabels Labels shown for node types in the canvas controls.
+ * @param lockedTypes Node types whose nodes cannot be edited.
+ * @param allowedTypes Node types available for creation in the canvas controls.
+ * @param editable Whether graph edits can be committed.
+ * @param disabled Whether to disable editing controls even when editing is enabled.
+ * @param clipboardKey Local storage key used to save and load copied graph data.
+ * @param showBg Whether to render the graph background grid.
+ * @param showCtrls Whether to render the React Flow controls.
+ * @param arcControls Whether the controls include the graph's edge-editing actions.
+ * @param edgeTypes Optional custom React Flow edge renderers.
+ * @param readyWhenEmpty Whether an empty graph can be reported as ready.
+ * @param onReady Optional callback invoked when the canvas is ready to use.
+ * @param style Inline styles merged into the outer canvas container.
+ * @param rest Other React Flow properties; the wrapper uses `tabIndex`, `onFocus`, and `onBlur`.
  *
- * @return Docs flow editor wrapper with derived height, toolbar controls, and drag state.
- *
- * @remarks
- * This is the public entrypoint; the rest of the file exists to keep the canvas state manageable.
+ * @return The Docs flow canvas with layout, selection, and editing controls configured by these props.
  */
 export default function Nodes({
   nodes: initialNodes = [],
@@ -1200,12 +1341,16 @@ export default function Nodes({
     nodes: initialNodes,
     edges: initialEdges,
   });
-  const [flow, setFlow] = useState<{ nodes: FlowNode[]; edges: Edge[] }>({ nodes: [], edges: [] });
+  const [flow, setFlow] = useState<{ nodes: FlowNode[]; edges: Edge[] }>({
+    nodes: [],
+    edges: [],
+  });
   const [isFocused, setIsFocused] = useState(false);
   const [internalHeight, setInternalHeight] = useState(384);
   const graphRef = useRef(graph);
   const flowRef = useRef(flow);
   const permitted = editable && !disabled;
+  const normLockedTypes = lockedTypes.filter((t): t is FlowNodeType => t in NODE_TYPES);
   const fns = useRef({ onCommit, onAddContent });
   fns.current = { onCommit, onAddContent };
 
@@ -1222,7 +1367,10 @@ export default function Nodes({
     (
       v:
         | { nodes: FlowNode[]; edges: Edge[] }
-        | ((curr: { nodes: FlowNode[]; edges: Edge[] }) => { nodes: FlowNode[]; edges: Edge[] }),
+        | ((curr: { nodes: FlowNode[]; edges: Edge[] }) => {
+            nodes: FlowNode[];
+            edges: Edge[];
+          }),
       c = true,
     ) => {
       const n = typeof v === 'function' ? v(graphRef.current) : v;
@@ -1232,70 +1380,262 @@ export default function Nodes({
     },
     [],
   );
-  useEditor({
-    adapter: {
-      ...(clipboardKey ? { clipboardKey } : {}),
-      cloneNode: (n, id) => ({
-        ...n,
-        id,
-        data: {
-          ...n.data,
-          ...(typeof (n.data as { graphKey?: unknown }).graphKey === 'string'
-            ? { graphKey: id }
-            : {}),
-        },
-      }),
-      editableNode: (n) => !lockedTypes.includes(n.type as keyof typeof NODE_TYPES),
-      read: flow,
-      write: useCallback(
-        (n: { nodes: FlowNode[]; edges: Edge[] }): void => {
-          flowRef.current = n;
-          setFlow(n);
-          writeGraph((c) => {
-            const currEntities = {
-              nodes: new Map(c.nodes.map((i) => [i.id, i])),
-              edges: new Map(c.edges.map((i) => [i.id, i])),
-            };
-            return {
-              nodes: n.nodes.map((n) => {
-                const {
-                  editable: _,
-                  groupId: __,
-                  id: ___,
-                  isDragTarget: ____,
-                  onResizeEnd: _____,
-                  requiredHandles: ______,
-                  ...data
-                } = n.data;
-                return {
-                  ...currEntities.nodes.get(n.id),
-                  id: n.id,
-                  type: n.type,
-                  position: n.position,
-                  style: n.style,
-                  data,
-                };
-              }),
-              edges: n.edges.map((e) => {
-                return {
-                  ...currEntities.edges.get(e.id),
-                  id: e.id,
-                  source: e.source,
-                  target: e.target,
-                  sourceHandle: e.sourceHandle,
-                  targetHandle: e.targetHandle,
-                  label: e.label,
-                  data: e.data,
-                };
-              }),
-            };
-          });
-        },
-        [writeGraph],
-      ),
+  const editorAdapter = {
+    ...(clipboardKey ? { clipboardKey } : {}),
+    cloneNode: (n: FlowNode, i: string) => ({
+      ...n,
+      id: i,
+      data: {
+        ...n.data,
+        ...(typeof (n.data as { graphKey?: unknown }).graphKey === 'string' ? { graphKey: i } : {}),
+      },
+    }),
+    editableNode: (n: FlowNode) => !normLockedTypes.includes(n.type as FlowNodeType),
+    read: flow,
+    write: useCallback(
+      (n: { nodes: FlowNode[]; edges: Edge[] }): void => {
+        flowRef.current = n;
+        setFlow(n);
+        writeGraph((c) => {
+          const currEntities = {
+            nodes: new Map(c.nodes.map((i) => [i.id, i])),
+            edges: new Map(c.edges.map((i) => [i.id, i])),
+          };
+          return {
+            nodes: n.nodes.map((n) => {
+              const data = { ...n.data };
+              for (const key of [
+                'editable',
+                'groupId',
+                'id',
+                'isDragTarget',
+                'onResizeEnd',
+                'requiredHandles',
+              ] as const)
+                Reflect.deleteProperty(data, key);
+              return {
+                ...(currEntities.nodes.get(n.id) ?? {}),
+                id: n.id,
+                ...(n.type === undefined ? {} : { type: n.type }),
+                position: n.position,
+                ...(n.style === undefined ? {} : { style: n.style }),
+                data,
+              };
+            }),
+            edges: n.edges.map((e) => {
+              return {
+                ...currEntities.edges.get(e.id),
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                ...(e.sourceHandle === undefined ? {} : { sourceHandle: e.sourceHandle }),
+                ...(e.targetHandle === undefined ? {} : { targetHandle: e.targetHandle }),
+                ...(e.label === undefined ? {} : { label: e.label }),
+                ...(e.data === undefined ? {} : { data: e.data }),
+              };
+            }),
+          };
+        });
+      },
+      [writeGraph],
+    ),
+  };
+  const [editorEls, setEditorEls] = useState(editorAdapter.read);
+  const editorRef = useRef(editorEls);
+  editorRef.current = editorEls;
+  useEffect((): void => {
+    setEditorEls(editorAdapter.read);
+  }, [editorAdapter.read]);
+  const editorWrite = useCallback(
+    (n: { nodes: FlowNode[]; edges: Edge[] }): void => {
+      editorRef.current = n;
+      setEditorEls(n);
+      editorAdapter.write(n);
     },
-    disabled,
-  });
+    [editorAdapter],
+  );
+  const editorEditable = useCallback(
+    (n: FlowNode): boolean => editorAdapter.editableNode?.(n) ?? true,
+    [editorAdapter],
+  );
+  const editorSelection = useCallback((): {
+    version: 1;
+    nodes: FlowNode[];
+    edges: Edge[];
+  } | null => {
+    const selectedNodes = editorRef.current.nodes.filter(
+      (node) => node.selected && editorEditable(node),
+    );
+    if (!selectedNodes.length) return null;
+    const ids = new Set(selectedNodes.map((node) => node.id));
+    return {
+      version: 1,
+      nodes: selectedNodes,
+      edges: editorRef.current.edges.filter((edge) => ids.has(edge.source) && ids.has(edge.target)),
+    };
+  }, [editorEditable]);
+  const editorCopy = useCallback((): void => {
+    const value = editorSelection();
+    if (!value || !editorAdapter.clipboardKey || typeof window === 'undefined') return;
+    window.localStorage.setItem(editorAdapter.clipboardKey, JSON.stringify(value));
+  }, [editorAdapter.clipboardKey, editorSelection]);
+  const editorDeleteSelection = useCallback((): void => {
+    if (disabled) return;
+    const ids = new Set(
+      editorRef.current.nodes
+        .filter((node) => node.selected && editorEditable(node))
+        .map((node) => node.id),
+    );
+    if (!ids.size) return;
+    editorWrite({
+      nodes: editorRef.current.nodes.filter((node) => !ids.has(node.id)),
+      edges: editorRef.current.edges.filter(
+        (edge) => !ids.has(edge.source) && !ids.has(edge.target),
+      ),
+    });
+  }, [disabled, editorEditable, editorWrite]);
+  const editorCut = useCallback((): void => {
+    if (disabled) return;
+    editorCopy();
+    editorDeleteSelection();
+  }, [editorCopy, editorDeleteSelection, disabled]);
+  const editorPaste = useCallback((): void => {
+    if (disabled || !editorAdapter.clipboardKey || typeof window === 'undefined') return;
+    try {
+      const raw: unknown = JSON.parse(
+        window.localStorage.getItem(editorAdapter.clipboardKey) ?? 'null',
+      );
+      if (
+        !isRec(raw) ||
+        raw.version !== 1 ||
+        !Array.isArray(raw.nodes) ||
+        !Array.isArray(raw.edges)
+      )
+        return;
+      const value = raw as { version: 1; nodes: FlowNode[]; edges: Edge[] };
+      const ids = new Map(value.nodes.map((node) => [node.id, `n-${crypto.randomUUID()}`]));
+      editorWrite({
+        nodes: [
+          ...editorRef.current.nodes.map((node) => ({ ...node, selected: false })),
+          ...value.nodes.map((node) => ({
+            ...(editorAdapter.cloneNode?.(node, ids.get(node.id)!) ?? {
+              ...node,
+              id: ids.get(node.id)!,
+            }),
+            position: { x: node.position.x + 40, y: node.position.y + 40 },
+            selected: true,
+          })),
+        ],
+        edges: [
+          ...editorRef.current.edges,
+          ...value.edges.map((edge) => ({
+            ...edge,
+            id: `e-${crypto.randomUUID()}`,
+            source: ids.get(edge.source)!,
+            target: ids.get(edge.target)!,
+          })),
+        ],
+      });
+    } catch {
+      // Ignore stale or malformed local clipboard payloads.
+    }
+  }, [editorAdapter.clipboardKey, disabled, editorWrite]);
+  const editorDuplicate = useCallback((): void => {
+    if (disabled) return;
+    const value = editorSelection();
+    if (!value) return;
+    const ids = new Map(value.nodes.map((node) => [node.id, `n-${crypto.randomUUID()}`]));
+    editorWrite({
+      nodes: [
+        ...editorRef.current.nodes.map((node) => ({ ...node, selected: false })),
+        ...value.nodes.map((node) => ({
+          ...(editorAdapter.cloneNode?.(node, ids.get(node.id)!) ?? {
+            ...node,
+            id: ids.get(node.id)!,
+          }),
+          position: { x: node.position.x + 40, y: node.position.y + 40 },
+          selected: true,
+        })),
+      ],
+      edges: [
+        ...editorRef.current.edges,
+        ...value.edges.map((edge) => ({
+          ...edge,
+          id: `e-${crypto.randomUUID()}`,
+          source: ids.get(edge.source)!,
+          target: ids.get(edge.target)!,
+        })),
+      ],
+    });
+  }, [editorAdapter, disabled, editorSelection, editorWrite]);
+  useEffect((): (() => void) | void => {
+    if (typeof window === 'undefined') return;
+    /**
+     * Routes copy, cut, paste, and duplicate shortcuts to the active flow editor.
+     * @param event Browser key event to inspect and handle.
+     * @returns No value; matching shortcuts are prevented and delegated to the editor.
+     */
+    const keydown = (event: KeyboardEvent): void => {
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        (event.target as HTMLElement | null)?.isContentEditable
+      )
+        return;
+      if (event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        editorCopy();
+      } else if (event.key.toLowerCase() === 'x') {
+        event.preventDefault();
+        editorCut();
+      } else if (event.key.toLowerCase() === 'v') {
+        event.preventDefault();
+        editorPaste();
+      } else if (event.key.toLowerCase() === 'd') {
+        event.preventDefault();
+        editorDuplicate();
+      }
+    };
+    window.addEventListener('keydown', keydown);
+    return () => {
+      window.removeEventListener('keydown', keydown);
+    };
+  }, [editorCopy, editorCut, editorDuplicate, editorPaste]);
+  useCallback(
+    (c: EdgeChange<Edge>[]): void => {
+      const permittedChanges = disabled ? c.filter((change) => change.type === 'select') : c;
+      if (permittedChanges.length)
+        editorWrite({
+          ...editorRef.current,
+          edges: applyEdgeChanges(permittedChanges, editorRef.current.edges),
+        });
+    },
+    [disabled, editorWrite],
+  );
+  useCallback(
+    (c: NodeChange<FlowNode>[]): void => {
+      const permittedChanges = disabled ? c.filter((change) => change.type === 'select') : c;
+      if (permittedChanges.length)
+        editorWrite({
+          ...editorRef.current,
+          nodes: applyNodeChanges(permittedChanges, editorRef.current.nodes),
+        });
+    },
+    [disabled, editorWrite],
+  );
+  useCallback(
+    (s: FlowNode[]): void => {
+      editorWrite({
+        ...editorRef.current,
+        nodes: editorRef.current.nodes.map((node) => ({
+          ...node,
+          selected: new Set(s.map((i) => i.id)).has(node.id),
+        })),
+      });
+    },
+    [editorWrite],
+  );
   const handleResizeEnd = useCallback(
     (i: string, p: { x: number; y: number; width: number; height: number }) => {
       writeGraph((c) => ({
@@ -1314,43 +1654,112 @@ export default function Nodes({
     },
     [writeGraph],
   );
-
-  // prettier-ignore
   useEffect(() => {
-		const { positionedNodes, graphHeight } = layoutGraph<FlowNode>(graph.nodes, graph.edges, dir, nodeSep, rankSep, {
-						getSize: node =>
-				getNodeSize(
-					node,
-					{ width: 175, height: 60, groupWidth: 160, groupHeight: 100, erdWidth: 224, erdHeight: 60 },
-					n => {
-						if (n.type !== 'erd') return;
-						const attrs = n.data && validateType(['object'], n.data) && 'attributes' in n.data ? (n.data as { attributes?: unknown[] }).attributes : undefined;
-						return 60 + (Array.isArray(attrs) ? attrs.length : 0) * 20;
-					},
-				),
-			getGroupId,
-			getCustomPosition: getCustomPos,
-						registerNode: (graph, node, size) => {
-				if (node.type === 'group') graph.setNode(node.id, { paddingLeft: 40, paddingRight: 40, paddingTop: 60, paddingBottom: 40 });
-				else graph.setNode(node.id, { width: size.w, height: size.h });
-			},
-						placeNode: (node, dagreNode) => {
-				const persisted = getCustomPos(node);
-				if (node.type === 'group') {
-					const calcW = dagreNode?.width ?? 200;
-					const calcH = dagreNode?.height ?? 150;
-					const w = persisted ? (node.style?.width ?? calcW) : calcW;
-					const h = persisted ? (node.style?.height ?? calcH) : calcH;
-					return { ...node, position: persisted ?? { x: (/* dagre computes absolute center, NodeResizer forces a top-left origin. Translating natively! */ (dagreNode?.x ?? 0) - (Number(w) / 2)), y: ((dagreNode?.y ?? 0) - (Number(h) / 2)) }, style: { ...node.style, width: w, height: h } };
-				}
-				return { ...node, position: persisted ?? { x: dagreNode?.x ?? 0, y: dagreNode?.y ?? 0 } };
-			},
-		});
-		if (graphHeight && height === undefined) setInternalHeight(graphHeight + 40);
-			const { nodes, edges } = syncGraph(positionedNodes, graph.edges, dir, proximityConnect, permitted, arcControls, handleResizeEnd);
-		const nFlow = { edges, nodes, selectedById: new Map(flowRef.current.nodes.filter(n => n.selected).map(n => [n.id, true])) };
-		setFlow({ nodes: nFlow.nodes.map(n => ({ ...n, selected: nFlow.selectedById.get(n.id) ?? false })), edges: nFlow.edges });
-	}, [graph, dir, nodeSep, rankSep, proximityConnect, permitted, arcControls, height, handleResizeEnd]);
+    const layout = new Dagre.graphlib.Graph({ compound: true });
+    layout.setGraph({ rankdir: dir, nodesep: nodeSep, ranksep: rankSep });
+    layout.setDefaultEdgeLabel(() => ({}));
+    graph.nodes.forEach((node) => {
+      const size = getNodeSize(
+        node,
+        { width: 175, height: 60, groupWidth: 160, groupHeight: 100, erdWidth: 224, erdHeight: 60 },
+        (candidate) => {
+          if (candidate.type !== 'erd') return;
+          const attrs =
+            candidate.data &&
+            validateType(['object'], candidate.data) &&
+            'attributes' in candidate.data
+              ? (candidate.data as { attributes?: unknown[] }).attributes
+              : undefined;
+          return 60 + (Array.isArray(attrs) ? attrs.length : 0) * 20;
+        },
+      );
+      if (node.type === 'group')
+        layout.setNode(node.id, {
+          paddingLeft: 40,
+          paddingRight: 40,
+          paddingTop: 60,
+          paddingBottom: 40,
+        });
+      else layout.setNode(node.id, { width: size.w, height: size.h });
+    });
+    graph.nodes.forEach((node) => {
+      const parentId = getGroupId(node);
+      if (parentId && layout.hasNode(parentId)) layout.setParent(node.id, parentId);
+    });
+    const groupNodeIds = new Set(
+      graph.nodes.filter((node) => node.type === 'group').map((node) => node.id),
+    );
+    graph.edges.forEach((edge) => {
+      if (
+        edge.source !== edge.target &&
+        !groupNodeIds.has(edge.source) &&
+        !groupNodeIds.has(edge.target)
+      )
+        layout.setEdge(edge.source, edge.target);
+    });
+    Dagre.layout(layout);
+    const graphHeight = (layout.graph() as { height?: number }).height ?? 0;
+    if (graphHeight && height === undefined) setInternalHeight(graphHeight + 40);
+    const { nodes, edges } = syncGraph(
+      graph.nodes.map((node) => {
+        const persisted =
+          node.data &&
+          isRec(node.data) &&
+          'customPosition' in node.data &&
+          isRec(node.data.customPosition) &&
+          typeof node.data.customPosition.x === 'number' &&
+          Number.isFinite(node.data.customPosition.x) &&
+          typeof node.data.customPosition.y === 'number' &&
+          Number.isFinite(node.data.customPosition.y)
+            ? { x: node.data.customPosition.x, y: node.data.customPosition.y }
+            : undefined;
+        const dagreNode = layout.node(node.id);
+        if (node.type === 'group') {
+          const calcW = dagreNode?.width ?? 200;
+          const calcH = dagreNode?.height ?? 150;
+          const width = persisted ? (node.style?.width ?? calcW) : calcW;
+          const height = persisted ? (node.style?.height ?? calcH) : calcH;
+          return {
+            ...node,
+            position: persisted ?? {
+              x: (dagreNode?.x ?? 0) - Number(width) / 2,
+              y: (dagreNode?.y ?? 0) - Number(height) / 2,
+            },
+            style: { ...node.style, width, height },
+          };
+        }
+        return {
+          ...node,
+          position: persisted ?? { x: dagreNode?.x ?? 0, y: dagreNode?.y ?? 0 },
+        };
+      }),
+      graph.edges,
+      dir,
+      proximityConnect,
+      permitted,
+      arcControls,
+      handleResizeEnd,
+    );
+    setFlow({
+      nodes: nodes.map((node) => ({
+        ...node,
+        selected: flowRef.current.nodes.some(
+          (selectedNode) => selectedNode.id === node.id && selectedNode.selected,
+        ),
+      })),
+      edges,
+    });
+  }, [
+    graph,
+    dir,
+    nodeSep,
+    rankSep,
+    proximityConnect,
+    permitted,
+    arcControls,
+    height,
+    handleResizeEnd,
+  ]);
   useEffect(() => {
     writeGraph({ nodes: initialNodes, edges: initialEdges }, false);
   }, [initialNodes, initialEdges, writeGraph]);
@@ -1361,7 +1770,6 @@ export default function Nodes({
   return (
     <ErrorBoundary name="Nodes">
       <div
-        {...rest}
         style={{ height: height ?? internalHeight, ...style }}
         className={cn(
           'docs-flow size-full overflow-hidden rounded-md border border-primary-6',
@@ -1382,14 +1790,14 @@ export default function Nodes({
           <FLOW_COMPONENTS.Canvas
             flow={flow}
             nodeTypes={
-              { ...FLOW_COMPONENTS.nodeTypes, ...customNodeTypes } as unknown as Record<
-                string,
-                React.ComponentType<NodeProps<FlowNode>>
-              >
+              {
+                ...FLOW_COMPONENTS.nodeTypes,
+                ...customNodeTypes,
+              } as unknown as Record<string, React.ComponentType<NodeProps<FlowNode>>>
             }
             {...(edgeTypes ? { edgeTypes } : {})}
             nodeLabels={nodeLabels}
-            onNodeClick={onNodeClick}
+            {...(onNodeClick === undefined ? {} : { onNodeClick })}
             onNodesChange={
               /* prettier-ignore */ useCallback((r: NodeChange[]) => {
 		const typedChanges = r as NodeChange<FlowNode>[];
@@ -1510,7 +1918,11 @@ export default function Nodes({
                   ...g,
                   edges: g.edges.map((e) =>
                     e.id === r.id
-                      ? { ...e, label: nLabel, labelBgStyle: { fill: 'white', fillOpacity: 0.8 } }
+                      ? {
+                          ...e,
+                          label: nLabel,
+                          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+                        }
                       : e,
                   ),
                 }));
@@ -1538,16 +1950,23 @@ export default function Nodes({
               },
               [writeGraph],
             )}
-            lockedTypes={lockedTypes}
-            allowedTypes={allowedTypes}
-            onAddContent={fns.current.onAddContent}
+            lockedTypes={normLockedTypes}
+            allowedTypes={allowedTypes.filter((t): t is FlowNodeType => t in NODE_TYPES)}
+            {...(fns.current.onAddContent === undefined
+              ? {}
+              : { onAddContent: fns.current.onAddContent })}
             onGroupNodes={useCallback(
               (g: FlowNode, v: FlowNode[]) => {
-                const group = { node: g, targetIds: new Set(v.map((s) => s.id)) };
+                const group = {
+                  node: g,
+                  targetIds: new Set(v.map((s) => s.id)),
+                };
                 writeGraph((c) => {
                   const nNodes = c.nodes.map((n) => {
                     if (group.targetIds.has(n.id)) {
-                      const { parentId: _parentId, extent: _extent, ...rest } = n;
+                      const rest = { ...n };
+                      Reflect.deleteProperty(rest, 'parentId');
+                      Reflect.deleteProperty(rest, 'extent');
                       return { ...rest, data: { ...n.data, groupId: g.id } };
                     }
                     return n;
@@ -1570,9 +1989,13 @@ export default function Nodes({
                   nodes: c.nodes.map((n) => {
                     if (ungroupMap.has(n.id)) {
                       if (!getGroupId(ungroupMap.get(n.id)!)) return n;
-                      const { parentId: _, extent: __, ...rest } = n;
-                      const { groupId: ___, ...restData } =
-                        (rest.data as Record<string, unknown>) ?? {};
+                      const rest = { ...n };
+                      Reflect.deleteProperty(rest, 'parentId');
+                      Reflect.deleteProperty(rest, 'extent');
+                      const restData = {
+                        ...((rest.data as Record<string, unknown>) ?? {}),
+                      };
+                      Reflect.deleteProperty(restData, 'groupId');
                       return { ...rest, data: restData as NodeData };
                     }
                     return n;
@@ -1633,7 +2056,11 @@ export default function Nodes({
                             break;
                         }
                         const nPos = { x: nAbsX, y: nAbsY };
-                        return { ...n, position: nPos, data: { ...n.data, customPosition: nPos } };
+                        return {
+                          ...n,
+                          position: nPos,
+                          data: { ...n.data, customPosition: nPos },
+                        };
                       }
                       return n;
                     }),
@@ -1649,10 +2076,9 @@ export default function Nodes({
                   const isHoriz = t.startsWith('horizontal');
                   const sizeKey = isHoriz ? 'w' : 'h';
 
-                  /**
-                   * Handles get edge.
-                   *
-                   * @param p - Graph node whose position should be rendered.
+                  /** Returns the node's leading, center, or trailing edge on the selected axis.
+                   * @param p Node and absolute position being measured.
+                   * @returns The requested edge coordinate for the active axis.
                    */
                   const getEdge = (p: { n: FlowNode; abs: { x: number; y: number } }) => {
                     const basePos = p.abs[isHoriz ? 'x' : 'y'];
@@ -1664,7 +2090,7 @@ export default function Nodes({
                   const sorted = [...v.map((n) => ({ n, abs: n.position }))].sort(
                     (a, b) => getEdge(a) - getEdge(b),
                   );
-                  const min = getEdge(sorted[0]);
+                  const min = getEdge(sorted[0]!);
                   const layoutLookup = {
                     nodes: new Map(v.map((s) => [s.id, s])),
                     indices: new Map(sorted.map((s, i) => [s.n.id, i])),
@@ -1675,7 +2101,7 @@ export default function Nodes({
                       if (layoutLookup.nodes.has(n.id)) {
                         const tEdge =
                           min +
-                          ((getEdge(sorted[sorted.length - 1]) - min) / (sorted.length - 1)) *
+                          ((getEdge(sorted[sorted.length - 1]!) - min) / (sorted.length - 1)) *
                             layoutLookup.indices.get(n.id)!;
                         const flowNode = layoutLookup.nodes.get(n.id)!;
                         const size = getNodeSize(flowNode)[sizeKey];
@@ -1743,7 +2169,10 @@ export default function Nodes({
             )}
             onDeleteEdge={useCallback(
               (i: string) => {
-                writeGraph((c) => ({ ...c, edges: c.edges.filter((_e) => _e.id !== i) }));
+                writeGraph((c) => ({
+                  ...c,
+                  edges: c.edges.filter((_e) => _e.id !== i),
+                }));
               },
               [writeGraph],
             )}
@@ -1753,7 +2182,9 @@ export default function Nodes({
                 return {
                   ...c,
                   nodes: c.nodes.map((n) => {
-                    const { parentId: _parentId, extent: _extent, ...rest } = n;
+                    const rest = { ...n };
+                    Reflect.deleteProperty(rest, 'parentId');
+                    Reflect.deleteProperty(rest, 'extent');
                     return {
                       ...rest,
                       data: Object.fromEntries(
@@ -1775,7 +2206,7 @@ export default function Nodes({
             showCtrls={showCtrls}
             arcControls={arcControls}
             readyWhenEmpty={readyWhenEmpty}
-            onReady={onReady}
+            {...(onReady === undefined ? {} : { onReady })}
           />
         </ReactFlowProvider>
       </div>

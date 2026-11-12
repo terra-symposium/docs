@@ -1,7 +1,6 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/_math_inline.tsx
- * Read-only Docs math inline renderer for the shared Terra content editor.
+ * src/components/terra/editor/docs/_math_inline.tsx
+ * Read-only Docs math inline renderer for the shared Content editor.
  */
 
 /*//////////////////////////////////////////////////
@@ -21,7 +20,9 @@ COMPONENTS
 /**
  * Renders a read-only Docs formula as an inline Portable Text object.
  *
- * @param props - Portable Text inline-object attributes, children, and node.
+ * @param attrs Portable Text wrapper attributes applied to the inline formula.
+ * @param children Nested rendered content supplied by the Portable Text renderer.
+ * @param node Inline math object containing its optional source string and display metadata.
  *
  * @return Inline rendered formula.
  */

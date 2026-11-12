@@ -1,29 +1,38 @@
-# Docs Content Template Directory
+# Docs starter
 
-This is the Docs workspace’s reserved template path. It is empty in this snapshot, so there is no reusable template to preview or copy.
+A repository template for a static documentation site powered by the Terra Docs package.
 
 ## Getting started
 
+Create a repository with GitHub's **Use this template** button, then install its dependencies and start the site:
+
+```sh
+pnpm install
+pnpm run docs
+```
+
+Write documentation in `docs/`. Add `index.md` for the home page and nested `.md` or `.mdx` files for guides. Folder names and filenames create URLs and navigation automatically. MDX pages can import interactive examples from the project source.
+
 ### Commands
 
-No template-specific validation command applies because there are no template files. For the parent Docs site, run `pnpm docs:build` from `docs/main/` to build the site.
+Build the static site into `dist/docs/` with `pnpm run build`. The template CI checks that build; configure a host and deployment workflow when the repository is ready to publish.
 
 ## Security and Limitations
 
-No template source or configuration exists here; the parent Docs site is the only runnable consumer in this snapshot.
+Optional Markdown frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). The generated not-found page always uses the shared Docs interface; a host-specific `docs/404.md` override is not supported.
 
 ## Structure
 
-This directory contains only its README; there is no template configuration to protect.
+The `docs/` directory holds Markdown and MDX pages. The Docs package generates routes, navigation, search, the workspace, and the 404 page.
 
 ## References
 
-See the parent [Docs package README](../README.md) for editor and workspace guidance.
+See the parent [Terra Docs README](../README.md) and the package's [Apache-2.0 license](../LICENSE) for integration and licensing details.
 
 ## Contributing
 
-Add new template assets here with a short usage note and coverage in the parent Docs package.
+Keep starter configuration aligned with the Docs package commands and supported frontmatter.
 
 ## Credits and license
 
-The Docs workspace has an [Apache-2.0 license](../LICENSE). Check the source and third-party notices of each future template; this README does not establish rights to external content.
+This template is part of the Terra Docs workspace and uses its [Apache-2.0 license](../LICENSE). Check third-party terms for imported examples and assets.

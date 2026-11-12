@@ -1,5 +1,5 @@
 /**
- * astro/src/components/flow/powerSource.ts
+ * src/lib/terra/flow/powerSource.ts
  * Power Source graph placement and route presentation.
  */
 
@@ -9,18 +9,13 @@ IMPORTS
 
 // TYPES
 import type { PowerSrcGraph } from '../runtime/types.js';
-import type { StructureQuestion } from '../runtime/types.js';
-
-/*//////////////////////////////////////////////////
-CONFIG
-//////////////////////////////////////////////////*/
 
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * Handles with power source positions.
+ * Assigns rows from question numbering and places the origin and terminal around content nodes.
  *
  * @param graph - Power Source graph whose content nodes need positions.
  * @param questions - Questions used to resolve node titles by document id.
@@ -29,7 +24,7 @@ HELPERS
  */
 export function withPowerSrcPositions(
   graph: PowerSrcGraph,
-  questions: StructureQuestion[],
+  questions: { _id?: string; question?: string }[],
 ): PowerSrcGraph {
   const titleById = new Map<string, string>();
   for (const q of questions) {

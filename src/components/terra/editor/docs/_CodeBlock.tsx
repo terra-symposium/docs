@@ -1,6 +1,5 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
- * astro/src/components/editor/docs/_CodeBlock.tsx
+ * src/components/terra/editor/docs/_CodeBlock.tsx
  * Shared Docs CodeMirror renderer.
  */
 
@@ -10,8 +9,7 @@ IMPORTS
 
 // API
 import { $hydrating, $transition } from '../../../../lib/terra/docs/state.js';
-import { htmlToMd } from '../../../../lib/terra/docs/editor-dom.js';
-import { cn, errorLog } from '../../../../lib/terra/runtime/runtime.js';
+import { cn, isDarkMode, logErr } from '../../../../lib/terra/runtime/runtime.js';
 import {
   copyLineDown,
   copyLineUp,
@@ -28,8 +26,8 @@ import {
 } from '@codemirror/commands';
 import { drawSelection, keymap, lineNumbers, placeholder as cmPlaceholder } from '@codemirror/view';
 import { githubLight } from '@uiw/codemirror-theme-github';
+import { htmlToMd } from '../../../../lib/terra/docs/editor-dom.js';
 import { indentUnit } from '@codemirror/language';
-import { isDarkMode } from '../../../../lib/terra/runtime/runtime.js';
 import { isEndpointVal } from '../../../../lib/terra/runtime/shared.js';
 import { languages } from '@codemirror/language-data';
 import { markdown } from '@codemirror/lang-markdown';
@@ -42,18 +40,18 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
-import { AlertError } from '@terra-symposium/styling/ui/terra-original';
-import { Button } from '@terra-symposium/styling/ui/terra-original';
-import { Checkmark as CheckIcon, Copy as CopyIcon } from '@carbon/icons-react';
-import { Compartment, EditorSelection, EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
-import { ErrorBoundary } from '../../ui.js';
 import {
+  AlertError,
+  Button,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from '@terra-symposium/styling/ui/terra-original';
+} from '@terra-symposium/styling/ui';
+import { Checkmark as CheckIcon, Copy as CopyIcon } from '@carbon/icons-react';
+import { Compartment, EditorSelection, EditorState } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
+import { ErrorBoundary } from '../../ui.js';
 
 // TYPES
 import type { Extension } from '@codemirror/state';
@@ -88,13 +86,9 @@ const light = [githubLight] satisfies Extension[];
 const dark = [oneDark] satisfies Extension[];
 const codeSrcCache = new Map<string, Promise<string>>();
 /**
- * Triggers a layout re-measure to fully expand codemirror instances.
+ * Expands CodeMirror to its measured content height after mount or visibility changes.
  *
- * @param v - The target CodeMirror view reference.
- *
- * @returns Void
- *
- * @remarks Resolves constraints within un-mounted or obscured states.
+ * @param v CodeMirror view whose editor height needs to match its content.
  */
 const expand = (v: EditorView | null): void => {
   if (!v) return;
@@ -102,13 +96,14 @@ const expand = (v: EditorView | null): void => {
   if ((v as EditorView & { viewState?: { printing: boolean } }).viewState)
     (v as EditorView & { viewState?: { printing: boolean } }).viewState!.printing = true;
   v.requestMeasure({
-    read: (view) => Math.ceil(view.contentHeight),
-    write: (height, view) => {
-      view.dom.style.height = `${height}px`;
-      view.scrollDOM.style.height = `${height}px`;
+    read: (v) => Math.ceil(v.contentHeight),
+    write: (h, v) => {
+      v.dom.style.height = `${h}px`;
+      v.scrollDOM.style.height = `${h}px`;
     },
   });
 };
+
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/
@@ -116,7 +111,7 @@ HELPERS
 /**
  * Renders the loading placeholder for deferred Docs content.
  *
- * @param props - Optional source identifier attached to the placeholder so its deferred block can be connected to the editor view.
+ * @param src Optional source URL attached to the placeholder for editor lookup.
  *
  * @return The loading placeholder.
  */
@@ -129,7 +124,6 @@ function BlockSkeleton({ source: src }: { source?: string }): JSX.Element {
     />
   );
 }
-Object.assign(BlockSkeleton, { displayName: 'DocsCodeBlockSkeleton' });
 
 /**
  * Resolves the primary language format identifier from a passed string.
@@ -145,16 +139,30 @@ function langOf(v: string): string {
 }
 
 /**
- * High-performance rich-text rendering shell managing syntax highlighted text presentations parsing raw code blocks.
+ * Renders a code block as a static preview or an editable CodeMirror surface and relays source changes to the host.
  *
- * @param props - Unified mapping resolving presentation versus active edit inputs.
+ * @param blockOptions Source text, language, display mode, and optional endpoint or editor controls.
+ * @param blockOptions.className Additional classes merged into the outer code surface.
+ * @param blockOptions.code Code value shown in the preview or loaded into CodeMirror.
+ * @param blockOptions.docsSource Marks code as Markdown-authored Docs source for preview normalization.
+ * @param blockOptions.language Language identifier used for syntax highlighting and, when enabled, language selection.
+ * @param blockOptions.source Optional endpoint whose response is displayed as received code.
+ * @param blockOptions.tone Selects a static preview or the interactive editor layout.
+ * @param blockOptions.placeholder Text shown in CodeMirror while the code value is empty.
+ * @param blockOptions.expandAll Expands the editor to fit the full code value.
+ * @param blockOptions.fullHeight Lets the edit-mode surface fill its available vertical space.
+ * @param blockOptions.languageEditable Allows language selection for a local editable block.
+ * @param blockOptions.readOnly Prevents typing and edit callbacks while retaining the edit-mode layout.
+ * @param blockOptions.onCodeChange Receives each code edit from CodeMirror.
+ * @param blockOptions.onCommit Receives the code and language when the editor commits them.
+ * @param blockOptions.onLanguageChange Receives the selected language and current code after a language change.
  *
- * @return Instanced CodeMirror window evaluating code chunks mapped dynamically against site theme constraints.
+ * @return A syntax-highlighted code preview or a CodeMirror editor with the requested controls.
  *
- * @remarks Facilitates explicit fallbacks during hydration avoiding layout shifts natively.
+ * @remarks View mode can resolve source-backed blocks through the host adapter; edit mode never commits without the caller's callback.
  */
 export function CodeBlock(
-  props:
+  blockOptions:
     | {
         className?: string;
         code?: unknown;
@@ -183,13 +191,21 @@ export function CodeBlock(
 ): JSX.Element {
   // STATES
   const src =
-    props.source?.trim() ||
-    (typeof props.code === 'string' && isEndpointVal(props.code) ? props.code.trim() : '');
-  const locked = props.tone === 'view' || props.readOnly === true;
-  const docsSrc = props.docsSource === true;
+    blockOptions.source?.trim() ||
+    (typeof blockOptions.code === 'string' && isEndpointVal(blockOptions.code)
+      ? blockOptions.code.trim()
+      : '');
+  const locked = blockOptions.tone === 'view' || blockOptions.readOnly === true;
+  const docsSrc = blockOptions.docsSource === true;
   // Keep intentional leading/trailing newlines. Stripping them here causes a
   // controlled Docs editor to undo a CodeMirror Enter transaction on rerender.
-  const code = stringifyCodeValue(props.code);
+  // Portable Text `code.value` is already the authored source. Decoding escape
+  // sequences here changes valid code such as `"Hello\\n"` into multiple
+  // rendered lines. Only the Docs source serializer needs the legacy unwrapping.
+  const code =
+    typeof blockOptions.code === 'string' && !blockOptions.docsSource
+      ? blockOptions.code
+      : stringifyCodeValue(blockOptions.code);
   const viewCode = docsSrc
     ? code.replace(
         /<Code\b([\s\S]*?)>(?:\s*\{`((?:\\.|[^`])*)`\}\s*|\s*([\s\S]*?)\s*)<\/Code>/g,
@@ -210,27 +226,25 @@ export function CodeBlock(
   const received = useRef<HTMLElement>(null);
   const view = useRef<EditorView | null>(null);
   const theme = useRef(new Compartment());
-  /**
-   * Returns the displayed code.
-   *
-   * @returns Current displayed code.
+  /** Returns the source code snapshot used to synchronize the editor view.
+   * @returns Current code value supplied to the editor.
    */
   const codeVal = (): string => viewCode;
   const codeRef = useRef(resCode);
-  const langRef = useRef(langOf(props.language));
-  const chgRef = useRef(props.tone === 'edit' ? props.onCodeChange : undefined);
-  const cmtRef = useRef(props.tone === 'edit' ? props.onCommit : undefined);
+  const langRef = useRef(langOf(blockOptions.language));
+  const chgRef = useRef(blockOptions.tone === 'edit' ? blockOptions.onCodeChange : undefined);
+  const cmtRef = useRef(blockOptions.tone === 'edit' ? blockOptions.onCommit : undefined);
 
   // SYNC REFS
-  chgRef.current = props.tone === 'edit' ? props.onCodeChange : undefined;
-  cmtRef.current = props.tone === 'edit' ? props.onCommit : undefined;
+  chgRef.current = blockOptions.tone === 'edit' ? blockOptions.onCodeChange : undefined;
+  cmtRef.current = blockOptions.tone === 'edit' ? blockOptions.onCommit : undefined;
   codeRef.current = resCode;
-  langRef.current = langOf(props.language);
+  langRef.current = langOf(blockOptions.language);
 
   // DERIVED
-  const curLang = langOf(props.language);
-  const expAll = 'expandAll' in props && props.expandAll === true;
-  const fullHeight = props.tone === 'edit' && props.fullHeight === true;
+  const curLang = langOf(blockOptions.language);
+  const expAll = 'expandAll' in blockOptions && blockOptions.expandAll === true;
+  const fullHeight = blockOptions.tone === 'edit' && blockOptions.fullHeight === true;
 
   // RENDER HELPERS
 
@@ -282,7 +296,7 @@ export function CodeBlock(
         codeSrcCache.delete(src);
         if (!a) return;
         const msg = e instanceof Error ? e.message : 'Unable to receive the API value.';
-        errorLog('DocsCode', `Failed to receive ${src}`, { message: msg });
+        logErr('DocsCode', `Failed to receive ${src}`, { message: msg });
         setResCode(n);
         setReceivedErr(msg);
         setReceivedState('error');
@@ -291,12 +305,11 @@ export function CodeBlock(
     return () => {
       a = false;
     };
-  }, [docsSrc, props.code, props.source, src]);
-
+  }, [docsSrc, blockOptions.code, blockOptions.source, src]);
   useEffect(() => {
-    if (props.tone === 'view') return;
+    if (blockOptions.tone === 'view') return;
     let a = true;
-    let activeEnterHandler: ((event: KeyboardEvent) => void) | undefined;
+    let aEnterHandler: ((event: KeyboardEvent) => void) | undefined;
     $hydrating.set($hydrating.get() + 1);
     const hydration = {
       finished: false,
@@ -347,7 +360,7 @@ export function CodeBlock(
             lineNumbers(),
             indentUnit.of('\t'),
             EditorState.allowMultipleSelections.of(true),
-            ...(props.placeholder ? [cmPlaceholder(props.placeholder)] : []),
+            ...(blockOptions.placeholder ? [cmPlaceholder(blockOptions.placeholder)] : []),
             keymap.of([
               ...standardKeymap,
               ...historyKeymap,
@@ -418,20 +431,23 @@ export function CodeBlock(
               if (lineSet.size > 1) {
                 u.view.dom.setAttribute(
                   'data-docs-multicursor',
-                  JSON.stringify({ lines: Array.from(lineSet).sort((a, b) => a - b) }),
+                  JSON.stringify({
+                    lines: Array.from(lineSet).sort((a, b) => a - b),
+                  }),
                 );
               } else u.view.dom.removeAttribute('data-docs-multicursor');
-              if (!u.docChanged || props.tone !== 'edit' || src || props.readOnly) return;
+              if (!u.docChanged || blockOptions.tone !== 'edit' || src || blockOptions.readOnly)
+                return;
               codeRef.current = u.state.doc.toString();
               chgRef.current?.(codeRef.current);
             }),
             EditorView.domEventHandlers({
               blur: () => {
-                if (props.tone !== 'edit' || props.readOnly) return;
+                if (blockOptions.tone !== 'edit' || blockOptions.readOnly) return;
                 cmtRef.current?.(codeRef.current, langRef.current);
               },
               paste: (evt, v) => {
-                if (props.tone !== 'edit' || props.readOnly) return false;
+                if (blockOptions.tone !== 'edit' || blockOptions.readOnly) return false;
                 if (!evt.clipboardData) return false;
                 const html = evt.clipboardData.getData('text/html'),
                   plain = evt.clipboardData.getData('text/plain'),
@@ -447,7 +463,9 @@ export function CodeBlock(
                         to: v.state.selection.main.to,
                         insert: md,
                       },
-                      selection: { anchor: v.state.selection.main.from + md.length },
+                      selection: {
+                        anchor: v.state.selection.main.from + md.length,
+                      },
                       scrollIntoView: true,
                     });
                     return true;
@@ -477,7 +495,9 @@ export function CodeBlock(
                         to: v.state.selection.main.to,
                         insert: transformed,
                       },
-                      selection: { anchor: v.state.selection.main.from + transformed.length },
+                      selection: {
+                        anchor: v.state.selection.main.from + transformed.length,
+                      },
                       scrollIntoView: true,
                     });
                     return true;
@@ -489,23 +509,28 @@ export function CodeBlock(
           ],
         }),
       });
-      const codeInput = editorView.contentDOM;
+      /**
+       * Inserts a newline directly into CodeMirror when Enter is pressed in editable code.
+       * @param event Keyboard event from the active code editor.
+       * @returns No value; ignored keys pass through to CodeMirror's normal handlers.
+       */
       const onCodeEnter = (event: KeyboardEvent): void => {
-        if (event.key !== 'Enter' || props.tone !== 'edit' || props.readOnly || src) return;
-        const activeView = view.current;
-        if (!activeView) return;
+        if (event.key !== 'Enter' || blockOptions.tone !== 'edit' || blockOptions.readOnly || src)
+          return;
+        const aView = view.current;
+        if (!aView) return;
         event.preventDefault();
         event.stopImmediatePropagation();
-        const { from, to } = activeView.state.selection.main;
-        activeView.dispatch({
+        const { from, to } = aView.state.selection.main;
+        aView.dispatch({
           changes: { from, to, insert: '\n' },
           selection: { anchor: from + 1 },
           scrollIntoView: true,
           userEvent: 'input.type',
         });
       };
-      activeEnterHandler = onCodeEnter;
-      codeInput.addEventListener('keydown', onCodeEnter, true);
+      aEnterHandler = onCodeEnter;
+      editorView.contentDOM.addEventListener('keydown', onCodeEnter, true);
       view.current = editorView;
       (editorView.dom as HTMLDivElement & { cmView?: { view: EditorView } }).cmView = {
         view: editorView,
@@ -538,14 +563,14 @@ export function CodeBlock(
       a = false;
       hydration.release();
       if (view.current) {
-        if (activeEnterHandler)
-          view.current.contentDOM.removeEventListener('keydown', activeEnterHandler, true);
+        if (aEnterHandler)
+          view.current.contentDOM.removeEventListener('keydown', aEnterHandler, true);
         delete (view.current.dom as HTMLDivElement & { cmView?: { view: EditorView } }).cmView;
       }
       view.current?.destroy();
       view.current = null;
     };
-  }, [expAll, locked, props.language, props.tone, src]);
+  }, [expAll, locked, blockOptions.language, blockOptions.tone, src]);
   useEffect(() => {
     return $transition.listen((i) => {
       if (!i && view.current)
@@ -561,16 +586,14 @@ export function CodeBlock(
   }, [expAll]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    /**
-     * Synchronises the editor theme with the system preference.
-     *
-     * @returns Nothing.
-     */
-    const m = window.matchMedia('(prefers-color-scheme: dark)'),
-      sync = (): void => {
-        if (!view.current) return;
-        view.current.dispatch({ effects: theme.current.reconfigure(isDarkMode() ? dark : light) });
-      };
+    const m = window.matchMedia('(prefers-color-scheme: dark)');
+    /** Applies the active system theme to the mounted CodeMirror editor. */
+    const sync = (): void => {
+      if (!view.current) return;
+      view.current.dispatch({
+        effects: theme.current.reconfigure(isDarkMode() ? dark : light),
+      });
+    };
     sync();
     m.addEventListener('change', sync);
     return () => {
@@ -580,11 +603,13 @@ export function CodeBlock(
   useEffect(() => {
     const n = codeVal();
     if (!view.current || view.current?.state.doc.toString() === n) return;
-    view.current.dispatch({ changes: { from: 0, to: view.current.state.doc.length, insert: n } });
+    view.current.dispatch({
+      changes: { from: 0, to: view.current.state.doc.length, insert: n },
+    });
     codeRef.current = n;
     if (expAll) expand(view.current);
     view.current.requestMeasure();
-  }, [expAll, props.code]);
+  }, [expAll, blockOptions.code]);
   useEffect(() => {
     if (!src || !view.current || view.current?.state.doc.toString() === resCode) return;
     view.current.dispatch({
@@ -628,17 +653,19 @@ export function CodeBlock(
           fullHeight &&
             'flex min-h-[50vh] flex-col [&_.cm-editor]:!min-h-[calc(50vh-1.75rem)] [&_.cm-scroller]:!min-h-[calc(50vh-1.75rem)]',
           'transition-all duration-200',
-          props.className,
+          blockOptions.className,
         )}
-        data-docs-code-block={props.tone}
+        data-docs-code-block={blockOptions.tone}
         data-docs-code-editor
         data-docs-code-source={src || 'local'}
-        contentEditable={props.tone === 'edit' ? false : undefined}
+        contentEditable={blockOptions.tone === 'edit' ? false : undefined}
         suppressContentEditableWarning
       >
         <div className="docs-code-block-header flex items-center justify-between gap-2 border-b border-primary-6 bg-primary-2 px-2 py-px">
-          {props.tone === 'view' ||
-          !(props.tone === 'edit' ? props.languageEditable !== false && !src : false) ? (
+          {blockOptions.tone === 'view' ||
+          !(blockOptions.tone === 'edit'
+            ? blockOptions.languageEditable !== false && !src
+            : false) ? (
             <p className="!my-0 text-xs font-medium text-primary-11">{langOf(curLang)}</p>
           ) : (
             <Select
@@ -646,16 +673,16 @@ export function CodeBlock(
               value={curLang}
               onValueChange={(v) => {
                 langRef.current = langOf(v);
-                props.onLanguageChange?.(langRef.current, codeRef.current);
+                blockOptions.onLanguageChange?.(langRef.current, codeRef.current);
               }}
             >
               <SelectTrigger aria-label="Select code language">
                 <span aria-label={curLang}>{langOf(curLang)}</span>
               </SelectTrigger>
               <SelectContent align="start">
-                {(LANGS.includes(langOf(props.language) as (typeof LANGS)[number])
+                {(LANGS.includes(langOf(blockOptions.language) as (typeof LANGS)[number])
                   ? LANGS
-                  : [...LANGS, langOf(props.language)]
+                  : [...LANGS, langOf(blockOptions.language)]
                 ).map((v) => (
                   <SelectItem key={v} value={v}>
                     {langOf(v)}
@@ -713,9 +740,9 @@ export function CodeBlock(
           ) : (
             <div className="min-w-0 max-w-full overflow-x-auto overflow-y-hidden">
               {
-                /* prettier-ignore */ props.tone === 'view' ? (
+                /* prettier-ignore */ blockOptions.tone === 'view' ? (
 		<div className='docs-code-block-fb m-0 flex max-w-full flex-col overflow-x-auto overflow-y-hidden bg-transparent p-0 text-sm leading-6' data-docs-code-fb='true'>
-			{(props.tone === 'view' ? resCode.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').split('\n') : []).map((l, i) => (
+			{(blockOptions.tone === 'view' ? resCode.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').split('\n') : []).map((l, i) => (
 				<div key={i} className='docs-code-block-fallback-line flex min-w-full text-sm leading-6'>
 					<div className='min-w-10 shrink-0 select-none border-r border-primary-6 px-2 text-right font-mono tabular-nums leading-6 text-primary-10'>{i + 1}</div>
 					<span className='block whitespace-pre px-1 leading-6 text-inherit'>{l || ' '}</span>
@@ -731,3 +758,4 @@ export function CodeBlock(
     </ErrorBoundary>
   );
 }
+Object.assign(BlockSkeleton, { displayName: 'DocsCodeBlockSkeleton' });

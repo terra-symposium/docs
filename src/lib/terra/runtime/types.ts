@@ -1,13 +1,39 @@
-import type { ComponentType, ReactNode } from 'react';
+/**
+ * src/lib/terra/runtime/types.ts
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// TYPES
+import type {
+  ComponentType,
+  CSSProperties,
+  FocusEventHandler,
+  MutableRefObject,
+  ReactNode,
+  SVGProps,
+} from 'react';
+import type { Edge as XYFlowEdge, Node as XYFlowNode, ReactFlowProps } from '@xyflow/react';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
+
+/** Open object shape for serialized content whose fields are host-defined. */
 type UnknownRecord = Record<string, unknown>;
-type PortableBlock<T extends string = string> = T extends string
+/** Portable Text block with a typed discriminator and optional nested blocks. */
+export type PortableBlock<T extends string = string> = T extends string
   ? { _type: T; _key?: string; children?: PortableBlock[]; [key: string]: unknown }
   : never;
-
+/** Permissions the shared workspace exposes for a document or navigation node. */
 export type DocsPermissionLevel = 'read' | 'write';
+/** Visible workspace modes selected by the document toolbar. */
 export type Mode = 'view' | 'edit' | 'attachments';
+/** Intermediate editor transition states used while changing modes or loading local content. */
 export type Transition = 'idle' | 'local' | 'p' | `to-${Mode}`;
+/** Portable table cell that can retain rich blocks or its original Markdown/HTML source. */
 export type DocTableCell = {
   _key?: string;
   _type?: 'cell';
@@ -15,6 +41,7 @@ export type DocTableCell = {
   html?: string;
   markdown?: string;
 };
+/** Common serialized fields accepted by the Docs block renderers. */
 export type DocBlock = {
   _type: string;
   _key?: string;
@@ -26,6 +53,7 @@ export type DocBlock = {
   direction?: string;
   edges?: unknown[];
   height?: number | string;
+  header?: string;
   inline?: boolean;
   items?: Array<{ content?: DocBody | null; markdown?: string; title?: string }>;
   kind?: string;
@@ -37,7 +65,7 @@ export type DocBlock = {
   nodeSep?: number;
   proximityConnect?: boolean;
   rankSep?: number;
-  rows?: Array<{ cells: DocTableCell[] }>;
+  rows?: Array<{ _key?: string; _type?: 'row'; cells: DocTableCell[] }>;
   source?: string;
   src?: string;
   scope?: string;
@@ -49,10 +77,18 @@ export type DocBlock = {
   width?: number | string;
   [key: string]: unknown;
 };
+/** Ordered block content stored for one Docs document or nested block. */
 export type DocBody = DocBlock[];
+/**
+ * Checks that a value is an array of block-shaped objects before rendering stored content.
+ *
+ * @param value Candidate value from a host or serialized document.
+ *
+ * @return Whether every array entry has an object shape and a `_type` discriminator.
+ */
 export const isDocBody = (value: unknown): value is DocBody =>
-  Array.isArray(value) &&
-  value.every((block) => block && typeof block === 'object' && '_type' in block);
+  Array.isArray(value) && value.every((b) => b && typeof b === 'object' && '_type' in b);
+/** Saved document revision with its content snapshot and display metadata. */
 export type DocVer = {
   _key?: string;
   ver?: string;
@@ -64,6 +100,7 @@ export type DocVer = {
   title: string;
   savedAt: string;
 };
+/** Markdown-backed document metadata accepted by the local and hosted workspaces. */
 export type Md = {
   [key: string]: unknown;
   content?: string | DocVer[] | DocBody | null;
@@ -76,7 +113,9 @@ export type Md = {
   title?: string;
   sources?: string[];
 };
+/** Result envelope returned by a host action, including a transport or operation error. */
 export type ActionRes<T = unknown> = { data?: T; error?: unknown };
+/** Unsaved editor draft paired with the original source and optional title metadata. */
 export type Draft = {
   content?: string | DocBody | null;
   description?: string;
@@ -84,50 +123,87 @@ export type Draft = {
   title?: string;
   source: string;
 };
+/** Serializable editor selection, including text offsets and optional browser range data. */
 export type EditorSel = {
-  anchorOffset?: number;
-  anchorPath?: number[] | null;
-  anchorText?: string;
-  box?: { height: number; left: number; top: number; width: number };
-  collapsed?: boolean;
-  code?: { from: number; to: number } | null;
-  dom?: Range | null;
-  focusOffset?: number;
-  focusPath?: number[] | null;
-  focusText?: string;
-  text?: string;
-  visible?: boolean;
+  anchorOffset?: number | null | undefined;
+  anchorPath?: number[] | null | undefined;
+  anchorText?: string | undefined;
+  anchorLinear?: number | null | undefined;
+  box?: { height: number; left: number; top: number; width: number } | undefined;
+  collapsed?: boolean | undefined;
+  code?: { from: number; to: number } | null | undefined;
+  dom?: Range | null | undefined;
+  focusOffset?: number | null | undefined;
+  focusPath?: number[] | null | undefined;
+  focusText?: string | undefined;
+  focusLinear?: number | null | undefined;
+  text?: string | undefined;
+  visible?: boolean | undefined;
 };
+/** References to the active editor body, current selection, and toolbar controls. */
 export type EditorRefs = {
+  blob?: Blob | null;
   body?: HTMLElement | null;
+  code?: string;
+  dirty?: boolean;
+  editor?: unknown;
+  lastMd?: string;
+  load?: { ignoreInitialChange: boolean; pendingContent: string };
+  norm?: { force: boolean; replay: boolean; markdown?: string; structural?: boolean };
+  previews?: Map<string, unknown>;
+  reparse?: string;
+  replacements?: Map<string, unknown>;
+  route?: { path: string | undefined; pathname: string };
+  saved?: string;
   selection?: EditorSel | null;
   toolbar?: ToolbarState | null;
+  uploads?: Map<string, unknown>;
+  version?: unknown;
+  [key: string]: unknown;
 };
-export type EditorSurface = UnknownRecord;
+
+/** State and callbacks exposed to Docs components while a document editor is mounted. */
+export type EditorSurface = {
+  attachFiles?: (files: File[]) => Promise<void>;
+  controls: ToolbarState;
+  editor: {
+    busy: string | null;
+    dirty: boolean;
+    draft: Draft;
+    loaded: boolean;
+    optimistic: boolean;
+    version: number;
+  };
+  insert: (markdown: string, rootEnd?: boolean, selection?: EditorSel | null) => void;
+  mode: Mode;
+  onBodyChange: (body: DocBody) => void;
+  onMdChange: (markdown: string) => void;
+  onVisualError: (err: unknown) => void;
+  parseError: string | null;
+  path: string | undefined;
+  pathname: string;
+  refs: MutableRefObject<EditorRefs>;
+  save: (code?: string) => void | Promise<void>;
+  setMode: (mode: Mode) => Promise<void>;
+  uploadImage?: (file: File) => Promise<string>;
+};
+/** State and callbacks consumed by the shared edit toolbar. */
 export type ToolbarState = {
   applySearchText: (value: string) => void;
   busy: string | null;
   dirty: boolean;
-  discard?: () => void | Promise<void>;
+  discard?: (() => void | Promise<void>) | undefined;
   insert: (md: string, rootEnd?: boolean, selection?: EditorSel | null) => void;
-  optimistic?: boolean;
-  path?: string;
-  permission?: DocsPermissionLevel;
-  prettier?: () => void;
+  optimistic?: boolean | undefined;
+  path?: string | undefined;
+  permission?: DocsPermissionLevel | undefined;
+  prettier?: (() => void) | undefined;
   readSearchText: () => Promise<string>;
-  save?: () => void | Promise<void>;
+  save?: (() => void | Promise<void>) | undefined;
   setMode: (mode: Mode) => Promise<void>;
-  toggleList?: (kind: string) => void;
+  toggleList?: ((kind: string) => void) | undefined;
 };
-export type EditorState = {
-  busy: string | null;
-  dirty: boolean;
-  draft: Draft;
-  loaded: boolean;
-  optimistic: boolean;
-  version: number;
-};
-export type PathProps = { pathname: string };
+/** Permissioned terminal node in the Docs navigation tree. */
 export type Leaf = {
   type: 'leaf';
   origName: string;
@@ -141,6 +217,7 @@ export type Leaf = {
   source?: string;
   [key: string]: unknown;
 };
+/** Permissioned navigation group containing descendant leaves or branches. */
 export type Branch = {
   type: 'branch';
   origName: string;
@@ -152,9 +229,12 @@ export type Branch = {
   hue?: number;
   [key: string]: unknown;
 };
+/** Navigation tree node accepted by the original Docs workspace. */
 export type Tree = Leaf | Branch;
+/** Attachment categories understood by the document export controls. */
 export type AttchType =
   'image' | 'pdf' | 'youtube' | 'tsdocs' | 'website' | 'file' | 'doc' | 'document' | 'other';
+/** Related document or asset entry shown alongside a leaf in the attachment view. */
 export type Sister = {
   content?: unknown;
   id?: string;
@@ -167,6 +247,7 @@ export type Sister = {
   source?: string;
   unavailable?: boolean;
 };
+/** One action or submenu entry in a Docs navigation context menu. */
 export type DocsTreeMenuAction = {
   destructive?: boolean;
   disabled?: boolean;
@@ -176,6 +257,7 @@ export type DocsTreeMenuAction = {
   separator?: boolean;
   subActions?: DocsTreeMenuAction[];
 };
+/** Export format, content filters, and merge policy selected by the user. */
 export type DocsExportOpts = {
   flatten: boolean;
   format: 'raw' | 'pdf';
@@ -189,6 +271,7 @@ export type DocsExportOpts = {
   };
   merges: { pages: boolean; pdfs: boolean; images: boolean; youtube: boolean; tsdocs: boolean };
 };
+/** Active export selection; null means the export dialog has no target. */
 export type ExportTgt = {
   paths: string[];
   rootDir: string;
@@ -196,12 +279,7 @@ export type ExportTgt = {
   title: string;
   nodeIds?: string[];
 } | null;
-export type AttchTgt = {
-  path: string;
-  title: string;
-  scope: 'section' | 'group' | 'leaf';
-  node: Tree;
-};
+/** Pending deletion target retained while the confirmation dialog is open. */
 export type DelTgt = {
   kind: 'section' | 'branch' | 'leaf';
   path: string;
@@ -211,73 +289,129 @@ export type DelTgt = {
   title: string;
   origNode?: Tree;
 } | null;
+/** Controlled prompt dialog state and the callbacks that commit or cancel its value. */
 export type PromptState = {
   open: boolean;
   title: string;
-  description?: string;
+  description?: string | undefined;
   label: string;
   value: string;
   onSave: (val: string) => void;
   onCancel?: () => void;
 } | null;
+/** One command shown in a block type or insert menu. */
 export type BlockOpt = {
   group: 'type' | 'insert';
-  icon: ReactNode;
+  icon: ComponentType<SVGProps<SVGSVGElement>> | ReactNode;
   label: string;
   value: string;
   onSelect: () => void;
 };
+/** Custom block component entry with optional labels for the editor menu. */
 export type RepoComponentWithLabel = {
   name: string;
+  path?: string;
   label?: string;
   component?: ComponentType<UnknownRecord>;
+  clipboardValue?: string;
   displayLabel?: string;
   [key: string]: unknown;
 };
+/** Nested menu index for custom components grouped by repository folder. */
 export type MenuTree = { components: RepoComponentWithLabel[]; folders: Record<string, MenuTree> };
+/** Current drag payload for either a leaf node or a branch node. */
 export type DragState =
   | { active: boolean; path: string; kind: 'leaf' }
   | { fPath: string; kind: 'branch'; pPath: string };
+/** Destination item and insertion position selected during a tree reorder. */
 export type ReorderDropState = { key: string; position: 'after' | 'before' | 'inside' };
-export type TableRow<TCell = DocTableCell> = { _key: string; _type: 'row'; cells: TCell[] };
+/** DOM element decorated with the action data for one rendered document block. */
 export type BlockTgt = HTMLElement & { __blockActions?: UnknownRecord[] };
+/** Parsed TypeScript documentation page passed to the graph and page renderers. */
 export type TsDocsItem = { slug: string; title: string; body: DocBody };
-export type Edge = UnknownRecord;
-export type FlowNode = UnknownRecord;
-export type FlowEdgeData = UnknownRecord & {
-  color?: string;
-  label?: string;
-  srcHandleOverride?: string;
-  tgtHandleOverride?: string;
-};
-export type NodeData = UnknownRecord & {
+/** Rendering and interaction metadata attached to a graph node. */
+export type NodeData = Record<string, unknown> & {
   attributes?: Array<{ name: string; type?: string; value?: string }>;
   compact?: boolean;
+  customPosition?: { x?: number; y?: number };
   editable?: boolean;
+  groupId?: string;
   href?: string;
   id?: string;
+  isDragTarget?: boolean;
   onClick?: () => void;
-  requiredHandles?: { sources?: Pos[]; tgts?: Pos[] };
+  onResizeEnd?: (id: string, size: FlowResizeParams) => void;
+  requiredHandles?: { sources?: Pos[]; targets?: Pos[]; tgts?: Pos[] };
   title?: string;
 };
+/** Supported node variants used by the Docs graph controls. */
+export type FlowNodeType =
+  'data' | 'decision' | 'erd' | 'group' | 'note' | 'origin' | 'process' | 'terminal' | 'terminator';
+/** React Flow node shape used by the shared Docs diagram canvas. */
+export type FlowNode = Omit<XYFlowNode<NodeData, FlowNodeType | undefined>, 'type'> & {
+  type?: FlowNodeType;
+};
+/** React Flow edge shape with a serializable, host-defined data record. */
+export type Edge = XYFlowEdge<Record<string, unknown>, string | undefined>;
+/** Valid sides for graph node connection handles. */
 export type Pos = 'top' | 'right' | 'bottom' | 'left';
+/** Coordinates and dimensions calculated by the Dagre graph layout. */
 export type DagreNode = { x?: number; y?: number; width?: number; height?: number };
+/** Flow node shape accepted by layout helpers before React Flow normalization. */
 export type FlowNodeLike = {
   id: string;
   position?: { x: number; y: number };
+  type?: string;
+  data?: NodeData;
+  style?: CSSProperties;
+  measured?: { width?: number; height?: number };
+  width?: number;
+  height?: number;
+  parentId?: string;
   [key: string]: unknown;
 };
+/** Width and height produced by measuring a resizable graph group. */
 export type FlowSize = { w: number; h: number };
-export type NodesProps = UnknownRecord & {
-  direction?: string;
+/** Dimensions reported by React Flow after resizing a group or note node. */
+export type FlowResizeParams = { x: number; y: number; width: number; height: number };
+/** Diagram input options accepted by the Docs graph block renderer. */
+export type NodesProps = Omit<
+  ReactFlowProps<FlowNode, Edge>,
+  'nodes' | 'edges' | 'onNodeClick' | 'onFocus' | 'onBlur'
+> & {
+  allowedTypes?: FlowNodeType[];
+  arcControls?: boolean;
+  clipboardKey?: string;
+  direction?: 'TB' | 'LR';
+  disabled?: boolean;
+  editable?: boolean;
   edges?: Edge[];
   height?: number;
+  interactive?: boolean;
+  lockedTypes?: FlowNodeType[];
   nodes?: FlowNode[];
+  nodeLabels?: Record<string, string>;
+  nodeSep?: number;
+  onAddContent?: (position: { x: number; y: number }) => void;
+  onCommit?: (graph: { nodes: FlowNode[]; edges: Edge[] }) => void;
+  onNodeClick?: (node: FlowNode) => void;
+  onFocus?: FocusEventHandler<HTMLDivElement>;
+  onBlur?: FocusEventHandler<HTMLDivElement>;
+  tabIndex?: number;
+  onReady?: () => void;
+  onResizeEnd?: (id: string, size: FlowResizeParams) => void;
+  proximityConnect?: boolean;
+  rankSep?: number;
+  readyWhenEmpty?: boolean;
+  showBg?: boolean;
+  showCtrls?: boolean;
 };
+/** Node metadata for a resizable or droppable diagram group. */
 export type GroupNodeData = NodeData & {
   isDragTarget?: boolean;
-  onResizeEnd?: (id: string, size: FlowSize) => void;
+  onResizeEnd?: (id: string, size: FlowResizeParams) => void;
 };
+/** Parsed power-source graph with source, terminal, and referenced-content nodes. */
 export type PowerSrcGraph = {
   nodes: Array<
     | { type: 'origin' | 'terminal'; position?: { row?: number }; [key: string]: unknown }
@@ -290,20 +424,14 @@ export type PowerSrcGraph = {
   >;
   [key: string]: unknown;
 };
+/** Portable Text mark definition retained in a Docs rich-text block. */
 export type DocsContentPtMarkDef = {
   _key?: string;
   _type?: string;
   href?: string;
   [key: string]: unknown;
 };
-export type DocsContentPtSpan = {
-  _key?: string;
-  _type?: string;
-  marks?: string[];
-  text?: string;
-  [key: string]: unknown;
-};
-export type DocsNodesDraft = Record<string, boolean | string | undefined>;
+/** Input descriptor used to build a Docs block configuration form. */
 export type Field = {
   key: string;
   kind: string;
@@ -312,48 +440,43 @@ export type Field = {
   textarea?: boolean;
   tooltip: string;
 };
-export type DocsAttachment = {
-  path?: string;
-  size?: number;
-  title: string;
-  type?: string;
-  url?: string;
+/** Host-provided toolbar state kept as an open adapter for legacy integrations. */
+export type EditorToolbarAdapter = {
+  format?: (kind: string) => void;
+  insert?: ToolbarState['insert'];
+  ready?: boolean;
+  redo?: () => void;
+  redoable?: boolean;
+  setBlockType?: (type: string) => void;
+  toggleList?: (kind: string) => void;
+  undo?: () => void;
+  undoable?: boolean;
 };
-export type EditorToolbarAdapter = UnknownRecord;
-export type PortableEditorBlock = PortableBlock;
-export type DocsPermSrc = UnknownRecord;
-export type User = { _id?: string; _type?: string; [key: string]: unknown };
-export type DocsNestedContent = PortableBlock[];
-export type TerraContent = PortableBlock[];
+/** Host-specific block inserted from the Docs toolbar. */
+export type ToolbarBlock = {
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  insert: () => string;
+  label: string;
+  type: string;
+};
+/** Portable Text block sequence accepted for a Docs document body. */
+export type Content = PortableBlock[];
+/** Problem document record used by the shared problem-content renderer. */
 export type Problem = { _id?: string; title?: string; [key: string]: unknown };
-type ArticleInlineType = 'image' | 'video' | 'table' | 'questions' | 'dialogue' | 'definition';
-export type ArticleContent = Array<
-  PortableBlock<'block'> & { children?: PortableBlock<ArticleInlineType>[] }
->;
-export type DocsContent = PortableBlock<keyof typeof DOCS_BLOCK_SCHEMAS>[];
+/** Docs block content narrowed to the configured block schema names. */
+export type DocsContent = {
+  [T in keyof typeof DOCS_BLOCK_SCHEMAS]: DocBlock & { _type: T };
+}[keyof typeof DOCS_BLOCK_SCHEMAS][];
+/** Portable blocks nested inside another Docs component. */
+export type DocsNestedContent = PortableBlock[];
+/** Blocks supported by the shared problem-content renderer. */
 export type ProblemContent = PortableBlock<(typeof PROBLEM_BLOCK_TYPES)[number]>[];
-export type StructureQuestion = { _id?: string; question?: string };
-export type TraversalGraph = { nodes: FlowNodeLike[]; edges?: ArcGraphEdge[] };
-export type ArcGraph = { nodes: FlowNodeLike[]; edges: ArcGraphEdge[]; [key: string]: unknown };
-export type ArcGraphEdge = { source: string; target: string; [key: string]: unknown };
-export type Arc = { _id?: string; _type?: string; [key: string]: unknown };
-export type Viewpoint = { _id?: string; title?: string; [key: string]: unknown };
-export type FlowMenuContext = { type: 'pane' | '_node' | 'e'; id: string | null };
-export type DocsBlockEditorProps = UnknownRecord;
-export type PortableTextBlockRendererProps<TBlock> = {
-  attributes: UnknownRecord;
-  children: ReactNode;
-  node: TBlock;
-  path: Array<string | number>;
-  readOnly?: boolean;
+/** Arc graph assembled from positioned nodes and source/target connections. */
+export type ArcGraph = {
+  nodes: FlowNodeLike[];
+  edges: { source: string; target: string; [key: string]: unknown }[];
+  [key: string]: unknown;
 };
-export type PortableTextBlockEditorProps<TBlock> = Omit<
-  PortableTextBlockRendererProps<TBlock>,
-  'readOnly'
->;
-export type InlineObjectRenderProps = UnknownRecord;
-export type JSX = ReactNode;
-
 export const DOCS_BLOCK_SCHEMAS = {
   accordion: { fields: [{ name: 'items', type: 'array' }] },
   tabs: { fields: [{ name: 'items', type: 'array' }] },
@@ -369,6 +492,7 @@ export const DOCS_BLOCK_SCHEMAS = {
   embed: { fields: [{ name: 'src', type: 'string' }] },
   math: { fields: [{ name: 'code', type: 'string' }] },
   nodes: { fields: [{ name: 'nodes', type: 'array' }] },
+  quiz: { fields: [{ name: 'markdown', type: 'string' }] },
   raw: { fields: [{ name: 'markdown', type: 'string' }] },
   tsDocs: { fields: [{ name: 'scope', type: 'string' }] },
 } satisfies Record<string, { fields: Array<{ name: string; type: string }> }>;
@@ -392,6 +516,3 @@ export const PROBLEM_BLOCK_TYPES = [
   'tabs',
   'accordion',
 ] as const;
-export const TERRA_CONTAINER_TYPES = ['tabs', 'accordion', 'callout'] as const;
-export const ARTICLE_INLINE_SCHEMAS = {};
-export const PROBLEM_BLOCK_SCHEMAS = {};

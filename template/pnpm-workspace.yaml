@@ -1,0 +1,6 @@
+allowBuilds:
+  '@carbon/icon-helpers': true
+  '@carbon/icons-react': true
+  esbuild: true
+lockfileDir: config
+virtualStoreDir: ../node_modules/.pnpm

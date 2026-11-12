@@ -1,9 +1,34 @@
-/** Uploads, assembles, and downloads Docs assets. */
+/**
+ * src/lib/terra/docs/assets.ts
+ * Uploads, assembles, and downloads Docs assets.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { actions } from '../runtime/action-proxy.js';
-import { warn } from '../runtime/runtime.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
 
 const ASSET_CHUNK_SIZE_BYTES = 0.9 * 1024 * 1024;
 
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Uploads a browser `File` in sequential chunks and returns the final attachment metadata.
+ *
+ * @param file - File whose bytes and media type are sent to the host.
+ * @param dPath - Destination path the host should assign to the completed asset.
+ * @param opts - Optional image processing and per-chunk progress settings.
+ *
+ * @return Metadata returned for the final uploaded attachment.
+ */
 export async function uploadAssetChunked(
   file: File,
   dPath: string,
@@ -18,10 +43,15 @@ export async function uploadAssetChunked(
       message?: string;
     }) => void;
   },
-): Promise<{ path?: string; src?: string; compressedSize?: number; name?: string }> {
+): Promise<{ id?: string; path?: string; src?: string; compressedSize?: number; name?: string }> {
   const totalChunks = Math.ceil(file.size / ASSET_CHUNK_SIZE_BYTES) || 1;
-  let finalAsset: { path?: string; src?: string; compressedSize?: number; name?: string } | null =
-    null;
+  let finalAsset: {
+    id?: string;
+    path?: string;
+    src?: string;
+    compressedSize?: number;
+    name?: string;
+  } | null = null;
   for (let c = 0; c < totalChunks; c++) {
     const chunk = file.slice(c * ASSET_CHUNK_SIZE_BYTES, (c + 1) * ASSET_CHUNK_SIZE_BYTES);
     const formData = new FormData();
@@ -39,8 +69,8 @@ export async function uploadAssetChunked(
     try {
       // native Astro Actions client automatically handles multipart/form-data encoding and routing!
       const { data, error } = await actions.write.asset.upload(formData);
-      if (error) {
-        const message =
+      if (error)
+        throw new Error(
           error instanceof Error
             ? error.message
             : typeof error === 'object' &&
@@ -48,11 +78,11 @@ export async function uploadAssetChunked(
                 'message' in error &&
                 typeof error.message === 'string'
               ? error.message
-              : 'Action rejected the payload';
-        throw new Error(message);
-      }
+              : 'Action rejected the payload',
+        );
       if (c === totalChunks - 1)
         finalAsset = data as {
+          id?: string;
           path?: string;
           src?: string;
           compressedSize?: number;
@@ -67,37 +97,4 @@ export async function uploadAssetChunked(
   }
   if (!finalAsset) throw new Error('Upload failed to return final attachment.');
   return finalAsset;
-}
-
-/**
- * Handles download.
- *
- * @param filename - Filename input supplied to download's operation.
- * @param content - Content input supplied to download's operation.
- * @param type - Type input supplied to download's operation.
- */
-export function download(
-  filename: string,
-  content: string | ArrayBuffer | Blob,
-  type = 'text/plain',
-): void {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    warn('download', 'Bypass requested execution; environment window context is dead.');
-    return;
-  }
-  let dlName = filename;
-  if (
-    type === 'text/markdown' &&
-    !dlName.toLowerCase().endsWith('.md') &&
-    !dlName.toLowerCase().endsWith('.mdx')
-  )
-    dlName += '.mdx';
-  const href = URL.createObjectURL(
-    content instanceof Blob ? content : new Blob([content], { type }),
-  );
-  const link = document.createElement('a');
-  link.href = href;
-  link.download = dlName;
-  link.click();
-  URL.revokeObjectURL(href);
 }

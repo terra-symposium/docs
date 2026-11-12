@@ -1,0 +1,57 @@
+---
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// COMPONENTS
+import { QuizDemo } from '../components/QuizDemo.js';
+
+// STYLES
+import '@terra-symposium/docs/style.css';
+---
+<!doctype html>
+<html lang="en" class="light">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="description" content="Try the shared Docs leaf quiz flow with the Playwright workspace fixture." />
+		<title>Leaf quiz demo · Docs</title>
+	</head>
+	<body>
+		<header class="demo-intro">
+			<p>Docs component demo</p>
+			<h1>Generate a quiz from a leaf</h1>
+			<p>Select a leaf, then choose <strong>Generate quiz</strong>. This fixture returns clearly marked sample questions and never sends content to an AI service.</p>
+		</header>
+		<QuizDemo client:load />
+	</body>
+</html>
+
+<style>
+	.demo-intro {
+		margin-left: 22rem;
+		padding: 1.25rem clamp(1rem, 4vw, 3rem);
+		background: #f7f4fb;
+		color: #24172f;
+	}
+	.demo-intro > p:first-child {
+		margin: 0 0 0.35rem;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	.demo-intro h1 {
+		margin: 0;
+		font-size: clamp(1.25rem, 2.5vw, 1.8rem);
+	}
+	.demo-intro > p:last-child {
+		margin: 0.35rem 0 0;
+		font-size: 0.9rem;
+	}
+	@media (max-width: 767px) {
+		.demo-intro {
+			margin-left: 0;
+		}
+	}
+</style>

@@ -3,7 +3,7 @@ title: Configuration
 description: Configure the Docs component in a host application.
 ---
 
-The library has no global configuration object. Configure each instance through React props and host-owned code.
+The library has no global configuration object, each instance is selt hosted through using the template associated with this repo..
 
 ## Component props
 

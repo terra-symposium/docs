@@ -20,20 +20,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
       - run: pnpm run quality:check
-
-  demo-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: config/.nvmrc
-          cache: pnpm
-          cache-dependency-path: config/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vite build --config config/vite.config.ts
 
   docs-build:
     runs-on: ubuntu-latest

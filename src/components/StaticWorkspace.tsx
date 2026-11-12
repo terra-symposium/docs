@@ -332,14 +332,14 @@ export function DocsStaticWorkspace({
   /**
    * Resolves a host route or storage path to the matching leaf, falling back to the current page.
    *
-   * @param path Route or content-store path requested by the host.
+   * @param requestedPath Route or content-store path requested by the host.
    *
    * @return Matching leaf metadata, the current page for an empty path, or `undefined`.
    */
-  const leafForPath = (path?: string): DocsLeaf | undefined => {
-    if (!path) return a?.leaf;
-    const requestedRoute = routeKey(path);
-    const requestedStoragePath = storageKey(path);
+  const leafForPath = (requestedPath?: string): DocsLeaf | undefined => {
+    if (!requestedPath) return a?.leaf;
+    const requestedRoute = routeKey(requestedPath);
+    const requestedStoragePath = storageKey(requestedPath);
     return (
       allLeaves.find(
         (i) =>
@@ -347,7 +347,7 @@ export function DocsStaticWorkspace({
           storageKey(i.leaf.path ?? i.leaf.href) === requestedStoragePath,
       )?.leaf ??
       allLeaves
-        .filter((i) => routeOwnsPath(i.leaf.href, path))
+        .filter((i) => routeOwnsPath(i.leaf.href, requestedPath))
         .sort((l, r) => routeKey(r.leaf.href).length - routeKey(l.leaf.href).length)[0]?.leaf
     );
   };
@@ -472,7 +472,24 @@ export function DocsStaticWorkspace({
             }
           : null;
       } else if (op === 'read.doc.attachments') {
-        data = hostAttachments;
+        const request = input as { path?: string; paths?: string[] } | undefined;
+        /**
+         * Returns attachments only when the requested path resolves to the current static page.
+         * @param requestedPath Page or content path; omitted selects the current page.
+         * @return Current-page attachments, or an empty list for another page.
+         */
+        const attachmentsForPath = (requestedPath?: string): DocsHostAttachment[] => {
+          return (requestedPath
+            ? requestedPath === a?.leaf.id
+              ? a?.leaf
+              : leafForPath(requestedPath)
+            : a?.leaf) === a?.leaf
+            ? hostAttachments
+            : [];
+        };
+        data = Array.isArray(request?.paths)
+          ? Object.fromEntries(request.paths.map((path) => [path, attachmentsForPath(path)]))
+          : attachmentsForPath(request?.path);
       } else if (op === 'read.util.pathname') {
         data = currentPath;
       } else if (op === 'read.util.node') {

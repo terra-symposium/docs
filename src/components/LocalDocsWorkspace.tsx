@@ -388,12 +388,36 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
               };
             }
             if (op === 'read.doc.attachments') {
-              return {
-                data: ((resolvePage(args) ?? aPage())?.attachments ?? []).map((attachment) => ({
+              /**
+               * Resolves attachment metadata for a local page in the legacy Docs UI shape.
+               * @param contentPath Content path to resolve; omitted uses the current request.
+               * @return Attachments for the resolved page, with legacy display fields added.
+               */
+              const attachmentsForPath = (contentPath?: string): DocsHostAttachment[] => {
+                return (
+                  (contentPath
+                    ? resolvePage({ path: contentPath })
+                    : (resolvePage(args) ?? aPage())
+                  )?.attachments ?? []
+                ).map((attachment) => ({
                   ...attachment,
                   title: attachment.name,
                   isMd: false,
-                })) as T,
+                }));
+              };
+              if (Array.isArray(args.paths)) {
+                return {
+                  data: Object.fromEntries(
+                    args.paths
+                      .filter((path): path is string => typeof path === 'string')
+                      .map((path) => [path, attachmentsForPath(path)]),
+                  ) as T,
+                };
+              }
+              return {
+                data: attachmentsForPath(
+                  typeof args.path === 'string' ? args.path : undefined,
+                ) as T,
               };
             }
             if (op === 'read.source.body')

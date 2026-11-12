@@ -18,7 +18,6 @@ import { SkillsExplorer } from '@terra-symposium/docs/skills';
 
 The index searches repository files named `SKILL.md`, including skills stored under `.agents/skills`, `.codex/skills`, or package-specific folders. The page groups skills by their owning repository path and shows their descriptions, frontmatter metadata, source paths, and full Markdown instructions. Rebuild Docs after changing skill files so the cached inventory stays current.
 
-
 ## Storage
 
 The standalone editor component is controlled: the host supplies `value` and receives edits in `onChange`. Repository-backed pages use `DocsLocalWorkspace` to render Markdown and adjacent files without an account or server. A remote Docs installation mounts `DocsWorkspace` and implements the `DocsHostAdapter` operations required for drafts, publishing, history, and attachment upload.

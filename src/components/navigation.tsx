@@ -13,7 +13,6 @@ import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 // TYPES
 import type { CSSProperties, JSX } from 'react';
 import type { DocsAttachment } from '../lib/workspace-types.js';
-import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG

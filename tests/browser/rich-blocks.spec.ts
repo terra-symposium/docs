@@ -1,0 +1,21 @@
+/**
+ * test/browser/rich-blocks.spec.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import './rich-blocks/accordion.case.ts';
+import './rich-blocks/callout.case.ts';
+import './rich-blocks/code.case.ts';
+import './rich-blocks/embed.case.ts';
+import './rich-blocks/image.case.ts';
+import './rich-blocks/math.case.ts';
+import './rich-blocks/nesting.case.ts';
+import './rich-blocks/nodes.case.ts';
+import './rich-blocks/raw.case.ts';
+import './rich-blocks/table.case.ts';
+import './rich-blocks/tabs.case.ts';
+import './rich-blocks/tsdocs.case.ts';

@@ -1,28 +1,85 @@
-import type { JSX } from 'react';
-import Scaffold from './pages/docs/_main.js';
+/**
+ * src/components/terra/Workspace.tsx
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { configureDocsHost } from '../../lib/host-runtime.js';
+
+// COMPONENTS
+import Scaffold from './pages/docs/_main.js';
+
+// TYPES
+import type { JSX } from 'react';
 import type { TerraDocsWorkspaceProps } from '../../lib/host.js';
 
-/** The source-preserving shared Terra Docs workspace used by host route adapters. */
-export function TerraDocsWorkspace(props: TerraDocsWorkspaceProps): JSX.Element {
-  configureDocsHost(props.host, props.customBlocks);
-  return (
-    <Scaffold
-      tree={props.tree as any}
-      pathname={props.pathname}
-      permission={props.permission}
-      userData={props.userData ?? null}
-      title={props.title}
-      {...(props.path ? { path: props.path } : {})}
-      {...(props.description ? { description: props.description } : {})}
-      {...(props.contributors ? { contributors: props.contributors } : {})}
-      {...(props.updatedAt ? { updatedAt: props.updatedAt } : {})}
-      {...(props.source ? { source: props.source } : {})}
-      {...(props.content !== undefined ? { content: props.content as any } : {})}
-      {...(props.renderContent !== undefined ? { viewContent: props.renderContent } : {})}
-      {...(props.standalone !== undefined ? { standalone: props.standalone } : {})}
-      {...(props.full !== undefined ? { full: props.full } : {})}
-      {...(props.mode ? { mode: props.mode } : {})}
-    />
-  );
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * The source-preserving shared Terra Docs workspace used by host route adapters.
+ *
+ * @param host Host adapter that supplies routes, permissions, and document actions.
+ * @param customBlocks Optional host-provided Portable Text block renderers.
+ * @param tree Navigation tree displayed by the workspace.
+ * @param pathname Current route used to select the active document.
+ * @param permission Current user's permission for Docs actions.
+ * @param userData Signed-in user information shown by the navigation.
+ * @param title Site or document title displayed by the workspace.
+ * @param path Optional document path.
+ * @param description Optional document description.
+ * @param contributors Contributor names associated with the document.
+ * @param updatedAt Document update timestamp.
+ * @param source Markdown source for the document.
+ * @param content Structured document body.
+ * @param renderContent Optional host-rendered view content.
+ * @param standalone Whether the workspace runs without the remote host shell.
+ * @param full Whether the workspace fills the available page area.
+ * @param mode Initial view or editing mode.
+ *
+ * @return Shared Terra Docs workspace element.
+ */
+export function TerraDocsWorkspace({
+	host,
+	customBlocks,
+	tree,
+	pathname,
+	permission,
+	userData,
+	title,
+	path,
+	description,
+	contributors,
+	updatedAt,
+	source,
+	content,
+	renderContent,
+	standalone,
+	full,
+	mode,
+}: TerraDocsWorkspaceProps): JSX.Element {
+	configureDocsHost(host, customBlocks);
+	return (
+		<Scaffold
+			tree={tree as any}
+			pathname={pathname}
+			permission={permission}
+			userData={userData ?? null}
+			title={title}
+			{...(path ? { path } : {})}
+			{...(description ? { description } : {})}
+			{...(contributors ? { contributors } : {})}
+			{...(updatedAt ? { updatedAt } : {})}
+			{...(source ? { source } : {})}
+			{...(content !== undefined ? { content: content as any } : {})}
+			{...(renderContent !== undefined ? { viewContent: renderContent } : {})}
+			{...(standalone !== undefined ? { standalone } : {})}
+			{...(full !== undefined ? { full } : {})}
+			{...(mode ? { mode } : {})}
+		/>
+	);
 }

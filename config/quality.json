@@ -1,0 +1,62 @@
+{
+  "$schema": "./node_modules/@terra-symposium/standards-quality/quality.schema.json",
+  "sourceRoots": [
+    "."
+  ],
+  "skippedDirectories": [
+    ".astro",
+    ".git",
+    "dist",
+    "node_modules",
+    "template/.astro",
+    "template/dist"
+  ],
+  "extensions": [
+    ".astro",
+    ".cjs",
+    ".css",
+    ".html",
+    ".js",
+    ".jsx",
+    ".md",
+    ".mdx",
+    ".mjs",
+    ".ts",
+    ".tsx"
+  ],
+  "tsconfig": "tsconfig.json",
+  "lintRoots": [
+    "."
+  ],
+  "typecheckCommand": {
+    "command": "pnpm",
+    "args": [
+      "run",
+      "typecheck"
+    ]
+  },
+  "tools": {
+    "eslint": "eslint",
+    "knip": "knip",
+    "prettier": "prettier",
+    "tsc": "tsc"
+  },
+  "oneLineImports": true,
+  "documentation": {
+    "commandRoots": [
+      "README.md",
+      "docs"
+    ],
+    "required": {
+      "types": true,
+      "functions": false,
+      "exportedFunctions": true,
+      "noInlineFunctions": false
+    }
+  },
+  "enabledChecks": {
+    "accessibility": true,
+    "display-name": true,
+    "documented-commands": true
+  }
+}

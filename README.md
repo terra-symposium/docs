@@ -11,11 +11,11 @@ pnpm install
 pnpm dev
 ```
 
-Vite opens the demo at `127.0.0.1`. Build the library with `pnpm build`; see the [interface guide](docs/interface.md) for integration details.
+Vite opens the demo at `127.0.0.1`. Build the library with `pnpm build`; see the [interface guide](docs/interface.mdx) for integration details.
 
 ### Commands
 
-From the repository root, run `pnpm check`, `pnpm test`, `pnpm test:browser`, and `pnpm test:consumer` as applicable.
+From the repository root, run `pnpm quality:all`, `pnpm test`, `pnpm test:browser`, and `pnpm test:consumer` as applicable.
 
 ## Security and Limitations
 
@@ -23,11 +23,11 @@ The package renders user-authored document content and includes HTML sanitizatio
 
 ## Structure
 
-`src/` contains exported library components and styles; `demo/` is the Vite consumer. `docs/` documents the interface, `test/` contains Node tests, and `template/` provides a consumer starter.
+`src/` contains exported library components and styles; `docs/` documents the interface, `tests/` contains Node and browser tests, and `template/` provides a consumer starter.
 
 ## References
 
-- [Interface guide](docs/interface.md)
+- [Interface guide](docs/interface.mdx)
 - [Test migration notes](TEST_MIGRATION.md)
 - [Package exports](package.json)
 - [Apache-2.0 license](LICENSE)

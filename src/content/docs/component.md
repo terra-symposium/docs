@@ -26,7 +26,7 @@ The default registry includes accordions, tabs, tables, callouts, code, images, 
 To disable a member in one instance, set its flag to `false`:
 
 ```tsx
-<Docs mode="edit" value={value} onChange={setValue} blocks={{ embed: false, nodes: false }} />
+<Docs mode='edit' value={value} onChange={setValue} blocks={{ embed: false, nodes: false }} />
 ```
 
 The same options can be passed to `renderMarkdown(markdown, blocks)`. Unknown or disabled structured source stays visible as escaped source, so it is not silently discarded.

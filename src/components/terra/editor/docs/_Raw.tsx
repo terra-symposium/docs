@@ -1,5 +1,9 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
+ * src/components/terra/editor/docs/_Raw.tsx
+ */
+
+// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
+/*
  * astro/src/components/editor/docs/_Raw.tsx
  */
 
@@ -21,19 +25,15 @@ HELPERS
 /**
  * Renders the raw component.
  *
- * @param props - Raw block props containing the authored markup.
+ * @param block Portable Text raw block containing authored markup.
  *
  * @return Rendered raw documentation content.
  */
-export function Raw({
-  block,
-}: {
-  block: /** Sanity Portable Text raw markup block fields. */ DocsBlock<'raw'>;
-}): JSX.Element {
-  return (
-    <ErrorBoundary name="Raw">
-      <CodeBlock docsSource code={block.markdown ?? ''} language="mdx" tone="view" />
-    </ErrorBoundary>
-  );
+export function Raw({ block }: { block: /** Sanity Portable Text raw markup block fields. */ DocsBlock<'raw'> }): JSX.Element {
+	return (
+		<ErrorBoundary name='Raw'>
+			<CodeBlock docsSource code={block.markdown ?? ''} language='mdx' tone='view' />
+		</ErrorBoundary>
+	);
 }
 Object.assign(Raw, { displayName: 'DocsRawMarkup' });

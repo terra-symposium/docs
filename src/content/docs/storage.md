@@ -8,17 +8,17 @@ The standalone editor component is controlled: the host supplies `value` and rec
 ```tsx
 const [value, setValue] = useState<DocsValue>(initialValue);
 
-<Docs mode="edit" value={value} onChange={setValue} />;
+<Docs mode='edit' value={value} onChange={setValue} />;
 ```
 
 Do not save on every keystroke. Let the host load a draft, save it with a revision check, and publish it explicitly. The host adapter contract is:
 
 ```ts
 type DocsHostAdapter = {
-  capabilities: DocsHostCapabilities;
-  invoke(operation: DocsActionOperation, input?: unknown): Promise<DocsActionResult>;
-  loadDraft?(path: string): Promise<DocsHostDocument | null>;
-  publishDraft?(path: string): Promise<void>;
+	capabilities: DocsHostCapabilities;
+	invoke(operation: DocsActionOperation, input?: unknown): Promise<DocsActionResult>;
+	loadDraft?(path: string): Promise<DocsHostDocument | null>;
+	publishDraft?(path: string): Promise<void>;
 };
 ```
 

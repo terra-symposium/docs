@@ -1,5 +1,9 @@
-// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /**
+ * src/components/terra/editor/docs/_math_inline.tsx
+ */
+
+// @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
+/*
  * astro/src/components/editor/docs/_math_inline.tsx
  * Read-only Docs math inline renderer for the shared Terra content editor.
  */
@@ -21,35 +25,27 @@ COMPONENTS
 /**
  * Renders a read-only Docs formula as an inline Portable Text object.
  *
- * @param props - Portable Text inline-object attributes, children, and node.
+ * @param attrs Attributes applied to the inline object wrapper.
+ * @param children Nested Portable Text children.
+ * @param node Inline math data to render.
  *
  * @return Inline rendered formula.
  */
-export default function MathInline({
-  attributes: attrs,
-  children,
-  node,
-}: InlineObjectRenderProps): React.JSX.Element {
-  return (
-    <span
-      {...attrs}
-      className="mx-1 inline align-baseline"
-      contentEditable={false}
-      data-terra-inline="math"
-      suppressContentEditableWarning
-    >
-      {renderMath({
-        code:
-          (
-            node as /** Optional math source read from the inline Portable Text object's node value. */ {
-              code?: string;
-            }
-          ).code || '',
-        inline: true,
-        className: 'align-baseline',
-      })}
-      {children}
-    </span>
-  );
+export default function MathInline({ attributes: attrs, children, node }: InlineObjectRenderProps): React.JSX.Element {
+	return (
+		<span {...attrs} className='mx-1 inline align-baseline' contentEditable={false} data-terra-inline='math' suppressContentEditableWarning>
+			{renderMath({
+				code:
+					(
+						node as /** Optional math source read from the inline Portable Text object's node value. */ {
+							code?: string;
+						}
+					).code || '',
+				inline: true,
+				className: 'align-baseline',
+			})}
+			{children}
+		</span>
+	);
 }
 Object.assign(MathInline, { displayName: 'DocsMathInline' });

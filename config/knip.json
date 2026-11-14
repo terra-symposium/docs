@@ -1,0 +1,33 @@
+{
+  "workspaces": {
+    ".": {
+      "entry": [
+        "src/lib/index.ts",
+        "src/components/LocalDocsWorkspace.tsx",
+        "src/components/SiteLayout.astro",
+        "src/components/NotFound.astro",
+        "src/components/NotFound.tsx",
+        "src/styles/style.css",
+        "src/styles/workspace.css",
+        "config/tailwind.docs.config.mjs",
+        "config/astro.config.mjs",
+        "tests/**/*.mjs",
+        "tests/**/*.ts",
+        "scripts/**/*.mjs",
+        "src/lib/terra/regex.mjs",
+        "src/lib/terra/runtime/content.ts",
+        "src/lib/terra/docs/workspace.ts",
+        "src/lib/terra/flow/powerSource.ts",
+        "src/components/terra/editor/docs/index.ts",
+        "config/eslint.config.js",
+        "config/prettier.config.cjs"
+      ],
+      "project": [
+        "src/**/*.{astro,css,js,jsx,mjs,ts,tsx}",
+        "tests/**/*.{mjs,ts,tsx}",
+        "scripts/**/*.mjs",
+        "config/**/*.{js,cjs,mjs,ts,tsx}"
+      ]
+    }
+  }
+}

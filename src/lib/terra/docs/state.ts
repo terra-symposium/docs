@@ -1,37 +1,51 @@
-/** Shared state, transitions, contexts, and surface readiness for Terra Docs. */
+/**
+ * src/lib/terra/docs/state.ts
+ * Shared state, transitions, contexts, and surface readiness for Terra Docs.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { atom, map } from 'nanostores';
 import { createContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { validateType } from '../runtime/runtime.js';
+
+// TYPES
 import type { EditorSel, EditorSurface, Mode, ToolbarState, Transition } from '../runtime/types.js';
 
-export function useAtom<Value>(store: {
-  get(): Value;
-  subscribe(listener: (val: Value) => void): () => void;
-}): Value {
-  return useSyncExternalStore(
-    (n) =>
-      store.subscribe(() => {
-        n();
-      }),
-    () => store.get(),
-    () => store.get(),
-  );
+/**
+ * Subscribes a React component to a nanostore-compatible external state source.
+ *
+ * @param store External store exposing a snapshot getter and change subscription.
+ *
+ * @return Current store snapshot, kept in sync with subscription updates.
+ */
+export function useAtom<Value>(store: { get(): Value; subscribe(listener: (val: Value) => void): () => void }): Value {
+	return useSyncExternalStore(
+		n =>
+			store.subscribe(() => {
+				n();
+			}),
+		() => store.get(),
+		() => store.get(),
+	);
 }
-
 function readStorage<T>(key: string, fallback: T, valid: (input: unknown) => input is T): T {
-  if (validateType(['undefined'], globalThis.window)) return fallback;
-  try {
-    const v = window.localStorage.getItem(key);
-    if (typeof v !== 'string') return fallback;
-    try {
-      const parsed = JSON.parse(v) as unknown;
-      return valid(parsed) ? parsed : fallback;
-    } catch {
-      return fallback;
-    }
-  } catch {
-    return fallback;
-  }
+	if (validateType(['undefined'], globalThis.window)) return fallback;
+	try {
+		const v = window.localStorage.getItem(key);
+		if (typeof v !== 'string') return fallback;
+		try {
+			const parsed = JSON.parse(v) as unknown;
+			return valid(parsed) ? parsed : fallback;
+		} catch {
+			return fallback;
+		}
+	} catch {
+		return fallback;
+	}
 }
 
 /**
@@ -43,19 +57,14 @@ function readStorage<T>(key: string, fallback: T, valid: (input: unknown) => inp
  * @remarks Write failures are swallowed because persistence should never block editing.
  */
 function writeStorage(key: string, v: unknown): void {
-  if (validateType(['undefined'], globalThis.window)) return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(v));
-  } catch {
-    return;
-  }
+	if (validateType(['undefined'], globalThis.window)) return;
+	try {
+		window.localStorage.setItem(key, JSON.stringify(v));
+	} catch {
+		return;
+	}
 }
-
-export const $mode = atom<Mode>(
-  readStorage('docs-mode', 'view', (i): i is Mode =>
-    ['view', 'edit', 'attachments'].includes(i as string),
-  ),
-);
+export const $mode = atom<Mode>(readStorage('docs-mode', 'view', (i): i is Mode => ['view', 'edit', 'attachments'].includes(i as string)));
 /** Shares the active leaf title across Docs surfaces. */
 export const $leafTitle = atom<{ path: string; title: string } | null>(null);
 /**
@@ -96,14 +105,7 @@ export const $cursor = atom<EditorSel | null>(null);
 /** Persisted caret snapshot used for the simulated cursor overlay when focus leaves the editor. */
 export const $cursorGhost = atom<EditorSel | null>(null);
 /** Linear caret bookmark used to simulate the visible cursor without relying on DOM focus. */
-export const $cursorTrack = atom<
-  | /* Describes a cursor track type. */ (Pick<EditorSel, 'box' | 'collapsed' | 'visible'> & {
-      anchor: number;
-      focus: number;
-      range: [number, number];
-    })
-  | null
->(null);
+export const $cursorTrack = atom</* Describes a cursor track type. */ (Pick<EditorSel, 'box' | 'collapsed' | 'visible'> & { anchor: number; focus: number; range: [number, number] }) | null>(null);
 /**
  * Cursor position snapshot for the docs editor.
  *
@@ -127,10 +129,7 @@ export const $unsavedDrafts = map<Record<string, boolean>>({});
  *
  * @remarks This cache is process-local and intentionally not persisted.
  */
-export const memoryDrafts = new Map<
-  string,
-  { source: string; draft: unknown; metadata: unknown }
->();
+export const memoryDrafts = new Map<string, { source: string; draft: unknown; metadata: unknown }>();
 /**
  * Sidebar visibility state for the docs editor.
  *
@@ -138,21 +137,19 @@ export const memoryDrafts = new Map<
  *
  * @remarks The default keeps the sidebar open for discoverability.
  */
-export const $sidebar = atom<boolean>(
-  readStorage('docs-sidebar-open', true, (i): i is boolean => validateType(['boolean'], i)),
-);
+export const $sidebar = atom<boolean>(readStorage('docs-sidebar-open', true, (i): i is boolean => validateType(['boolean'], i)));
 
 // HELPERS
 if (!validateType(['undefined'], globalThis.window)) {
-  $sidebar.listen((v) => {
-    writeStorage('docs-sidebar-open', v);
-  });
-  $mode.listen((v) => {
-    writeStorage('docs-mode', v);
-  });
-  $cursor.listen((v) => {
-    if (v) $cursorGhost.set(v);
-  });
+	$sidebar.listen(v => {
+		writeStorage('docs-sidebar-open', v);
+	});
+	$mode.listen(v => {
+		writeStorage('docs-mode', v);
+	});
+	$cursor.listen(v => {
+		if (v) $cursorGhost.set(v);
+	});
 }
 
 /*//////////////////////////////////////////////////
@@ -166,11 +163,7 @@ TRANSITION SYSTEM
  *
  * @remarks This is kept as a plain object so listeners can subscribe without extra abstractions.
  */
-export const transitionStore = {
-  transition: 'idle' as Transition,
-  restore: null as (() => void) | null,
-  listeners: new Set<() => void>(),
-};
+export const transitionStore = { transition: 'idle' as Transition, restore: null as (() => void) | null, listeners: new Set<() => void>() };
 
 /**
  * Sets the active docs transition state.
@@ -180,11 +173,11 @@ export const transitionStore = {
  * @remarks The boolean store mirrors the non-idle state for simpler UI consumers.
  */
 export function setTransition(transition: Transition): void {
-  transitionStore.transition = transition;
-  $transition.set(transition !== 'idle');
-  transitionStore.listeners.forEach((l) => {
-    l();
-  });
+	transitionStore.transition = transition;
+	$transition.set(transition !== 'idle');
+	transitionStore.listeners.forEach(l => {
+		l();
+	});
 }
 
 /**
@@ -194,8 +187,8 @@ export function setTransition(transition: Transition): void {
  * @remarks Idle is the only state that leaves the transition flag unset.
  */
 export function clearTransition(): void {
-  if (transitionStore.transition === 'idle') return;
-  setTransition('idle');
+	if (transitionStore.transition === 'idle') return;
+	setTransition('idle');
 }
 
 /**
@@ -206,20 +199,21 @@ export function clearTransition(): void {
  * @remarks This is used by components that need to react to local mutation states.
  */
 export function useTransitionState(): Transition {
-  const [transition, setTransitionState] = useState(transitionStore.transition);
-  useEffect(() => {
-    /**
-     * Handles update.
-     */
-    const update = (): void => {
-      setTransitionState(transitionStore.transition);
-    };
-    transitionStore.listeners.add(update);
-    return (): void => {
-      transitionStore.listeners.delete(update);
-    };
-  }, []);
-  return transition;
+	const [transition, setTransitionState] = useState(transitionStore.transition);
+	useEffect(() => {
+		/**
+		 * Handles update.
+		 *
+		 */
+		const update = (): void => {
+			setTransitionState(transitionStore.transition);
+		};
+		transitionStore.listeners.add(update);
+		return (): void => {
+			transitionStore.listeners.delete(update);
+		};
+	}, []);
+	return transition;
 }
 
 /**
@@ -229,25 +223,21 @@ export function useTransitionState(): Transition {
  *
  * @remarks The provider keeps layout and loading overlays in sync.
  */
-export const TransitionCtx = createContext<{
-  setSourceReady: (ready: boolean) => void;
-  setLoading: (loading: boolean) => void;
-} | null>(null);
-
+export const TransitionCtx = createContext<{ setSourceReady: (ready: boolean) => void; setLoading: (loading: boolean) => void } | null>(null);
 export const EditStateCtx = createContext<{
-  busy: import('../runtime/types.js').EditorState['busy'];
-  code: string;
-  draft: import('../runtime/types.js').Draft;
-  dirty: boolean;
-  loaded?: boolean;
-  mark?: () => void;
-  references?: import('react').MutableRefObject<import('../runtime/types.js').EditorRefs>;
-  setSrc?: (val: string) => void;
-  source?: string;
-  state?: import('../runtime/types.js').EditorState;
-  save: (code?: string, opts?: { force?: boolean; format?: boolean }) => void;
-  setCode: (val: string) => void;
-  update: (patch: Partial<import('../runtime/types.js').Draft>) => void;
+	busy: import('../runtime/types.js').EditorState['busy'];
+	code: string;
+	draft: import('../runtime/types.js').Draft;
+	dirty: boolean;
+	loaded?: boolean;
+	mark?: () => void;
+	references?: import('react').MutableRefObject<import('../runtime/types.js').EditorRefs>;
+	setSrc?: (val: string) => void;
+	source?: string;
+	state?: import('../runtime/types.js').EditorState;
+	save: (code?: string, opts?: { force?: boolean; format?: boolean }) => void;
+	setCode: (val: string) => void;
+	update: (patch: Partial<import('../runtime/types.js').Draft>) => void;
 } | null>(null);
 /**
  * Context for the docs editor surface.
@@ -257,12 +247,7 @@ export const EditStateCtx = createContext<{
  * @remarks This lets nested components reach the active editor surface without prop drilling.
  */
 export const EditorSurfaceCtx = createContext<EditorSurface | null>(null);
-
-export const $editorMounts = atom<{
-  expected: string[];
-  mounted: string[];
-  path: string | null;
-}>({ expected: [], mounted: [], path: null });
+export const $editorMounts = atom<{ expected: string[]; mounted: string[]; path: string | null }>({ expected: [], mounted: [], path: null });
 const assignments = new Map<string, string>();
 
 /**
@@ -272,8 +257,8 @@ const assignments = new Map<string, string>();
  * @param expected - Expected input supplied to reset editor mounts's operation.
  */
 export function resetEditorMounts(path: string | undefined, expected: string[]): void {
-  assignments.clear();
-  $editorMounts.set({ expected, mounted: [], path: path || null });
+	assignments.clear();
+	$editorMounts.set({ expected, mounted: [], path: path || null });
 }
 
 /**
@@ -284,25 +269,17 @@ export function resetEditorMounts(path: string | undefined, expected: string[]):
  * @param mounted - Mounted input supplied to set editor mount's operation.
  * @param kind - Content kind that selects set editor mount's renderer.
  */
-export function setEditorMount(
-  path: string | undefined,
-  reporter: string | undefined,
-  mounted: boolean,
-  kind?: string,
-): void {
-  if (!path || !reporter) return;
-  const state = $editorMounts.get();
-  if (state.path !== path) return;
-  if (mounted && !assignments.has(reporter)) {
-    const id = kind
-      ? state.expected.find((v) => v.startsWith(`${kind}:`) && !state.mounted.includes(v))
-      : reporter;
-    if (!id || !state.expected.includes(id)) return;
-    assignments.set(reporter, id);
-  }
-  const id = assignments.get(reporter) || reporter;
-  if (!mounted) assignments.delete(reporter);
-  const n = mounted ? [...new Set([...state.mounted, id])] : state.mounted.filter((v) => v !== id);
-  if (n.length !== state.mounted.length || n.some((v, i) => v !== state.mounted[i]))
-    $editorMounts.set({ ...state, mounted: n });
+export function setEditorMount(path: string | undefined, reporter: string | undefined, mounted: boolean, kind?: string): void {
+	if (!path || !reporter) return;
+	const state = $editorMounts.get();
+	if (state.path !== path) return;
+	if (mounted && !assignments.has(reporter)) {
+		const id = kind ? state.expected.find(v => v.startsWith(`${kind}:`) && !state.mounted.includes(v)) : reporter;
+		if (!id || !state.expected.includes(id)) return;
+		assignments.set(reporter, id);
+	}
+	const id = assignments.get(reporter) || reporter;
+	if (!mounted) assignments.delete(reporter);
+	const n = mounted ? [...new Set([...state.mounted, id])] : state.mounted.filter(v => v !== id);
+	if (n.length !== state.mounted.length || n.some((v, i) => v !== state.mounted[i])) $editorMounts.set({ ...state, mounted: n });
 }

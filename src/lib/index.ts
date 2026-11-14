@@ -1,3 +1,7 @@
+/**
+ * src/lib/index.ts
+ */
+
 export { Docs } from '../components/Docs.js';
 export { DocsSiteLayout } from '../components/SiteLayout.js';
 export { DocsStaticWorkspace } from '../components/StaticWorkspace.js';
@@ -6,13 +10,7 @@ export { DocsNavigation } from '../components/navigation.js';
 export type { DocsNavNode } from '../components/navigation.js';
 export { renderMarkdown } from './markdown.js';
 export { markdownToDocsValue, docsValueToMarkdown } from './markdown-model.js';
-export {
-  DOCS_BLOCK_TYPES,
-  DOCS_BLOCK_FIELDS,
-  enabledDocsBlocks,
-  defaultDocsBlock,
-  DocsRichBlock,
-} from '../components/blocks.js';
+export { DOCS_BLOCK_TYPES, DOCS_BLOCK_FIELDS, enabledDocsBlocks, defaultDocsBlock, DocsRichBlock } from '../components/blocks.js';
 export type { DocsBlockOptions, DocsBlockType, RichBlock } from '../components/blocks.js';
 export { TerraDocsWorkspace } from '../components/terra/Workspace.js';
 export { DocsLocalWorkspace } from '../components/LocalDocsWorkspace.js';
@@ -36,18 +34,17 @@ export { ExportDialog } from '../components/terra/pages/docs/_export-dialog.js';
 export type { DocsExportOpts, ExportTgt } from './terra/runtime/types.js';
 export { configureDocsHost, getDocsHostAdapter } from './host-runtime.js';
 export type {
-  DocsActionOperation,
-  DocsActionResult,
-  DocsHostOperationContracts,
-  DocsResolvedRoute,
-  DocsCustomBlock,
-  DocsHostAdapter,
-  DocsHostAttachment,
-  DocsHostCapabilities,
-  DocsHostDocument,
-  DocsHostTreeNode,
-  DocsHostUser,
-  TerraDocsWorkspaceProps,
+	DocsActionOperation,
+	DocsActionResult,
+	DocsHostOperationContracts,
+	DocsResolvedRoute,
+	DocsCustomBlock,
+	DocsHostAdapter,
+	DocsHostAttachment,
+	DocsHostCapabilities,
+	DocsHostDocument,
+	DocsHostTreeNode,
+	DocsHostUser,
+	TerraDocsWorkspaceProps,
 } from './host.js';
-
 export type { DocsAttachment, DocsLeaf, DocsGroup, DocsSection } from './workspace-types.js';

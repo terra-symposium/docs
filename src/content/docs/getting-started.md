@@ -43,8 +43,8 @@ import type { DocsValue } from '@terra-symposium/docs';
 import '@terra-symposium/docs/style.css';
 
 export default function App() {
-  const [value, setValue] = useState<DocsValue>([]);
-  return <Docs mode="edit" value={value} onChange={setValue} />;
+	const [value, setValue] = useState<DocsValue>([]);
+	return <Docs mode='edit' value={value} onChange={setValue} />;
 }
 ```
 

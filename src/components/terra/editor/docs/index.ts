@@ -1,3 +1,7 @@
+/**
+ * src/components/terra/editor/docs/index.ts
+ */
+
 // @ts-nocheck -- source-preserving extraction; public host contracts are typed in src/host.ts.
 /** Internal Docs renderer contracts. */
 

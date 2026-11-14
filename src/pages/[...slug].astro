@@ -1,27 +1,36 @@
 ---
 import { DocsLocalWorkspace } from '../components/LocalDocsWorkspace';
 import { docsPages, docsTree } from '../lib/docs-catalog';
-import '../../lib-dist/style.css';
+import '../../dist/lib/style.css';
 
 export function getStaticPaths() {
-	return docsPages.map(page => ({
-		params: { slug: page.id === 'index' ? undefined : page.id },
-		props: { pageId: page.id },
+	return docsPages.map(p => ({
+		params: { slug: p.id === 'index' ? undefined : p.id },
+		props: { pageId: p.id },
 	}));
 }
 
 const { pageId } = Astro.props;
-const page = docsPages.find(entry => entry.id === pageId) ?? docsPages[0];
+const p = docsPages.find(e => e.id === pageId) ?? docsPages[0];
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang='en'>
 	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>{page?.title ?? 'Terra Docs'}</title>
+		<meta charset='utf-8' />
+		<meta name='viewport' content='width=device-width, initial-scale=1' />
+		<title>{p?.title ?? 'Terra Docs'}</title>
 	</head>
 	<body>
-		<DocsLocalWorkspace client:load tree={docsTree} pages={docsPages} pathname={Astro.url.pathname} title="Terra Docs" description="Install and configure independent Terra Docs instances." rootPath="/" homePath="/" />
+		<DocsLocalWorkspace
+			client:load
+			tree={docsTree}
+			pages={docsPages}
+			pathname={Astro.url.pathname}
+			title='Terra Docs'
+			description='Install and configure independent Terra Docs instances.'
+			rootPath='/'
+			homePath='/'
+		/>
 	</body>
 </html>

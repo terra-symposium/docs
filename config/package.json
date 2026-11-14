@@ -1,0 +1,108 @@
+{
+	"name": "@terra-symposium/docs",
+	"version": "0.1.23",
+	"description": "Reusable React document editor and viewer.",
+	"repository": "https://github.com/Terra-Symposium/docs",
+	"type": "module",
+	"packageManager": "pnpm@10.30.3",
+	"engines": {
+		"node": ">=24.12.0"
+	},
+	"files": [
+		"dist/lib",
+		"src/components/navigation.tsx",
+		"src/components/SiteLayout.astro",
+		"src/components/NotFound.astro",
+		"src/components/NotFound.tsx"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/lib/lib/index.d.ts",
+			"import": "./dist/lib/lib/index.js"
+		},
+		"./style.css": "./dist/lib/style.css",
+		"./workspace.css": "./dist/lib/workspace.css",
+		"./local-workspace": {
+			"types": "./dist/lib/components/LocalDocsWorkspace.d.ts",
+			"import": "./dist/lib/components/LocalDocsWorkspace.js"
+		},
+		"./site-layout.astro": "./src/components/SiteLayout.astro",
+		"./not-found.astro": "./src/components/NotFound.astro"
+	},
+	"scripts": {
+		"changeset:status": "changeset status",
+		"docs:dev": "pnpm build && mkdir -p dist/cache/astro-types && astro dev --config config/astro.config.mjs --host 127.0.0.1 --open",
+		"docs:build": "pnpm build && mkdir -p dist/cache/astro-types && astro build --config config/astro.config.mjs",
+		"docs:preview": "pnpm docs:build && astro preview --config config/astro.config.mjs --host 127.0.0.1",
+		"dev:library": "tsc --watch",
+		"build": "rm -rf dist/lib && tsc && tailwindcss -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/docs-workspace-style.css --minify && node scripts/copy-runtime.mjs",
+		"typecheck": "tsc --noEmit",
+		"quality": "node \"$(git rev-parse --show-toplevel)/scripts/quality-runner.mjs\" quality",
+		"quality:all": "node \"$(git rev-parse --show-toplevel)/scripts/quality-runner.mjs\" quality --all",
+		"verify": "pnpm run quality:all && pnpm run test && pnpm run test:browser && pnpm run test:consumer && pnpm run docs:build",
+		"test": "pnpm build && mkdir -p tests/results && node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=tests/results/junit.xml tests/*.test.mjs",
+		"test:browser": "playwright test --config=config/playwright.config.ts",
+		"test:consumer": "playwright test --config=config/playwright.consumer.config.ts",
+		"test:report:slides": "node scripts/generate-screenshot-deck.mjs",
+		"prepare": "husky",
+		"changeset": "changeset",
+		"version-packages": "changeset version"
+	},
+	"peerDependencies": {
+		"@terra-symposium/styling": "^0.1.16",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	},
+	"devDependencies": {
+		"@astrojs/react": "^7.1.0",
+		"@changesets/cli": "^3.0.3",
+		"@eslint/js": "10.0.1",
+		"@playwright/test": "^1.64.1",
+		"@terra-symposium/standards-error-boundaries": "0.1.2",
+		"@terra-symposium/standards-quality": "2.3.7",
+		"@terra-symposium/standards-reporting": "0.6.2",
+		"@terra-symposium/styling": "file:vendor/terra-symposium-styling-0.1.16.tgz",
+		"@types/node": "^24.19.2",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"@types/sanitize-html": "^2.16.2",
+		"astro": "^7.4.2",
+		"eslint": "10.13.0",
+		"husky": "^9.1.7",
+		"knip": "^6.42.1",
+		"prettier": "3.9.10",
+		"prettier-plugin-astro": "^1.1.2",
+		"react": "19.3.1",
+		"react-dom": "19.3.1",
+		"tailwindcss": "^3.4.3",
+		"typescript": "5.9.3",
+		"typescript-eslint": "8.71.2",
+		"vite": "8.3.4"
+	},
+	"dependencies": {
+		"@carbon/icons-react": "11.90.0",
+		"@codemirror/commands": "^6.10.0",
+		"@codemirror/lang-markdown": "^6.1.3",
+		"@codemirror/language": "^6.11.3",
+		"@codemirror/language-data": "^6.5.1",
+		"@codemirror/state": "^6.5.2",
+		"@codemirror/theme-one-dark": "^6.1.3",
+		"@codemirror/view": "^6.39.4",
+		"@dagrejs/dagre": "^1.1.4",
+		"@lexical/rich-text": "^0.35.0",
+		"@portabletext/editor": "7.9.0",
+		"@radix-ui/react-popover": "^1.1.15",
+		"@uiw/codemirror-theme-github": "^4.25.9",
+		"@xyflow/react": "^12.3.6",
+		"jszip": "^3.10.1",
+		"katex": "^0.19.1",
+		"lexical": "^0.35.0",
+		"marked": "^18.1.1",
+		"nanostores": "^1.3.0",
+		"pdf-lib": "^1.17.1",
+		"sanitize-html": "^2.18.1",
+		"sonner": "^1.4.41",
+		"yaml": "^2.7.0"
+	},
+	"license": "Apache-2.0"
+}

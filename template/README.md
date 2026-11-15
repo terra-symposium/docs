@@ -8,13 +8,11 @@ For validation and pull-request guidance, see the [repository README](../README.
 
 ### Commands
 
-No template-specific validation command applies because there are no template files. For the parent
-Docs site, run `pnpm docs:build` from `docs/main/` to build the site.
+No template-specific validation command applies because there are no template files. For the parent Docs site, run `pnpm docs:build` from `docs/main/` to build the site.
 
 ## Configuration
 
-No template source or configuration exists here; the parent Docs site is the only runnable consumer
-in this snapshot.
+No template source or configuration exists here; the parent Docs site is the only runnable consumer in this snapshot.
 
 ## Contributing
 
@@ -28,5 +26,4 @@ See the parent [Docs package README](../README.md) for editor and workspace guid
 
 ## License
 
-The Docs workspace has an [Apache-2.0 license](../LICENSE). Check the source and third-party notices
-of each future template; this README does not establish rights to external content.
+The Docs workspace has an [Apache-2.0 license](../LICENSE). Check the source and third-party notices of each future template; this README does not establish rights to external content.

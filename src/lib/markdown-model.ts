@@ -213,6 +213,9 @@ export function docsValueToMarkdown(value: DocsValue): string {
 				if (item._type === 'raw' && !extra) return String(item.markdown ?? '');
 				if (item._type === 'code' && !extra) return `\`\`\`${String(item.language ?? '')}\n${String(item.value ?? '')}\n\`\`\``;
 				if (item._type === 'accordion' || item._type === 'tabs') {
+					// The delimiter syntax represents one item per block. Keep grouped
+					// alternatives together in their structured form during a round trip.
+					if (Array.isArray(item.items) && item.items.length > 1) return `:::terra-docs ${item._type}\n${JSON.stringify(item)}\n:::`;
 					if (item.markdown) return item.markdown;
 					const delimiter = item._type === 'accordion' ? '===' : '|||';
 					return (Array.isArray(item.items) ? (item.items as { title?: string; markdown?: string }[]) : [])

@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.15
+
+### Patch Changes
+
+- Render tables with Styling's read-only data table and diagrams with the existing Nodes component. Preserve rich table cells, styles in packaged sites, and consumer React resolution.
+
 ## 0.4.11
 
 ### Patch Changes

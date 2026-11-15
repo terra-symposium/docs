@@ -38,6 +38,20 @@ const configUrl = new URL('../site/config/astro.config.mjs', import.meta.url).hr
 const findAlias = (aliases, specifier) =>
   aliases.find(({ find: f }) => (typeof f === 'string' ? f === specifier : f.test(specifier)));
 
+test('uses package React without an absolute alias in the Docs checkout', async () => {
+  const originalDocsRoot = process.env.DOCS_ROOT;
+  try {
+    process.env.DOCS_ROOT = packageRoot;
+    const aliases = (await import(`${configUrl}?package-react=${Date.now()}`)).default.vite.resolve
+      .alias;
+    assert.equal(findAlias(aliases, 'react'), undefined);
+    assert.equal(findAlias(aliases, 'react-dom'), undefined);
+  } finally {
+    if (originalDocsRoot === undefined) delete process.env.DOCS_ROOT;
+    else process.env.DOCS_ROOT = originalDocsRoot;
+  }
+});
+
 test('selects React, ReactDOM, Styling, and their Radix dependencies from one runtime', async () => {
   const originalDocsRoot = process.env.DOCS_ROOT;
   const fixtureRoot = await mkdtemp(join(tmpdir(), 'terra-docs-runtime-'));
@@ -53,12 +67,9 @@ test('selects React, ReactDOM, Styling, and their Radix dependencies from one ru
       .resolve.alias;
     const docsReact = requireFromPackage.resolve('react');
     const docsReactDom = requireFromPackage.resolve('react-dom');
-    const docsStyling = requireFromPackage.resolve('@terra-symposium/styling');
-    const docsTabs = createRequire(docsStyling).resolve('@radix-ui/react-tabs');
-    const docsContext = createRequire(docsTabs).resolve('@radix-ui/react-context');
     assert.equal(findAlias(docsOwnedAliases, 'react')?.replacement, docsReact);
     assert.equal(findAlias(docsOwnedAliases, 'react-dom')?.replacement, docsReactDom);
-    assert.equal(findAlias(docsOwnedAliases, '@radix-ui/react-context')?.replacement, docsContext);
+    assert.equal(findAlias(docsOwnedAliases, '@radix-ui/react-context'), undefined);
     const consumerRoot = join(fixtureRoot, 'consumer-owned');
     const consumerNodeModules = join(consumerRoot, 'node_modules');
     const reactRoot = join(consumerNodeModules, 'react');
@@ -141,18 +152,13 @@ test('selects React, ReactDOM, Styling, and their Radix dependencies from one ru
     const consumerReact = requireFromConsumer.resolve('react');
     const consumerReactDom = requireFromConsumer.resolve('react-dom');
     const consumerStyling = requireFromConsumer.resolve('@terra-symposium/styling');
-    const consumerTabs = createRequire(consumerStyling).resolve('@radix-ui/react-tabs');
-    const consumerContext = createRequire(consumerTabs).resolve('@radix-ui/react-context');
     assert.equal(findAlias(consumerAliases, 'react')?.replacement, consumerReact);
     assert.equal(findAlias(consumerAliases, 'react-dom')?.replacement, consumerReactDom);
     assert.equal(
       findAlias(consumerAliases, '@terra-symposium/styling')?.replacement,
       consumerStyling,
     );
-    assert.equal(
-      findAlias(consumerAliases, '@radix-ui/react-context')?.replacement,
-      consumerContext,
-    );
+    assert.equal(findAlias(consumerAliases, '@radix-ui/react-context'), undefined);
   } finally {
     if (originalDocsRoot === undefined) delete process.env.DOCS_ROOT;
     else process.env.DOCS_ROOT = originalDocsRoot;
@@ -226,11 +232,7 @@ test('SSR renders a Styling Radix component through the selected consumer React 
     );
     const reactAlias = findAlias(config.default.vite.resolve.alias, 'react');
     assert.equal(reactAlias?.replacement, consumerReact);
-    const tabsAlias = findAlias(config.default.vite.resolve.alias, '@radix-ui/react-tabs');
-    assert.equal(
-      tabsAlias?.replacement,
-      createRequire(join(stylingRoot, 'index.js')).resolve('@radix-ui/react-tabs'),
-    );
+    assert.equal(findAlias(config.default.vite.resolve.alias, '@radix-ui/react-tabs'), undefined);
     const sharedTabsPath = join(fixtureRoot, 'shared-radix.mjs');
     const radixSource = `import React from 'react';\nexport function TabsRoot() { const [value] = React.useState('ready'); return React.createElement('div', { 'data-runtime-test': value }, value); }\n`;
     await writeFile(

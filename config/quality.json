@@ -1,5 +1,5 @@
 {
-  "$schema": "../node_modules/@terra-symposium/standards-quality/quality.schema.json",
+  "$schema": "../node_modules/@terra-symposium/quality/quality.schema.json",
   "root": ".",
   "tsconfig": "config/tsconfig.json",
   "sourceRoots": ["."],

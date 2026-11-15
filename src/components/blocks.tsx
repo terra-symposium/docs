@@ -8,12 +8,14 @@ IMPORTS
 
 // API
 import katex from 'katex';
+import { DataTableContent } from '@terra-symposium/styling/ui';
 import { docsValueToMarkdown } from '../lib/markdown-model.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 import { DocsQuizBlock } from './quiz.js';
 import { DocsMarkdown } from './MarkdownContent.js';
+import { NodesBlock } from './terra/editor/docs/_Nodes.js';
 
 // DATA
 import { DOCS_BLOCK_TYPES } from '../lib/block-types.js';
@@ -285,28 +287,30 @@ export function DocsRichBlock({
   switch (block._type) {
     case 'block':
       return <PortableTextBlockView block={block} />;
-    case 'table':
+    case 'table': {
+      const rows = (Array.isArray(block.rows) ? block.rows : []).map((row) =>
+        row && typeof row === 'object' && Array.isArray((row as Record<string, unknown>).cells)
+          ? ((row as Record<string, unknown>).cells as unknown[])
+          : [],
+      );
+      const count = rows.reduce((width, row) => Math.max(width, row.length), 0);
       return (
-        <section className="docs-table">
-          <strong>{text(block.header)}</strong>
-          <table>
-            <tbody>
-              {(Array.isArray(block.rows) ? block.rows : []).map((r, i) => (
-                <tr key={i}>
-                  {(Array.isArray((r as Record<string, unknown>).cells)
-                    ? ((r as Record<string, unknown>).cells as unknown[])
-                    : []
-                  ).map((cell, j) => (
-                    <td key={j}>
-                      <NestedContent value={cell} options={options} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <section className="docs-table" data-docs-editor-block="DocsTable">
+          {text(block.header) && text(block.header) !== 'Table' && (
+            <h3 className="sr-only">{text(block.header)}</h3>
+          )}
+          <DataTableContent
+            columns={Array.from({ length: count }, (_, i) => ({
+              key: String(i),
+              label: <NestedContent value={rows[0]?.[i]} options={options} />,
+              render: (row: unknown[]) => <NestedContent value={row[i]} options={options} />,
+            }))}
+            rows={rows.slice(1)}
+            variant="default"
+          />
         </section>
       );
+    }
     case 'callout': {
       const content = Array.isArray(block.content) ? (block.content as RichBlock[]) : [];
       return (
@@ -366,90 +370,7 @@ export function DocsRichBlock({
       );
     }
     case 'nodes': {
-      /**
-       * Renders a simple flow diagram from the node and edge data stored in a rich block.
-       * @param block Rich block containing optional nodes, edges, direction, and label fields.
-       * @returns An accessible figure whose SVG positions follow the requested orientation.
-       */
-      const renderDiagram = (block: RichBlock): JSX.Element => {
-        const nodes = (Array.isArray(block.nodes) ? block.nodes : []).filter(
-          (n): n is Record<string, unknown> => Boolean(n) && typeof n === 'object',
-        );
-        const edges = (Array.isArray(block.edges) ? block.edges : []).filter(
-          (e): e is Record<string, unknown> => Boolean(e) && typeof e === 'object',
-        );
-        const horizontal = block.direction === 'LR';
-        const positions = new Map(
-          nodes.map((n, i) => [
-            String(n.id ?? i),
-            horizontal ? { x: 90 + i * 180, y: 70 } : { x: 160, y: 70 + i * 100 },
-          ]),
-        );
-        return (
-          <figure className="docs-diagram">
-            <svg
-              role="img"
-              aria-label="Document diagram"
-              viewBox={`0 0 ${horizontal ? Math.max(320, nodes.length * 180) : 320} ${horizontal ? 140 : Math.max(140, nodes.length * 100)}`}
-            >
-              <defs>
-                <marker
-                  id="docs-arrow"
-                  markerWidth="8"
-                  markerHeight="8"
-                  refX="7"
-                  refY="4"
-                  orient="auto"
-                >
-                  <path d="M0 0 L8 4 L0 8 Z" fill="currentColor" />
-                </marker>
-              </defs>
-              {edges.map((e, i) => {
-                const from = positions.get(String(e.source ?? ''));
-                const to = positions.get(String(e.target ?? ''));
-                return from && to ? (
-                  <line
-                    key={i}
-                    x1={from.x}
-                    y1={from.y}
-                    x2={to.x}
-                    y2={to.y}
-                    stroke="currentColor"
-                    markerEnd="url(#docs-arrow)"
-                  />
-                ) : null;
-              })}
-              {nodes.map((n, i) => {
-                const point = positions.get(String(n.id ?? i))!;
-                return (
-                  <g key={i}>
-                    <rect
-                      x={point.x - 75}
-                      y={point.y - 24}
-                      width="150"
-                      height="48"
-                      rx="7"
-                      fill="white"
-                      stroke="currentColor"
-                    />
-                    <text x={point.x} y={point.y + 5} textAnchor="middle">
-                      {text(
-                        (n.data && typeof n.data === 'object'
-                          ? (n.data as Record<string, unknown>).title
-                          : undefined) ?? n.id,
-                      )}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-            <figcaption>
-              {nodes.length} nodes, {edges.length} connections
-            </figcaption>
-          </figure>
-        );
-      };
-      return renderDiagram(block);
+      return <NodesBlock block={block as Parameters<typeof NodesBlock>[0]['block']} />;
     }
     case 'raw': {
       const markdown = text(block.markdown);

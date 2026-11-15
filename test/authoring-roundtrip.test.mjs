@@ -27,7 +27,11 @@ test('authored blocks parse and render through the shared package', () => {
     ['code', '```js\nconsole.log(1)\n```', '<code'],
     ['accordion', '===[Title]\nBody\n===', 'data-orientation="vertical"'],
     ['tabs', '|||[Tab]\nBody\n|||', 'role="tablist"'],
-    ['nodes', '<Nodes nodes={`[{"id":"a","data":{"title":"A"}}]`} edges={`[]`} />', 'docs-diagram'],
+    [
+      'nodes',
+      '<Nodes nodes={`[{"id":"a","data":{"title":"A"}}]`} edges={`[]`} />',
+      'data-docs-editor-block="Nodes"',
+    ],
     ['embed', '<Embed src="https://example.com" title="Example" />', '<iframe'],
   ]) {
     const blocks = markdownToDocsValue(source);

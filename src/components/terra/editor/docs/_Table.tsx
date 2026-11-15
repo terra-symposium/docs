@@ -14,7 +14,7 @@ import { useEditor } from '@portabletext/editor';
 
 // COMPONENTS
 import { Add as AddIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
-import { Button, Input } from '@terra-symposium/styling/ui';
+import { Button, DataTableContent, Input } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../../ui.js';
 import { TerraContentEditor } from './_editor.js';
 
@@ -46,16 +46,6 @@ type TableCell = DocTableCell;
  */
 const key = (val: unknown, fallback: string): string =>
   isRec(val) && typeof val._key === 'string' ? val._key : fallback;
-/**
- * Pads a row's cell list to the table's current column count.
- *
- * @param vals Existing cell values in the row.
- * @param count Number of columns in the widest row.
- *
- * @return Exactly `count` cells, with undefined entries for missing cells.
- */
-const cells = <T,>(vals: T[], count: number): Array<T | undefined> =>
-  Array.from({ length: count }, (_cell, i) => vals[i]);
 /**
  * Creates a compact identifier for newly inserted table content.
  *
@@ -118,26 +108,15 @@ function Table({ block }: { block: TableBlock }): React.JSX.Element {
     <ErrorBoundary name="TableBlock">
       <section className="my-6 overflow-x-auto" data-docs-editor-block="DocsTable">
         {block.header && block.header !== 'Table' && <h3 className="sr-only">{block.header}</h3>}
-        <table>
-          <thead>
-            <tr>
-              {cells(Array.isArray(rows[0]?.cells) ? rows[0].cells : [], count).map((c, i) => (
-                <th key={c ? key(c, `${i}`) : i}>{renderCell(c)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.slice(1).map((r, v) => {
-              return (
-                <tr key={key(r, `${v}`)}>
-                  {cells(Array.isArray(r.cells) ? r.cells : [], count).map((c, i) => (
-                    <td key={c ? key(c, `${i}`) : i}>{renderCell(c)}</td>
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <DataTableContent
+          columns={Array.from({ length: count }, (_, i) => ({
+            key: String(i),
+            label: renderCell(rows[0]?.cells?.[i]),
+            render: (row: TableRow) => renderCell(row.cells?.[i]),
+          }))}
+          rows={rows.slice(1)}
+          rowKey={(row, i) => key(row, `${i}`)}
+        />
       </section>
     </ErrorBoundary>
   );

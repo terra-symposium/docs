@@ -28,7 +28,7 @@ export const DOCS_VITE_OPTIMIZE_DEPS = [
   // it as a root so Vite also pre-bundles its CommonJS runtime dependencies.
   '@terra-symposium/styling',
   '@terra-symposium/styling > bezier-easing',
-  '@terra-symposium/standards-error-boundaries/react',
+  '@terra-symposium/boundaries/react',
   // Also expose the CommonJS package as a root entry. Some consumer Vite
   // roots do not discover the nested edge when styling is loaded lazily.
   resolvablePrebundle('bezier-easing', import.meta.resolve('bezier-easing')),

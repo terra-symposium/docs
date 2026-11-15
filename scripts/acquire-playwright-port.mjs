@@ -8,7 +8,7 @@ IMPORTS
 
 // API
 import process from 'node:process';
-import { acquirePort } from '@terra-symposium/standards-quality/port';
+import { acquirePort } from '@terra-symposium/quality/port';
 
 /*//////////////////////////////////////////////////
 CONFIG

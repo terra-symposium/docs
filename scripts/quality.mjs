@@ -7,7 +7,7 @@ IMPORTS
 // API
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { runQualityFromCfg } from '@terra-symposium/standards-quality/cli';
+import { runQualityFromCfg } from '@terra-symposium/quality/cli';
 
 // DATA
 import { URL } from 'node:url';

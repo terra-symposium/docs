@@ -3,6 +3,7 @@
    cascade, while the host imports only this published stylesheet. */
 @import '../../node_modules/@terra-symposium/styling/dist/docs-base.css';
 @import '../../node_modules/@terra-symposium/styling/dist/ui-base.css';
+@import '@xyflow/react/dist/style.css';
 @import './docs-theme.css';
 @import './prose.css';
 @tailwind utilities;
@@ -218,17 +219,6 @@
 .docs-diagram figcaption {
   color: var(--docs-muted);
   font-size: 12px;
-}
-.docs-table {
-  overflow-x: auto;
-}
-.docs-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.docs-table td {
-  padding: 8px;
-  border: 1px solid var(--docs-border);
 }
 .docs-math {
   overflow-x: auto;

@@ -14,7 +14,7 @@ import { Fragment, isValidElement, useEffect } from 'react';
 
 // COMPONENTS
 import { Button } from '@terra-symposium/styling/ui';
-import { ErrorBoundary } from '@terra-symposium/standards-error-boundaries/react';
+import { ErrorBoundary } from '@terra-symposium/boundaries/react';
 import { DocsWorkspace } from './terra/Workspace.js';
 import { DocsMarkdown } from './MarkdownContent.js';
 import type { DocsQuizConfig } from './quiz.js';

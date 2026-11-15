@@ -10,7 +10,7 @@ IMPORTS
 import { defineConfig } from '@playwright/test';
 import { resolve } from 'node:path';
 import { publishedDocsSmokeTests } from './playwright-selection.mjs';
-import { withResponsivePlaywright } from '@terra-symposium/standards-reporting/viewports';
+import { withResponsivePlaywright } from '@terra-symposium/reporting/viewports';
 
 /*//////////////////////////////////////////////////
 CONFIG

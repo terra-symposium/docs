@@ -21,7 +21,7 @@ import { dirname, resolve } from 'node:path';
 import { docsContentPlugin } from '../docs-content-plugin.mjs';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
-import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
+import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/boundaries/astro-integration';
 import { unified } from '@astrojs/markdown-remark';
 
 // COMPONENTS
@@ -59,6 +59,35 @@ HELPERS
  */
 function packageExportAliases() {
   return createProjectExportAliases(projectManifest, consumerRoot);
+}
+
+/**
+ * Use the consuming site's React installation when Docs runs outside its own checkout.
+ * @return Alias records for a separate consumer's React and ReactDOM.
+ */
+function consumerReactAliases() {
+  if (resolve(consumerRoot) === resolve(packageRoot)) return [];
+  return ['react', 'react-dom'].map((name) => ({
+    find: new RegExp(`^${name}$`),
+    replacement: resolveConsumerDependency(requireFromProject, requireFromPackage, name),
+  }));
+}
+
+/**
+ * Use the consumer's Styling installation when it provides one.
+ * @return The Styling alias, or an empty list when the consumer has no installation.
+ */
+function stylingAlias() {
+  try {
+    return [
+      {
+        find: /^@terra-symposium\/styling$/,
+        replacement: requireFromProject.resolve('@terra-symposium/styling'),
+      },
+    ];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -257,6 +286,8 @@ export default defineConfig({
       // root. Consumers only need the Docs package, so map Astro's exported
       // subpaths to the installation shipped with Docs.
       alias: [
+        ...consumerReactAliases(),
+        ...stylingAlias(),
         ...packageExportAliases(),
         ...createProjectExportAliases(docsManifest, packageRoot),
         ...astroPackageExportAliases(),
@@ -270,7 +301,7 @@ export default defineConfig({
     },
     ssr: {
       optimizeDeps: { include: ['react', 'react-dom', 'react-dom/server'] },
-      noExternal: ['@terra-symposium/styling', '@terra-symposium/standards-error-boundaries'],
+      noExternal: ['@terra-symposium/styling', '@terra-symposium/boundaries', /^@radix-ui\//],
     },
     server: { fs: { allow: [projectRoot, consumerRoot, packageRoot] } },
   },

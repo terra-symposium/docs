@@ -220,7 +220,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
       const rendered = renderMarkdown(nestedMarkdown);
       const restored = markdownToDocsValue(nestedMarkdown);
       assert.match(rendered, /docs-callout/);
-      assert.match(rendered, /docs-diagram/);
+      assert.match(rendered, /data-docs-editor-block="Nodes"/);
       assert.doesNotMatch(rendered, /_type:\s*nodes/);
       assert.equal(restored[0]._type, 'callout');
       assert.equal(restored[0].kind, 'note');
@@ -299,8 +299,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.equal(callout.markdown, undefined);
       const html = renderToStaticMarkup(createElement(DocsRichBlock, { block: callout }));
       assert.match(html, /docs-callout-example/);
-      assert.match(html, /docs-diagram/);
-      assert.match(html, /Script Requirements/);
+      assert.match(html, /data-docs-editor-block="Nodes"/);
       assert.match(html, /The audio workflow begins here\./);
       assert.match(html, /The workflow continues here\./);
       assert.doesNotMatch(html, /&lt;Nodes/);
@@ -310,8 +309,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
         ),
       );
       const tabHtml = renderToStaticMarkup(createElement(DocsMarkdown, { markdown: source }));
-      assert.match(tabHtml, /docs-diagram/);
-      assert.match(tabHtml, /Script Requirements/);
+      assert.match(tabHtml, /data-docs-editor-block="Nodes"/);
       assert.doesNotMatch(tabHtml, /&lt;Nodes/);
     });
   });

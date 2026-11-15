@@ -9,7 +9,7 @@ IMPORTS
 // API
 import fs from 'node:fs';
 import path from 'node:path';
-import { writeScreenshotSlideshowFromDirectory } from '@terra-symposium/standards-reporting/slideshow';
+import { writeScreenshotSlideshowFromDirectory } from '@terra-symposium/reporting/slideshow';
 
 /*//////////////////////////////////////////////////
 CONFIG

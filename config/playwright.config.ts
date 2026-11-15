@@ -8,7 +8,7 @@ IMPORTS
 
 // API
 import { defineConfig } from '@playwright/test';
-import { withResponsivePlaywright } from '@terra-symposium/standards-reporting/viewports';
+import { withResponsivePlaywright } from '@terra-symposium/reporting/viewports';
 import { fileURLToPath } from 'node:url';
 export default withResponsivePlaywright(
 	defineConfig({

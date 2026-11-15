@@ -1833,8 +1833,8 @@ const TOOLBAR_COMPONENTS = {
 																		if (dirty && toolbar.save) await toolbar.save();
 																		await publishDraft(toolbar.path);
 																		toast.success('Published.');
-																	} catch (error) {
-																		toast.error(error instanceof Error ? error.message : 'Unable to publish document.');
+																	} catch (err) {
+																		toast.error(err instanceof Error ? err.message : 'Unable to publish document.');
 																	}
 																})();
 															}}

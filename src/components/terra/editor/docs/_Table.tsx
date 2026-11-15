@@ -10,12 +10,11 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
-import { isRec } from '../../../../lib/terra/runtime/runtime.js';
 import { useEditor } from '@portabletext/editor';
 
 // COMPONENTS
 import { Add as AddIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
-import { Button, Input } from '@terra-symposium/styling/ui/terra-original';
+import { Button, DataTableContent, Input } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '../../ui.js';
 import { TerraContentEditor } from '../TerraContentEditor.js';
 
@@ -31,8 +30,6 @@ CONFIG
 type TableBlock = DocsBlock<'table'>;
 /** Sanity Portable Text table cell content and formatting. */
 type TableCell = NonNullable<NonNullable<TableBlock['rows']>[number]['cells']>[number];
-const key = (val: unknown, fallback: string): string => (isRec(val) && typeof val._key === 'string' ? val._key : fallback);
-const cells = <T,>(vals: T[], count: number): Array<T | undefined> => Array.from({ length: count }, (_cell, i) => vals[i]);
 const newKey = (): string => crypto.randomUUID().replaceAll('-', '');
 const cell = (text = ''): TableCell => ({
 	_key: newKey(),
@@ -64,33 +61,21 @@ HELPERS
  */
 function Table({ block }: { block: TableBlock }): React.JSX.Element {
 	const rows = (block.rows ?? []) as TableRow[];
-	const count = rows.reduce((m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0), 0);
 	const renderCell = (c: DocTableCell | undefined): React.JSX.Element | null =>
 		c ? <TerraContentEditor content={(Array.isArray(c.content) ? c.content : []) as unknown as TerraContentData} docsAttachments={[]} memberProfile='docs' nested readOnly /> : null;
 	return (
 		<ErrorBoundary name='TableBlock'>
-			<section className='my-6 overflow-x-auto' data-docs-editor-block='DocsTable'>
+			<section data-docs-editor-block='DocsTable'>
 				{block.header && block.header !== 'Table' && <h3 className='sr-only'>{block.header}</h3>}
-				<table>
-					<thead>
-						<tr>
-							{cells(Array.isArray(rows[0]?.cells) ? rows[0].cells : [], count).map((c, i) => (
-								<th key={c ? key(c, `${i}`) : i}>{renderCell(c)}</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{rows.slice(1).map((r, v) => {
-							return (
-								<tr key={key(r, `${v}`)}>
-									{cells(Array.isArray(r.cells) ? r.cells : [], count).map((c, i) => (
-										<td key={c ? key(c, `${i}`) : i}>{renderCell(c)}</td>
-									))}
-								</tr>
-							);
-						})}
-					</tbody>
-				</table>
+				<DataTableContent
+					columns={Array.from({ length: rows.reduce((m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0), 0) }, (_cell, i) => ({
+						key: String(i),
+						label: renderCell(rows[0]?.cells?.[i]),
+						render: (row: TableRow) => renderCell(row.cells?.[i]),
+					}))}
+					rows={rows.slice(1)}
+					variant='default'
+				/>
 			</section>
 		</ErrorBoundary>
 	);

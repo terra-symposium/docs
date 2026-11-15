@@ -38,8 +38,8 @@ test('structured block containers round-trip without losing source fields', () =
 });
 test('rich Markdown rendering escapes unsafe content and supports block opt-out', () => {
 	const source = ':::terra-docs callout\n{"_type":"callout","title":"Safe","content":"Hello"}\n:::';
-	assert.match(renderMarkdown(source), /terra-docs-callout/);
-	assert.doesNotMatch(renderMarkdown(source, { callout: false }), /terra-docs-callout/);
+	assert.match(renderMarkdown(source), /data-docs-aside="note"/);
+	assert.doesNotMatch(renderMarkdown(source, { callout: false }), /data-docs-aside=/);
 	assert.doesNotMatch(renderMarkdown(':::terra-docs docImage\n{"_type":"docImage","url":"javascript:alert(1)","alt":"bad"}\n:::'), /src="javascript:/);
 });
 test('inline math survives visual conversion and renders as math', () => {

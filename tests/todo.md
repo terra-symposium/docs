@@ -2952,7 +2952,6 @@ This checklist inventories repository-owned functions, documents, and configurat
 - [ ] `config/package.json`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `config/quality.json`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `config/tsconfig.json`: validate syntax or schema, exercise its owning tool, and check references to this file.
-- [ ] `patches/@terra-symposium__standards-quality@2.2.0.patch`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `pnpm-lock.yaml`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `pnpm-workspace.yaml`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `src/styles/prose.css`: validate syntax or schema, exercise its owning tool, and check references to this file.

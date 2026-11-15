@@ -9,7 +9,7 @@ IMPORTS
 // API
 import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
-import { terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
+import { terraErrorBoundaryIntegration } from '@terra-symposium/boundaries/astro-integration';
 export default defineConfig({
 	outDir: './dist/site/',
 	cacheDir: './dist/cache/astro/',

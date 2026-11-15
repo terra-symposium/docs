@@ -46,7 +46,7 @@ export function Toolbar({ blocks }: { blocks?: DocsBlockOptions | undefined }): 
 	const [slot, setSlot] = useState<HTMLElement | null>(null);
 	useEffect(() => setSlot(document.querySelector<HTMLElement>('.terra-docs-formatting-slot')), []);
 	const controls = (
-		<div className='terra-docs-toolbar' role='toolbar' aria-label='Editor controls'>
+		<div className='flex flex-wrap items-center gap-1.5 max-[480px]:gap-0.5 max-[480px]:p-1.5' role='toolbar' aria-label='Editor controls'>
 			<Select
 				value={getActiveStyle(snapshot) ?? 'normal'}
 				onValueChange={s => {
@@ -56,7 +56,7 @@ export function Toolbar({ blocks }: { blocks?: DocsBlockOptions | undefined }): 
 				}}
 			>
 				<SelectTrigger
-					className='terra-docs-select'
+					className='max-[480px]:w-28'
 					aria-label='Block type'
 					onPointerDownCapture={() => {
 						selection.current = editor.getSnapshot().context.selection;
@@ -75,7 +75,7 @@ export function Toolbar({ blocks }: { blocks?: DocsBlockOptions | undefined }): 
 					))}
 				</SelectContent>
 			</Select>
-			<span className='terra-docs-toolbar-divider' aria-hidden='true' />
+			<span className='mx-1 h-5 border-l border-border max-[480px]:mx-0.5' aria-hidden='true' />
 			{[
 				{ Icon: TextBold, name: 'strong', label: 'Bold' },
 				{ Icon: TextItalic, name: 'em', label: 'Italic' },
@@ -182,7 +182,11 @@ export function Toolbar({ blocks }: { blocks?: DocsBlockOptions | undefined }): 
 			>
 				<Redo size={16} aria-hidden='true' />
 			</Button>
-			<dialog ref={linkDialog} className='terra-docs-link-dialog' aria-labelledby={`${linkId}-title`}>
+			<dialog
+				ref={linkDialog}
+				className='w-[min(360px,calc(100vw-32px))] rounded-xl border border-border bg-background p-5 text-foreground backdrop:bg-[#16251f55]'
+				aria-labelledby={`${linkId}-title`}
+			>
 				<form
 					onSubmit={e => {
 						e.preventDefault();
@@ -197,11 +201,19 @@ export function Toolbar({ blocks }: { blocks?: DocsBlockOptions | undefined }): 
 						editor.send({ type: 'focus' });
 					}}
 				>
-					<h2 id={`${linkId}-title`}>Add link</h2>
-					<label htmlFor={`${linkId}-url`}>URL</label>
+					<h2 id={`${linkId}-title`} className='mb-4 text-lg font-semibold'>
+						Add link
+					</h2>
+					<label htmlFor={`${linkId}-url`} className='mb-1.5 block'>
+						URL
+					</label>
 					<Input id={`${linkId}-url`} autoFocus required value={linkValue} onChange={e => setLinkValue(e.currentTarget.value)} placeholder='https://example.com' />
-					{linkErr && <p role='alert'>Enter a valid web, email, or relative URL.</p>}
-					<div>
+					{linkErr && (
+						<p role='alert' className='text-destructive'>
+							Enter a valid web, email, or relative URL.
+						</p>
+					)}
+					<div className='mt-4 flex justify-end gap-2'>
 						<Button
 							variant='ghost'
 							onClick={() => {

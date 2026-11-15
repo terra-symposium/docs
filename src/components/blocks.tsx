@@ -11,6 +11,9 @@ import katex from 'katex';
 import { defineBlockObject, defineInlineObject, useEditor } from '@portabletext/editor';
 import { renderMarkdown } from '../lib/markdown.js';
 import { useState } from 'react';
+import { CodeBlock } from './terra/editor/docs/_CodeBlock.js';
+import { NodesBlock } from './terra/editor/docs/_Nodes.js';
+import { Button, DataTableContent, Input, Textarea } from '@terra-symposium/styling/ui';
 
 // TYPES
 import type { JSX } from 'react';
@@ -19,6 +22,9 @@ import type { Path } from '@portabletext/editor';
 /*//////////////////////////////////////////////////
 CONFIG
 //////////////////////////////////////////////////*/
+const GRID_GAP_2_5_ROUNDED_LG_BORDER_BORDER_BORDER_P_3_CLASS = 'grid gap-2.5 rounded-lg border border-border p-3';
+const GRID_GAP_2_ROUNDED_MD_BORDER_BORDER_BORDER_P_2_5_CLASS = 'grid gap-2 rounded-md border border-border p-2.5';
+const GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS = 'grid gap-1 text-sm font-semibold';
 
 /** The portable Docs members. A host can disable any member without changing stored data. */
 export const DOCS_BLOCK_TYPES = ['accordion', 'tabs', 'table', 'callout', 'code', 'docImage', 'embed', 'math', 'nodes', 'raw', 'tsDocs'] as const;
@@ -172,50 +178,6 @@ function nestedMarkdown(item: Record<string, unknown>): string {
 	return typeof item.markdown === 'string' ? item.markdown : text(item.content);
 }
 
-// terra-quality-ignore single-use -- Keep Diagram as a stable React component instead of recreating its type inside the block renderer.
-/**
- *
- * @param block
- *
- * @return
- */
-function Diagram({ block }: { block: RichBlock }): JSX.Element {
-	const nodes = (Array.isArray(block.nodes) ? block.nodes : []).filter((n): n is Record<string, unknown> => Boolean(n) && typeof n === 'object');
-	const edges = (Array.isArray(block.edges) ? block.edges : []).filter((e): e is Record<string, unknown> => Boolean(e) && typeof e === 'object');
-	const horizontal = block.direction === 'LR';
-	const positions = new Map(nodes.map((n, i) => [String(n.id ?? i), horizontal ? { x: 90 + i * 180, y: 70 } : { x: 160, y: 70 + i * 100 }]));
-	return (
-		<figure className='terra-docs-diagram'>
-			<svg role='img' aria-label='Document diagram' viewBox={`0 0 ${horizontal ? Math.max(320, nodes.length * 180) : 320} ${horizontal ? 140 : Math.max(140, nodes.length * 100)}`}>
-				<defs>
-					<marker id='terra-docs-arrow' markerWidth='8' markerHeight='8' refX='7' refY='4' orient='auto'>
-						<path d='M0 0 L8 4 L0 8 Z' fill='currentColor' />
-					</marker>
-				</defs>
-				{edges.map((e, i) => {
-					const from = positions.get(String(e.source ?? ''));
-					const to = positions.get(String(e.target ?? ''));
-					return from && to ? <line key={i} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke='currentColor' markerEnd='url(#terra-docs-arrow)' /> : null;
-				})}
-				{nodes.map((n, i) => {
-					const point = positions.get(String(n.id ?? i))!;
-					return (
-						<g key={i}>
-							<rect x={point.x - 75} y={point.y - 24} width='150' height='48' rx='7' fill='white' stroke='currentColor' />
-							<text x={point.x} y={point.y + 5} textAnchor='middle'>
-								{text((n.data && typeof n.data === 'object' ? (n.data as Record<string, unknown>) : {}).title ?? n.id)}
-							</text>
-						</g>
-					);
-				})}
-			</svg>
-			<figcaption>
-				{nodes.length} nodes, {edges.length} connections
-			</figcaption>
-		</figure>
-	);
-}
-
 /**
  * Read-only rendering for every reusable Terra Docs member. Unknown data stays in the value.
  *
@@ -228,7 +190,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
 	switch (block._type) {
 		case 'accordion':
 			return (
-				<div className='terra-docs-accordions'>
+				<div>
 					{items.map((v, i) => (
 						<details key={i}>
 							<summary>{text(v.title)}</summary>
@@ -239,7 +201,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
 			);
 		case 'tabs':
 			return (
-				<div className='terra-docs-tabs' role='tablist'>
+				<div>
 					{items.map((v, i) => (
 						<details key={i} open={i === 0}>
 							<summary>{text(v.title)}</summary>
@@ -248,36 +210,34 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
 					))}
 				</div>
 			);
-		case 'table':
+		case 'table': {
+			const rows = Array.isArray(block.rows) ? (block.rows as Record<string, unknown>[]) : [];
 			return (
-				<section className='terra-docs-table'>
-					<strong>{text(block.header)}</strong>
-					<table>
-						<tbody>
-							{(Array.isArray(block.rows) ? block.rows : []).map((r, i) => (
-								<tr key={i}>
-									{(Array.isArray((r as Record<string, unknown>).cells) ? ((r as Record<string, unknown>).cells as unknown[]) : []).map((cell, j) => (
-										<td key={j}>{text(cell)}</td>
-									))}
-								</tr>
-							))}
-						</tbody>
-					</table>
+				<section>
+					{block.header && block.header !== 'Table' ? <strong>{text(block.header)}</strong> : null}
+					<DataTableContent
+						columns={(Array.isArray(rows[0]?.cells) ? (rows[0].cells as unknown[]) : []).map((cell, i) => ({
+							key: String(i),
+							label: text(cell),
+							render: (row: Record<string, unknown>) => text(Array.isArray(row.cells) ? row.cells[i] : ''),
+						}))}
+						rows={rows.slice(1)}
+						variant='default'
+					/>
 				</section>
 			);
-		case 'callout':
+		}
+		case 'callout': {
+			const kind = text(block.kind);
 			return (
-				<aside className={`terra-docs-callout terra-docs-callout-${text(block.kind).replace(/[^a-z0-9-]/gi, '') || 'info'}`}>
-					<strong>{text(block.title)}</strong>
+				<aside className='docs-block my-0 flow-root' data-docs-aside={kind === 'warning' ? 'caution' : kind === 'error' ? 'danger' : kind || 'note'}>
+					<h4 className='title'>{text(block.title)}</h4>
 					<div dangerouslySetInnerHTML={{ __html: renderMarkdown(nestedMarkdown(block)) }} />
 				</aside>
 			);
+		}
 		case 'code':
-			return (
-				<pre className='terra-docs-code'>
-					<code data-language={text(block.language)}>{text(block.value)}</code>
-				</pre>
-			);
+			return <CodeBlock code={text(block.value)} language={text(block.language)} tone='view' />;
 		case 'docImage':
 			return sUrl(block.url) ? (
 				<figure>
@@ -302,13 +262,13 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
 				trust: false,
 			});
 			return block.inline ? (
-				<span className='terra-docs-math' aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
+				<span className='overflow-x-auto' aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
 			) : (
-				<div className='terra-docs-math' aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
+				<div className='overflow-x-auto' aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
 			);
 		}
 		case 'nodes':
-			return <Diagram block={block} />;
+			return <NodesBlock block={block as Parameters<typeof NodesBlock>[0]['block']} />;
 		case 'raw':
 			return <div className='terra-docs-raw' dangerouslySetInnerHTML={{ __html: renderMarkdown(text(block.markdown)) }} />;
 		case 'tsDocs':
@@ -342,27 +302,27 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 	const nodes = Array.isArray(block.nodes) ? (block.nodes as Record<string, unknown>[]) : [];
 	const edges = Array.isArray(block.edges) ? (block.edges as Record<string, unknown>[]) : [];
 	return (
-		<div className='terra-docs-rich-editor'>
+		<div className='my-3 rounded-lg border border-border bg-background p-3'>
 			<DocsRichBlock block={block} />
 			{!readOnly && (
 				<>
-					<button onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
+					<Button variant='outline' size='sm' onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
 						Edit {type}
-					</button>
+					</Button>
 					{expanded && (
-						<div className='terra-docs-rich-fields'>
+						<div className='mt-3 grid gap-3'>
 							{(DOCS_BLOCK_FIELDS[type] ?? []).map(f => {
 								const value = block[f.name];
 								const update = (n: unknown) => set({ [f.name]: n, markdown: f.name === 'markdown' ? n : '' });
 								if (f.name === 'items')
 									return (
-										<fieldset key='items'>
+										<fieldset className={GRID_GAP_2_5_ROUNDED_LG_BORDER_BORDER_BORDER_P_3_CLASS} key='items'>
 											<legend>Items</legend>
 											{items.map((item, index) => (
-												<div className='terra-docs-rich-item' key={index}>
-													<label>
+												<div className={GRID_GAP_2_ROUNDED_MD_BORDER_BORDER_BORDER_P_2_5_CLASS} key={index}>
+													<label className={GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS}>
 														Title
-														<input
+														<Input
 															value={text(item.title)}
 															onChange={event =>
 																set({
@@ -372,9 +332,9 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 															}
 														/>
 													</label>
-													<label>
+													<label className={GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS}>
 														Content
-														<textarea
+														<Textarea
 															value={nestedMarkdown(item)}
 															onChange={event =>
 																set({
@@ -384,10 +344,14 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 															}
 														/>
 													</label>
-													<button onClick={() => set({ items: items.filter((_entry, i) => i !== index), markdown: '' })}>Remove item</button>
+													<Button variant='outline' size='sm' onClick={() => set({ items: items.filter((_entry, i) => i !== index), markdown: '' })}>
+														Remove item
+													</Button>
 												</div>
 											))}
-											<button
+											<Button
+												variant='outline'
+												size='sm'
 												onClick={() =>
 													set({
 														items: [...items, { title: 'Item', markdown: '', content: [] }],
@@ -396,21 +360,21 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 												}
 											>
 												Add item
-											</button>
+											</Button>
 										</fieldset>
 									);
 								if (f.name === 'rows')
 									return (
-										<fieldset key='rows'>
+										<fieldset className={GRID_GAP_2_5_ROUNDED_LG_BORDER_BORDER_BORDER_P_3_CLASS} key='rows'>
 											<legend>Table rows</legend>
 											{rows.map((row, rowIndex) => {
 												const cells = Array.isArray(row.cells) ? (row.cells as Record<string, unknown>[]) : [];
 												return (
-													<div key={rowIndex} className='terra-docs-rich-item'>
+													<div key={rowIndex} className={GRID_GAP_2_ROUNDED_MD_BORDER_BORDER_BORDER_P_2_5_CLASS}>
 														{cells.map((cell, cellIndex) => (
-															<label key={cellIndex}>
+															<label className={GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS} key={cellIndex}>
 																Cell {cellIndex + 1}
-																<input
+																<Input
 																	value={text(cell.content ?? cell.markdown)}
 																	onChange={event =>
 																		set({
@@ -436,7 +400,9 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 																/>
 															</label>
 														))}
-														<button
+														<Button
+															variant='outline'
+															size='sm'
 															onClick={() =>
 																set({
 																	rows: rows.map((entry, i) =>
@@ -452,8 +418,10 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 															}
 														>
 															Add cell
-														</button>
-														<button
+														</Button>
+														<Button
+															variant='outline'
+															size='sm'
 															onClick={() =>
 																set({
 																	rows: rows.filter((_entry, i) => i !== rowIndex),
@@ -462,11 +430,13 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 															}
 														>
 															Remove row
-														</button>
+														</Button>
 													</div>
 												);
 											})}
-											<button
+											<Button
+												variant='outline'
+												size='sm'
 												onClick={() =>
 													set({
 														rows: [
@@ -481,18 +451,18 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 												}
 											>
 												Add row
-											</button>
+											</Button>
 										</fieldset>
 									);
 								if (f.name === 'nodes')
 									return (
-										<fieldset key='nodes'>
+										<fieldset className={GRID_GAP_2_5_ROUNDED_LG_BORDER_BORDER_BORDER_P_3_CLASS} key='nodes'>
 											<legend>Diagram nodes</legend>
 											{nodes.map((node, index) => (
-												<div key={index} className='terra-docs-rich-item'>
-													<label>
+												<div key={index} className={GRID_GAP_2_ROUNDED_MD_BORDER_BORDER_BORDER_P_2_5_CLASS}>
+													<label className={GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS}>
 														ID
-														<input
+														<Input
 															value={text(node.id)}
 															onChange={event =>
 																set({
@@ -502,9 +472,9 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 															}
 														/>
 													</label>
-													<label>
+													<label className={GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS}>
 														Title
-														<input
+														<Input
 															value={text((node.data as Record<string, unknown> | undefined)?.title)}
 															onChange={event =>
 																set({
@@ -524,10 +494,14 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 															}
 														/>
 													</label>
-													<button onClick={() => set({ nodes: nodes.filter((_entry, i) => i !== index), markdown: '' })}>Remove node</button>
+													<Button variant='outline' size='sm' onClick={() => set({ nodes: nodes.filter((_entry, i) => i !== index), markdown: '' })}>
+														Remove node
+													</Button>
 												</div>
 											))}
-											<button
+											<Button
+												variant='outline'
+												size='sm'
 												onClick={() =>
 													set({
 														nodes: [...nodes, { id: crypto.randomUUID(), type: 'process', data: { title: 'Node' } }],
@@ -536,19 +510,20 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 												}
 											>
 												Add node
-											</button>
+											</Button>
 										</fieldset>
 									);
 								if (f.name === 'edges')
 									return (
-										<fieldset key='edges'>
+										<fieldset className={GRID_GAP_2_5_ROUNDED_LG_BORDER_BORDER_BORDER_P_3_CLASS} key='edges'>
 											<legend>Connections</legend>
 											{edges.map((edge, index) => (
-												<div key={index} className='terra-docs-rich-item'>
+												<div key={index} className={GRID_GAP_2_ROUNDED_MD_BORDER_BORDER_BORDER_P_2_5_CLASS}>
 													{(['source', 'target'] as const).map(name => (
-														<label key={name}>
+														<label className={GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS} key={name}>
 															{name}
 															<select
+																className='min-h-9 rounded-md border border-border bg-background p-1.5'
 																value={text(edge[name])}
 																onChange={event =>
 																	set({
@@ -565,10 +540,14 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 															</select>
 														</label>
 													))}
-													<button onClick={() => set({ edges: edges.filter((_entry, i) => i !== index), markdown: '' })}>Remove connection</button>
+													<Button variant='outline' size='sm' onClick={() => set({ edges: edges.filter((_entry, i) => i !== index), markdown: '' })}>
+														Remove connection
+													</Button>
 												</div>
 											))}
-											<button
+											<Button
+												variant='outline'
+												size='sm'
 												disabled={nodes.length < 2}
 												onClick={() =>
 													set({
@@ -585,23 +564,23 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 												}
 											>
 												Add connection
-											</button>
+											</Button>
 										</fieldset>
 									);
 								if (f.name === 'content')
 									return (
-										<label key='content'>
+										<label className={GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS} key='content'>
 											Content
-											<textarea value={typeof block.markdown === 'string' ? block.markdown : text(value)} onChange={event => set({ markdown: event.currentTarget.value })} />
+											<Textarea value={typeof block.markdown === 'string' ? block.markdown : text(value)} onChange={event => set({ markdown: event.currentTarget.value })} />
 										</label>
 									);
 								return (
-									<label key={f.name}>
+									<label className={GRID_GAP_1_TEXT_SM_FONT_SEMIBOLD_CLASS} key={f.name}>
 										{f.name}
 										{f.type === 'boolean' ? (
 											<input type='checkbox' checked={Boolean(value)} onChange={event => update(event.currentTarget.checked)} />
 										) : (
-											<textarea value={String(value ?? '')} onChange={event => update(f.type === 'number' ? Number(event.currentTarget.value) : event.currentTarget.value)} />
+											<Textarea value={String(value ?? '')} onChange={event => update(f.type === 'number' ? Number(event.currentTarget.value) : event.currentTarget.value)} />
 										)}
 									</label>
 								);

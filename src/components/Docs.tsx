@@ -104,7 +104,7 @@ function DocsSurface(props: DocsProps): JSX.Element {
 				aria-label={props.mode === 'edit' ? 'Document editor' : 'Document viewer'}
 				aria-readonly={props.mode === 'view'}
 				contentEditable={props.mode === 'edit'}
-				className='terra-docs-content'
+				className='prose mx-auto min-h-80 max-w-3xl p-0'
 				renderStyle={({ children: c, schemaType: s }) => {
 					if (s.value === 'h2') return <h2>{c}</h2>;
 					if (s.value === 'h3') return <h3>{c}</h3>;

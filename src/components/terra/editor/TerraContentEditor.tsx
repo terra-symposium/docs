@@ -129,7 +129,7 @@ export function TerraContentEditor({
 				<PortableTextEditable
 					aria-label={readOnly ? 'Document viewer' : 'Document editor'}
 					contentEditable={!readOnly}
-					className='terra-docs-content outline-none'
+					className='prose mx-auto min-h-80 max-w-3xl p-0 outline-none'
 					renderStyle={({ children: c, schemaType: s }) => {
 						const style = s.value;
 						if (style === 'blockquote') return <blockquote>{c}</blockquote>;

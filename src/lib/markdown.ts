@@ -73,13 +73,8 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
 				},
 			],
 		});
-	let blockNumber = 0;
-	rich = rich.replace(/^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm, (_match, d: string, t: string, b: string) => {
-		const summary = sanitizeHtml(t, { allowedTags: [], allowedAttributes: {} });
-		const content = parser.parse(b, { async: false });
-		if (d === '===') return `<details class="terra-docs-accordion"><summary>${summary}</summary>${content}</details>`;
-		blockNumber += 1;
-		return `<details class="terra-docs-tab" data-tab="${blockNumber}"><summary>${summary}</summary>${content}</details>`;
+	rich = rich.replace(/^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm, (_match, _delimiter: string, t: string, b: string) => {
+		return `<details><summary>${sanitizeHtml(t, { allowedTags: [], allowedAttributes: {} })}</summary>${parser.parse(b, { async: false })}</details>`;
 	});
 	return sanitizeHtml(parser.parse(rich, { async: false }), {
 		...sanitizeHtml.defaults,

@@ -242,7 +242,6 @@ export function CodeBlock(
 		};
 	}, [docsSrc, configuration.code, configuration.source, src]);
 	useEffect(() => {
-		if (configuration.tone === 'view') return;
 		let a = true;
 		let aEnterHandler: ((event: KeyboardEvent) => void) | undefined;
 		$hydrating.set($hydrating.get() + 1);

@@ -62,18 +62,6 @@ function packageExportAliases() {
 }
 
 /**
- * Use the consuming site's React installation when Docs runs outside its own checkout.
- * @return Alias records for a separate consumer's React and ReactDOM.
- */
-function consumerReactAliases() {
-  if (resolve(consumerRoot) === resolve(packageRoot)) return [];
-  return ['react', 'react-dom'].map((name) => ({
-    find: new RegExp(`^${name}$`),
-    replacement: resolveConsumerDependency(requireFromProject, requireFromPackage, name),
-  }));
-}
-
-/**
  * Use the consumer's Styling installation when it provides one.
  * @return The Styling alias, or an empty list when the consumer has no installation.
  */
@@ -286,7 +274,6 @@ export default defineConfig({
       // root. Consumers only need the Docs package, so map Astro's exported
       // subpaths to the installation shipped with Docs.
       alias: [
-        ...consumerReactAliases(),
         ...stylingAlias(),
         ...packageExportAliases(),
         ...createProjectExportAliases(docsManifest, packageRoot),
@@ -295,12 +282,10 @@ export default defineConfig({
         ...packageDependencyAliases(),
         ...stylingDependencyAliases(),
       ],
-      // Use the consumer's React installation once, while leaving `server`
-      // subpaths unaliased so Vite can select their environment-specific entry.
-      dedupe: ['react', 'react-dom'],
     },
     ssr: {
-      optimizeDeps: { include: ['react', 'react-dom', 'react-dom/server'] },
+      // Let React resolve as one external module for both Vite components and
+      // ReactDOM's server renderer; absolute aliases bundle a second dispatcher.
       noExternal: ['@terra-symposium/styling', '@terra-symposium/boundaries', /^@radix-ui\//],
     },
     server: { fs: { allow: [projectRoot, consumerRoot, packageRoot] } },

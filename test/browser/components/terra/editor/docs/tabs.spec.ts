@@ -283,21 +283,20 @@ test.describe('Docs editor tab contracts', () => {
           },
         ] satisfies Content;
         await openEditor(p, content, { readOnly: true });
-        const cells = p
-          .getByRole('tabpanel', { name: 'Overview' })
-          .getByRole('table')
-          .getByRole('cell');
+        const table = p.getByRole('tabpanel', { name: 'Overview' }).getByRole('table');
+        const headings = table.getByRole('columnheader');
+        const cells = table.getByRole('cell');
         await expect(p.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
           'aria-selected',
           'true',
         );
-        await expect(cells.nth(0)).toContainText('🔍 Aspect');
-        await expect(cells.nth(1)).toContainText('Description');
-        await expect(cells.nth(2)).toContainText('🗣️ Voice');
-        await expect(cells.nth(3)).toContainText(
+        await expect(headings.nth(0)).toContainText('🔍 Aspect');
+        await expect(headings.nth(1)).toContainText('Description');
+        await expect(cells.nth(0)).toContainText('🗣️ Voice');
+        await expect(cells.nth(1)).toContainText(
           'Professional, authoritative, and evidence-based.',
         );
-        await expect(cells.nth(5)).toContainText('Data-driven, ethical, and collaborative.');
+        await expect(cells.nth(3)).toContainText('Data-driven, ethical, and collaborative.');
       },
     );
     test(
@@ -353,18 +352,17 @@ test.describe('Docs editor tab contracts', () => {
           },
         ] satisfies Content;
         await openEditor(p, content, { readOnly: true });
-        const cells = p
-          .getByRole('tabpanel', { name: 'Overview' })
-          .getByRole('table')
-          .getByRole('cell');
+        const table = p.getByRole('tabpanel', { name: 'Overview' }).getByRole('table');
+        const headings = table.getByRole('columnheader');
+        const cells = table.getByRole('cell');
         await expect(p.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
           'aria-selected',
           'true',
         );
-        await expect(cells.nth(0)).toHaveText('🔍 Aspect');
-        await expect(cells.nth(1)).toHaveText('Description');
-        await expect(cells.nth(2)).toHaveText('🗣️ Voice');
-        await expect(cells.nth(3)).toHaveText('Professional, authoritative, and evidence-based.');
+        await expect(headings.nth(0)).toHaveText('🔍 Aspect');
+        await expect(headings.nth(1)).toHaveText('Description');
+        await expect(cells.nth(0)).toHaveText('🗣️ Voice');
+        await expect(cells.nth(1)).toHaveText('Professional, authoritative, and evidence-based.');
       },
     );
   });

@@ -11,8 +11,8 @@ import assert from 'node:assert/strict';
 import process from 'node:process';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { tmpdir } from 'node:os';
 
@@ -24,7 +24,6 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const requireFromPackage = createRequire(resolve(packageRoot, 'package.json'));
 const configUrl = new URL('../site/config/astro.config.mjs', import.meta.url).href;
 
 /**
@@ -38,21 +37,22 @@ const configUrl = new URL('../site/config/astro.config.mjs', import.meta.url).hr
 const findAlias = (aliases, specifier) =>
   aliases.find(({ find: f }) => (typeof f === 'string' ? f === specifier : f.test(specifier)));
 
-test('uses package React without an absolute alias in the Docs checkout', async () => {
+test('leaves React and ReactDOM external to SSR bundles', async () => {
   const originalDocsRoot = process.env.DOCS_ROOT;
   try {
     process.env.DOCS_ROOT = packageRoot;
-    const aliases = (await import(`${configUrl}?package-react=${Date.now()}`)).default.vite.resolve
-      .alias;
+    const vite = (await import(`${configUrl}?package-react=${Date.now()}`)).default.vite;
+    const aliases = vite.resolve.alias;
     assert.equal(findAlias(aliases, 'react'), undefined);
     assert.equal(findAlias(aliases, 'react-dom'), undefined);
+    assert.equal(vite.ssr.optimizeDeps, undefined);
   } finally {
     if (originalDocsRoot === undefined) delete process.env.DOCS_ROOT;
     else process.env.DOCS_ROOT = originalDocsRoot;
   }
 });
 
-test('selects React, ReactDOM, Styling, and their Radix dependencies from one runtime', async () => {
+test('resolves Styling and Radix without aliasing the consumer React runtime', async () => {
   const originalDocsRoot = process.env.DOCS_ROOT;
   const fixtureRoot = await mkdtemp(join(tmpdir(), 'terra-docs-runtime-'));
   try {
@@ -65,10 +65,8 @@ test('selects React, ReactDOM, Styling, and their Radix dependencies from one ru
     process.env.DOCS_ROOT = docsOwnedRoot;
     const docsOwnedAliases = (await import(`${configUrl}?docs-owned=${Date.now()}`)).default.vite
       .resolve.alias;
-    const docsReact = requireFromPackage.resolve('react');
-    const docsReactDom = requireFromPackage.resolve('react-dom');
-    assert.equal(findAlias(docsOwnedAliases, 'react')?.replacement, docsReact);
-    assert.equal(findAlias(docsOwnedAliases, 'react-dom')?.replacement, docsReactDom);
+    assert.equal(findAlias(docsOwnedAliases, 'react'), undefined);
+    assert.equal(findAlias(docsOwnedAliases, 'react-dom'), undefined);
     assert.equal(findAlias(docsOwnedAliases, '@radix-ui/react-context'), undefined);
     const consumerRoot = join(fixtureRoot, 'consumer-owned');
     const consumerNodeModules = join(consumerRoot, 'node_modules');
@@ -149,108 +147,14 @@ test('selects React, ReactDOM, Styling, and their Radix dependencies from one ru
     const consumerAliases = (await import(`${configUrl}?consumer-owned=${Date.now()}`)).default.vite
       .resolve.alias;
     const requireFromConsumer = createRequire(resolve(consumerRoot, 'package.json'));
-    const consumerReact = requireFromConsumer.resolve('react');
-    const consumerReactDom = requireFromConsumer.resolve('react-dom');
     const consumerStyling = requireFromConsumer.resolve('@terra-symposium/styling');
-    assert.equal(findAlias(consumerAliases, 'react')?.replacement, consumerReact);
-    assert.equal(findAlias(consumerAliases, 'react-dom')?.replacement, consumerReactDom);
+    assert.equal(findAlias(consumerAliases, 'react'), undefined);
+    assert.equal(findAlias(consumerAliases, 'react-dom'), undefined);
     assert.equal(
       findAlias(consumerAliases, '@terra-symposium/styling')?.replacement,
       consumerStyling,
     );
     assert.equal(findAlias(consumerAliases, '@radix-ui/react-context'), undefined);
-  } finally {
-    if (originalDocsRoot === undefined) delete process.env.DOCS_ROOT;
-    else process.env.DOCS_ROOT = originalDocsRoot;
-    await rm(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
-test('SSR renders a Styling Radix component through the selected consumer React runtime', async () => {
-  const originalDocsRoot = process.env.DOCS_ROOT;
-  const fixtureRoot = await mkdtemp(join(tmpdir(), 'terra-docs-ssr-runtime-'));
-  try {
-    const nodeModules = join(fixtureRoot, 'node_modules');
-    const stylingRoot = join(nodeModules, '@terra-symposium', 'styling');
-    const tabsRoot = join(stylingRoot, 'node_modules', '@radix-ui', 'react-tabs');
-    const duplicateReactRoot = join(tabsRoot, 'node_modules', 'react');
-    const reactRoot = dirname(requireFromPackage.resolve('react'));
-    const reactDomRoot = dirname(requireFromPackage.resolve('react-dom'));
-    await mkdir(stylingRoot, { recursive: true });
-    await writeFile(
-      join(fixtureRoot, 'package.json'),
-      JSON.stringify({
-        name: 'consumer-ssr-runtime',
-        dependencies: {
-          '@terra-symposium/styling': '1.0.0',
-          react: '19.0.0',
-          'react-dom': '19.0.0',
-        },
-      }),
-    );
-    await symlink(reactRoot, join(nodeModules, 'react'), 'dir');
-    await symlink(reactDomRoot, join(nodeModules, 'react-dom'), 'dir');
-    await writeFile(
-      join(stylingRoot, 'package.json'),
-      JSON.stringify({
-        name: '@terra-symposium/styling',
-        type: 'module',
-        dependencies: { '@radix-ui/react-tabs': '1.0.0' },
-        exports: { '.': './index.js' },
-      }),
-    );
-    await writeFile(
-      join(stylingRoot, 'index.js'),
-      `import { TabsRoot } from '@radix-ui/react-tabs';\nexport { TabsRoot };\n`,
-    );
-    await mkdir(tabsRoot, { recursive: true });
-    await writeFile(
-      join(tabsRoot, 'package.json'),
-      JSON.stringify({
-        name: '@radix-ui/react-tabs',
-        type: 'module',
-        peerDependencies: { react: '^19.0.0' },
-        exports: { '.': './index.js' },
-      }),
-    );
-    await writeFile(
-      join(tabsRoot, 'index.js'),
-      `import React from 'react';\nexport function TabsRoot() { const [value] = React.useState('ready'); return React.createElement('div', { 'data-runtime-test': value }, value); }\n`,
-    );
-    await cp(reactRoot, duplicateReactRoot, { recursive: true });
-    process.env.DOCS_ROOT = fixtureRoot;
-    const config = await import(`${configUrl}?ssr=${Date.now()}`);
-    const consumerRequire = createRequire(join(fixtureRoot, 'package.json'));
-    const React = consumerRequire('react');
-    const { renderToString } = consumerRequire('react-dom/server');
-    const consumerReact = consumerRequire.resolve('react');
-    const nestedReact = createRequire(join(tabsRoot, 'index.js')).resolve('react');
-    assert.notEqual(
-      nestedReact,
-      consumerReact,
-      'the fixture must contain a second React peer root',
-    );
-    const reactAlias = findAlias(config.default.vite.resolve.alias, 'react');
-    assert.equal(reactAlias?.replacement, consumerReact);
-    assert.equal(findAlias(config.default.vite.resolve.alias, '@radix-ui/react-tabs'), undefined);
-    const sharedTabsPath = join(fixtureRoot, 'shared-radix.mjs');
-    const radixSource = `import React from 'react';\nexport function TabsRoot() { const [value] = React.useState('ready'); return React.createElement('div', { 'data-runtime-test': value }, value); }\n`;
-    await writeFile(
-      sharedTabsPath,
-      radixSource.replace("from 'react'", `from '${pathToFileURL(reactAlias.replacement).href}'`),
-    );
-    const { TabsRoot: SharedTabsRoot } = await import(
-      `${pathToFileURL(sharedTabsPath).href}?runtime=${Date.now()}`
-    );
-    assert.match(renderToString(React.createElement(SharedTabsRoot)), /data-runtime-test="ready"/);
-    assert.ok(
-      config.default.vite.ssr.noExternal.some((entry) =>
-        entry instanceof RegExp
-          ? entry.test('@radix-ui/react-tabs')
-          : entry === '@radix-ui/react-tabs',
-      ),
-      'SSR must bundle Radix UI peers so their React imports use the selected runtime alias',
-    );
   } finally {
     if (originalDocsRoot === undefined) delete process.env.DOCS_ROOT;
     else process.env.DOCS_ROOT = originalDocsRoot;

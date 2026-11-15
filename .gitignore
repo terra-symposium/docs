@@ -11,6 +11,7 @@ site-dist/
 # Test artifacts
 coverage/
 tests/results/
+config/tests/results/
 test-results/
 config/test-results/
 

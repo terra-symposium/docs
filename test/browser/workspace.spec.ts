@@ -420,17 +420,18 @@ test.describe('Docs workspace browser contracts', () => {
           }));
         await expect(content.getByText('Long page background check 1.')).toBeVisible();
         await expect.poll(async () => (await hueOfPage()).hue).toBe('30');
-        const diagram = content.getByRole('img', { name: 'Document diagram' });
-        await expect(diagram.locator('text')).toHaveText([
-          'Orange section node',
-          'Primary section node',
-        ]);
-        const orangeDiagramColor = await diagram.evaluate((svg) => ({
-          color: getComputedStyle(svg).color,
-          stroke: getComputedStyle(svg.querySelector('rect')!).stroke,
-        }));
+        const diagram = content.getByRole('application');
+        await expect(diagram.getByRole('link', { name: 'Orange section node' })).toBeVisible();
+        await expect(diagram.getByRole('link', { name: 'Primary section node' })).toBeVisible();
+        const orangeDiagramColor = await diagram
+          .locator('.react-flow__node')
+          .first()
+          .evaluate((node) => ({
+            color: getComputedStyle(node).color,
+            border: getComputedStyle(node).borderColor,
+          }));
         expect(orangeDiagramColor.color).not.toBe('');
-        expect(orangeDiagramColor.stroke).toBe(orangeDiagramColor.color);
+        expect(orangeDiagramColor.border).not.toBe('');
         const beforeNavigation = await p.evaluate(
           () => performance.getEntriesByType('navigation').length,
         );

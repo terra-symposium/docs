@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.16
+
+### Patch Changes
+
+- Use the consumer's React dispatcher during static rendering so table and node blocks build reliably.
+
 ## 0.4.15
 
 ### Patch Changes

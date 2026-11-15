@@ -1,8 +1,8 @@
 # Terra Docs
 
-A reusable React document editor and viewer with Markdown, Portable Text, diagram, PDF, and local-workspace components. The repository includes a Vite consumer demo, Astro integration, interface documentation, and unit and browser coverage.
+Terra Docs lets teams write, read, and share rich documents in their applications.
 
-## Getting started
+## Get started
 
 Requires Node.js 24.12+ and pnpm 10.30.3. From the repository root:
 
@@ -11,31 +11,49 @@ pnpm install
 pnpm dev
 ```
 
-Vite opens the demo at `127.0.0.1`. Build the library with `pnpm build`; see the [interface guide](docs/interface.mdx) for integration details.
+Vite opens the demo at `127.0.0.1`. Build the library with `pnpm build`; see the
+[interface guide](docs/interface.mdx) for integration details.
 
-### Commands
+From the repository root, run `pnpm quality:all`, `pnpm test`, `pnpm test:browser`, and
+`pnpm test:consumer` as applicable.
 
-From the repository root, run `pnpm quality:all`, `pnpm test`, `pnpm test:browser`, and `pnpm test:consumer` as applicable.
+## Configuration
 
-## Security and Limitations
+The package renders user-authored document content and includes HTML sanitization. Integrators
+should preserve sanitization and workspace boundaries; do not treat rendering as authorization for
+private content.
 
-The package renders user-authored document content and includes HTML sanitization. Integrators should preserve sanitization and workspace boundaries; do not treat rendering as authorization for private content.
+## Validation
 
-## Structure
+| Command                  | Checks                        |
+| ------------------------ | ----------------------------- |
+| `pnpm run quality`       | Changed and untracked files   |
+| `pnpm run quality:all`   | Full configured Quality scope |
+| `pnpm run test`          | Project test suite            |
+| `pnpm run test:browser`  | Browser tests                 |
+| `pnpm run test:consumer` | Consumer integration tests    |
+| `pnpm run build`         | Build output                  |
 
-`src/` contains exported library components and styles; `docs/` documents the interface, `tests/` contains Node and browser tests, and `template/` provides a consumer starter.
-
-## References
-
-- [Interface guide](docs/interface.mdx)
-- [Test migration notes](TEST_MIGRATION.md)
-- [Package exports](package.json)
-- [Apache-2.0 license](LICENSE)
+Quality can apply safe fixes; review the diff before committing.
 
 ## Contributing
 
+`src/` contains exported library components and styles; `docs/` documents the interface, `tests/`
+contains Node and browser tests, and `template/` provides a consumer starter.
+
 Document interface changes and keep consumer examples aligned with the package exports.
 
-## Credits and license
+Open a pull request against `development` and review the results of
+[`check.yml`](.github/workflows/check.yml) before merging. Keep unrelated changes out of the pull
+request.
 
-The package declares [Apache-2.0](LICENSE). Review third-party dependency and asset terms separately.
+## Documentation
+
+- [Interface guide](docs/interface.mdx)
+- [Package exports](package.json)
+- [Apache-2.0 license](LICENSE)
+
+## License
+
+The package declares [Apache-2.0](LICENSE). Review third-party dependency and asset terms
+separately.

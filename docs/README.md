@@ -1,10 +1,12 @@
 # docs documentation
 
-Terra documentation package, examples, and template.
+This index helps readers find the guides and source material for this project.
 
-Start with the [repository overview](../README.md). Configuration lives in `config/`, authored implementation stays in its owning source tree, test plans and source are in `tests/`, and generated output belongs in `dist/`.
+See the [repository overview](../README.md) for setup and project structure.
 
-## Contents
+For validation and pull-request guidance, see the [repository README](../README.md).
+
+## Documentation
 
 - `developer/`: developer documentation.
 - [interface.mdx](interface.mdx)

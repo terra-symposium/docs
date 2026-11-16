@@ -16,7 +16,7 @@ import type { DocsLocalPage } from '../components/LocalDocsWorkspace.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const sources = import.meta.glob('../content/docs/**/*.md', {
+const srcs = import.meta.glob('../content/docs/**/*.md', {
 	query: '?raw',
 	import: 'default',
 	eager: true,
@@ -43,7 +43,7 @@ export const docsPages: DocsLocalPage[] = Object.entries(
 						.replace(/-/g, ' ')
 						.replace(/\b\w/g, value => value.toUpperCase())),
 		...(m.frontmatter?.description ? { description: m.frontmatter.description } : {}),
-		markdown: String(sources[f] ?? '').replace(/^---\s*\n[\s\S]*?\n---\s*\n/, ''),
+		markdown: String(srcs[f] ?? '').replace(/^---\s*\n[\s\S]*?\n---\s*\n/, ''),
 	};
 });
 export const docsTree: DocsHostTreeNode[] = [

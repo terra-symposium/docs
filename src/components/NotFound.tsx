@@ -25,14 +25,14 @@ HELPERS
  *
  * @param appName Host name displayed in the return link.
  * @param homeHref Route linked by the return action.
- * @param description Explanation shown below the not-found title.
+ * @param desc Explanation shown below the not-found title.
  *
  * @return Themed not-found page element.
  */
 export function DocsNotFound({
 	appName = 'Terra Docs',
 	homeHref = '/',
-	description = 'The page may have moved, or the link may be out of date.',
+	description: desc = 'The page may have moved, or the link may be out of date.',
 }: {
 	appName?: string;
 	homeHref?: string;
@@ -50,7 +50,7 @@ export function DocsNotFound({
 					</CardHeading>
 				</CardHeader>
 				<CardContent className='text-center'>
-					<CardDescription className='text-base leading-relaxed'>{description}</CardDescription>
+					<CardDescription className='text-base leading-relaxed'>{desc}</CardDescription>
 				</CardContent>
 				<CardFooter className='justify-center'>
 					<ButtonLink href={homeHref} variant='primary-tonal' size='sm'>

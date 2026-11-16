@@ -87,10 +87,10 @@ function CodeEditor({ attributes: attrs, children, node, path }: PortableTextBlo
 		if (!boundary.current) return;
 		const stop = (e: Event): void => e.stopPropagation();
 		const es = ['beforeinput', 'input', 'keydown', 'keyup', 'paste', 'copy', 'cut', 'focusin', 'focusout', 'pointerdown', 'pointerup'];
-		const element = boundary.current;
-		for (const e of es) element.addEventListener(e, stop);
+		const el = boundary.current;
+		for (const e of es) el.addEventListener(e, stop);
 		return () => {
-			for (const e of es) element.removeEventListener(e, stop);
+			for (const e of es) el.removeEventListener(e, stop);
 		};
 	}, [code.source]);
 	useEffect(() => {

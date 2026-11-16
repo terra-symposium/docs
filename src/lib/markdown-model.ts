@@ -105,7 +105,7 @@ function textBlock(style: string, tokens: Token[] | undefined, fallback: string)
  */
 export function markdownToDocsValue(markdown: string, options: DocsBlockOptions = {}): DocsValue {
 	const blocks: RichBlock[] = [];
-	let source = markdown.replace(/^:::terra-docs ([A-Za-z]+)\s*\n([\s\S]*?)^:::\s*$/gm, (s, t: string, j: string) => {
+	let src = markdown.replace(/^:::terra-docs ([A-Za-z]+)\s*\n([\s\S]*?)^:::\s*$/gm, (s, t: string, j: string) => {
 		try {
 			const data = JSON.parse(j) as RichBlock;
 			if (data._type === t && enabledDocsBlocks(options).includes(t as never)) {
@@ -118,7 +118,7 @@ export function markdownToDocsValue(markdown: string, options: DocsBlockOptions 
 		blocks.push({ _type: 'raw', _key: key(), markdown: s });
 		return `\n\nTERRADOCSBLOCK${blocks.length - 1}PLACEHOLDER\n\n`;
 	});
-	source = source.replace(/^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm, (_match, d: string, t: string, b: string) => {
+	src = src.replace(/^(===|\|\|\|)\s*\[([^\]\n]+)\]\s*\n([\s\S]*?)^\1\s*$/gm, (_match, d: string, t: string, b: string) => {
 		blocks.push({
 			_type: d === '===' ? 'accordion' : 'tabs',
 			_key: key(),
@@ -127,7 +127,7 @@ export function markdownToDocsValue(markdown: string, options: DocsBlockOptions 
 		});
 		return `\n\nTERRADOCSBLOCK${blocks.length - 1}PLACEHOLDER\n\n`;
 	});
-	const parsed = marked.lexer(source, { gfm: true }) as Token[];
+	const parsed = marked.lexer(src, { gfm: true }) as Token[];
 	const result: RichBlock[] = [];
 	for (const token of parsed) {
 		if (token.type === 'space') continue;

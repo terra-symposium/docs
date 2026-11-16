@@ -18,14 +18,14 @@ type Props = {
 	updatedAt?: string;
 };
 
-const { title, homeHref = '/', description, pageTitle, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt } = Astro.props;
+const { title, homeHref = '/', description: desc, pageTitle, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt } = Astro.props;
 ---
 
 <DocsStaticWorkspace
 	client:load
 	title={title}
 	homeHref={homeHref}
-	description={description}
+	description={desc}
 	pageTitle={pageTitle}
 	nodes={nodes}
 	sections={sections}

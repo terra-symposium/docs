@@ -152,11 +152,11 @@ function GroupNode({ data, selected }: NodeProps<XyNode<GroupNodeData>>): React.
  */
 function createNode(className: string, inner?: string): (props: NodeProps<XyNode<NodeData>>) => React.JSX.Element {
 	return function NodeCard({ data, selected }: NodeProps<XyNode<NodeData>>): React.JSX.Element {
-		const Element = data.onClick ? 'button' : data.href ? 'a' : 'div';
+		const El = data.onClick ? 'button' : data.href ? 'a' : 'div';
 		return (
-			<Element
-				{...(Element === 'button' ? { type: 'button' } : {})}
-				{...(Element === 'a' ? { href: data.href } : {})}
+			<El
+				{...(El === 'button' ? { type: 'button' } : {})}
+				{...(El === 'a' ? { href: data.href } : {})}
 				onClick={data.onClick}
 				className={cn(
 					'relative block min-w-40 text-pretty p-2 text-center text-sm font-normal !no-underline shadow-md transition-shadow',
@@ -166,7 +166,7 @@ function createNode(className: string, inner?: string): (props: NodeProps<XyNode
 			>
 				<Handles editable={data.editable === true} sources={data.requiredHandles?.sources ?? []} tgts={data.requiredHandles?.tgts ?? []} />
 				<span className={inner}>{data.title}</span>
-			</Element>
+			</El>
 		);
 	};
 }
@@ -219,11 +219,11 @@ function NoteNode({ id, data, selected }: NodeProps<XyNode<GroupNodeData>>): Rea
 export const NODE_TYPES = {
 	erd: function ErdNode({ data: d, selected: s }: NodeProps<XyNode<NodeData>>): React.JSX.Element {
 		const compact = d.compact === true;
-		const Element = d.onClick ? 'button' : d.href ? 'a' : 'div';
+		const El = d.onClick ? 'button' : d.href ? 'a' : 'div';
 		return (
-			<Element
-				type={Element === 'button' ? 'button' : undefined}
-				href={Element === 'a' ? d.href : undefined}
+			<El
+				type={El === 'button' ? 'button' : undefined}
+				href={El === 'a' ? d.href : undefined}
 				onClick={d.onClick}
 				className={cn(
 					'block max-h-96 w-full overflow-y-scroll rounded-md border-2 border-primary-6 bg-primary-2 text-primary-12 !no-underline shadow-lg transition-shadow',
@@ -259,7 +259,7 @@ export const NODE_TYPES = {
 					</ul>
 				)}
 				<Handles editable={d.editable === true} sources={d.requiredHandles?.sources ?? []} tgts={d.requiredHandles?.tgts ?? []} />
-			</Element>
+			</El>
 		);
 	},
 	process: createNode(NODE_STYLES.process),
@@ -390,7 +390,7 @@ function syncGraph(
 		edges: syncedGraph.edges,
 	};
 }
-const FLOW_COMPONENTS = {
+const FLOW_COMPS = {
 	nodeTypes: NODE_TYPES,
 	/**
 	 * Renders the interactive flow canvas and context menus for n editing, grouping, and layout.
@@ -1134,9 +1134,9 @@ export default function Nodes({
 				}}
 			>
 				<ReactFlowProvider>
-					<FLOW_COMPONENTS.Canvas
+					<FLOW_COMPS.Canvas
 						flow={flow}
-						nodeTypes={{ ...FLOW_COMPONENTS.nodeTypes, ...customNodeTypes } as unknown as Record<string, React.ComponentType<NodeProps<FlowNode>>>}
+						nodeTypes={{ ...FLOW_COMPS.nodeTypes, ...customNodeTypes } as unknown as Record<string, React.ComponentType<NodeProps<FlowNode>>>}
 						{...(edgeTypes ? { edgeTypes } : {})}
 						nodeLabels={nodeLabels}
 						onNodeClick={onNodeClick}

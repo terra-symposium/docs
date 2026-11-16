@@ -80,7 +80,7 @@ export default function WorkspaceDemo({ readOnly = false, hue = 145 }: { readOnl
 			document.removeEventListener('docs:navigate', syncLocation);
 		};
 	}, []);
-	const selectedDocument =
+	const selectedDoc =
 		state.documents[
 			((): string => {
 				try {
@@ -95,17 +95,17 @@ export default function WorkspaceDemo({ readOnly = false, hue = 145 }: { readOnl
 	// terra-quality-ignore single-use -- Memoize the demo host at a stable hook position so editor consumers retain its identity.
 	const host = useMemo(() => createWorkspaceDemoHost(readOnly), [readOnly]);
 	const [primary, secondary] = colors(hue);
-	if (!selectedDocument) return <div className='min-h-svh' />;
+	if (!selectedDoc) return <div className='min-h-svh' />;
 	const localPage = {
 		id: 'salesphere',
-		path: selectedDocument.path,
+		path: selectedDoc.path,
 		pathname: '/workspace-readonly/',
-		title: selectedDocument.title,
+		title: selectedDoc.title,
 		description: 'A page level description for the Salesphere overview.',
-		updatedAt: selectedDocument.updatedAt,
+		updatedAt: selectedDoc.updatedAt,
 		markdown:
 			'# Salesphere\n\nSalesphere helps sales professionals choose a useful next step in a customer relationship and understand why it matters.\n\n## Start with the product\n\nRead [Salesphere’s purpose](/product/purpose/) for the larger aim.',
-		attachments: selectedDocument.attachments,
+		attachments: selectedDoc.attachments,
 	};
 	return (
 		<div
@@ -135,13 +135,13 @@ export default function WorkspaceDemo({ readOnly = false, hue = 145 }: { readOnl
 					host={host}
 					pathname={location}
 					permission='write'
-					path={selectedDocument.path}
-					title={selectedDocument.title}
-					description={selectedDocument.description}
-					contributors={selectedDocument.contributors}
-					updatedAt={selectedDocument.updatedAt}
-					content={selectedDocument.content}
-					source={selectedDocument.source}
+					path={selectedDoc.path}
+					title={selectedDoc.title}
+					description={selectedDoc.description}
+					contributors={selectedDoc.contributors}
+					updatedAt={selectedDoc.updatedAt}
+					content={selectedDoc.content}
+					source={selectedDoc.source}
 				/>
 			)}
 		</div>

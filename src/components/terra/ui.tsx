@@ -24,15 +24,15 @@ HELPERS
  * Displays a centered empty-state message.
  *
  * @param title Short heading shown above the description.
- * @param description Optional supporting text.
+ * @param desc Optional supporting text.
  *
  * @return Empty-state markup.
  */
-export function Empty({ title = 'Nothing to show', description = '' }: { title?: string; description?: string }): JSX.Element {
+export function Empty({ title = 'Nothing to show', description: desc = '' }: { title?: string; description?: string }): JSX.Element {
 	return (
 		<div className='flex min-h-24 flex-col items-center justify-center gap-2 p-6 text-center text-primary-11'>
 			<strong className='text-primary-12'>{title}</strong>
-			{description && <span>{description}</span>}
+			{desc && <span>{desc}</span>}
 		</div>
 	);
 }

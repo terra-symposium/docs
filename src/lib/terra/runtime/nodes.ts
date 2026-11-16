@@ -122,7 +122,7 @@ const NODES = {
 		const n = r
 			?.replace(NODES.rx.import, '')
 			?.replace(NODES.rx.tag, c => {
-				const vals: Draft = Object.fromEntries(Object.entries(properties(c)).map(([k, v]) => [k, `${v ?? ''}`]));
+				const vals: Draft = Object.fromEntries(Object.entries(props(c)).map(([k, v]) => [k, `${v ?? ''}`]));
 				const result: Record<string, unknown> = {};
 				for (const field of NODES.fields) {
 					const content = Object.hasOwn(vals, field.key) ? vals[field.key] : undefined;
@@ -360,7 +360,7 @@ const scalar = (val: string): unknown => {
  *
  * @remarks This parser reads one inline `Nodes` tag at a time and preserves only recognized fields.
  */
-const properties = (content: string): Draft => {
+const props = (content: string): Draft => {
 	const vals: Draft = {};
 	let i = content.indexOf('Nodes') + 5;
 	while (i < content.length) {

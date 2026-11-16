@@ -22,9 +22,9 @@ test(
 	{ tag: '@viewport:xl', annotation: { type: 'viewport-reason', description: 'Rich-block interactions use the standard desktop editor layout.' } } as const,
 	async ({ page: p }) => {
 		await openEditor(p, [{ _key: 'raw-under-test', _type: 'raw', markdown: '# Terra source' }] satisfies TerraContent);
-		const source = p.locator('[data-docs-code-block="view"]');
-		await expect(source).toContainText('# Terra source');
-		await expect(source.getByRole('button', { name: 'Copy' })).toBeVisible();
+		const src = p.locator('[data-docs-code-block="view"]');
+		await expect(src).toContainText('# Terra source');
+		await expect(src.getByRole('button', { name: 'Copy' })).toBeVisible();
 		await expect(p.getByTestId('editor-output')).toContainText('# Terra source');
 	},
 );

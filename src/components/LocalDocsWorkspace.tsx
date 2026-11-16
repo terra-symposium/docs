@@ -95,7 +95,7 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
  * @param pages Markdown pages available to the local workspace.
  * @param pathname Current URL used to select the active page.
  * @param title Site title displayed in the workspace chrome.
- * @param description Optional site description.
+ * @param desc Optional site description.
  * @param hue Base hue used to derive the workspace theme.
  * @param rootPath Fallback route used for the home document.
  * @param homePath Optional route used by the home link.
@@ -103,7 +103,7 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
  *
  * @return Read-only Terra Docs workspace element.
  */
-export function DocsLocalWorkspace({ tree, pages, pathname, title, description, hue = 145, rootPath = '/', homePath, customBlocks }: DocsLocalWorkspaceProps): JSX.Element {
+export function DocsLocalWorkspace({ tree, pages, pathname, title, description: desc, hue = 145, rootPath = '/', homePath, customBlocks }: DocsLocalWorkspaceProps): JSX.Element {
 	const page = findPage(pages, pathname) ?? pages[0];
 	const content = useMemo(() => (page ? markdownToDocsValue(page.markdown) : []), [page]);
 	const [primary, secondary] = colors(hue);
@@ -137,7 +137,7 @@ export function DocsLocalWorkspace({ tree, pages, pathname, title, description, 
 			rootPath,
 			...(homePath ? { homePath } : {}),
 			siteTitle: title,
-			...(description ? { siteDescription: description } : {}),
+			...(desc ? { siteDescription: desc } : {}),
 			assetUrl: () => undefined,
 			resolveRoute(value) {
 				const resolved = findPage(pages, value) ?? pages[0];
@@ -199,7 +199,7 @@ export function DocsLocalWorkspace({ tree, pages, pathname, title, description, 
 				return { data: null as T };
 			},
 		} satisfies DocsHostAdapter;
-	}, [description, homePath, pages, pathname, rootPath, title, tree]);
+	}, [desc, homePath, pages, pathname, rootPath, title, tree]);
 	return (
 		<div
 			style={

@@ -95,21 +95,21 @@ test('structured tabs, table, and nodes survive conversion and render as content
 	}
 });
 test('rich Markdown rendering escapes unsafe content and supports block opt-out', () => {
-	const source = ':::terra-docs callout\n{"_type":"callout","title":"Safe","content":"Hello"}\n:::';
-	assert.match(renderMarkdown(source), /data-docs-aside="note"/);
-	assert.doesNotMatch(renderMarkdown(source, { callout: false }), /data-docs-aside=/);
+	const src = ':::terra-docs callout\n{"_type":"callout","title":"Safe","content":"Hello"}\n:::';
+	assert.match(renderMarkdown(src), /data-docs-aside="note"/);
+	assert.doesNotMatch(renderMarkdown(src, { callout: false }), /data-docs-aside=/);
 	assert.doesNotMatch(renderMarkdown(':::terra-docs docImage\n{"_type":"docImage","url":"javascript:alert(1)","alt":"bad"}\n:::'), /src="javascript:/);
 });
 test('inline math survives visual conversion and renders as math', () => {
-	const source = 'An equation $x^2 + 1$ in text.\n';
-	const value = markdownToDocsValue(source);
+	const src = 'An equation $x^2 + 1$ in text.\n';
+	const value = markdownToDocsValue(src);
 	assert.equal(
 		value[0].children.some(child => child._type === 'math'),
 		true,
 	);
 	assert.match(docsValueToMarkdown(value), /\$x\^2 \+ 1\$/);
-	assert.match(renderMarkdown(source), /katex/);
-	assert.doesNotMatch(renderMarkdown(source, { inlineMath: false }), /katex/);
+	assert.match(renderMarkdown(src), /katex/);
+	assert.doesNotMatch(renderMarkdown(src, { inlineMath: false }), /katex/);
 });
 test('Markdown links become visual link annotations and keep their targets', () => {
 	const value = markdownToDocsValue('Read [the guide](/product/purpose/) and **[the map](/product/structure/)**.\n');

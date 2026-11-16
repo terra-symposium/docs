@@ -106,14 +106,14 @@ function langOf(v: string): string {
 /**
  * High-performance rich-text rendering shell managing syntax highlighted text presentations parsing raw code blocks.
  *
- * @param configuration View or edit settings, source content, and change callbacks for the code block.
+ * @param config View or edit settings, source content, and change callbacks for the code block.
  *
  * @return Instanced CodeMirror window evaluating code chunks mapped dynamically against site theme constraints.
  *
  * @remarks Facilitates explicit fallbacks during hydration avoiding layout shifts natively.
  */
 export function CodeBlock(
-	configuration:
+	config:
 		| {
 				className?: string;
 				code?: unknown;
@@ -141,12 +141,12 @@ export function CodeBlock(
 		  },
 ): JSX.Element {
 	// STATES
-	const src = configuration.source?.trim() || (typeof configuration.code === 'string' && isEndpointVal(configuration.code) ? configuration.code.trim() : '');
-	const locked = configuration.tone === 'view' || configuration.readOnly === true;
-	const docsSrc = configuration.docsSource === true;
+	const src = config.source?.trim() || (typeof config.code === 'string' && isEndpointVal(config.code) ? config.code.trim() : '');
+	const locked = config.tone === 'view' || config.readOnly === true;
+	const docsSrc = config.docsSource === true;
 	// Keep intentional leading/trailing newlines. Stripping them here causes a
 	// controlled Docs editor to undo a CodeMirror Enter transaction on rerender.
-	const code = stringifyCodeValue(configuration.code);
+	const code = stringifyCodeValue(config.code);
 	const viewCode = docsSrc
 		? code.replace(/<Code\b([\s\S]*?)>(?:\s*\{`((?:\\.|[^`])*)`\}\s*|\s*([\s\S]*?)\s*)<\/Code>/g, (_match, p, e, v) => {
 				return `\n<Code${p}>\n${/* prettier-ignore */ e !== undefined ? e.replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1').replace(TerraQualityRegex.REGEX_N_G_REGEX_2(), '\n') : (v || '').trim()}\n</Code>\n`;
@@ -169,20 +169,20 @@ export function CodeBlock(
 	 */
 	const codeVal = (): string => viewCode;
 	const codeRef = useRef(resCode);
-	const langRef = useRef(langOf(configuration.language));
-	const chgRef = useRef(configuration.tone === 'edit' ? configuration.onCodeChange : undefined);
-	const cmtRef = useRef(configuration.tone === 'edit' ? configuration.onCommit : undefined);
+	const langRef = useRef(langOf(config.language));
+	const chgRef = useRef(config.tone === 'edit' ? config.onCodeChange : undefined);
+	const cmtRef = useRef(config.tone === 'edit' ? config.onCommit : undefined);
 
 	// SYNC REFS
-	chgRef.current = configuration.tone === 'edit' ? configuration.onCodeChange : undefined;
-	cmtRef.current = configuration.tone === 'edit' ? configuration.onCommit : undefined;
+	chgRef.current = config.tone === 'edit' ? config.onCodeChange : undefined;
+	cmtRef.current = config.tone === 'edit' ? config.onCommit : undefined;
 	codeRef.current = resCode;
-	langRef.current = langOf(configuration.language);
+	langRef.current = langOf(config.language);
 
 	// DERIVED
-	const curLang = langOf(configuration.language);
-	const expAll = 'expandAll' in configuration && configuration.expandAll === true;
-	const fullHeight = configuration.tone === 'edit' && configuration.fullHeight === true;
+	const curLang = langOf(config.language);
+	const expAll = 'expandAll' in config && config.expandAll === true;
+	const fullHeight = config.tone === 'edit' && config.fullHeight === true;
 
 	// RENDER HELPERS
 
@@ -240,7 +240,7 @@ export function CodeBlock(
 		return () => {
 			a = false;
 		};
-	}, [docsSrc, configuration.code, configuration.source, src]);
+	}, [docsSrc, config.code, config.source, src]);
 	useEffect(() => {
 		let a = true;
 		let aEnterHandler: ((event: KeyboardEvent) => void) | undefined;
@@ -290,7 +290,7 @@ export function CodeBlock(
 						lineNumbers(),
 						indentUnit.of('\t'),
 						EditorState.allowMultipleSelections.of(true),
-						...(configuration.placeholder ? [cmPlaceholder(configuration.placeholder)] : []),
+						...(config.placeholder ? [cmPlaceholder(config.placeholder)] : []),
 						keymap.of([
 							...standardKeymap,
 							...historyKeymap,
@@ -337,17 +337,17 @@ export function CodeBlock(
 							if (lineSet.size > 1) {
 								u.view.dom.setAttribute('data-docs-multicursor', JSON.stringify({ lines: Array.from(lineSet).sort((a, b) => a - b) }));
 							} else u.view.dom.removeAttribute('data-docs-multicursor');
-							if (!u.docChanged || configuration.tone !== 'edit' || src || configuration.readOnly) return;
+							if (!u.docChanged || config.tone !== 'edit' || src || config.readOnly) return;
 							codeRef.current = u.state.doc.toString();
 							chgRef.current?.(codeRef.current);
 						}),
 						EditorView.domEventHandlers({
 							blur: () => {
-								if (configuration.tone !== 'edit' || configuration.readOnly) return;
+								if (config.tone !== 'edit' || config.readOnly) return;
 								cmtRef.current?.(codeRef.current, langRef.current);
 							},
 							paste: (evt, v) => {
-								if (configuration.tone !== 'edit' || configuration.readOnly) return false;
+								if (config.tone !== 'edit' || config.readOnly) return false;
 								if (!evt.clipboardData) return false;
 								const html = evt.clipboardData.getData('text/html'),
 									plain = evt.clipboardData.getData('text/plain'),
@@ -406,7 +406,7 @@ export function CodeBlock(
 				}),
 			});
 			const onCodeEnter = (event: KeyboardEvent): void => {
-				if (event.key !== 'Enter' || configuration.tone !== 'edit' || configuration.readOnly || src) return;
+				if (event.key !== 'Enter' || config.tone !== 'edit' || config.readOnly || src) return;
 				const aView = view.current;
 				if (!aView) return;
 				event.preventDefault();
@@ -459,7 +459,7 @@ export function CodeBlock(
 			view.current?.destroy();
 			view.current = null;
 		};
-	}, [expAll, locked, configuration.language, configuration.tone, src]);
+	}, [expAll, locked, config.language, config.tone, src]);
 	useEffect(() => {
 		return $transition.listen(i => {
 			if (!i && view.current)
@@ -498,7 +498,7 @@ export function CodeBlock(
 		codeRef.current = n;
 		if (expAll) expand(view.current);
 		view.current.requestMeasure();
-	}, [expAll, configuration.code]);
+	}, [expAll, config.code]);
 	useEffect(() => {
 		if (!src || !view.current || view.current?.state.doc.toString() === resCode) return;
 		view.current.dispatch({
@@ -540,16 +540,16 @@ export function CodeBlock(
 					'[&_.cm-gutterElement]:!font-mono [&_.cm-gutterElement]:!text-[13px] [&_.cm-gutterElement]:!tabular-nums',
 					fullHeight && 'flex min-h-[50vh] flex-col [&_.cm-editor]:!min-h-[calc(50vh-1.75rem)] [&_.cm-scroller]:!min-h-[calc(50vh-1.75rem)]',
 					'transition-all duration-200',
-					configuration.className,
+					config.className,
 				)}
-				data-docs-code-block={configuration.tone}
+				data-docs-code-block={config.tone}
 				data-docs-code-editor
 				data-docs-code-source={src || 'local'}
-				contentEditable={configuration.tone === 'edit' ? false : undefined}
+				contentEditable={config.tone === 'edit' ? false : undefined}
 				suppressContentEditableWarning
 			>
 				<div className='docs-code-block-header flex items-center justify-between gap-2 border-b border-primary-6 bg-primary-2 px-2 py-px'>
-					{configuration.tone === 'view' || !(configuration.tone === 'edit' ? configuration.languageEditable !== false && !src : false) ? (
+					{config.tone === 'view' || !(config.tone === 'edit' ? config.languageEditable !== false && !src : false) ? (
 						<p className='!my-0 text-xs font-medium text-primary-11'>{langOf(curLang)}</p>
 					) : (
 						<Select
@@ -557,14 +557,14 @@ export function CodeBlock(
 							value={curLang}
 							onValueChange={v => {
 								langRef.current = langOf(v);
-								configuration.onLanguageChange?.(langRef.current, codeRef.current);
+								config.onLanguageChange?.(langRef.current, codeRef.current);
 							}}
 						>
 							<SelectTrigger aria-label='Select code language'>
 								<span aria-label={curLang}>{langOf(curLang)}</span>
 							</SelectTrigger>
 							<SelectContent align='start'>
-								{(LANGS.includes(langOf(configuration.language) as (typeof LANGS)[number]) ? LANGS : [...LANGS, langOf(configuration.language)]).map(v => (
+								{(LANGS.includes(langOf(config.language) as (typeof LANGS)[number]) ? LANGS : [...LANGS, langOf(config.language)]).map(v => (
 									<SelectItem key={v} value={v}>
 										{langOf(v)}
 									</SelectItem>
@@ -602,9 +602,9 @@ export function CodeBlock(
 					) : (
 						<div className='min-w-0 max-w-full overflow-x-auto overflow-y-hidden'>
 							{
-								/* prettier-ignore */ configuration.tone === 'view' ? (
+								/* prettier-ignore */ config.tone === 'view' ? (
 		<div className='docs-code-block-fb m-0 flex max-w-full flex-col overflow-x-auto overflow-y-hidden bg-transparent p-0 text-sm leading-6' data-docs-code-fb='true'>
-			{(configuration.tone === 'view' ? resCode.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').split('\n') : []).map((l, i) => (
+			{(config.tone === 'view' ? resCode.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').split('\n') : []).map((l, i) => (
 				<div key={i} className='docs-code-block-fallback-line flex min-w-full text-sm leading-6'>
 					<div className='min-w-10 shrink-0 select-none border-r border-primary-6 px-2 text-right font-mono tabular-nums leading-6 text-primary-10'>{i + 1}</div>
 					<span className='block whitespace-pre px-1 leading-6 text-inherit'>{l || ' '}</span>

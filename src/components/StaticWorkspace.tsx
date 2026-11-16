@@ -66,7 +66,7 @@ const toLeaf = (node: DocsNavNode): DocsLeaf | null =>
  *
  * @param title Name of the Docs site shown in the workspace chrome.
  * @param homeHref Link target for the home navigation action.
- * @param description Optional site description shown by the workspace.
+ * @param desc Optional site description shown by the workspace.
  * @param pageTitle Optional title for the currently selected page.
  * @param hue Base color hue used to derive the workspace theme.
  * @param nodes Flat or nested navigation nodes used when sections are omitted.
@@ -84,7 +84,7 @@ const toLeaf = (node: DocsNavNode): DocsLeaf | null =>
 export function DocsStaticWorkspace({
 	title,
 	homeHref = '/',
-	description,
+	description: desc,
 	pageTitle,
 	hue = 145,
 	nodes = [],
@@ -216,7 +216,7 @@ export function DocsStaticWorkspace({
 						rootPath,
 						homePath: homeHref,
 						siteTitle: title,
-						...(description ? { siteDescription: description } : {}),
+						...(desc ? { siteDescription: desc } : {}),
 						buildRoute(sectionId, groupId, leafId) {
 							return (
 								allLeaves.find(

@@ -248,7 +248,7 @@ function Mode({
  *
  * @return The mode, history, save, or version actions supported by the active Docs editor toolbar.
  */
-const TOOLBAR_COMPONENTS = {
+const TOOLBAR_COMPS = {
 	/**
 	 * Undo and Redo control group dynamically checking CodeMirror depth levels.
 	 *
@@ -520,7 +520,7 @@ const TOOLBAR_COMPONENTS = {
 	 *
 	 * @return {JSX.Element} React rendered menu node explicitly containing nested branches cleanly.
 	 */
-	GlobalComponentMenuNode({ name, tree, onCopy }: { name: string; tree: MenuTree; onCopy?: (component: RepoComponentWithLabel) => void }): JSX.Element {
+	GlobalComponentMenuNode({ name, tree, onCopy }: { name: string; tree: MenuTree; onCopy?: (comp: RepoComponentWithLabel) => void }): JSX.Element {
 		return (
 			<DropdownMenuSub>
 				<DropdownMenuSubTrigger className='capitalize'>{name.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ')}</DropdownMenuSubTrigger>
@@ -538,7 +538,7 @@ const TOOLBAR_COMPONENTS = {
 						</DropdownMenuItem>
 					))}
 					{Object.entries(tree.folders).map(([f, s]) => (
-						<TOOLBAR_COMPONENTS.GlobalComponentMenuNode key={f} name={f} tree={s} onCopy={onCopy} />
+						<TOOLBAR_COMPS.GlobalComponentMenuNode key={f} name={f} tree={s} onCopy={onCopy} />
 					))}
 				</DropdownMenuSubContent>
 			</DropdownMenuSub>
@@ -602,7 +602,7 @@ const TOOLBAR_COMPONENTS = {
 		}, [ctx]);
 
 		// 2. BUILD GLOBAL COMPONENT TREE
-		const componentTree = useMemo(() => {
+		const compTree = useMemo(() => {
 			const root: MenuTree = { components: [], folders: {} };
 			const counts = new Map<string, number>();
 			repoComponents.forEach(c => counts.set(c.path, (counts.get(c.path) ?? 0) + 1));
@@ -624,7 +624,7 @@ const TOOLBAR_COMPONENTS = {
 			});
 			return root;
 		}, []);
-		const copyComponent = useCallback(
+		const copyComp = useCallback(
 			async (c: RepoComponentWithLabel): Promise<void> => {
 				if (onInsert) {
 					onInsert(`import ${c.name} from '${c.path}';`, c.clipboardValue ?? `<${c.name} />`);
@@ -832,8 +832,8 @@ const TOOLBAR_COMPONENTS = {
 		// 6. LOCAL MENUS
 		// prettier-ignore
 		const menuGroups = {
-			globalComponents: componentTree.components,
-			globalFolders: componentTree.folders,
+			globalComponents: compTree.components,
+			globalFolders: compTree.folders,
 			local: [
 		{
 			label: 'Copy attachments',
@@ -894,14 +894,14 @@ const TOOLBAR_COMPONENTS = {
 										onMouseDown={preserveSel}
 										onSelect={e => {
 											e.preventDefault();
-											void copyComponent(c);
+											void copyComp(c);
 										}}
 									>
 										{c.displayLabel.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase())}
 									</DropdownMenuItem>
 								))}
 								{Object.entries(menuGroups.globalFolders).map(([f, s]) => (
-									<TOOLBAR_COMPONENTS.GlobalComponentMenuNode key={f} name={f} tree={s} onCopy={copyComponent} />
+									<TOOLBAR_COMPS.GlobalComponentMenuNode key={f} name={f} tree={s} onCopy={copyComp} />
 								))}
 							</DropdownMenuSubContent>
 						</DropdownMenuSub>
@@ -1643,7 +1643,7 @@ const TOOLBAR_COMPONENTS = {
 										{/* BLOCKS */}
 										<ButtonGroup>
 											{/* block select */}
-											<TOOLBAR_COMPONENTS.BlockType disabled={!ready} toolbar={toolbar} adapter={adapter} options={toolbarOpts.blocks} json={mode === 'edit'} />
+											<TOOLBAR_COMPS.BlockType disabled={!ready} toolbar={toolbar} adapter={adapter} options={toolbarOpts.blocks} json={mode === 'edit'} />
 											{/* format */}
 											{toolbarOpts.formats
 												.map(({ key: k, lbl: l, icon: i, shortcut: s, format: f }) => ({
@@ -1740,7 +1740,7 @@ const TOOLBAR_COMPONENTS = {
 												{docs && <FindReplace mode={mode} toolbar={toolbar} />}
 											</TextTooltip>
 											{/* undo/redo */}
-											<TOOLBAR_COMPONENTS.Undo onMouseDown={preserveSel} disabled={!ready} adapter={adapter} />
+											<TOOLBAR_COMPS.Undo onMouseDown={preserveSel} disabled={!ready} adapter={adapter} />
 											{docs && (
 												<>
 													{/* discard */}
@@ -1846,8 +1846,8 @@ const TOOLBAR_COMPONENTS = {
 											)}
 										</div>
 										<div className='flex items-center gap-0.5'>
-											<TOOLBAR_COMPONENTS.Uploader icon={ImageIcon} insert={insert} onMouseDown={preserveSel} disabled={!ready} ctx={toolbar?.path} />
-											<TOOLBAR_COMPONENTS.Custom onInsert={(_statement, v) => insert?.(v, true)} onInsertMd={insert} onMouseDown={preserveSel} disabled={!ready} ctx={toolbar?.path} />
+											<TOOLBAR_COMPS.Uploader icon={ImageIcon} insert={insert} onMouseDown={preserveSel} disabled={!ready} ctx={toolbar?.path} />
+											<TOOLBAR_COMPS.Custom onInsert={(_statement, v) => insert?.(v, true)} onInsertMd={insert} onMouseDown={preserveSel} disabled={!ready} ctx={toolbar?.path} />
 										</div>
 										<Dialog
 											open={endpointOpen}
@@ -1887,4 +1887,4 @@ const TOOLBAR_COMPONENTS = {
 		);
 	},
 };
-export const { Toolbar } = TOOLBAR_COMPONENTS;
+export const { Toolbar } = TOOLBAR_COMPS;

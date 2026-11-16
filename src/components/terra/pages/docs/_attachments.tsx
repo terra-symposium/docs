@@ -734,8 +734,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 															]);
 															setSel([]);
 															try {
-																const { PDFDocument } = await import('pdf-lib');
-																const mergedPdf = await PDFDocument.create();
+																const { PDFDocument: PDFDoc } = await import('pdf-lib');
+																const mergedPdf = await PDFDoc.create();
 																for (let i = 0; i < selItems.length; i++) {
 																	const item = selItems[i];
 																	let buf: ArrayBuffer;
@@ -748,7 +748,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 																		if (err || !data) throw err || new Error('Failed to read local asset');
 																		buf = data;
 																	}
-																	const pdfDoc = await PDFDocument.load(buf);
+																	const pdfDoc = await PDFDoc.load(buf);
 																	(await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach(p => mergedPdf.addPage(p));
 																}
 																const mergedFile = new File([(await mergedPdf.save()).buffer as ArrayBuffer], 'Merged-Document.pdf', { type: 'application/pdf' });
@@ -987,10 +987,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 									setUploading(true);
 									setMergePdfState(null);
 									try {
-										const { PDFDocument } = await import('pdf-lib');
-										const mergedPdf = await PDFDocument.create();
+										const { PDFDocument: PDFDoc } = await import('pdf-lib');
+										const mergedPdf = await PDFDoc.create();
 										for (let i = 0; i < mergePdfState.pdfs.length; i++) {
-											const pdfDoc = await PDFDocument.load(await mergePdfState.pdfs[i].arrayBuffer());
+											const pdfDoc = await PDFDoc.load(await mergePdfState.pdfs[i].arrayBuffer());
 											(await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach(p => mergedPdf.addPage(p));
 										}
 										[new File([(await mergedPdf.save()).buffer as ArrayBuffer], 'Merged-Document.pdf', { type: 'application/pdf' }), ...mergePdfState.others].forEach((f, i) => {

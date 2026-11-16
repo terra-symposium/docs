@@ -52,28 +52,28 @@ export const validateType = (types: readonly string[], value: unknown): boolean 
  * Writes a tagged warning and optional detail to the browser console.
  *
  * @param tag Category displayed with the warning.
- * @param message Warning text.
+ * @param msg Warning text.
  * @param detail Optional structured detail to log.
  *
  * @return Nothing.
  */
-export const warn = (tag: string, message: string, detail?: unknown): void => console.warn(`[${tag}] ${message}`, detail ?? '');
+export const warn = (tag: string, msg: string, detail?: unknown): void => console.warn(`[${tag}] ${msg}`, detail ?? '');
 /**
  * Writes an error-level message with the Docs runtime tag.
  * @param tag - Category displayed with the error.
- * @param message - Error text.
+ * @param msg - Error text.
  * @param detail - Optional structured detail to log.
  * @return Nothing.
  */
-export const error = (tag: string, message: string, detail?: unknown): void => console.warn(`[${tag}] ${message}`, detail ?? '');
+export const error = (tag: string, msg: string, detail?: unknown): void => console.warn(`[${tag}] ${msg}`, detail ?? '');
 /**
  * Preserves the legacy named logger while sharing the runtime warning format.
  * @param tag - Category displayed with the message.
- * @param message - Message text.
+ * @param msg - Message text.
  * @param detail - Optional structured detail to log.
  * @return Nothing.
  */
-export const errorLog = (tag: string, message: string, detail?: unknown): void => warn(tag, message, detail);
+export const errorLog = (tag: string, msg: string, detail?: unknown): void => warn(tag, msg, detail);
 /**
  * Creates a scoped debug logger that emits only when enabled.
  *
@@ -170,11 +170,11 @@ export function resolvedEdges(graph: unknown): ArcEdge[] {
 	);
 	const terminalKey = nodes.find(n => n.type === 'terminal')?._key;
 	if (typeof terminalKey !== 'string') return edges;
-	const sources = new Set(edges.flatMap(e => (e.source ? [e.source] : [])));
+	const srcs = new Set(edges.flatMap(e => (e.source ? [e.source] : [])));
 	return [
 		...edges,
 		...nodes.flatMap(n => {
-			if (n.type !== 'content' || typeof n._key !== 'string' || sources.has(n._key)) return [];
+			if (n.type !== 'content' || typeof n._key !== 'string' || srcs.has(n._key)) return [];
 			return [{ _key: `terminal:${n._key}`, _type: 'edge', source: n._key, target: terminalKey }];
 		}),
 	];

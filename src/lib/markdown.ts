@@ -57,8 +57,8 @@ export function renderMarkdown(markdown: string, options: DocsBlockOptions = {})
 					name: 'terraInlineMath',
 					level: 'inline',
 					start: s => s.indexOf('$'),
-					tokenizer(source) {
-						const match = /^\$([^$\n]+)\$/.exec(source);
+					tokenizer(src) {
+						const match = /^\$([^$\n]+)\$/.exec(src);
 						return match ? { type: 'terraInlineMath', raw: match[0], text: match[1] } : undefined;
 					},
 					renderer(token) {

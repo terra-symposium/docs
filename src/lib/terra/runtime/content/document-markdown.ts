@@ -160,9 +160,9 @@ const nestedMd = (body: DocBody | null | undefined, md = ''): string => {
  *
  * @return Serialized block Markdown, or an empty string when the block cannot be rendered safely.
  */
-const sBlockMd = (block: unknown, number = 1): string => {
+const sBlockMd = (block: unknown, num = 1): string => {
 	try {
-		return isRec(block) && typeof block._type === 'string' ? blockMd(block as DocBlock, number) : '';
+		return isRec(block) && typeof block._type === 'string' ? blockMd(block as DocBlock, num) : '';
 	} catch (err) {
 		if (isRec(block) && typeof block.markdown === 'string') return fromBlockJsx(block.markdown);
 		console.error('[DOCS:content] Failed to serialize block.', {
@@ -181,12 +181,12 @@ const sBlockMd = (block: unknown, number = 1): string => {
  *
  * @return Markdown string for the supplied block, including nested custom syntax when present.
  */
-const blockMd = (b: DocBlock, number = 1): string => {
+const blockMd = (b: DocBlock, num = 1): string => {
 	if (b._type === 'block') {
 		const text = (Array.isArray(b.c) && b.c.length > 0 ? b.c : Array.isArray(b.children) ? b.children : [])
 			.map(c => {
 				if (ptText(c)) return renderMarks(c.text || '', Array.isArray(c.marks) ? c.marks : [], ptMarkDefs(b.markDefs));
-				return isRec(c) && typeof c._type === 'string' ? sBlockMd(c, number) : '';
+				return isRec(c) && typeof c._type === 'string' ? sBlockMd(c, num) : '';
 			})
 			.join('');
 		if (TABLE_TAG.test(text)) {
@@ -194,7 +194,7 @@ const blockMd = (b: DocBlock, number = 1): string => {
 			return table ? `\n${table}\n` : '';
 		}
 		if (b.style && TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
-		if (b.listItem) return `\n${b.listItem === 'number' ? `${number}.` : '*'} ${text}\n`;
+		if (b.listItem) return `\n${b.listItem === 'number' ? `${num}.` : '*'} ${text}\n`;
 		return text ? `\n${text}\n` : '';
 	}
 	switch (b._type) {
@@ -320,12 +320,12 @@ const problemBlockMd = (b: Record<string, unknown>): string => {
  *
  * @return Editor Markdown block, with tables and problem blocks kept in editor-safe JSX.
  */
-const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs'): string => {
+const editorBlockMd = (b: DocBlock, num = 1, mode: 'docs' | 'problem' = 'docs'): string => {
 	if (b._type === 'block') {
 		const text = (Array.isArray(b.c) && b.c.length > 0 ? b.c : Array.isArray(b.children) ? b.children : [])
 			.map(s => {
 				if (ptText(s)) return renderMarks(s.text || '', Array.isArray(s.marks) ? s.marks : [], ptMarkDefs(b.markDefs));
-				return isRec(s) && typeof s._type === 'string' ? editorBlockMd(s as DocBlock, number, mode) : '';
+				return isRec(s) && typeof s._type === 'string' ? editorBlockMd(s as DocBlock, num, mode) : '';
 			})
 			.join('');
 		if (mode === 'docs' && TABLE_TAG.test(text)) {
@@ -333,7 +333,7 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
 			return table ? `\n${editorNestedMd(null, table)}\n` : '';
 		}
 		if (b.style && TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
-		if (b.listItem) return `\n${b.listItem === 'number' ? `${number}.` : '*'} ${text}\n`;
+		if (b.listItem) return `\n${b.listItem === 'number' ? `${num}.` : '*'} ${text}\n`;
 		return text ? `\n${text}\n` : '';
 	}
 	switch (b._type) {
@@ -358,7 +358,7 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
 		case 'raw': {
 			const raw = atomicTableHtml(fromBlockJsx(b.markdown || '').trim());
 			if (!raw && TABLE_TAG.test(fromBlockJsx(b.markdown || '').trim())) return '';
-			return TABLE_TAG.test(raw) ? `\n${editorNestedMd(null, raw)}\n` : blockMd(b, number);
+			return TABLE_TAG.test(raw) ? `\n${editorNestedMd(null, raw)}\n` : blockMd(b, num);
 		}
 		case 'paragraph': {
 			const md = fromBlockJsx(b.markdown || '').trim();
@@ -367,7 +367,7 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
 			return table ? `\n${editorNestedMd(null, table)}\n` : '';
 		}
 		default:
-			return mode === 'problem' && PROBLEM_BLOCK_TYPES.includes(b._type as (typeof PROBLEM_BLOCK_TYPES)[number]) ? problemBlockMd({ ...b }) : blockMd(b, number);
+			return mode === 'problem' && PROBLEM_BLOCK_TYPES.includes(b._type as (typeof PROBLEM_BLOCK_TYPES)[number]) ? problemBlockMd({ ...b }) : blockMd(b, num);
 	}
 };
 
@@ -393,12 +393,12 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
 		firstTypes: body.slice(0, 6).map(b => (isRec(b) && typeof b._type === 'string' ? b._type : typeof b)),
 	};
 	let md = '';
-	let number = 1;
+	let num = 1;
 	for (let i = 0; i < body.length; i++) {
 		const block = body[i];
 		if (!block) continue;
-		const listNumber = listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
-		const text = sBlockMd(block, listNumber).trim();
+		const listNum = listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? num + 1 : 1;
+		const text = sBlockMd(block, listNum).trim();
 		void {
 			index: i,
 			type: isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
@@ -406,7 +406,7 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
 			textHead: text.slice(0, 120),
 		};
 		if (!text) continue;
-		number = listNumber;
+		num = listNum;
 		if (md) {
 			const prevList = listKind(body[i - 1]);
 			const currList = listKind(block);
@@ -438,12 +438,12 @@ const stringifyEditorContentBody = (body: DocBody | null | undefined): string =>
 		firstTypes: body.slice(0, 6).map(b => (isRec(b) && typeof b._type === 'string' ? b._type : typeof b)),
 	};
 	let md = '';
-	let number = 1;
+	let num = 1;
 	for (let i = 0; i < body.length; i++) {
 		const block = body[i];
 		if (!block) continue;
-		const listNumber = listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
-		const text = editorBlockMd(block, listNumber).trim();
+		const listNum = listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? num + 1 : 1;
+		const text = editorBlockMd(block, listNum).trim();
 		void {
 			index: i,
 			type: isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
@@ -451,7 +451,7 @@ const stringifyEditorContentBody = (body: DocBody | null | undefined): string =>
 			textHead: text.slice(0, 120),
 		};
 		if (!text) continue;
-		number = listNumber;
+		num = listNum;
 		if (md) {
 			const prevList = listKind(body[i - 1]);
 			const currList = listKind(block);

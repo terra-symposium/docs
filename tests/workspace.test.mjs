@@ -21,14 +21,14 @@ CONFIG
 const sections = [{ title: 'Development', groups: [{ title: 'Guides', leaves: [{ title: 'Intro', href: '/intro', attachments: [{ title: 'Notes', href: '/notes.pdf' }] }] }] }];
 test('React static adapter forwards host and leaf data to the shared workspace', () => {
 	const body = React.createElement('p', null, 'Body text');
-	const element = DocsSiteLayout({ title: 'Docs', pageTitle: 'Intro', description: 'Site tagline stays in the sidebar.', nodes: [], sections, currentPath: '/intro', children: body });
-	assert.equal(typeof element.type, 'function');
-	assert.equal(element.type.name, 'DocsStaticWorkspace');
-	assert.equal(element.props.title, 'Docs');
-	assert.equal(element.props.pageTitle, 'Intro');
-	assert.equal(element.props.description, 'Site tagline stays in the sidebar.');
-	assert.equal(element.props.sections, sections);
-	assert.equal(element.props.currentPath, '/intro');
-	assert.equal(element.props.renderContent, body);
-	assert.deepEqual(element.props.attachments, []);
+	const el = DocsSiteLayout({ title: 'Docs', pageTitle: 'Intro', description: 'Site tagline stays in the sidebar.', nodes: [], sections, currentPath: '/intro', children: body });
+	assert.equal(typeof el.type, 'function');
+	assert.equal(el.type.name, 'DocsStaticWorkspace');
+	assert.equal(el.props.title, 'Docs');
+	assert.equal(el.props.pageTitle, 'Intro');
+	assert.equal(el.props.description, 'Site tagline stays in the sidebar.');
+	assert.equal(el.props.sections, sections);
+	assert.equal(el.props.currentPath, '/intro');
+	assert.equal(el.props.renderContent, body);
+	assert.deepEqual(el.props.attachments, []);
 });

@@ -209,7 +209,7 @@ export function TransitionShell({ children, className, mode, path }: { children:
  *
  * @param children - Child content nested inside editable's rendered output.
  * @param content - Content input supplied to editable's operation.
- * @param description - Supporting text shown in editable.
+ * @param desc - Supporting text shown in editable.
  * @param path - Source or route path resolved for editable.
  * @param permission - Permission input supplied to editable's operation.
  * @param pathname - Pathname input supplied to editable's operation.
@@ -221,7 +221,7 @@ export function TransitionShell({ children, className, mode, path }: { children:
 export default function Editable({
 	children,
 	content = [],
-	description = '',
+	description: desc = '',
 	path,
 	permission,
 	pathname,
@@ -262,7 +262,7 @@ export default function Editable({
 	const saving = useRef(false);
 	const [err, setErr] = useState<string | null>(null);
 	// prettier-ignore
-	const [state, setState] = useState<EditorState>({ busy: null, dirty: false, draft: { content, description, path: path || pathname, source: src, title }, loaded: Boolean(content.length || !src), optimistic: false, version: 0, });
+	const [state, setState] = useState<EditorState>({ busy: null, dirty: false, draft: { content, description: desc, path: path || pathname, source: src, title }, loaded: Boolean(content.length || !src), optimistic: false, version: 0, });
 	const draftContent = isDocBody(state.draft.content) ? state.draft.content : [];
 
 	// INIT
@@ -270,12 +270,12 @@ export default function Editable({
 		refs.current.route = { path, pathname };
 		setState(p => ({
 			...p,
-			draft: { ...p.draft, content, description, path: path || pathname, source: src, title },
+			draft: { ...p.draft, content, description: desc, path: path || pathname, source: src, title },
 			dirty: false,
 			loaded: Boolean(content.length || !src),
 			version: p.version + 1,
 		}));
-	}, [content, description, path, pathname, src, title]);
+	}, [content, desc, path, pathname, src, title]);
 	useEffect(() => {
 		if (content.length || !src) return;
 		let a = true;

@@ -236,7 +236,7 @@ TOC COMPONENTS
  *
  * @return A table of contents for discovered headings, or `null` when there are no headings to navigate.
  */
-const TREE_COMPONENTS = {
+const TREE_COMPS = {
 	/*//////////////////////////////////////////////////
 LEAF COMPONENTS
 //////////////////////////////////////////////////*/
@@ -485,12 +485,12 @@ LEAF COMPONENTS
 						} catch (err) {
 							toast.error('Failed to rename docs page.');
 							// revert on failure
-							const originalRoute = 'url' in node ? node.url : docsRootPath();
+							const origRoute = 'url' in node ? node.url : docsRootPath();
 							// prettier-ignore
-							document.dispatchEvent(new CustomEvent('docs:rename', { detail: { nfilepath: node.path!, path: node.path!, pathname: originalRoute, title: currTitle, isActive: a } }));
+							document.dispatchEvent(new CustomEvent('docs:rename', { detail: { nfilepath: node.path!, path: node.path!, pathname: origRoute, title: currTitle, isActive: a } }));
 							if (a) {
 								const url = new URL(window.location.href);
-								url.pathname = originalRoute;
+								url.pathname = origRoute;
 								window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
 							}
 							console.error('Rename failed', err);
@@ -1222,7 +1222,7 @@ TREE COMPONENTS
 		if (node.type === 'leaf')
 			return (
 				<ErrorBoundary name='Tree'>
-					<TREE_COMPONENTS.Leaf active={pathname !== '' && pathname === nodeUrl} bPath={bPath} node={node} ctx={ctx} siblings={sibs} />
+					<TREE_COMPS.Leaf active={pathname !== '' && pathname === nodeUrl} bPath={bPath} node={node} ctx={ctx} siblings={sibs} />
 				</ErrorBoundary>
 			);
 		// branch
@@ -1405,11 +1405,11 @@ TREE COMPONENTS
 					)}
 					{/* GROUPS */}
 					<SidebarGroupContent>
-						<SidebarMenu>{node.type === 'branch' && node.children?.map(c => <TREE_COMPONENTS.Tree key={getStableKey(c)} bPath={fPath} node={c} ctx={ctx} siblings={node.children} />)}</SidebarMenu>
+						<SidebarMenu>{node.type === 'branch' && node.children?.map(c => <TREE_COMPS.Tree key={getStableKey(c)} bPath={fPath} node={c} ctx={ctx} siblings={node.children} />)}</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</ErrorBoundary>
 		);
 	},
 };
-export default TREE_COMPONENTS.Tree;
+export default TREE_COMPS.Tree;

@@ -31,10 +31,10 @@ HELPERS
  * @param userData Signed-in user information shown by the navigation.
  * @param title Site or document title displayed by the workspace.
  * @param path Optional document path.
- * @param description Optional document description.
+ * @param desc Optional document description.
  * @param contributors Contributor names associated with the document.
  * @param updatedAt Document update timestamp.
- * @param source Markdown source for the document.
+ * @param src Markdown source for the document.
  * @param content Structured document body.
  * @param renderContent Optional host-rendered view content.
  * @param standalone Whether the workspace runs without the remote host shell.
@@ -52,10 +52,10 @@ export function TerraDocsWorkspace({
 	userData,
 	title,
 	path,
-	description,
+	description: desc,
 	contributors,
 	updatedAt,
-	source,
+	source: src,
 	content,
 	renderContent,
 	standalone,
@@ -71,10 +71,10 @@ export function TerraDocsWorkspace({
 			userData={userData ?? null}
 			title={title}
 			{...(path ? { path } : {})}
-			{...(description ? { description } : {})}
+			{...(desc ? { description: desc } : {})}
 			{...(contributors ? { contributors } : {})}
 			{...(updatedAt ? { updatedAt } : {})}
-			{...(source ? { source } : {})}
+			{...(src ? { source: src } : {})}
 			{...(content !== undefined ? { content: content as any } : {})}
 			{...(renderContent !== undefined ? { viewContent: renderContent } : {})}
 			{...(standalone !== undefined ? { standalone } : {})}

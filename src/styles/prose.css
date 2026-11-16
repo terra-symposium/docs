@@ -248,15 +248,24 @@ DOCS
   .docs-block-copy,
   [class*='_contentEditable_']
 ) {
-  --baseText: theme('colors.primary.12');
-  --baseTextContrast: theme('colors.primary.12');
-  --tw-prose-body: theme('colors.primary.12');
-  --tw-prose-headings: theme('colors.primary.12');
-  --tw-prose-links: theme('colors.primary.12');
-  --tw-prose-bold: theme('colors.primary.12');
-  --tw-prose-bullets: theme('colors.primary.8');
-  --tw-prose-quotes: theme('colors.primary.11');
-  --tw-prose-code: theme('colors.primary.12');
+  --baseText: rgb(var(--primary-12));
+  --baseTextContrast: rgb(var(--primary-12));
+  --tw-prose-body: rgb(var(--primary-12));
+  --tw-prose-headings: rgb(var(--primary-12));
+  --tw-prose-links: rgb(var(--primary-12));
+  --tw-prose-bold: rgb(var(--primary-12));
+  --tw-prose-bullets: rgb(var(--primary-8));
+  --tw-prose-quotes: rgb(var(--primary-11));
+  --tw-prose-code: rgb(var(--primary-12));
+}
+:is(
+  .prose,
+  .mdxeditor-root-contenteditable,
+  .aside-copy,
+  .docs-block-copy,
+  [class*='_contentEditable_']
+) :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--tw-prose-headings, inherit);
 }
 .prose :is(p, div.p) a {
   color: inherit !important;

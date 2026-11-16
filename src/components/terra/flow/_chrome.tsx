@@ -513,10 +513,10 @@ export function SkeletonCard<T extends ElementType = 'div'>({
 	style,
 	...attrs
 }: { as?: T; className?: string } & Omit<ComponentPropsWithoutRef<T>, 'as' | 'className' | 'children'>): JSX.Element {
-	const Element = as as ElementType;
+	const El = as as ElementType;
 	return (
 		<ErrorBoundary name='SkeletonCard'>
-			<Element
+			<El
 				{...attrs}
 				className={cn('relative flex h-16 items-center justify-center overflow-visible rounded-md border-2 px-3 py-2 shadow-sm', className)}
 				style={{ backgroundColor: '#eaf8f9', borderColor: '#16899d', width: 208, ...style }}
@@ -526,7 +526,7 @@ export function SkeletonCard<T extends ElementType = 'div'>({
 					<div className='h-4 w-[92%] rounded-md' style={{ backgroundColor: '#5db9c6' }} />
 					<div className='mr-2 h-2.5 w-20 rounded-md' style={{ backgroundColor: '#91d3db' }} />
 				</div>
-			</Element>
+			</El>
 		</ErrorBoundary>
 	);
 }
@@ -1009,7 +1009,7 @@ function ArcCanvas({
  *
  * @return The canonical canvas elements.
  */
-function arcCanvasElements(graph: ArcGraph, problems: Problem[], edgeData?: (edge: ArcGraphEdge, src: Problem | undefined) => FlowEdgeData): ArcCanvasEls {
+function arcCanvasEls(graph: ArcGraph, problems: Problem[], edgeData?: (edge: ArcGraphEdge, src: Problem | undefined) => FlowEdgeData): ArcCanvasEls {
 	const norm = normArcGraph(graph);
 	const byId = new Map(problems.map(p => [canonicalId(p._id), p]));
 	return {

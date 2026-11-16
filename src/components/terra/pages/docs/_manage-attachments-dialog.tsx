@@ -261,11 +261,11 @@ export function ManageAttachmentsDialog({ tgt, setTgt, disabled, tree }: { tgt: 
 	const handleKeyboardDelete = useCallback(async () => {
 		if (!selAtts.length) return;
 		// 1. Snapshot for rollback
-		const originalSel = [...selAtts];
+		const origSel = [...selAtts];
 		// 2. Optimistic UI updates
 		setAtts(v => {
 			const n = { ...v };
-			for (const { docPath, a } of originalSel) {
+			for (const { docPath, a } of origSel) {
 				n[docPath] = (n[docPath] || []).filter(
 					(
 						(key: string) => (p: Sister) =>
@@ -278,7 +278,7 @@ export function ManageAttachmentsDialog({ tgt, setTgt, disabled, tree }: { tgt: 
 		setSelAtts([]);
 		// 3. Background network operation
 		try {
-			for (const { docPath, a } of originalSel) {
+			for (const { docPath, a } of origSel) {
 				if (a.isMd) await actions.write.doc.rm({ path: a.path, type: 'doc', assets: false });
 				else if (a.id) {
 					await actions.write.attachment.rm({ docPath, attachmentKey: a.id });
@@ -290,8 +290,8 @@ export function ManageAttachmentsDialog({ tgt, setTgt, disabled, tree }: { tgt: 
 		} catch (_err) {
 			// 4. Failure rollback
 			setAtts({ ...atts });
-			setSelAtts(originalSel);
-			toast.error(`Failed to delete ${originalSel.length === 1 ? 'attachment' : 'attachments'}`);
+			setSelAtts(origSel);
+			toast.error(`Failed to delete ${origSel.length === 1 ? 'attachment' : 'attachments'}`);
 		}
 	}, [atts, selAtts, fetchAtts]);
 

@@ -16,7 +16,7 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = join(root, 'src', 'lib', 'terra');
+const src = join(root, 'src', 'lib', 'terra');
 const output = join(root, 'dist/lib', 'lib', 'terra');
 
 /*//////////////////////////////////////////////////
@@ -35,12 +35,12 @@ async function copyRuntime(dir) {
 			continue;
 		}
 		if (!entry.isFile() || !entry.name.endsWith('.mjs')) continue;
-		const destination = join(output, relative(source, path));
-		await mkdir(dirname(destination), { recursive: true });
-		await cp(path, destination);
+		const dest = join(output, relative(src, path));
+		await mkdir(dirname(dest), { recursive: true });
+		await cp(path, dest);
 	}
 }
-await copyRuntime(source);
+await copyRuntime(src);
 await mkdir(join(root, 'dist/lib'), { recursive: true });
 for (const name of ['EditorHarness', 'WorkspaceDemo']) {
 	for (const ext of ['js', 'js.map', 'd.ts', 'd.ts.map']) {

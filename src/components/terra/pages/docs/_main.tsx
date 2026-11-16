@@ -244,7 +244,7 @@ const EditorSurfaces = {
 
 	Head({
 		compact = false,
-		description = '',
+		description: desc = '',
 		editable,
 		title,
 		full,
@@ -261,7 +261,7 @@ const EditorSurfaces = {
 	}): JSX.Element {
 		// STATES
 		const edit = useContext(EditStateCtx);
-		const draft: Pick<Draft, 'description' | 'title'> = edit?.draft ?? { description, title };
+		const draft: Pick<Draft, 'description' | 'title'> = edit?.draft ?? { description: desc, title };
 		const contributors = initContributors ?? [];
 
 		// RENDER

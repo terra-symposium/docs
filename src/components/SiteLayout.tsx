@@ -26,7 +26,7 @@ HELPERS
  *
  * @param title Site name displayed by the workspace.
  * @param homeHref Link target for the home navigation action.
- * @param description Optional description for the site.
+ * @param desc Optional description for the site.
  * @param pageTitle Optional title for the current page.
  * @param nodes Navigation nodes used to build page sections when supplied.
  * @param currentPath Current page URL used to select the active page.
@@ -43,7 +43,7 @@ HELPERS
 export function DocsSiteLayout({
 	title,
 	homeHref = '/',
-	description,
+	description: desc,
 	pageTitle,
 	nodes,
 	currentPath,
@@ -73,7 +73,7 @@ export function DocsSiteLayout({
 		<DocsStaticWorkspace
 			title={title}
 			homeHref={homeHref}
-			{...(description ? { description } : {})}
+			{...(desc ? { description: desc } : {})}
 			{...(pageTitle ? { pageTitle } : {})}
 			hue={hue}
 			nodes={nodes}

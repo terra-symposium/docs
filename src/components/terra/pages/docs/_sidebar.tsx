@@ -98,7 +98,7 @@ FUNCTIONS
  * @param d - Callback invoked for progress.
  * @param n - Node ids input supplied to archive's operation.
  */
-const SidebarComponents = {} as {
+const SidebarComps = {} as {
 	PromptDialog: (props: { state: PromptState; setState: (v: PromptState) => void; disabled: boolean }) => JSX.Element | null;
 	DeleteDialog: (props: { tgt: DelTgt; setTgt: (v: DelTgt) => void; onConfirm: () => void; disabled: boolean }) => JSX.Element | null;
 };
@@ -122,7 +122,7 @@ COMPONENTS
  * Provides a unified interface for uploading raw media, scraping external web links, linking YouTube videos,
  * and directly associating existing or new internal documentation pages as relational attachments.
  */
-SidebarComponents.PromptDialog = function PromptDialog({ state: s, setState: setS, disabled }: { state: PromptState; setState: (v: PromptState) => void; disabled: boolean }): JSX.Element | null {
+SidebarComps.PromptDialog = function PromptDialog({ state: s, setState: setS, disabled }: { state: PromptState; setState: (v: PromptState) => void; disabled: boolean }): JSX.Element | null {
 	if (!s) return null;
 	return (
 		<Dialog
@@ -191,17 +191,7 @@ SidebarComponents.PromptDialog = function PromptDialog({ state: s, setState: set
  *
  * @remarks Renders the delete confirmation dialog for sidebar content.
  */
-SidebarComponents.DeleteDialog = function DeleteDialog({
-	tgt,
-	setTgt,
-	onConfirm,
-	disabled,
-}: {
-	tgt: DelTgt;
-	setTgt: (v: DelTgt) => void;
-	onConfirm: () => void;
-	disabled: boolean;
-}): JSX.Element | null {
+SidebarComps.DeleteDialog = function DeleteDialog({ tgt, setTgt, onConfirm, disabled }: { tgt: DelTgt; setTgt: (v: DelTgt) => void; onConfirm: () => void; disabled: boolean }): JSX.Element | null {
 	if (!tgt) return null;
 	return (
 		<Dialog
@@ -255,7 +245,7 @@ export default (function Nav({
 	permission,
 	userData,
 	siteTitle = 'Terra Symposium',
-	siteDescription,
+	siteDescription: siteDesc,
 	homePath = '/',
 	...props
 }: {
@@ -297,7 +287,7 @@ export default (function Nav({
 	const [assetTgt, setAssetTgt] = useState<{ path: string; title: string } | null>(null);
 	const [assetDialogOpen, setAssetDialogOpen] = useState(false);
 	const [assetBusy, setAssetBusy] = useState(false);
-	const [assetComponent, setAssetComponent] = useState(repoComponents.find(c => c.name !== 'Leaf' && c.name !== 'Visualize')?.name ?? repoComponents[0]?.name ?? '');
+	const [assetComp, setAssetComp] = useState(repoComponents.find(c => c.name !== 'Leaf' && c.name !== 'Visualize')?.name ?? repoComponents[0]?.name ?? '');
 	const [hueDlg, setHueDlg] = useState<{ open: boolean; hue: number; section: TreeType } | null>(null);
 	const [inputDlg, setInputDlg] = useState<{
 		open: boolean;
@@ -1208,16 +1198,16 @@ export default (function Nav({
 	const assetChoices = useMemo(() => repoComponents.filter(c => c.name !== 'Leaf' && c.name !== 'Visualize').map(c => ({ label: c.name.replace(/([a-z])([A-Z])/g, '$1 $2'), name: c.name })), []);
 	useEffect(() => {
 		if (!assetTgt) return;
-		if (!assetChoices.some(c => c.name === assetComponent)) setAssetComponent(assetChoices[0]?.name ?? '');
+		if (!assetChoices.some(c => c.name === assetComp)) setAssetComp(assetChoices[0]?.name ?? '');
 		setAssetDialogOpen(true);
-	}, [assetTgt, assetChoices, assetComponent]);
+	}, [assetTgt, assetChoices, assetComp]);
 	SidebarActions.makeAsset = useCallback(async (): Promise<void> => {
-		if (!assetTgt || !assetComponent || assetBusy) return;
+		if (!assetTgt || !assetComp || assetBusy) return;
 		try {
 			setAssetBusy(true);
 			const { error } = await actions.write.doc.asset({
 				path: assetTgt.path,
-				component: assetComponent,
+				component: assetComp,
 				title: assetTgt.title,
 				description: '',
 			});
@@ -1235,7 +1225,7 @@ export default (function Nav({
 		} finally {
 			setAssetBusy(false);
 		}
-	}, [assetBusy, assetComponent, assetTgt, refreshTree]);
+	}, [assetBusy, assetComp, assetTgt, refreshTree]);
 	SidebarActions.renderSects = useCallback(
 		(t: TreeType) => {
 			const origName = t.type === 'branch' ? t.origName : '';
@@ -1422,7 +1412,7 @@ export default (function Nav({
 						<div className='space-y-4 py-4'>
 							<div className='space-y-1.5'>
 								<Label>Component</Label>
-								<Select value={assetComponent} onValueChange={setAssetComponent}>
+								<Select value={assetComp} onValueChange={setAssetComp}>
 									<SelectTrigger aria-label='Select a component...'><SelectValue placeholder='Select a component...' /></SelectTrigger>
 									<SelectContent>{assetChoices.map(c => <SelectItem key={c.name} value={c.name}>{c.label}</SelectItem>)}</SelectContent>
 								</Select>
@@ -1431,12 +1421,12 @@ export default (function Nav({
 						</div>
 						<DialogFooter>
 							<Button variant='ghost' disabled={assetBusy} onClick={() => { setAssetTgt(null); }}>Cancel</Button>
-							<Button disabled={!assetComponent || assetBusy} loading={assetBusy} onClick={() => void SidebarActions.makeAsset!()}>Make Asset</Button>
+							<Button disabled={!assetComp || assetBusy} loading={assetBusy} onClick={() => void SidebarActions.makeAsset!()}>Make Asset</Button>
 						</DialogFooter>
 					</DialogContent>
 				</Dialog>
-				<SidebarComponents.PromptDialog state={inputDlg} setState={setInputDlg} disabled={loading || transitioning} />
-				<SidebarComponents.DeleteDialog
+				<SidebarComps.PromptDialog state={inputDlg} setState={setInputDlg} disabled={loading || transitioning} />
+				<SidebarComps.DeleteDialog
 					tgt={delTgt}
 					setTgt={setDelTgt}
 					onConfirm={() => {
@@ -1529,7 +1519,7 @@ export default (function Nav({
 						<a className='font-serif text-2xl hover:italic hover:tracking-tight' href={homePath}>
 							{siteTitle}
 						</a>
-						{siteDescription && <p className='m-0 text-sm text-primary-11'>{siteDescription}</p>}
+						{siteDesc && <p className='m-0 text-sm text-primary-11'>{siteDesc}</p>}
 					</div>
 					{/* sects */}
 					<div className='mt-2'>

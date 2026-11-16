@@ -586,9 +586,9 @@ test('host branding stays in the sidebar while leaf metadata stays in the docume
 	await expect(header).toContainText('Salesphere');
 	await expect(header).toContainText('A page level description for the Salesphere overview.');
 	await expect(header).not.toContainText('Product and engineering documentation.');
-	const description = p.getByRole('textbox', { name: 'Description' });
-	await expect(description).toBeDisabled();
-	await expect(description).toHaveValue('A page level description for the Salesphere overview.');
-	await expect(description).not.toHaveAttribute('class', /min-h-6/);
+	const desc = p.getByRole('textbox', { name: 'Description' });
+	await expect(desc).toBeDisabled();
+	await expect(desc).toHaveValue('A page level description for the Salesphere overview.');
+	await expect(desc).not.toHaveAttribute('class', /min-h-6/);
 	await expect(p.getByRole('textbox', { name: 'Search pages' })).toHaveCount(0);
 });

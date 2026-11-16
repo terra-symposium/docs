@@ -143,17 +143,17 @@ export function htmlToMd(html: string): string {
 			rendered.set(curr.node, '');
 			continue;
 		}
-		const element = curr.node as HTMLElement;
+		const el = curr.node as HTMLElement;
 		if (!curr.visited) {
 			pending.push({ node: curr.node, visited: true });
-			for (let i = element.childNodes.length - 1; i >= 0; i--) {
-				const child = element.childNodes[i];
+			for (let i = el.childNodes.length - 1; i >= 0; i--) {
+				const child = el.childNodes[i];
 				if (child) pending.push({ node: child, visited: false });
 			}
 			continue;
 		}
-		const tag = element.tagName.toLowerCase();
-		const children = Array.from(element.childNodes)
+		const tag = el.tagName.toLowerCase();
+		const children = Array.from(el.childNodes)
 			.map(c => rendered.get(c) || '')
 			.join('');
 		let text = children;
@@ -163,13 +163,13 @@ export function htmlToMd(html: string): string {
 			case 'tbody':
 			case 'tfoot':
 			case 'tr':
-				text = `<${tag}${Array.from(element.attributes)
+				text = `<${tag}${Array.from(el.attributes)
 					.map(a => ` ${a.name}="${a.value}"`)
 					.join('')}>\n${children}\n</${tag}>`;
 				break;
 			case 'th':
 			case 'td':
-				text = `<${tag}${Array.from(element.attributes)
+				text = `<${tag}${Array.from(el.attributes)
 					.map(a => ` ${a.name}="${a.value}"`)
 					.join('')}>\n${children.trim()}\n</${tag}>`;
 				break;
@@ -185,7 +185,7 @@ export function htmlToMd(html: string): string {
 				break;
 			case 'p':
 			case 'div':
-				text = element.closest('td, th') ? `\n${children}\n` : `\n${children}\n\n`;
+				text = el.closest('td, th') ? `\n${children}\n` : `\n${children}\n\n`;
 				break;
 			case 'strong':
 			case 'b':
@@ -203,13 +203,13 @@ export function htmlToMd(html: string): string {
 				text = `~~${children}~~`;
 				break;
 			case 'a':
-				text = `[${children}](${element.getAttribute('href') || ''})`;
+				text = `[${children}](${el.getAttribute('href') || ''})`;
 				break;
 			case 'code':
-				text = element.closest('pre') ? children : `\`${children}\``;
+				text = el.closest('pre') ? children : `\`${children}\``;
 				break;
 			case 'pre': {
-				const match = element.querySelector('code')?.className.match(TerraQualityRegex.REGEX_LANGUAGE_A_Z0_9_I_REGEX());
+				const match = el.querySelector('code')?.className.match(TerraQualityRegex.REGEX_LANGUAGE_A_Z0_9_I_REGEX());
 				text = `\n\`\`\`${match ? match[1] : 'text'}\n${children.trim()}\n\`\`\`\n`;
 				break;
 			}
@@ -221,13 +221,13 @@ export function htmlToMd(html: string): string {
 				text = `\n${children}\n`;
 				break;
 			case 'li':
-				text = `${element.closest('ul, ol')?.tagName.toLowerCase() === 'ol' ? '1. ' : '- '}${children.trim()}\n`;
+				text = `${el.closest('ul, ol')?.tagName.toLowerCase() === 'ol' ? '1. ' : '- '}${children.trim()}\n`;
 				break;
 			case 'br':
 				text = '\n';
 				break;
 			case 'img':
-				text = `![${element.getAttribute('alt') || 'image'}](${element.getAttribute('src') || ''})`;
+				text = `![${el.getAttribute('alt') || 'image'}](${el.getAttribute('src') || ''})`;
 				break;
 		}
 		rendered.set(curr.node, text);

@@ -14,7 +14,7 @@ import { isIndexFile, sanitizeName } from './tree.js';
 import { toast } from 'sonner';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../regex.mjs';
+import * as HygieneRegex from '../regex.mjs';
 
 // TYPES
 import type { DocsExportOpts as ExportOptions, Md } from '../runtime/types.js';
@@ -24,7 +24,7 @@ import type { PDFDocument, PDFImage } from 'pdf-lib';
 HELPERS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Preserve the exported archiveDocs API used by hosts to package Docs content.
+// hygiene-ignore single-use -- Preserve the exported archiveDocs API used by hosts to package Docs content.
 /**
  * Downloads selected documents and attachments as a ZIP archive.
  *
@@ -41,7 +41,7 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 	console.info('[archive] start', { paths: v, rootDir: r, filenameBase: f, opts: o, nodeIds: n });
 	if (!v?.length && !r) throw new Error('No docs files found to download.');
 	let allPaths: string[] = v && v.length > 0 ? [...v] : [];
-	const isMdFile = TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(r) || !r.includes('.');
+	const isMdFile = HygieneRegex.REGEX_MD_MDX_I_REGEX().test(r) || !r.includes('.');
 	if (allPaths.length === 0) {
 		if (isMdFile) {
 			if (isIndexFile(r)) {
@@ -70,7 +70,7 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 	await Promise.allSettled(
 		[...new Set([...allPaths, ...n])].map(async p => {
 			const c = p.split('?')[0] || p;
-			if (TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(c) || !c.includes('.')) {
+			if (HygieneRegex.REGEX_MD_MDX_I_REGEX().test(c) || !c.includes('.')) {
 				try {
 					const { data: atts, error: err } = await actions.read.doc.attachments({ path: p });
 					if (!err && Array.isArray(atts)) {
@@ -142,17 +142,17 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 		const isTsDoc = p.includes(`${docsRootPath()}/tsdocs/`);
 		const isHttp = p.startsWith('http');
 		const noDot = !assetNameMap.has(p) && !c.includes('.');
-		if (!isHttp && !isTsDoc && (TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(c) || noDot)) mdPaths.push(p);
+		if (!isHttp && !isTsDoc && (HygieneRegex.REGEX_MD_MDX_I_REGEX().test(c) || noDot)) mdPaths.push(p);
 		let matched = false;
 		if (!isHttp && !isTsDoc && (/\.(md|mdx|txt|json|cpp|c|h|hpp|js|jsx|ts|tsx|astro|yaml|yml|xml|csv|html|css|scss|sh|py|java|rs|go|rb|swift)$/i.test(assetNameMap.get(c) || c) || noDot)) {
 			textPaths.push(p);
 			matched = true;
 		}
-		if (isExtMatch(p, TerraQualityRegex.REGEX_PDF_I_REGEX())) {
+		if (isExtMatch(p, HygieneRegex.REGEX_PDF_I_REGEX())) {
 			pdfPaths.push(p);
 			matched = true;
 		}
-		if (isExtMatch(p, TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2())) {
+		if (isExtMatch(p, HygieneRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2())) {
 			imgPaths.push(p);
 			matched = true;
 		}
@@ -214,7 +214,7 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 				const urlObj = new URL(rel);
 				let baseName = urlObj.pathname.split('/').pop() || 'downloaded-file';
 				if (urlObj.search) {
-					const sQuery = urlObj.search.replace(/[^a-zA-Z0-9]/g, '-').replace(TerraQualityRegex.REGEX_G_REGEX_3(), '-').replace(TerraQualityRegex.REGEX_G_REGEX_20(), '');
+					const sQuery = urlObj.search.replace(/[^a-zA-Z0-9]/g, '-').replace(HygieneRegex.REGEX_G_REGEX_3(), '-').replace(HygieneRegex.REGEX_G_REGEX_20(), '');
 					if (sQuery) baseName = `${baseName}-${sQuery}`;
 				}
 				rel = baseName;
@@ -228,11 +228,11 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 		if (o.flatten) {
 			if (/(?:\/|^)index\.[^.]+$/i.test(p) && p.includes('/')) {
 				const parts = p.split('/');
-				rel = `${parts[parts.length - 2]}${p.match(TerraQualityRegex.REGEX_PATTERN_REGEX())?.[0] || ''}`;
+				rel = `${parts[parts.length - 2]}${p.match(HygieneRegex.REGEX_PATTERN_REGEX())?.[0] || ''}`;
 			} else rel = p.split('/').pop() || rel;
 		}
 		if (forceExt) {
-			if (rel.match(TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2())) rel = rel.replace(TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2(), forceExt);
+			if (rel.match(HygieneRegex.REGEX_A_Z0_9_I_REGEX_2())) rel = rel.replace(HygieneRegex.REGEX_A_Z0_9_I_REGEX_2(), forceExt);
 			else rel = `${rel}${forceExt}`;
 		}
 		return rel || 'untitled-file';
@@ -246,7 +246,7 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 	 * @return fetch Asset Data.
 	 */
 	const fetchAssetData = async (p: string): Promise<{ buffer: ArrayBuffer; contentType: string } | null> => {
-		if (TerraQualityRegex.REGEX_HTTPS_I_REGEX().test(p)) {
+		if (HygieneRegex.REGEX_HTTPS_I_REGEX().test(p)) {
 			try {
 				console.info('[archive] fetching remote asset directly', { path: p });
 				const res = await fetch(p, { signal: AbortSignal.timeout(20_000) });
@@ -340,8 +340,8 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 				if (!error && data) {
 					const doc = data as Md;
 					const fm = ['---'];
-					if (doc.title) fm.push(`title: "${doc.title.replace(TerraQualityRegex.REGEX_G_REGEX_5(), '\\"')}"`);
-					if (doc.description) fm.push(`description: "${doc.description.replace(TerraQualityRegex.REGEX_G_REGEX_5(), '\\"')}"`);
+					if (doc.title) fm.push(`title: "${doc.title.replace(HygieneRegex.REGEX_G_REGEX_5(), '\\"')}"`);
+					if (doc.description) fm.push(`description: "${doc.description.replace(HygieneRegex.REGEX_G_REGEX_5(), '\\"')}"`);
 					fm.push('---');
 					let localSrc = typeof doc.source === 'string' ? doc.source : '';
 					localSrc = localSrc.replace(/\]\((http[^)]+)\)/g, (m, l) => {
@@ -358,7 +358,7 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 						else if (isMdFile) relPath = p.split('/').pop() || p;
 						const dir = relPath.includes('/') ? relPath.substring(0, relPath.lastIndexOf('/')) : '.';
 						const fname = relPath.split('/').pop() || '';
-						const key = dir === '.' ? fname.replace(TerraQualityRegex.REGEX_PATTERN_REGEX(), '') : dir;
+						const key = dir === '.' ? fname.replace(HygieneRegex.REGEX_PATTERN_REGEX(), '') : dir;
 						if (!gJson[key]) gJson[key] = [];
 						let src = typeof doc.source === 'string' ? doc.source : '';
 						src = src.replace(/\]\((?!http|#)([^)]+)\)/g, (m, l) => {
@@ -494,7 +494,7 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 			}
 		} else if (type === 'tsdocs') {
 			try {
-				const scope = p.match(TerraQualityRegex.REGEX_DOCS_TSDOCS_REGEX())?.[1] ?? p;
+				const scope = p.match(HygieneRegex.REGEX_DOCS_TSDOCS_REGEX())?.[1] ?? p;
 				const { data: tsData, error: tsErr } = await actions.read.tsdocs({ scope });
 				if (!tsErr && tsData && tsData.docs) {
 					const items = tsData.docs as { slug: string; title: string; body: string }[];
@@ -502,7 +502,7 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 						gJson['tsdocs'] = [...(Array.isArray(gJson['tsdocs']) ? gJson['tsdocs'] : []), ...items.map(d => ({ title: d.title, slug: d.slug, source: d.body }))];
 					} else {
 						// prettier-ignore
-						zip.file(resolvePath(`${sanitizeName(scope.replace(TerraQualityRegex.REGEX_G_REGEX_10(), '-'))}.json`), JSON.stringify(items.map(d => ({ title: d.title, slug: d.slug, source: d.body })), null, 2));
+						zip.file(resolvePath(`${sanitizeName(scope.replace(HygieneRegex.REGEX_G_REGEX_10(), '-'))}.json`), JSON.stringify(items.map(d => ({ title: d.title, slug: d.slug, source: d.body })), null, 2));
 					}
 				} else if (tsErr) console.error(`[archive] Error fetching TSDocs for scope ${scope}:`, tsErr);
 			} catch (e) {
@@ -513,7 +513,7 @@ export async function archiveDocs(v: string[], r: string, f: string, o: ExportOp
 				const res = await fetchAssetData(p);
 				if (res && res.buffer) {
 					let tgtPath = resolvePath(p);
-					if (!TerraQualityRegex.REGEX_A_Z0_9_I_REGEX_2().test(tgtPath)) {
+					if (!HygieneRegex.REGEX_A_Z0_9_I_REGEX_2().test(tgtPath)) {
 						let forcedExt = '';
 						if (res.contentType.includes('application/pdf')) forcedExt = '.pdf';
 						else if (res.contentType.includes('image/jpeg')) forcedExt = '.jpg';

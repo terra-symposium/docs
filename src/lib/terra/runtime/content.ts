@@ -18,7 +18,7 @@ import { encodeNodesPayload } from './nodes.js';
 import { isEndpointVal } from './shared.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../regex.mjs';
+import * as HygieneRegex from '../regex.mjs';
 
 // DATA
 import { TESTIMONIALS_EXPORT } from './shared.js';
@@ -120,11 +120,11 @@ const quote = (val: string): string => JSON.stringify(val);
  */
 const escHtml = (val: string): string =>
 	val
-		.replace(TerraQualityRegex.REGEX_G_REGEX_17(), '&amp;')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_23(), '&lt;')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_24(), '&gt;')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_5(), '&quot;')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_4(), '&#39;');
+		.replace(HygieneRegex.REGEX_G_REGEX_17(), '&amp;')
+		.replace(HygieneRegex.REGEX_G_REGEX_23(), '&lt;')
+		.replace(HygieneRegex.REGEX_G_REGEX_24(), '&gt;')
+		.replace(HygieneRegex.REGEX_G_REGEX_5(), '&quot;')
+		.replace(HygieneRegex.REGEX_G_REGEX_4(), '&#39;');
 
 /**
  * Extracts readable text from nested docs content when structured serializers cannot recover it.
@@ -139,8 +139,8 @@ const bodyText = (val: unknown): string => {
 	if (Array.isArray(val)) return val.map(bodyText).join('');
 	if (!isRec(val)) return '';
 	if (typeof val.text === 'string') return val.text;
-	if (typeof val.markdown === 'string' && val.markdown.trim()) return fromBlockJsx(val.markdown).replace(TerraQualityRegex.REGEX_G_REGEX_22(), '');
-	if (typeof val.html === 'string' && val.html.trim()) return val.html.replace(TerraQualityRegex.REGEX_G_REGEX_22(), ' ');
+	if (typeof val.markdown === 'string' && val.markdown.trim()) return fromBlockJsx(val.markdown).replace(HygieneRegex.REGEX_G_REGEX_22(), '');
+	if (typeof val.html === 'string' && val.html.trim()) return val.html.replace(HygieneRegex.REGEX_G_REGEX_22(), ' ');
 	const children = Array.isArray(val.children) ? val.children : [];
 	return bodyText(children.length > 0 ? children : (val.c ?? val.content ?? val.body ?? []));
 };
@@ -179,7 +179,7 @@ export const docsEditorMountIds = (src: string): string[] => {
 		...Array.from(
 			toBlockJsx(src)
 				.replace(/```[\s\S]*?```/g, '')
-				.replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), '')
+				.replace(HygieneRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), '')
 				.replace(/<TabsGroup\b[^>]*>([\s\S]*?)<\/TabsGroup>/g, (g, i: string) => `${g.slice(0, g.indexOf('>') + 1)}${i.match(/<TabsItem\b[\s\S]*?<\/TabsItem>/)?.[0] || ''}</TabsGroup>`)
 				.matchAll(/<(AccordionGroup|AccordionItem|TabsGroup|DocsTable|Nodes)\b/g),
 			m => `${m[1]}:${m.index}`,
@@ -201,7 +201,7 @@ const normBlockMarkers = (md: string): string =>
 		.replace(/(\|\|\|[ \t]*\[[^\]\n]*\])[ \t]+(?=\S)/g, '$1\n\n')
 		.replace(/(^|\n)[ \t]*\|\|\|[ \t]+(?=\|\|\|[ \t]*\[)/gm, '$1|||\n\n');
 
-// terra-quality-ignore single-use -- Keep the exported toBlockJsx callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported toBlockJsx callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Rewrites the supported docs block markers into their JSX wrapper forms.
  *
@@ -216,18 +216,18 @@ export function toBlockJsx(md: string): string {
 	if (!md) return '';
 	const code = new Map<string, string>();
 	const lns = normBlockMarkers(md)
-		.replace(TerraQualityRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), m => {
+		.replace(HygieneRegex.REGEX_CODE_B_S_S_CODE_G_REGEX(), m => {
 			const key = `TERRA_CODE_${code.size}`;
 			code.set(key, m);
 			return key;
 		})
-		.replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), m => {
+		.replace(HygieneRegex.REGEX_S_S_N_G_REGEX(), m => {
 			let res = '';
 			for (let i = 0; i < m.length; i++) res += m[i] && ['{', '}', '<', '>'].includes(m[i]) && (i === 0 || m[i - 1] !== '\\') ? '\\' + m[i] : (m[i] ?? '');
 			return res;
 		})
-		.replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
-		.split(TerraQualityRegex.REGEX_R_N_REGEX());
+		.replace(HygieneRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
+		.split(HygieneRegex.REGEX_R_N_REGEX());
 	const res: string[] = [];
 	let icode = false;
 	const grp = new Set<string>();
@@ -247,7 +247,7 @@ export function toBlockJsx(md: string): string {
 		}
 		const _m = BLOCKS.find(b => tClean.startsWith(b.syntax));
 		if (_m) {
-			const rM = tClean.match(new RegExp(`^${_m.syntax.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}(?:\\s*\\[(.*?)\\])?$`));
+			const rM = tClean.match(new RegExp(`^${_m.syntax.replace(HygieneRegex.REGEX_G_REGEX_9(), '\\$&')}(?:\\s*\\[(.*?)\\])?$`));
 			if (tClean === _m.syntax) {
 				if (itm.has(_m.item)) {
 					res.push('', `</${_m.item}>`);
@@ -291,7 +291,7 @@ export function toBlockJsx(md: string): string {
 		}
 	}
 	const n = res.join('\n');
-	return code.size ? n.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), k => code.get(k) || k) : n;
+	return code.size ? n.replace(HygieneRegex.REGEX_TERRA_CODE_D_G_REGEX(), k => code.get(k) || k) : n;
 }
 
 /**
@@ -318,19 +318,19 @@ export function fromBlockJsx(jsx: string): string {
 		.replace(/^\\?:\\?:\\?:/gm, ':::')
 		.replace(/^(===|\|\|\||\^\^\^|:::)[ \t]*\\?\[(.*?)\\?\]/gm, (_m, p, c) => `${p}[${c.replace(/\\\]/g, ']').replace(/\\\[/g, '[')}]`);
 	_rs = _rs
-		.replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
+		.replace(HygieneRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
 		.replace(/<DocsMath\b([\s\S]*?)code=(?:\{\s*("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)\s*\}|(["'])([\s\S]*?)\3)([\s\S]*?)\/>/gi, (_m, p, e, _quote, s, v) => {
 			// prettier-ignore
 			const parsed = e
 					? e.startsWith('`')
-						? e.slice(1, -1).replace(TerraQualityRegex.REGEX_G_REGEX_15(), '`').replace(TerraQualityRegex.REGEX_G_REGEX_14(), '$').replace(TerraQualityRegex.REGEX_G_REGEX_13(), '\\')
-						: e.startsWith('"') ? JSON.parse(e.replace(TerraQualityRegex.REGEX_N_G_REGEX_3(), '\\n')) : e.slice(1, -1).replace(/\\([`'"])/g, '$1')
+						? e.slice(1, -1).replace(HygieneRegex.REGEX_G_REGEX_15(), '`').replace(HygieneRegex.REGEX_G_REGEX_14(), '$').replace(HygieneRegex.REGEX_G_REGEX_13(), '\\')
+						: e.startsWith('"') ? JSON.parse(e.replace(HygieneRegex.REGEX_N_G_REGEX_3(), '\\n')) : e.slice(1, -1).replace(/\\([`'"])/g, '$1')
 					: s;
-			return TerraQualityRegex.REGEX_BINLINE_B_I_REGEX().test(p) || TerraQualityRegex.REGEX_BINLINE_B_I_REGEX().test(v) ? `$${parsed}$` : `\n\n$$${parsed}$$\n\n`;
+			return HygieneRegex.REGEX_BINLINE_B_I_REGEX().test(p) || HygieneRegex.REGEX_BINLINE_B_I_REGEX().test(v) ? `$${parsed}$` : `\n\n$$${parsed}$$\n\n`;
 		})
-		.replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), _m => _m.replace(/\\\{/g, '{').replace(/\\\}/g, '}').replace(/\\</g, '<').replace(/\\>/g, '>'));
-	_rs = _rs.replace(/(<\/?(?:AccordionGroup|TabsGroup|AccordionItem|TabsItem)\b[^>]*>)/g, '\n$1\n').replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
-	if (code.size) _rs = _rs.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), k => code.get(k) || k);
+		.replace(HygieneRegex.REGEX_S_S_N_G_REGEX(), _m => _m.replace(/\\\{/g, '{').replace(/\\\}/g, '}').replace(/\\</g, '<').replace(/\\>/g, '>'));
+	_rs = _rs.replace(/(<\/?(?:AccordionGroup|TabsGroup|AccordionItem|TabsItem)\b[^>]*>)/g, '\n$1\n').replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n');
+	if (code.size) _rs = _rs.replace(HygieneRegex.REGEX_TERRA_CODE_D_G_REGEX(), k => code.get(k) || k);
 	const lns = _rs.split('\n');
 	const out: string[] = [];
 	let icode = false;
@@ -380,7 +380,7 @@ export function fromBlockJsx(jsx: string): string {
 		}
 		out.push(raw.replace(/^[ \t]{1,8}/, ''));
 	}
-	return /* prettier-ignore */ out.join('\n').replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n').trim() + '\n';
+	return /* prettier-ignore */ out.join('\n').replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n').trim() + '\n';
 }
 
 /*//////////////////////////////////////////////////
@@ -397,7 +397,7 @@ CODE SYNTAX
  */
 const codeAttrs = (lang?: string): string => (lang?.trim() ? ` language=${JSON.stringify(lang.trim())}` : '');
 
-// terra-quality-ignore single-use -- Keep the exported stringifyCodeValue callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported stringifyCodeValue callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Converts any code payload into a printable string before it is written into docs markup.
  *
@@ -414,7 +414,7 @@ export function stringifyCodeValue(val: unknown): string {
 		for (let i = 0; i < 16; i++) {
 			const match = n.match(/^\s*\{`([\s\S]*)`}\s*$/);
 			if (!match) break;
-			const unwrapped = match[1].replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1').replace(TerraQualityRegex.REGEX_N_G_REGEX_2(), '\n');
+			const unwrapped = match[1].replace(HygieneRegex.REGEX_G_REGEX_11(), '$1').replace(HygieneRegex.REGEX_N_G_REGEX_2(), '\n');
 			if (unwrapped === n) break;
 			n = unwrapped;
 		}
@@ -442,7 +442,7 @@ export function stringifyCodeValue(val: unknown): string {
  */
 export function codeJsx(lang: string | undefined, val: string): string {
 	return `\n<Code${codeAttrs(lang)}>\n{\`
-${val.replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQualityRegex.REGEX_G_REGEX_18(), '\\`').replace(TerraQualityRegex.REGEX_G_REGEX_16(), '\\$')}
+${val.replace(HygieneRegex.REGEX_G_REGEX_12(), '\\\\').replace(HygieneRegex.REGEX_G_REGEX_18(), '\\`').replace(HygieneRegex.REGEX_G_REGEX_16(), '\\$')}
 \`}\n</Code>\n`;
 }
 
@@ -472,7 +472,7 @@ export function toCodeJsx(src: string): string {
 	let fenced = false;
 	let lang = '';
 	let body: string[] = [];
-	for (const line of src.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').split('\n')) {
+	for (const line of src.replace(HygieneRegex.REGEX_R_N_G_REGEX(), '\n').split('\n')) {
 		const trim = line.trimStart();
 		if (trim.startsWith('```')) {
 			if (fenced) {
@@ -506,15 +506,15 @@ export function toCodeJsx(src: string): string {
 					v
 						.replace(/&#10;/g, '\n')
 						.replace(/&#13;/g, '\r')
-						.replace(TerraQualityRegex.REGEX_QUOT_G_REGEX(), '"')
+						.replace(HygieneRegex.REGEX_QUOT_G_REGEX(), '"')
 						.replace(/&#39;/g, "'")
-						.replace(TerraQualityRegex.REGEX_AMP_G_REGEX(), '&')
-						.replace(TerraQualityRegex.REGEX_LT_G_REGEX(), '<')
-						.replace(TerraQualityRegex.REGEX_GT_G_REGEX(), '>'),
+						.replace(HygieneRegex.REGEX_AMP_G_REGEX(), '&')
+						.replace(HygieneRegex.REGEX_LT_G_REGEX(), '<')
+						.replace(HygieneRegex.REGEX_GT_G_REGEX(), '>'),
 				)}</${t}>`,
 		);
 	res = res.replace(/<Code\b([\s\S]*?)\s+code=(?:"([\s\S]*?)"|\{`((?:\\.|[^`])*?)`\})\s*\/>/g, (_match, p, q, e) => {
-		return `<Code${p} source=${quote(e !== undefined ? e.replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1') : q)} />`;
+		return `<Code${p} source=${quote(e !== undefined ? e.replace(HygieneRegex.REGEX_G_REGEX_11(), '$1') : q)} />`;
 	});
 	return blocks.reduce((n, b, i) => n.replace(new RegExp(`TERRA_PROTECTED_${i}__`, 'g'), b), res);
 }
@@ -554,7 +554,7 @@ const trimPipe = (val: string, side: 'start' | 'end'): string => {
  * Callers can supply a custom cell renderer to preserve nested markdown or JSX.
  */
 export const mdTableToHtml = (md: string, renderCell: (val: string) => string = escHtml): string | null => {
-	const lines = md.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').trim().split('\n');
+	const lines = md.replace(HygieneRegex.REGEX_R_N_G_REGEX(), '\n').trim().split('\n');
 	if (lines.length < 2 || lines.some(l => !l.trim())) return null;
 	const rows = lines.map(l => {
 		const cells: string[] = [];
@@ -613,9 +613,9 @@ const renderMd = (val: string): string => {
 			return `__CODE_${codes.length - 1}__`;
 		})
 		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, l: string, h: string) => `<a href="${escHtml(h)}">${l}</a>`)
-		.replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
-		.replace(TerraQualityRegex.REGEX_N_G_REGEX(), (_, a: string, b: string, v: string) => `${a}<em>${b}</em>${v}`)
-		.replace(TerraQualityRegex.REGEX_N_G_REGEX_3(), '<br />');
+		.replace(HygieneRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
+		.replace(HygieneRegex.REGEX_N_G_REGEX(), (_, a: string, b: string, v: string) => `${a}<em>${b}</em>${v}`)
+		.replace(HygieneRegex.REGEX_N_G_REGEX_3(), '<br />');
 	codes.forEach((c, i) => {
 		html = html.replace(`__CODE_${i}__`, c);
 	});
@@ -650,7 +650,7 @@ export const sanitizeTableHtml = (val: string): string => val.replace(/<style\b[
  * @return Formatted table HTML string with stable indentation.
  */
 const fmtRawTable = (val: string): string => {
-	if (!TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
+	if (!HygieneRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
 	let depth = 0;
 	return val
 		.replace(/\s*\n\s*/g, ' ')
@@ -740,15 +740,15 @@ export const normDocsSpacing = (src: string): string => {
 			.replace(/^(:::[A-Za-z][\w-]*(?:\[[^\]]*\])?)\s+(.+)$/gm, '$1\n\n$2')
 			.replace(/^:::\s+(.+)$/gm, ':::\n\n$1')
 			.replace(/([^\n])\s+(?=:::(?![A-Za-z]))/g, '$1\n\n')
-			.replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
+			.replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n');
 		if (n === n) break;
 	}
 	n = n
 		.split('\n')
 		.reduce<{ lines: string[]; prev: string }>(
 			(a, l) => {
-				const currList = TerraQualityRegex.REGEX_S_D_S_REGEX().test(l);
-				const prevList = TerraQualityRegex.REGEX_S_D_S_REGEX().test(a.prev);
+				const currList = HygieneRegex.REGEX_S_D_S_REGEX().test(l);
+				const prevList = HygieneRegex.REGEX_S_D_S_REGEX().test(a.prev);
 				if (!l.trim()) {
 					a.lines.push(l);
 					return a;
@@ -766,7 +766,7 @@ export const normDocsSpacing = (src: string): string => {
 		.flatMap(l => {
 			const heading = l.match(/^(#{1,6}\s+)(.+)$/);
 			if (!heading) return [l];
-			const words = heading[2].trim().split(TerraQualityRegex.REGEX_S_REGEX_2()).filter(Boolean);
+			const words = heading[2].trim().split(HygieneRegex.REGEX_S_REGEX_2()).filter(Boolean);
 			if (words.length < 2) return [l];
 			let cap = 0;
 			for (const word of words) {
@@ -778,7 +778,7 @@ export const normDocsSpacing = (src: string): string => {
 			return [`${heading[1]}${words.slice(0, Math.max(1, cap - 1)).join(' ')}`, '', words.slice(Math.max(1, cap - 1)).join(' ')];
 		})
 		.join('\n')
-		.replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
+		.replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n');
 	return blocks
 		.reduceRight((o, b, i) => o.replace(new RegExp(`TERRA_PROTECTED_${i}__`, 'g'), b), n)
 		.replace(/(<\/Code>)[ \t]*(\d+)(?=\s|$)/g, '$1')
@@ -808,21 +808,19 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
 			.map(c => {
 				let html: string;
 				if (c.html?.trim())
-					html = sanitizeTableHtml(stripNestedAnchors(c.html.trim()))
-						.replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
-						.replace(TerraQualityRegex.REGEX_N_G_REGEX(), '$1<em>$2</em>$3');
+					html = sanitizeTableHtml(stripNestedAnchors(c.html.trim())).replace(HygieneRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>').replace(HygieneRegex.REGEX_N_G_REGEX(), '$1<em>$2</em>$3');
 				else {
 					const body = stringifyDocBody(c.content).trim();
-					if (TerraQualityRegex.REGEX_CODE_B_S_S_CODE_REGEX().test(body)) html = body;
+					if (HygieneRegex.REGEX_CODE_B_S_S_CODE_REGEX().test(body)) html = body;
 					else {
 						const table = body ? mdTableToHtml(body, renderMd) : null;
 						if (table) html = table;
-						else if (body) html = sanitizeTableHtml(TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(body) ? body : renderMd(body));
+						else if (body) html = sanitizeTableHtml(HygieneRegex.REGEX_TABLE_B_I_REGEX().test(body) ? body : renderMd(body));
 						else {
 							const md = fromBlockJsx(c.markdown || '').trim();
 							const fallback = mdTableToHtml(md, renderMd);
 							if (fallback) html = sanitizeTableHtml(fallback);
-							else if (TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(md)) html = sanitizeTableHtml(md);
+							else if (HygieneRegex.REGEX_TABLE_B_I_REGEX().test(md)) html = sanitizeTableHtml(md);
 							else {
 								const text = bodyText(c.content) || bodyText(c.markdown) || bodyText(c.html);
 								html = text ? sanitizeTableHtml(renderMd(text)) : '';
@@ -833,7 +831,7 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
 				if (html.includes('\n') || /<(?:p|ul|ol|table|pre|div)\b/i.test(html)) {
 					let depth = 0;
 					return `\t\t<${tag}>\n${html
-						.split(TerraQualityRegex.REGEX_R_N_REGEX())
+						.split(HygieneRegex.REGEX_R_N_REGEX())
 						.map(l => l.trim())
 						.filter(Boolean)
 						.map(l => {
@@ -908,7 +906,7 @@ const blockMd = (b: DocBlock, num = 1): string => {
 			const table = atomicTableHtml(text);
 			return table ? `\n${table}\n` : '';
 		}
-		if (b.style && TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
+		if (b.style && HygieneRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
 		if (b.listItem) return `\n${b.listItem === 'number' ? `${num}.` : '*'} ${text}\n`;
 		return text ? `\n${text}\n` : '';
 	}
@@ -1003,9 +1001,9 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
 				return `TERRA_EDITOR_TABLE_${tables.length - 1}`;
 			})
 			.replace(
-				TerraQualityRegex.REGEX_TABLE_B_S_S_TABLE_GI_REGEX(),
+				HygieneRegex.REGEX_TABLE_B_S_S_TABLE_GI_REGEX(),
 				t =>
-					`<DocsTable html={\`${toCodeJsx(fmtRawTable(t).trim()).replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQualityRegex.REGEX_G_REGEX_18(), '\\`').replace(TerraQualityRegex.REGEX_G_REGEX_16(), '\\$')}\`} />`,
+					`<DocsTable html={\`${toCodeJsx(fmtRawTable(t).trim()).replace(HygieneRegex.REGEX_G_REGEX_12(), '\\\\').replace(HygieneRegex.REGEX_G_REGEX_18(), '\\`').replace(HygieneRegex.REGEX_G_REGEX_16(), '\\$')}\`} />`,
 			),
 	);
 };
@@ -1047,7 +1045,7 @@ const editorBlockMd = (b: DocBlock, num = 1, mode: 'docs' | 'problem' = 'docs'):
 			const table = atomicTableHtml(text);
 			return table ? `\n${editorNestedMd(null, table)}\n` : '';
 		}
-		if (b.style && TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
+		if (b.style && HygieneRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
 		if (b.listItem) return `\n${b.listItem === 'number' ? `${num}.` : '*'} ${text}\n`;
 		return text ? `\n${text}\n` : '';
 	}
@@ -1133,7 +1131,7 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
 	return src;
 };
 
-// terra-quality-ignore single-use -- Keep the exported stringifyEditorContentBody module value available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported stringifyEditorContentBody module value available to external consumers; its one local reference does not replace that contract.
 /**
  * Stringifies the Editor Content Body for the docs.
  *

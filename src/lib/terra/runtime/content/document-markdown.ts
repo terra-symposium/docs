@@ -16,7 +16,7 @@ import { fromBlockJsx } from './block-jsx.js';
 import { isEndpointVal } from '../shared.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../regex.mjs';
+import * as HygieneRegex from '../../regex.mjs';
 
 // DATA
 import { PROBLEM_BLOCK_TYPES } from '../types.js';
@@ -74,8 +74,8 @@ const bodyText = (val: unknown): string => {
 	if (Array.isArray(val)) return val.map(bodyText).join('');
 	if (!isRec(val)) return '';
 	if (typeof val.text === 'string') return val.text;
-	if (typeof val.markdown === 'string' && val.markdown.trim()) return fromBlockJsx(val.markdown).replace(TerraQualityRegex.REGEX_G_REGEX_22(), '');
-	if (typeof val.html === 'string' && val.html.trim()) return val.html.replace(TerraQualityRegex.REGEX_G_REGEX_22(), ' ');
+	if (typeof val.markdown === 'string' && val.markdown.trim()) return fromBlockJsx(val.markdown).replace(HygieneRegex.REGEX_G_REGEX_22(), '');
+	if (typeof val.html === 'string' && val.html.trim()) return val.html.replace(HygieneRegex.REGEX_G_REGEX_22(), ' ');
 	const children = Array.isArray(val.children) ? val.children : [];
 	return bodyText(children.length > 0 ? children : (val.c ?? val.content ?? val.body ?? []));
 };
@@ -93,21 +93,19 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
 			.map(c => {
 				let html: string;
 				if (c.html?.trim())
-					html = sanitizeTableHtml(stripNestedAnchors(c.html.trim()))
-						.replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
-						.replace(TerraQualityRegex.REGEX_N_G_REGEX(), '$1<em>$2</em>$3');
+					html = sanitizeTableHtml(stripNestedAnchors(c.html.trim())).replace(HygieneRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>').replace(HygieneRegex.REGEX_N_G_REGEX(), '$1<em>$2</em>$3');
 				else {
 					const body = stringifyDocBody(c.content).trim();
-					if (TerraQualityRegex.REGEX_CODE_B_S_S_CODE_REGEX().test(body)) html = body;
+					if (HygieneRegex.REGEX_CODE_B_S_S_CODE_REGEX().test(body)) html = body;
 					else {
 						const table = body ? mdTableToHtml(body, renderMd) : null;
 						if (table) html = table;
-						else if (body) html = sanitizeTableHtml(TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(body) ? body : renderMd(body));
+						else if (body) html = sanitizeTableHtml(HygieneRegex.REGEX_TABLE_B_I_REGEX().test(body) ? body : renderMd(body));
 						else {
 							const md = fromBlockJsx(c.markdown || '').trim();
 							const fallback = mdTableToHtml(md, renderMd);
 							if (fallback) html = sanitizeTableHtml(fallback);
-							else if (TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(md)) html = sanitizeTableHtml(md);
+							else if (HygieneRegex.REGEX_TABLE_B_I_REGEX().test(md)) html = sanitizeTableHtml(md);
 							else {
 								const text = bodyText(c.content) || bodyText(c.markdown) || bodyText(c.html);
 								html = text ? sanitizeTableHtml(renderMd(text)) : '';
@@ -118,7 +116,7 @@ const tableHtml = (rows: { cells: DocTableCell[] }[]): string => {
 				if (html.includes('\n') || /<(?:p|ul|ol|table|pre|div)\b/i.test(html)) {
 					let depth = 0;
 					return `\t\t<${tag}>\n${html
-						.split(TerraQualityRegex.REGEX_R_N_REGEX())
+						.split(HygieneRegex.REGEX_R_N_REGEX())
 						.map(l => l.trim())
 						.filter(Boolean)
 						.map(l => {
@@ -193,7 +191,7 @@ const blockMd = (b: DocBlock, num = 1): string => {
 			const table = atomicTableHtml(text);
 			return table ? `\n${table}\n` : '';
 		}
-		if (b.style && TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
+		if (b.style && HygieneRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
 		if (b.listItem) return `\n${b.listItem === 'number' ? `${num}.` : '*'} ${text}\n`;
 		return text ? `\n${text}\n` : '';
 	}
@@ -288,9 +286,9 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
 				return `TERRA_EDITOR_TABLE_${tables.length - 1}`;
 			})
 			.replace(
-				TerraQualityRegex.REGEX_TABLE_B_S_S_TABLE_GI_REGEX(),
+				HygieneRegex.REGEX_TABLE_B_S_S_TABLE_GI_REGEX(),
 				t =>
-					`<DocsTable html={\`${toCodeJsx(fmtRawTable(t).trim()).replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQualityRegex.REGEX_G_REGEX_18(), '\\`').replace(TerraQualityRegex.REGEX_G_REGEX_16(), '\\$')}\`} />`,
+					`<DocsTable html={\`${toCodeJsx(fmtRawTable(t).trim()).replace(HygieneRegex.REGEX_G_REGEX_12(), '\\\\').replace(HygieneRegex.REGEX_G_REGEX_18(), '\\`').replace(HygieneRegex.REGEX_G_REGEX_16(), '\\$')}\`} />`,
 			),
 	);
 };
@@ -332,7 +330,7 @@ const editorBlockMd = (b: DocBlock, num = 1, mode: 'docs' | 'problem' = 'docs'):
 			const table = atomicTableHtml(text);
 			return table ? `\n${editorNestedMd(null, table)}\n` : '';
 		}
-		if (b.style && TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
+		if (b.style && HygieneRegex.REGEX_H_1_6_U_REGEX().test(b.style)) return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
 		if (b.listItem) return `\n${b.listItem === 'number' ? `${num}.` : '*'} ${text}\n`;
 		return text ? `\n${text}\n` : '';
 	}
@@ -419,7 +417,7 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
 	return src;
 };
 
-// terra-quality-ignore single-use -- Keep the documented editor serializer boundary so trace output and errors identify this exact MDX conversion stage.
+// hygiene-ignore single-use -- Keep the documented editor serializer boundary so trace output and errors identify this exact MDX conversion stage.
 /**
  * Stringifies the Editor Content Body for the docs.
  *

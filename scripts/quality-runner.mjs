@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { runQualityFromCfg as installedRunQualityFromCfg } from '@terra-symposium/quality/cli';
+import { runQualityFromCfg as installedRunQualityFromCfg } from '@terra-symposium/hygiene/cli';
 
 const script = fileURLToPath(import.meta.url);
 const root = dirname(dirname(script));

@@ -37,7 +37,7 @@ export function Empty({ title = 'Nothing to show', description: desc = '' }: { t
 	);
 }
 
-// terra-quality-ignore single-use -- Preserve the default User component export for external workspace consumers.
+// hygiene-ignore single-use -- Preserve the default User component export for external workspace consumers.
 /**
  * Displays the signed-in user's name or email when present.
  *

@@ -64,7 +64,7 @@ export const actions = action('') as unknown as {
 HELPERS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported configureDocsActionProxy callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported configureDocsActionProxy callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Installs the host invocation function used by nested Docs action calls.
  *

@@ -110,7 +110,7 @@ export const canonicalId = (value: string): string =>
 		.trim()
 		.replace(/[^a-z0-9_-]/gi, '-')
 		.toLowerCase();
-// terra-quality-ignore single-use -- Keep the exported normArcGraph module value available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported normArcGraph module value available to external consumers; its one local reference does not replace that contract.
 /**
  * Returns an arc graph unchanged for generic graph normalization call sites.
  *
@@ -134,7 +134,7 @@ export const isDarkMode = (): boolean => typeof document !== 'undefined' && docu
 HELPERS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported isDevOrigin callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported isDevOrigin callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Determines whether a URL belongs to a local development origin.
  *
@@ -153,7 +153,7 @@ export function isDevOrigin(value: string | URL): boolean {
 	}
 }
 
-// terra-quality-ignore single-use -- Keep the exported resolvedEdges callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported resolvedEdges callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Removes hidden nodes and invalid edges, then links disconnected content to the terminal node.
  *

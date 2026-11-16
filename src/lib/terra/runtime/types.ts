@@ -150,7 +150,7 @@ export type ToolbarState = {
 	setMode: (mode: Mode) => Promise<void>;
 	toggleList?: (kind: string) => void;
 };
-// terra-quality-ignore single-use -- Keep the exported EditorState type contract available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported EditorState type contract available to external consumers; its one local reference does not replace that contract.
 /** Load, save, and dirty state shared by the document editor. */
 export type EditorState = {
 	busy: string | null;
@@ -285,7 +285,7 @@ export type MenuTree = { components: RepoComponentWithLabel[]; folders: Record<s
 export type DragState = { active: boolean; path: string; kind: 'leaf' } | { fPath: string; kind: 'branch'; pPath: string };
 /** Drop target and relative placement for a tree reorder operation. */
 export type ReorderDropState = { key: string; position: 'after' | 'before' | 'inside' };
-// terra-quality-ignore single-use -- Keep the exported TableRow type contract available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported TableRow type contract available to external consumers; its one local reference does not replace that contract.
 /** Portable Text table row containing keyed cells. */
 export type TableRow<TCell = DocTableCell> = { _key: string; _type: 'row'; cells: TCell[] };
 /** DOM block annotated with optional Docs action metadata. */
@@ -380,7 +380,7 @@ export type Field = {
 
 /** Host adapter record for editor toolbar integrations. */
 export type EditorToolbarAdapter = UnknownRecord;
-// terra-quality-ignore single-use -- Keep the exported PortableEditorBlock type contract available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported PortableEditorBlock type contract available to external consumers; its one local reference does not replace that contract.
 /** Portable Text block used by the editor integration. */
 export type PortableEditorBlock = PortableBlock;
 
@@ -391,7 +391,7 @@ export type TerraContent = PortableBlock[];
 /** Problem document record used by problem content views. */
 export type Problem = { _id?: string; title?: string; [key: string]: unknown };
 
-// terra-quality-ignore single-use -- Keep the exported ArticleContent type contract available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported ArticleContent type contract available to external consumers; its one local reference does not replace that contract.
 /** Article body with standard text blocks and supported inline objects. */
 export type ArticleContent = Array<
 	PortableBlock<'block'> & {

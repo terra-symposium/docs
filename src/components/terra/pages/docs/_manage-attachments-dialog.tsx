@@ -22,7 +22,7 @@ import { useRenderTripwire } from './use-render-tripwire.js';
 import { Menu } from './_tree.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 // prettier-ignore
 import { Add as AddIcon, ArrowLeft as LeftArrowIcon, Box as BoxIcon, Catalog as CatalogIcon, Doc as DocumentIcon, Image as ImageIcon, Link as LinkIcon, LogoYoutube as YouTubeIcon, MagicWand as MagicIcon, Upload as UploadIcon } from '@carbon/icons-react';
@@ -38,7 +38,7 @@ import type { AttchTgt, AttchType, Branch, Leaf as LeafNode, Sister, Tree as Tre
 HELPERS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported ManageAttachmentsDialog component identity available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported ManageAttachmentsDialog component identity available to external consumers; its one local reference does not replace that contract.
 /**
  * Presents attachment selection, uploads, and organization actions for a tree target.
  *
@@ -106,7 +106,7 @@ export function ManageAttachmentsDialog({ tgt, setTgt, disabled, tree }: { tgt: 
 				title: `${gTitle} (Index)`,
 				fullTitle: gTitle,
 				id: (n as Branch).origName,
-				path: 'url' in n && n.url ? n.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '',
+				path: 'url' in n && n.url ? n.url.replace(HygieneRegex.REGEX_DOCS_REGEX(), '') : '',
 				type: 'Index' as const,
 				node: n,
 			});
@@ -139,13 +139,13 @@ export function ManageAttachmentsDialog({ tgt, setTgt, disabled, tree }: { tgt: 
 			}[] = [];
 			const sectTitle = cTitle(toNodeLabel(tgt.title));
 			// prettier-ignore
-			groups.push({ groupTitle: 'Section Root', nodes: [{ title: `${sectTitle} (Index)`, fullTitle: sectTitle, id: (n as Branch).origName, path: 'url' in n && n.url ? n.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: n },] });
+			groups.push({ groupTitle: 'Section Root', nodes: [{ title: `${sectTitle} (Index)`, fullTitle: sectTitle, id: (n as Branch).origName, path: 'url' in n && n.url ? n.url.replace(HygieneRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: n },] });
 			(n as Branch).children?.forEach(c => {
 				if (c.type === 'branch') {
 					const gTitle = cTitle(toNodeLabel(c.title || c.origName));
 					const gNodes = [];
 					// prettier-ignore
-					gNodes.push({ title: `${gTitle} (Index)`, fullTitle: `${sectTitle} / ${gTitle}`, id: c.origName, path: 'url' in c && c.url ? c.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: c });
+					gNodes.push({ title: `${gTitle} (Index)`, fullTitle: `${sectTitle} / ${gTitle}`, id: c.origName, path: 'url' in c && c.url ? c.url.replace(HygieneRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: c });
 					c.children?.forEach(l => {
 						if (l.type === 'leaf') {
 							const lTitle = cTitle(toNodeLabel(l.title || l.origName));
@@ -334,9 +334,7 @@ export function ManageAttachmentsDialog({ tgt, setTgt, disabled, tree }: { tgt: 
 	 */
 	const addRemote = async (v: string, type: AttchType | 'page', tgtPath: string, titleOverride?: string) => {
 		if (!tgtPath || !v.trim()) return;
-		const urls = v
-			.split(TerraQualityRegex.REGEX_N_S_REGEX())
-			.filter(u => (type === 'tsdocs' ? u.trim().length > 0 : u.startsWith('http') || isDocsPath(u) || u.startsWith('/tsdocs') || type === 'page'));
+		const urls = v.split(HygieneRegex.REGEX_N_S_REGEX()).filter(u => (type === 'tsdocs' ? u.trim().length > 0 : u.startsWith('http') || isDocsPath(u) || u.startsWith('/tsdocs') || type === 'page'));
 		if (!urls.length) return;
 		void runMutation(
 			async () => {
@@ -344,14 +342,14 @@ export function ManageAttachmentsDialog({ tgt, setTgt, disabled, tree }: { tgt: 
 					urls.map(async u => {
 						let t = type;
 						if (t === 'other')
-							t = u.toLowerCase().split('?')[0].endsWith('.pdf') ? 'document' : TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(u.toLowerCase().split('?')[0] ?? '') ? 'image' : t;
+							t = u.toLowerCase().split('?')[0].endsWith('.pdf') ? 'document' : HygieneRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(u.toLowerCase().split('?')[0] ?? '') ? 'image' : t;
 						if (t === 'page') {
 							// directly inject a strict Sanity reference to the existing document
 							// prettier-ignore
 							await actions.write.attachment.docRef({
 								path: tgtPath,
 								refId: u, // u is the pure Sanity path/id
-								title: titleOverride || u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Page',
+								title: titleOverride || u.split('/').filter(Boolean).pop()?.replace(HygieneRegex.REGEX_G_REGEX_7(), ' ').replace(HygieneRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Page',
 							});
 						} else if (t === 'youtube') {
 							await actions.write.attachment.youtube({ path: tgtPath, url: u });
@@ -368,7 +366,7 @@ export function ManageAttachmentsDialog({ tgt, setTgt, disabled, tree }: { tgt: 
 							});
 						} else if (t === 'tsdocs') {
 							// prettier-ignore
-							await actions.write.attachment.link({ path: tgtPath, url: u.startsWith('http') ? u : u.startsWith('/') ? `${window.location.origin}${u}` : `${window.location.origin}${docsPath(`tsdocs/${u}`)}`, type: 'tsdocs', title: u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Reference' });
+							await actions.write.attachment.link({ path: tgtPath, url: u.startsWith('http') ? u : u.startsWith('/') ? `${window.location.origin}${u}` : `${window.location.origin}${docsPath(`tsdocs/${u}`)}`, type: 'tsdocs', title: u.split('/').filter(Boolean).pop()?.replace(HygieneRegex.REGEX_G_REGEX_7(), ' ').replace(HygieneRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Reference' });
 						} else
 							await actions.write.attachment.remoteFile({
 								path: tgtPath,

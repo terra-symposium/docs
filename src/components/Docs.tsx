@@ -72,7 +72,7 @@ export function Docs({ value, className, blocks, mode, onChange }: DocsProps): J
 	);
 }
 
-// terra-quality-ignore single-use -- Keep DocsSurface as the child component that owns the editor hooks under EditorProvider.
+// hygiene-ignore single-use -- Keep DocsSurface as the child component that owns the editor hooks under EditorProvider.
 /**
  *
  * @param props

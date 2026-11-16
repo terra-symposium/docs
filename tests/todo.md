@@ -2947,7 +2947,7 @@ This checklist inventories repository-owned functions, documents, and configurat
 - [ ] `config/.nvmrc`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `config/.prettierignore`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `config/.prettierrc.json`: validate syntax or schema, exercise its owning tool, and check references to this file.
-- [ ] `config/.terra-tests.json`: validate syntax or schema, exercise its owning tool, and check references to this file.
+- [ ] `config/tests.json`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `config/knip.json`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `config/package.json`: validate syntax or schema, exercise its owning tool, and check references to this file.
 - [ ] `config/quality.json`: validate syntax or schema, exercise its owning tool, and check references to this file.

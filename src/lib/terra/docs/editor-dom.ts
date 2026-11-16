@@ -11,7 +11,7 @@ IMPORTS
 import { warn } from '../runtime/runtime.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../regex.mjs';
+import * as HygieneRegex from '../regex.mjs';
 
 // TYPES
 import type { EditorSel } from '../runtime/types.js';
@@ -209,7 +209,7 @@ export function htmlToMd(html: string): string {
 				text = el.closest('pre') ? children : `\`${children}\``;
 				break;
 			case 'pre': {
-				const match = el.querySelector('code')?.className.match(TerraQualityRegex.REGEX_LANGUAGE_A_Z0_9_I_REGEX());
+				const match = el.querySelector('code')?.className.match(HygieneRegex.REGEX_LANGUAGE_A_Z0_9_I_REGEX());
 				text = `\n\`\`\`${match ? match[1] : 'text'}\n${children.trim()}\n\`\`\`\n`;
 				break;
 			}
@@ -232,5 +232,5 @@ export function htmlToMd(html: string): string {
 		}
 		rendered.set(curr.node, text);
 	}
-	return (rendered.get(root) || '').replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n').trim();
+	return (rendered.get(root) || '').replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n').trim();
 }

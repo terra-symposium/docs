@@ -11,7 +11,7 @@ IMPORTS
 import { toCodeJsx } from './markdown.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../regex.mjs';
+import * as HygieneRegex from '../../regex.mjs';
 
 /*//////////////////////////////////////////////////
 BLOCK SYNTAX
@@ -52,19 +52,19 @@ export function fromBlockJsx(jsx: string): string {
 		.replace(/^\\?:\\?:\\?:/gm, ':::')
 		.replace(/^(===|\|\|\||\^\^\^|:::)[ \t]*\\?\[(.*?)\\?\]/gm, (_m, p, c) => `${p}[${c.replace(/\\\]/g, ']').replace(/\\\[/g, '[')}]`);
 	_rs = _rs
-		.replace(TerraQualityRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
+		.replace(HygieneRegex.REGEX_XA0_U2002_U2003_U200B_G_REGEX(), ' ')
 		.replace(/<DocsMath\b([\s\S]*?)code=(?:\{\s*("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`)\s*\}|(["'])([\s\S]*?)\3)([\s\S]*?)\/>/gi, (_m, p, e, _quote, s, v) => {
 			// prettier-ignore
 			const parsed = e
 					? e.startsWith('`')
-						? e.slice(1, -1).replace(TerraQualityRegex.REGEX_G_REGEX_15(), '`').replace(TerraQualityRegex.REGEX_G_REGEX_14(), '$').replace(TerraQualityRegex.REGEX_G_REGEX_13(), '\\')
-						: e.startsWith('"') ? JSON.parse(e.replace(TerraQualityRegex.REGEX_N_G_REGEX_3(), '\\n')) : e.slice(1, -1).replace(/\\([`'"])/g, '$1')
+						? e.slice(1, -1).replace(HygieneRegex.REGEX_G_REGEX_15(), '`').replace(HygieneRegex.REGEX_G_REGEX_14(), '$').replace(HygieneRegex.REGEX_G_REGEX_13(), '\\')
+						: e.startsWith('"') ? JSON.parse(e.replace(HygieneRegex.REGEX_N_G_REGEX_3(), '\\n')) : e.slice(1, -1).replace(/\\([`'"])/g, '$1')
 					: s;
-			return TerraQualityRegex.REGEX_BINLINE_B_I_REGEX().test(p) || TerraQualityRegex.REGEX_BINLINE_B_I_REGEX().test(v) ? `$${parsed}$` : `\n\n$$${parsed}$$\n\n`;
+			return HygieneRegex.REGEX_BINLINE_B_I_REGEX().test(p) || HygieneRegex.REGEX_BINLINE_B_I_REGEX().test(v) ? `$${parsed}$` : `\n\n$$${parsed}$$\n\n`;
 		})
-		.replace(TerraQualityRegex.REGEX_S_S_N_G_REGEX(), _m => _m.replace(/\\\{/g, '{').replace(/\\\}/g, '}').replace(/\\</g, '<').replace(/\\>/g, '>'));
-	_rs = _rs.replace(/(<\/?(?:AccordionGroup|TabsGroup|AccordionItem|TabsItem)\b[^>]*>)/g, '\n$1\n').replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
-	if (code.size) _rs = _rs.replace(TerraQualityRegex.REGEX_TERRA_CODE_D_G_REGEX(), k => code.get(k) || k);
+		.replace(HygieneRegex.REGEX_S_S_N_G_REGEX(), _m => _m.replace(/\\\{/g, '{').replace(/\\\}/g, '}').replace(/\\</g, '<').replace(/\\>/g, '>'));
+	_rs = _rs.replace(/(<\/?(?:AccordionGroup|TabsGroup|AccordionItem|TabsItem)\b[^>]*>)/g, '\n$1\n').replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n');
+	if (code.size) _rs = _rs.replace(HygieneRegex.REGEX_TERRA_CODE_D_G_REGEX(), k => code.get(k) || k);
 	const lns = _rs.split('\n');
 	const out: string[] = [];
 	let icode = false;
@@ -114,5 +114,5 @@ export function fromBlockJsx(jsx: string): string {
 		}
 		out.push(raw.replace(/^[ \t]{1,8}/, ''));
 	}
-	return /* prettier-ignore */ out.join('\n').replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n').trim() + '\n';
+	return /* prettier-ignore */ out.join('\n').replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n').trim() + '\n';
 }

@@ -8,9 +8,9 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../regex.mjs';
+import * as HygieneRegex from '../../regex.mjs';
 
-// terra-quality-ignore single-use -- Keep delimiter normalization as a named stage before code and table protection so the transformation order stays explicit.
+// hygiene-ignore single-use -- Keep delimiter normalization as a named stage before code and table protection so the transformation order stays explicit.
 /**
  * Separates compact tabs markers before they reach the line-based block parser.
  *
@@ -42,11 +42,11 @@ export const quote = (value: string): string => JSON.stringify(value);
  */
 const escHtml = (value: string): string =>
 	value
-		.replace(TerraQualityRegex.REGEX_G_REGEX_17(), '&amp;')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_23(), '&lt;')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_24(), '&gt;')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_5(), '&quot;')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_4(), '&#39;');
+		.replace(HygieneRegex.REGEX_G_REGEX_17(), '&amp;')
+		.replace(HygieneRegex.REGEX_G_REGEX_23(), '&lt;')
+		.replace(HygieneRegex.REGEX_G_REGEX_24(), '&gt;')
+		.replace(HygieneRegex.REGEX_G_REGEX_5(), '&quot;')
+		.replace(HygieneRegex.REGEX_G_REGEX_4(), '&#39;');
 
 /*//////////////////////////////////////////////////
 CODE SYNTAX
@@ -78,7 +78,7 @@ export function stringifyCodeValue(val: unknown): string {
 		for (let i = 0; i < 16; i++) {
 			const match = n.match(/^\s*\{`([\s\S]*)`}\s*$/);
 			if (!match) break;
-			const unwrapped = (match[1] ?? '').replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1').replace(TerraQualityRegex.REGEX_N_G_REGEX_2(), '\n');
+			const unwrapped = (match[1] ?? '').replace(HygieneRegex.REGEX_G_REGEX_11(), '$1').replace(HygieneRegex.REGEX_N_G_REGEX_2(), '\n');
 			if (unwrapped === n) break;
 			n = unwrapped;
 		}
@@ -106,7 +106,7 @@ export function stringifyCodeValue(val: unknown): string {
  */
 export function codeJsx(lang: string | undefined, val: string): string {
 	return `\n<Code${codeAttrs(lang)}>\n{\`
-${val.replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\').replace(TerraQualityRegex.REGEX_G_REGEX_18(), '\\`').replace(TerraQualityRegex.REGEX_G_REGEX_16(), '\\$')}
+${val.replace(HygieneRegex.REGEX_G_REGEX_12(), '\\\\').replace(HygieneRegex.REGEX_G_REGEX_18(), '\\`').replace(HygieneRegex.REGEX_G_REGEX_16(), '\\$')}
 \`}\n</Code>\n`;
 }
 
@@ -136,7 +136,7 @@ export function toCodeJsx(src: string): string {
 	let fenced = false;
 	let lang = '';
 	let body: string[] = [];
-	for (const line of src.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').split('\n')) {
+	for (const line of src.replace(HygieneRegex.REGEX_R_N_G_REGEX(), '\n').split('\n')) {
 		const trim = line.trimStart();
 		if (trim.startsWith('```')) {
 			if (fenced) {
@@ -170,15 +170,15 @@ export function toCodeJsx(src: string): string {
 					v
 						.replace(/&#10;/g, '\n')
 						.replace(/&#13;/g, '\r')
-						.replace(TerraQualityRegex.REGEX_QUOT_G_REGEX(), '"')
+						.replace(HygieneRegex.REGEX_QUOT_G_REGEX(), '"')
 						.replace(/&#39;/g, "'")
-						.replace(TerraQualityRegex.REGEX_AMP_G_REGEX(), '&')
-						.replace(TerraQualityRegex.REGEX_LT_G_REGEX(), '<')
-						.replace(TerraQualityRegex.REGEX_GT_G_REGEX(), '>'),
+						.replace(HygieneRegex.REGEX_AMP_G_REGEX(), '&')
+						.replace(HygieneRegex.REGEX_LT_G_REGEX(), '<')
+						.replace(HygieneRegex.REGEX_GT_G_REGEX(), '>'),
 				)}</${t}>`,
 		);
 	res = res.replace(/<Code\b([\s\S]*?)\s+code=(?:"([\s\S]*?)"|\{`((?:\\.|[^`])*?)`\})\s*\/>/g, (_match, p, q, e) => {
-		return `<Code${p} source=${quote(e !== undefined ? e.replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1') : q)} />`;
+		return `<Code${p} source=${quote(e !== undefined ? e.replace(HygieneRegex.REGEX_G_REGEX_11(), '$1') : q)} />`;
 	});
 	return blocks.reduce((n, b, i) => n.replace(new RegExp(`TERRA_PROTECTED_${i}__`, 'g'), b), res);
 }
@@ -218,7 +218,7 @@ const trimPipe = (val: string, side: 'start' | 'end'): string => {
  * Callers can supply a custom cell renderer to preserve nested markdown or JSX.
  */
 export const mdTableToHtml = (md: string, renderCell: (val: string) => string = escHtml): string | null => {
-	const lines = md.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').trim().split('\n');
+	const lines = md.replace(HygieneRegex.REGEX_R_N_G_REGEX(), '\n').trim().split('\n');
 	if (lines.length < 2 || lines.some(l => !l.trim())) return null;
 	const rows = lines.map(l => {
 		const cells: string[] = [];
@@ -276,9 +276,9 @@ export const renderMd = (val: string): string => {
 			return `__CODE_${codes.length - 1}__`;
 		})
 		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, l: string, h: string) => `<a href="${escHtml(h)}">${l}</a>`)
-		.replace(TerraQualityRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
-		.replace(TerraQualityRegex.REGEX_N_G_REGEX(), (_, a: string, b: string, v: string) => `${a}<em>${b}</em>${v}`)
-		.replace(TerraQualityRegex.REGEX_N_G_REGEX_3(), '<br />');
+		.replace(HygieneRegex.REGEX_S_S_G_REGEX(), '<strong>$1</strong>')
+		.replace(HygieneRegex.REGEX_N_G_REGEX(), (_, a: string, b: string, v: string) => `${a}<em>${b}</em>${v}`)
+		.replace(HygieneRegex.REGEX_N_G_REGEX_3(), '<br />');
 	codes.forEach((c, i) => {
 		html = html.replace(`__CODE_${i}__`, c);
 	});
@@ -312,7 +312,7 @@ export const sanitizeTableHtml = (val: string): string => val.replace(/<style\b[
  * @return Formatted table HTML string with stable indentation.
  */
 export const fmtRawTable = (val: string): string => {
-	if (!TerraQualityRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
+	if (!HygieneRegex.REGEX_TABLE_B_I_REGEX().test(val)) return val;
 	let depth = 0;
 	return val
 		.replace(/\s*\n\s*/g, ' ')
@@ -374,7 +374,7 @@ const protectMarkupBlocks = (src: string, tag: string, blocks: string[]): string
 	}
 };
 
-// terra-quality-ignore single-use -- Keep the exported normDocsSpacing module value available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported normDocsSpacing module value available to external consumers; its one local reference does not replace that contract.
 /**
  * Normalizes block spacing in serialized docs source.
  *
@@ -398,15 +398,15 @@ export const normDocsSpacing = (src: string): string => {
 			.replace(/^(:::[A-Za-z][\w-]*(?:\[[^\]]*\])?)\s+(.+)$/gm, '$1\n\n$2')
 			.replace(/^:::\s+(.+)$/gm, ':::\n\n$1')
 			.replace(/([^\n])\s+(?=:::(?![A-Za-z]))/g, '$1\n\n')
-			.replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
+			.replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n');
 		if (n === n) break;
 	}
 	n = n
 		.split('\n')
 		.reduce<{ lines: string[]; prev: string }>(
 			(a, l) => {
-				const currList = TerraQualityRegex.REGEX_S_D_S_REGEX().test(l);
-				const prevList = TerraQualityRegex.REGEX_S_D_S_REGEX().test(a.prev);
+				const currList = HygieneRegex.REGEX_S_D_S_REGEX().test(l);
+				const prevList = HygieneRegex.REGEX_S_D_S_REGEX().test(a.prev);
 				if (!l.trim()) {
 					a.lines.push(l);
 					return a;
@@ -424,7 +424,7 @@ export const normDocsSpacing = (src: string): string => {
 		.flatMap(l => {
 			const heading = l.match(/^(#{1,6}\s+)(.+)$/);
 			if (!heading) return [l];
-			const words = (heading[2] ?? '').trim().split(TerraQualityRegex.REGEX_S_REGEX_2()).filter(Boolean);
+			const words = (heading[2] ?? '').trim().split(HygieneRegex.REGEX_S_REGEX_2()).filter(Boolean);
 			if (words.length < 2) return [l];
 			let cap = 0;
 			for (const word of words) {
@@ -436,7 +436,7 @@ export const normDocsSpacing = (src: string): string => {
 			return [`${heading[1]}${words.slice(0, Math.max(1, cap - 1)).join(' ')}`, '', words.slice(Math.max(1, cap - 1)).join(' ')];
 		})
 		.join('\n')
-		.replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n');
+		.replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n');
 	return blocks
 		.reduceRight((o, b, i) => o.replace(new RegExp(`TERRA_PROTECTED_${i}__`, 'g'), b), n)
 		.replace(/(<\/Code>)[ \t]*(\d+)(?=\s|$)/g, '$1')

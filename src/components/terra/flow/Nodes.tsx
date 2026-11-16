@@ -111,7 +111,7 @@ const MENU_CLASS = {
 NODE TYPES
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep this named React Flow group renderer stable so graph edits do not remount group nodes.
+// hygiene-ignore single-use -- Keep this named React Flow group renderer stable so graph edits do not remount group nodes.
 /**
  * Renders the container node used to group related flowchart nodes.
  *
@@ -171,7 +171,7 @@ function createNode(className: string, inner?: string): (props: NodeProps<XyNode
 	};
 }
 
-// terra-quality-ignore single-use -- Keep this named React Flow note renderer stable so graph edits do not remount note nodes.
+// hygiene-ignore single-use -- Keep this named React Flow note renderer stable so graph edits do not remount note nodes.
 /**
  * Renders a sticky-note style node in the flowchart.
  *
@@ -906,7 +906,7 @@ const FLOW_COMPS = {
 COMPONENT
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Preserve the default Nodes component export used by external Docs flow consumers.
+// hygiene-ignore single-use -- Preserve the default Nodes component export used by external Docs flow consumers.
 /**
  * Renders the flow editor wrapper used by docs diagrams.
  *

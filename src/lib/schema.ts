@@ -20,7 +20,7 @@ import type { DocsBlockOptions } from '../components/blocks.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported schema module value available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported schema module value available to external consumers; its one local reference does not replace that contract.
 export const schema = createDocsSchema();
 
 /*//////////////////////////////////////////////////

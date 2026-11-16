@@ -108,7 +108,7 @@ export function DocsLocalWorkspace({ tree, pages, pathname, title, description: 
 	const content = useMemo(() => (page ? markdownToDocsValue(page.markdown) : []), [page]);
 	const [primary, secondary] = colors(hue);
 
-	// terra-quality-ignore single-use -- Keep the host memo at this hook position so its adapter identity survives renders.
+	// hygiene-ignore single-use -- Keep the host memo at this hook position so its adapter identity survives renders.
 	const host = useMemo<DocsHostAdapter>(() => {
 		const aPage = (): DocsLocalPage | undefined => (typeof window === 'undefined' ? page : (findPage(pages, `${window.location.pathname}${window.location.search}${window.location.hash}`) ?? page));
 		const resolvePage = (input: unknown): DocsLocalPage | undefined => {

@@ -92,7 +92,7 @@ export default function WorkspaceDemo({ readOnly = false, hue = 145 }: { readOnl
 				return state.documents.salesphere ? 'salesphere' : (Object.keys(state.documents)[0] ?? '');
 			})()
 		] ?? state.documents.salesphere;
-	// terra-quality-ignore single-use -- Memoize the demo host at a stable hook position so editor consumers retain its identity.
+	// hygiene-ignore single-use -- Memoize the demo host at a stable hook position so editor consumers retain its identity.
 	const host = useMemo(() => createWorkspaceDemoHost(readOnly), [readOnly]);
 	const [primary, secondary] = colors(hue);
 	if (!selectedDoc) return <div className='min-h-svh' />;

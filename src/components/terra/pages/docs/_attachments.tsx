@@ -17,7 +17,7 @@ import { $attachmentFilter } from '../../../../lib/terra/docs/attachments.js';
 import { $surfaceReady, $transition, clearTransition, useAtom } from '../../../../lib/terra/docs/state.js';
 import { actions } from '../../../../lib/terra/runtime/action-proxy.js';
 import { cn, error as logError, errorLog, isRec, notify, warn } from '../../../../lib/terra/runtime/runtime.js';
-import { createElement, createElement as __terraQualityCreateElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createElement, createElement as __hygieneCreateElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { currLeafSrc } from '../../../../lib/terra/runtime/leaf.js';
 import { dirname, docsPath, isDocsPath } from '../../../../lib/terra/runtime/shared.js';
 import { sanitizeName } from '../../../../lib/terra/docs/tree.js';
@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import { uploadAssetChunked } from '../../../../lib/terra/docs/assets.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 // prettier-ignore
 import { ArrowUpRight as PopOutIcon, Box as BoxIcon, Catalog as CatalogIcon, Copy as CopyIcon, Doc as DocumentIcon, Download as DownloadIcon, Edit as EditIcon, Image as ImageIcon, Link as LinkIcon, LogoYoutube as YouTubeIcon, MagicWand as MagicIcon, TrashCan as TrashIcon, Upload as UploadIcon } from '@carbon/icons-react';
 // prettier-ignore
@@ -150,7 +150,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 			else if (s.name.toLowerCase().endsWith('.pdf') || s.path.toLowerCase().split('?')[0].endsWith('.pdf') || s.isMd || s.type === 'document') cat = 'document';
 			else if (s.type === 'website') cat = 'website';
 			else if (s.type === 'tsdocs') cat = 'tsdocs';
-			else if (TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(s.name)) cat = 'image';
+			else if (HygieneRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(s.name)) cat = 'image';
 			else if (s.type && ((val: string): val is AttchType => (ATTCH_TYPES as readonly string[]).includes(val))(s.type)) cat = s.type;
 			if (!attchFilter.includes(cat)) continue;
 			(groups[cat] ??= []).push(s);
@@ -285,7 +285,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 				return;
 			}
 			validFiles.forEach((f, i) => {
-				const isMdFile = TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(f.name);
+				const isMdFile = HygieneRegex.REGEX_MD_MDX_I_REGEX().test(f.name);
 				const tmpId = `temp-${Date.now()}-${i}`;
 				setSisters(p => [...p, { id: tmpId, path: tmpId, name: f.name, isMd: isMdFile }]);
 				void processUpload(f, tmpId, isMdFile);
@@ -298,7 +298,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 		async (v: string, t: AttchType) => {
 			setAddDialogOpen(false);
 			if ($transition.get() || !dPath || !v.trim()) return;
-			const urls = v.split(TerraQualityRegex.REGEX_N_S_REGEX()).filter(u => (t === 'tsdocs' ? u.trim().length > 0 : u.startsWith('http') || isDocsPath(u) || u.startsWith('/tsdocs')));
+			const urls = v.split(HygieneRegex.REGEX_N_S_REGEX()).filter(u => (t === 'tsdocs' ? u.trim().length > 0 : u.startsWith('http') || isDocsPath(u) || u.startsWith('/tsdocs')));
 			if (!urls.length) return;
 			setUploading(true);
 			await Promise.allSettled(
@@ -306,7 +306,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 					let aType = t;
 					if (t === 'other') {
 						if (u.toLowerCase().split('?')[0].endsWith('.pdf')) aType = 'document';
-						else if (TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(u.toLowerCase().split('?')[0] ?? '')) aType = 'image';
+						else if (HygieneRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(u.toLowerCase().split('?')[0] ?? '')) aType = 'image';
 					}
 					const tmpId = `temp-${aType}-${Date.now()}-${i}`;
 					// prettier-ignore
@@ -361,9 +361,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 								path: docId,
 								url: fmtUrl,
 								type: 'tsdocs',
-								title: (u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ') || 'TsDocs Reference').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c =>
-									c.toUpperCase(),
-								),
+								title: (u.split('/').filter(Boolean).pop()?.replace(HygieneRegex.REGEX_G_REGEX_7(), ' ') || 'TsDocs Reference').replace(HygieneRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()),
 							});
 							if (linkErr || !linkData) throw linkErr;
 							const { title } = linkData as { title: string; id: string };
@@ -408,12 +406,12 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 			const text = e.clipboardData?.getData('text');
 			if (text) {
-				const urls = text.split(TerraQualityRegex.REGEX_N_S_REGEX()).filter(u => u.startsWith('http') || isDocsPath(u) || u.startsWith('/tsdocs'));
+				const urls = text.split(HygieneRegex.REGEX_N_S_REGEX()).filter(u => u.startsWith('http') || isDocsPath(u) || u.startsWith('/tsdocs'));
 				if (urls.length > 0) {
 					e.preventDefault();
 					const ytUrls = urls.filter(u => u.includes('youtube.com') || u.includes('youtu.be'));
 					const refUrls = urls.filter(u => u.includes('/tsdocs/'));
-					const imgUrls = urls.filter(u => TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(u.toLowerCase().split('?')[0] ?? ''));
+					const imgUrls = urls.filter(u => HygieneRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(u.toLowerCase().split('?')[0] ?? ''));
 					const docUrls = [...urls.filter(u => u.toLowerCase().split('?')[0].endsWith('.pdf')), ...urls.filter(u => u.toLowerCase().split('?')[0].endsWith('.json'))];
 					const webUrls = urls.filter(u => !ytUrls.includes(u) && !refUrls.includes(u) && !docUrls.includes(u) && !imgUrls.includes(u));
 					if (ytUrls.length > 0) void addRemote(ytUrls.join('\n'), 'youtube');
@@ -443,7 +441,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 		if (!renameDlg) return;
 		try {
 			const { path, name, isMd, id } = renameDlg;
-			const nFilename = `${sanitizeName(nName)}${name.match(TerraQualityRegex.REGEX_I_REGEX())?.[0] ?? ''}`;
+			const nFilename = `${sanitizeName(nName)}${name.match(HygieneRegex.REGEX_I_REGEX())?.[0] ?? ''}`;
 			const nPath = `${dirname(path) === '.' ? '' : `${dirname(path)}/`}${nFilename}`;
 			setSisters(p => p.map(s => (s.path === path ? { ...s, path: nPath, name: nFilename } : s)));
 			if (isMd) {
@@ -663,7 +661,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 												}}
 											>
 												<CardHeader>
-													{__terraQualityCreateElement(
+													{__hygieneCreateElement(
 														/* prettier-ignore */ v.type === 'youtube' ? YouTubeIcon : v.type === 'website' ? LinkIcon : v.type === 'image' ? ImageIcon : v.type === 'tsdocs' ? CatalogIcon : v.type === 'other' ? BoxIcon : DocumentIcon,
 														{ className: 'size-6 text-primary-10', 'aria-hidden': 'true' },
 													)}
@@ -824,7 +822,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 										? [
 												{
 													onSelect: () => {
-														setRenameInput(ctxAttachment.item.name.replace(TerraQualityRegex.REGEX_I_REGEX(), ''));
+														setRenameInput(ctxAttachment.item.name.replace(HygieneRegex.REGEX_I_REGEX(), ''));
 														setRenameDlg({
 															open: true,
 															path: ctxAttachment.item.path,
@@ -872,7 +870,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 																	void (async () => {
 																		const path = ctxAttachment.item.path;
 																		if (!path) return;
-																		const name = window.prompt('Duplicate file name', `${path.split('/').at(-1)?.replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX(), '') ?? ''}-copy`);
+																		const name = window.prompt('Duplicate file name', `${path.split('/').at(-1)?.replace(HygieneRegex.REGEX_MD_MDX_I_REGEX(), '') ?? ''}-copy`);
 																		if (!name) return;
 																		try {
 																			const { data: docData, error: readErr } = await actions.read.doc.get({ path });
@@ -970,7 +968,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 								variant='ghost'
 								onClick={() => {
 									[...mergePdfState.pdfs, ...mergePdfState.others].forEach((f, i) => {
-										const isMdFile = TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(f.name);
+										const isMdFile = HygieneRegex.REGEX_MD_MDX_I_REGEX().test(f.name);
 										const tmpId = `temp-${Date.now()}-${i}`;
 										setSisters(p => [...p, { id: tmpId, path: tmpId, name: f.name, isMd: isMdFile, type: 'document' }]);
 										void processUpload(f, tmpId, isMdFile);
@@ -994,7 +992,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 											(await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach(p => mergedPdf.addPage(p));
 										}
 										[new File([(await mergedPdf.save()).buffer as ArrayBuffer], 'Merged-Document.pdf', { type: 'application/pdf' }), ...mergePdfState.others].forEach((f, i) => {
-											const isMdFile = TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(f.name);
+											const isMdFile = HygieneRegex.REGEX_MD_MDX_I_REGEX().test(f.name);
 											const tmpId = `temp-${Date.now()}-${i}`;
 											setSisters(p => [...p, { id: tmpId, path: tmpId, name: f.name, isMd: isMdFile, type: 'document' }]);
 											void processUpload(f, tmpId, isMdFile);
@@ -1036,7 +1034,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 													if (!viewDlg) return;
 													try {
 														if (viewDlg.type === 'tsdocs') {
-															const scopeMatch = viewDlg.path.match(TerraQualityRegex.REGEX_DOCS_TSDOCS_REGEX());
+															const scopeMatch = viewDlg.path.match(HygieneRegex.REGEX_DOCS_TSDOCS_REGEX());
 															const scope = scopeMatch ? scopeMatch[1] : viewDlg.path;
 															const { data, error } = await actions.read.tsdocs({ scope });
 															if (!error && data?.docs) {
@@ -1058,7 +1056,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 																);
 																const a = document.createElement('a');
 																a.href = url;
-																a.download = `${sanitizeName(scope.replace(TerraQualityRegex.REGEX_G_REGEX_10(), '-'))}.json`;
+																a.download = `${sanitizeName(scope.replace(HygieneRegex.REGEX_G_REGEX_10(), '-'))}.json`;
 																document.body.appendChild(a);
 																a.click();
 																document.body.removeChild(a);
@@ -1071,7 +1069,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 															return;
 														}
 														let dlName = viewDlg.title || viewDlg.name;
-														const extMatch = viewDlg.path.split('?')[0]?.match(TerraQualityRegex.REGEX_A_Z0_9_I_REGEX());
+														const extMatch = viewDlg.path.split('?')[0]?.match(HygieneRegex.REGEX_A_Z0_9_I_REGEX());
 														if (extMatch && !dlName.toLowerCase().endsWith(extMatch[0].toLowerCase())) dlName = `${dlName}${extMatch[0]}`;
 														else if (viewDlg.type === 'document' && !dlName.toLowerCase().endsWith('.pdf')) dlName = `${dlName}.pdf`;
 														const { data, error } = await actions.read.asset.get({
@@ -1185,7 +1183,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 														if (i.isMd) {
 														const { data: docData } = await actions.read.doc.get({ path: i.path });
 														await actions.write.doc.save({
-															path: `${dirname(destPath)}/${`${i.name.replace(TerraQualityRegex.REGEX_I_REGEX(), '')}-copy-${Math.floor(Math.random() * 10000)}${i.name.match(TerraQualityRegex.REGEX_I_REGEX())?.[0] ?? ''}`}`,
+															path: `${dirname(destPath)}/${`${i.name.replace(HygieneRegex.REGEX_I_REGEX(), '')}-copy-${Math.floor(Math.random() * 10000)}${i.name.match(HygieneRegex.REGEX_I_REGEX())?.[0] ?? ''}`}`,
 															source: (docData as Md).source as string,
 														});
 													} else if (i.id) {

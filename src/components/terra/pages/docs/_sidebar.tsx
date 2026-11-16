@@ -30,7 +30,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRenderTripwire } from './use-render-tripwire.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 import Tree, { Menu } from './_tree.js';
 import User, { ErrorBoundary } from '../../ui.js';
@@ -433,7 +433,7 @@ export default (function Nav({
 					 *
 					 * @return
 					 */
-					const cPath = (val: string): string => val.replace(TerraQualityRegex.REGEX_DRAFTS_REGEX(), '').replace(TerraQualityRegex.REGEX_MD_MDX_PDF_I_REGEX(), '');
+					const cPath = (val: string): string => val.replace(HygieneRegex.REGEX_DRAFTS_REGEX(), '').replace(HygieneRegex.REGEX_MD_MDX_PDF_I_REGEX(), '');
 					return nodes.map(n => {
 						const nodePath = n.type === 'leaf' ? n.path || '' : '';
 						if (
@@ -482,7 +482,7 @@ export default (function Nav({
 									...node,
 									path: d.nfilepath,
 									title: d.title ?? node.title,
-									url: docsPath(d.nfilepath.replace(TerraQualityRegex.REGEX_PATTERN_REGEX_6(), '').replace(FILES.markdown, '').replace(TerraQualityRegex.REGEX_INDEX_I_REGEX(), '')),
+									url: docsPath(d.nfilepath.replace(HygieneRegex.REGEX_PATTERN_REGEX_6(), '').replace(FILES.markdown, '').replace(HygieneRegex.REGEX_INDEX_I_REGEX(), '')),
 								});
 								continue;
 							}
@@ -642,7 +642,7 @@ export default (function Nav({
 								if (srcErr) throw srcErr;
 								// pass the raw path string straight out of the selection array to the RM action to safely hit Sanity identifiers without verifyWrite injecting `.mdx`
 								for (const p of restPaths) {
-									if ((TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(p))) await actions.write.doc.rm({ path: dirname(p), type: 'folder' });
+									if ((HygieneRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(p))) await actions.write.doc.rm({ path: dirname(p), type: 'folder' });
 									else await actions.write.doc.rm({ path: p, assets: false, type: 'doc' });
 								}
 								setSelLeaves([]);
@@ -737,14 +737,14 @@ export default (function Nav({
 					const dir = dirname(t);
 					for (let i = 0; i < f.length; i++) {
 						const file = f[i];
-						if (!file || !TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(file.name)) {
+						if (!file || !HygieneRegex.REGEX_MD_MDX_I_REGEX().test(file.name)) {
 							toast.error(`File ${file?.name} must be a markdown document to be a page.`);
 							continue;
 						}
-						const baseName = sanitizeName(file.name.replace(TerraQualityRegex.REGEX_I_REGEX(), '')) || 'untitled';
+						const baseName = sanitizeName(file.name.replace(HygieneRegex.REGEX_I_REGEX(), '')) || 'untitled';
 						const { error: wErr } = await actions.write.doc.editor({
 							path: `${dir && dir !== '.' ? `${dir}/` : ''}${baseName}`,
-							title: baseName.replace(TerraQualityRegex.REGEX_G_REGEX_2(), ' '),
+							title: baseName.replace(HygieneRegex.REGEX_G_REGEX_2(), ' '),
 							source: await file.text(),
 						});
 						if (wErr) throw wErr;
@@ -868,11 +868,11 @@ export default (function Nav({
 				if (idx !== -1) sibs.splice(idx, 1);
 				return nTree;
 			});
-			const currPath = cPathname.toLowerCase().replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '');
-			const currPrefix = docsPath(s).toLowerCase().replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '');
+			const currPath = cPathname.toLowerCase().replace(HygieneRegex.REGEX_PATTERN_REGEX_3(), '');
+			const currPrefix = docsPath(s).toLowerCase().replace(HygieneRegex.REGEX_PATTERN_REGEX_3(), '');
 			const nPrefix = docsPath(dirname(s));
 			const redirect =
-				currPath !== currPrefix && !currPath.startsWith(`${currPrefix}/`) ? null : `${nPrefix.replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '')}${currPath.slice(currPrefix.length)}` || nPrefix;
+				currPath !== currPrefix && !currPath.startsWith(`${currPrefix}/`) ? null : `${nPrefix.replace(HygieneRegex.REGEX_PATTERN_REGEX_3(), '')}${currPath.slice(currPrefix.length)}` || nPrefix;
 			try {
 				const { error: err } = await actions.write.doc.rm({ path: s, type: 'folder' });
 				if (err && !err.message?.includes('folder not found')) throw err;
@@ -887,7 +887,7 @@ export default (function Nav({
 	);
 	const rmLeaf = useCallback(
 		async (p: string, b: string, a: boolean): Promise<void> => {
-			const isIdx = TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(p);
+			const isIdx = HygieneRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(p);
 			const tgtPath = isIdx ? dirname(p) : p;
 			const tgtType = isIdx ? 'folder' : 'doc';
 			let prevTree: TreeType[] = [];
@@ -1097,9 +1097,9 @@ export default (function Nav({
 				setTree(nTree);
 				if (isMovingBranch) {
 					const tgtNorm = v === '.' ? '' : v;
-					const folderBacked = TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(p);
-					const leafDirName = folderBacked ? p.split('/').slice(-2)[0] : bName(p, p.match(TerraQualityRegex.REGEX_I_REGEX())?.[0]);
-					const ext = p.match(TerraQualityRegex.REGEX_I_REGEX())?.[0] ?? '.mdx';
+					const folderBacked = HygieneRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(p);
+					const leafDirName = folderBacked ? p.split('/').slice(-2)[0] : bName(p, p.match(HygieneRegex.REGEX_I_REGEX())?.[0]);
+					const ext = p.match(HygieneRegex.REGEX_I_REGEX())?.[0] ?? '.mdx';
 					const nPath = folderBacked ? `${tgtNorm === '.' ? '' : `${tgtNorm}/`}${leafDirName}/index${ext}` : `${tgtNorm === '.' ? '' : `${tgtNorm}/`}${leafDirName}${ext}`;
 					if (p !== nPath) {
 						const { data: docData } = await actions.read.doc.get({ path: p });
@@ -1229,7 +1229,7 @@ export default (function Nav({
 	SidebarActions.renderSects = useCallback(
 		(t: TreeType) => {
 			const origName = t.type === 'branch' ? t.origName : '';
-			const slugPath = 'url' in t && t.url ? t.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '';
+			const slugPath = 'url' in t && t.url ? t.url.replace(HygieneRegex.REGEX_DOCS_REGEX(), '') : '';
 			const titleStr = cTitle(toNodeLabel(t.title || origName));
 			return [
 				{

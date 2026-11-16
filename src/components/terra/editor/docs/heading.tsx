@@ -16,7 +16,7 @@ IMPORTS
 import { isValidElement, useEffect, useRef, useState } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import { Children } from 'react';
 import { Link as LinkIcon } from '@carbon/icons-react';
 
@@ -34,7 +34,7 @@ HELPERS
  *
  * @return The heading's URL fragment.
  */
-export const toHeadingId = (text: string): string => text.toLowerCase().replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-').replace(TerraQualityRegex.REGEX_G_REGEX_6(), '');
+export const toHeadingId = (text: string): string => text.toLowerCase().replace(HygieneRegex.REGEX_A_Z0_9_G_REGEX(), '-').replace(HygieneRegex.REGEX_G_REGEX_6(), '');
 
 /*//////////////////////////////////////////////////
 COMPONENTS

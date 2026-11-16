@@ -182,7 +182,7 @@ export function DocsStaticWorkspace({
 			}),
 		};
 	});
-	// terra-quality-ignore single-use -- Snapshot attachments during render so later host reads use this render's document data.
+	// hygiene-ignore single-use -- Snapshot attachments during render so later host reads use this render's document data.
 	const hostAttachments: DocsHostAttachment[] = (a?.leaf.attachments ?? attachments).map((i, v) => ({
 		id: String(v),
 		name: i.title,

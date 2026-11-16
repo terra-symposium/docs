@@ -57,7 +57,7 @@ const EDGE_LANE = {
 EDITOR
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported useEditor callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported useEditor callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Owns generic graph changes while adapters retain domain persistence.
  *
@@ -322,7 +322,7 @@ export function getNodeSize(
 	};
 }
 
-// terra-quality-ignore single-use -- Keep this custom hook as a named hook so React preserves hook ordering and lint rules can validate its calls.
+// hygiene-ignore single-use -- Keep this custom hook as a named hook so React preserves hook ordering and lint rules can validate its calls.
 /**
  * Creates the stable Arc layout used by both the editor and read-only canvas.
  *
@@ -582,7 +582,7 @@ function isArrayEqual(a: string[], b: string[]): boolean {
 	return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
-// terra-quality-ignore single-use -- Keep this named React Flow node renderer stable so the graph does not remount its logic nodes.
+// hygiene-ignore single-use -- Keep this named React Flow node renderer stable so the graph does not remount its logic nodes.
 /**
  * Renders the common Arc logic body through the active workspace skin.
  *
@@ -1145,7 +1145,7 @@ function arcCanvasEls(graph: ArcGraph, problems: Problem[], edgeData?: (edge: Ar
 	};
 }
 
-// terra-quality-ignore single-use -- Keep this named React Flow edge renderer stable so the graph does not remount its edge labels.
+// hygiene-ignore single-use -- Keep this named React Flow edge renderer stable so the graph does not remount its edge labels.
 /**
  * Renders shared labelled Arc edges while the skin controls node primitives.
  *
@@ -1254,7 +1254,7 @@ function ArcEdge({
 	);
 }
 
-// terra-quality-ignore single-use -- Keep this named React Flow node renderer stable so the graph does not remount its problem nodes.
+// hygiene-ignore single-use -- Keep this named React Flow node renderer stable so the graph does not remount its problem nodes.
 /**
  * Renders the common problem card, its handles, title editing, and route affordances.
  *

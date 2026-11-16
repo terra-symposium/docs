@@ -47,7 +47,7 @@ export type WorkspaceDemoState = {
 	documents: Record<string, WorkspaceDemoDoc>;
 	assets: Record<string, WorkspaceDemoAsset>;
 };
-// terra-quality-ignore single-use -- Keep this module-level seed content shared across createWorkspaceDemoSeed calls to preserve fixture reference identity.
+// hygiene-ignore single-use -- Keep this module-level seed content shared across createWorkspaceDemoSeed calls to preserve fixture reference identity.
 const initialContent: unknown[] = [
 	{
 		_key: 'intro',
@@ -113,7 +113,7 @@ const initialContent: unknown[] = [
 		],
 	},
 ];
-// terra-quality-ignore single-use -- Keep this module-level seed tree shared across createWorkspaceDemoSeed calls to preserve fixture reference identity.
+// hygiene-ignore single-use -- Keep this module-level seed tree shared across createWorkspaceDemoSeed calls to preserve fixture reference identity.
 const initialTree: DocsHostTreeNode[] = [
 	{
 		type: 'branch',
@@ -380,7 +380,7 @@ function removeDocsForNode(state: WorkspaceDemoState, node: DocsHostTreeNode): v
 	}
 	for (const child of node.children ?? []) removeDocsForNode(state, child);
 }
-// terra-quality-ignore single-use -- Keep the exported createWorkspaceDemoHost callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported createWorkspaceDemoHost callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Creates a Docs host adapter backed by the local demo fixture.
  *
@@ -696,7 +696,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
 					const fileName = uploaded instanceof File ? uploaded.name : 'attachment.bin';
 					const id = `attachment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 					const path = `/assets/${id}/${fileName.replace(/[^a-zA-Z0-9._-]+/g, '-')}`;
-					// terra-quality-ignore single-use -- Resolve the owning document before awaiting file bytes so concurrent fixture updates cannot change attachment ownership.
+					// hygiene-ignore single-use -- Resolve the owning document before awaiting file bytes so concurrent fixture updates cannot change attachment ownership.
 					const doc = findDoc(state, String(form?.get('path') ?? ''));
 					const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
 					const asset: WorkspaceDemoAsset = {

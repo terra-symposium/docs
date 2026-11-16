@@ -126,7 +126,7 @@ export function bName(path: string, ext?: string): string {
  * @return Trimmed title or an empty string.
  */
 export const cTitle = (title?: string): string => (title || '').trim();
-// terra-quality-ignore single-use -- Keep the exported toPascal module value available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported toPascal module value available to external consumers; its one local reference does not replace that contract.
 /**
  * Converts a hyphenated or underscored label to PascalCase.
  *

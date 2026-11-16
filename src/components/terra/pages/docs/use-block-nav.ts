@@ -15,7 +15,7 @@ import { captureLinearOffset, captureNodePath, codeViewOf, document, getCollapse
 import { useEffect, useRef } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 
 // TYPES
@@ -25,7 +25,7 @@ import type { EditorRefs } from '../../../../lib/terra/runtime/types.js';
 HELPERS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported useBlockNav callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported useBlockNav callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Tracks keyboard, pointer, and selection movement across hydrated editor blocks.
  *
@@ -482,7 +482,7 @@ export function useBlockNav(refs: React.MutableRefObject<EditorRefs>) {
 			const sel = window.getSelection();
 			if (!sel) return false;
 			const walker = document.createTreeWalker(tgt, NodeFilter.SHOW_TEXT, {
-				acceptNode: n => (n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
+				acceptNode: n => (n.textContent?.replace(HygieneRegex.REGEX_U200B_G_REGEX(), '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
 			});
 			const texts: Text[] = [];
 			let node = walker.nextNode();
@@ -769,7 +769,7 @@ export function useBlockNav(refs: React.MutableRefObject<EditorRefs>) {
 								const body = getActiveEditable();
 								if (!body) return false;
 								const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
-									acceptNode: n => (n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
+									acceptNode: n => (n.textContent?.replace(HygieneRegex.REGEX_U200B_G_REGEX(), '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
 								});
 								const first = cur.dec.compareDocumentPosition(adjacent) & Node.DOCUMENT_POSITION_FOLLOWING ? cur.dec : adjacent;
 								let text = walker.nextNode();
@@ -792,7 +792,7 @@ export function useBlockNav(refs: React.MutableRefObject<EditorRefs>) {
 						const selection = window.getSelection();
 						if (body && selection) {
 							const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
-								acceptNode: n => (n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
+								acceptNode: n => (n.textContent?.replace(HygieneRegex.REGEX_U200B_G_REGEX(), '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
 							});
 							let candidate: Text | null = null;
 							let node = walker.nextNode();
@@ -848,7 +848,7 @@ export function useBlockNav(refs: React.MutableRefObject<EditorRefs>) {
 						const block = (range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement)?.closest('p, li, blockquote, h2, h3, h4, h5, h6, td, th') ?? null;
 						if (!block || !isLocalText(block)) return null;
 						const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
-							acceptNode: n => (n.textContent?.replace(TerraQualityRegex.REGEX_U200B_G_REGEX(), '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
+							acceptNode: n => (n.textContent?.replace(HygieneRegex.REGEX_U200B_G_REGEX(), '').trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
 						});
 						const textNodes: Text[] = [];
 						let text = walker.nextNode();

@@ -15,7 +15,7 @@ IMPORTS
 // API
 import katex from 'katex';
 import { cn } from '../../../../lib/terra/runtime/runtime.js';
-import { createElement as __terraQualityCreateElement, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement as __hygieneCreateElement, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor } from '@portabletext/editor';
 
 // COMPONENTS
@@ -71,7 +71,7 @@ export function renderMath({ code, inline, className, write }: { code: string; i
 			},
 		];
 	}, [code, inline, write]);
-	const math = __terraQualityCreateElement(inline ? 'span' : 'div', {
+	const math = __hygieneCreateElement(inline ? 'span' : 'div', {
 		className: cn('docs-math', !inline && 'my-4 flex w-full justify-center overflow-x-auto', className),
 		dangerouslySetInnerHTML: {
 			__html: useMemo(() => {

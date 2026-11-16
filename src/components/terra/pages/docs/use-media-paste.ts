@@ -18,7 +18,7 @@ import { toImgAlt, toImgMd } from './_blocks.js';
 import { useEffect } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 
 // DATA
@@ -31,7 +31,7 @@ import type { EditorRefs } from '../../../../lib/terra/runtime/types.js';
 HELPERS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported useMediaPaste callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported useMediaPaste callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Installs image paste, drag, and drop handlers for the mounted Docs editor.
  *
@@ -95,7 +95,7 @@ export function useMediaPaste(
 				e.preventDefault();
 				e.stopPropagation();
 				const files = dropped.filter(f => {
-					const ext = f.name.match(TerraQualityRegex.REGEX_PATTERN_REGEX())?.[0].toLowerCase();
+					const ext = f.name.match(HygieneRegex.REGEX_PATTERN_REGEX())?.[0].toLowerCase();
 					return Boolean((f.type && f.type in MIME) || (ext && Object.values(MIME).includes(ext as (typeof MIME)[keyof typeof MIME])));
 				});
 				if (!files.length) {
@@ -212,7 +212,7 @@ export function useMediaPaste(
 							]),
 						]
 							.sort((left, right) => right.length - left.length)
-							.reduce((v, name) => v.replace(new RegExp(`(<\\/?\\s*)${name.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&')}(?=\\b)`, 'gi'), (_, prefix: string) => `${prefix}${name}`), md);
+							.reduce((v, name) => v.replace(new RegExp(`(<\\/?\\s*)${name.replace(HygieneRegex.REGEX_G_REGEX_9(), '\\$&')}(?=\\b)`, 'gi'), (_, prefix: string) => `${prefix}${name}`), md);
 					})(plain),
 					savedSel,
 				);
@@ -281,7 +281,7 @@ export function useMediaPaste(
 					const trimmed = val.trim();
 					if (!trimmed) return false;
 					if (trimmed.startsWith('/api/media?')) return true;
-					if (TerraQualityRegex.REGEX_HTTPS_I_REGEX().test(trimmed)) {
+					if (HygieneRegex.REGEX_HTTPS_I_REGEX().test(trimmed)) {
 						try {
 							const imgUrl = new URL(trimmed);
 							if (imgUrl.pathname === '/api/media' || /\.(?:avif|gif|jpe?g|png|svg|webp)(?:$|[?#])/i.test(imgUrl.pathname + imgUrl.search)) return true;

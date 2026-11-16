@@ -13,7 +13,7 @@ import { createTrace, validateType } from './runtime.js';
 import { parse as fromYaml } from 'yaml';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../regex.mjs';
+import * as HygieneRegex from '../regex.mjs';
 
 // TYPES
 import type { DocsNodesDraft as Draft, Field, Md } from './types.js';
@@ -155,7 +155,7 @@ const NODES = {
 						recs.push(line);
 						continue;
 					}
-					if (TerraQualityRegex.REGEX_A_ZA_Z_W_S_U_REGEX().test(line.trim())) {
+					if (HygieneRegex.REGEX_A_ZA_Z_W_S_U_REGEX().test(line.trim())) {
 						statements.push(line);
 						continue;
 					}
@@ -205,13 +205,13 @@ const NODES = {
 							i++;
 							continue;
 						}
-							if (depth === 0 && TerraQualityRegex.REGEX_S_U_REGEX().test(char ?? '') && TerraQualityRegex.REGEX_A_ZA_Z_W_S_U_REGEX().test(line.slice(i).trimStart())) break;
+							if (depth === 0 && HygieneRegex.REGEX_S_U_REGEX().test(char ?? '') && HygieneRegex.REGEX_A_ZA_Z_W_S_U_REGEX().test(line.slice(i).trimStart())) break;
 						v += char;
 						i++;
 					}
 					const trimmed = v.trim();
 						assignmentVals[attrName] = scalar((trimmed.match(/^\{([^{}\n]+)\}$/u)?.[1]?.trim() ?? (/^\{[-\w.'"`$]+\}$/u.test(trimmed) ? trimmed.slice(1, -1).trim() : null)) ?? trimmed);
-						while (i < line.length && TerraQualityRegex.REGEX_S_U_REGEX().test(line[i] ?? '')) i++;
+						while (i < line.length && HygieneRegex.REGEX_S_U_REGEX().test(line[i] ?? '')) i++;
 				}
 			}
 				const asgn = Object.keys(assignmentVals).length ? assignmentVals : null;
@@ -266,9 +266,9 @@ const NODES = {
  */
 export const encodeNodesPayload = (val: unknown): string =>
 	`\`${(Array.isArray(val) ? `[\n${val.map(i => `    ${literal(i)}`).join(',\n')}\n  ]` : '[]')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_18(), '\\`')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_16(), '\\$')}\``;
+		.replace(HygieneRegex.REGEX_G_REGEX_12(), '\\\\')
+		.replace(HygieneRegex.REGEX_G_REGEX_18(), '\\`')
+		.replace(HygieneRegex.REGEX_G_REGEX_16(), '\\$')}\``;
 
 /**
  * Decodes a serializer-safe node payload back into arrays.
@@ -286,7 +286,7 @@ export const decodeNodesPayload = (val: unknown): unknown[] => {
 	try {
 		const parsed = JSON.parse(
 			val.trim().startsWith('`') && val.trim().endsWith('`')
-				? val.trim().slice(1, -1).replace(TerraQualityRegex.REGEX_G_REGEX_15(), '`').replace(TerraQualityRegex.REGEX_G_REGEX_14(), '$').replace(TerraQualityRegex.REGEX_G_REGEX_13(), '\\')
+				? val.trim().slice(1, -1).replace(HygieneRegex.REGEX_G_REGEX_15(), '`').replace(HygieneRegex.REGEX_G_REGEX_14(), '$').replace(HygieneRegex.REGEX_G_REGEX_13(), '\\')
 				: val.trim(),
 		) as unknown;
 		if (Array.isArray(parsed)) return parsed;
@@ -342,7 +342,7 @@ const scalar = (val: string): unknown => {
 	if (!trimmed) return '';
 	try {
 		if (trimmed.startsWith('{') || trimmed.startsWith('[')) return Function(`"use strict"; return (${loose(trimmed)});`)() as unknown;
-		if (trimmed.startsWith('"') || trimmed.startsWith("'") || trimmed.startsWith('`') || TerraQualityRegex.REGEX_TRUE_FALSE_NULL_UNDEFINED_D_D_U_REGEX().test(trimmed))
+		if (trimmed.startsWith('"') || trimmed.startsWith("'") || trimmed.startsWith('`') || HygieneRegex.REGEX_TRUE_FALSE_NULL_UNDEFINED_D_D_U_REGEX().test(trimmed))
 			return Function(`"use strict"; return (${trimmed});`)() as unknown;
 		return Function(`"use strict"; return (${quote(trimmed)});`)() as unknown;
 	} catch {
@@ -350,7 +350,7 @@ const scalar = (val: string): unknown => {
 	}
 };
 
-// terra-quality-ignore single-use -- Keep the documented Nodes attribute parser separate so errors retain the parser stack boundary and recognized-field contract.
+// hygiene-ignore single-use -- Keep the documented Nodes attribute parser separate so errors retain the parser stack boundary and recognized-field contract.
 /**
  * Parses the raw attribute shell on a `Nodes` tag into a field map of editor keys and raw values.
  *
@@ -364,22 +364,22 @@ const props = (content: string): Draft => {
 	const vals: Draft = {};
 	let i = content.indexOf('Nodes') + 5;
 	while (i < content.length) {
-		while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
+		while (HygieneRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
 		if (content.slice(i).startsWith('/>') || content[i] === '>') break;
-		const name = content.slice(i).match(TerraQualityRegex.REGEX_A_ZA_Z_W_U_REGEX())?.[0];
+		const name = content.slice(i).match(HygieneRegex.REGEX_A_ZA_Z_W_U_REGEX())?.[0];
 		if (!name) {
 			i++;
 			continue;
 		}
 		i += name.length;
 		const field = FIELDS.get(name);
-		while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
+		while (HygieneRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
 		if (content[i] !== '=') {
 			if (field?.kind === 'boolean') vals[field.key] = true;
 			continue;
 		}
 		i++;
-		while (TerraQualityRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
+		while (HygieneRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
 		if (!field) continue;
 		if (content[i] === '{') {
 			i++;
@@ -465,7 +465,7 @@ const jsx = (vals: Record<string, unknown>): string => {
 const quote = (x: string): string => {
 	const y = x.trim();
 	if (!y) return '""';
-	if (['"', "'", '`', '{', '['].includes(y.charAt(0)) || TerraQualityRegex.REGEX_TRUE_FALSE_NULL_UNDEFINED_D_D_U_REGEX().test(y)) return y;
+	if (['"', "'", '`', '{', '['].includes(y.charAt(0)) || HygieneRegex.REGEX_TRUE_FALSE_NULL_UNDEFINED_D_D_U_REGEX().test(y)) return y;
 	return JSON.stringify(y);
 };
 

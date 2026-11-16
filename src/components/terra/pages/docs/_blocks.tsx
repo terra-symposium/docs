@@ -18,7 +18,7 @@ import { cn, error as logError, errorLog } from '../../../../lib/terra/runtime/r
 import { useEffect, useMemo, useState } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 // prettier-ignore
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Popover, PopoverContent, PopoverTrigger, SearchEmpty } from '@terra-symposium/styling/ui/terra-original';
@@ -56,7 +56,7 @@ export function toImgMd(src: string, alt = ''): string {
 export function toImgAlt(v: string): string {
 	return v
 		.replace(/\.[^.]+$/u, '')
-		.replace(TerraQualityRegex.REGEX_G_REGEX_8(), ' ')
+		.replace(HygieneRegex.REGEX_G_REGEX_8(), ' ')
 		.trim();
 }
 

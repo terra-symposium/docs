@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { validateType, warn } from '../runtime/runtime.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../regex.mjs';
+import * as HygieneRegex from '../regex.mjs';
 
 // TYPES
 import type { AttchType, DocBody, EditorSel, EditorSurface, Mode, ToolbarState, Transition, Tree as TreeType } from '../runtime/types.js';
@@ -50,7 +50,7 @@ export const sanitizeName = (name: string): string => name.replace(/[^a-z0-9-]/g
  *
  * @return Whether the path identifies a Markdown index file.
  */
-export const isIndexFile = (path: string): boolean => TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
+export const isIndexFile = (path: string): boolean => HygieneRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
 
 /**
  * Subscribes a React component to an external store and returns its current snapshot.
@@ -509,7 +509,7 @@ export function htmlToMd(html: string): string {
 				text = el.closest('pre') ? children : `\`${children}\``;
 				break;
 			case 'pre': {
-				const match = el.querySelector('code')?.className.match(TerraQualityRegex.REGEX_LANGUAGE_A_Z0_9_I_REGEX());
+				const match = el.querySelector('code')?.className.match(HygieneRegex.REGEX_LANGUAGE_A_Z0_9_I_REGEX());
 				text = `\n\`\`\`${match ? match[1] : 'text'}\n${children.trim()}\n\`\`\`\n`;
 				break;
 			}
@@ -532,7 +532,7 @@ export function htmlToMd(html: string): string {
 		}
 		rendered.set(curr.node, text);
 	}
-	return (rendered.get(root) || '').replace(TerraQualityRegex.REGEX_N_3_G_REGEX(), '\n\n').trim();
+	return (rendered.get(root) || '').replace(HygieneRegex.REGEX_N_3_G_REGEX(), '\n\n').trim();
 }
 
 /*//////////////////////////////////////////////////
@@ -591,7 +591,7 @@ STORES
 //////////////////////////////////////////////////*/
 
 // STATE ATOMS
-// terra-quality-ignore single-use -- Keep the exported ATTCH_TYPES module value available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported ATTCH_TYPES module value available to external consumers; its one local reference does not replace that contract.
 /**
  * Shared attachment types accepted by the docs editor.
  *
@@ -609,7 +609,7 @@ export const ATTCH_TYPES = ['document', 'image', 'youtube', 'website', 'tsdocs',
  * @remarks The filter defaults to showing all supported types.
  */
 export const $attachmentFilter = atom<AttchType[]>([...ATTCH_TYPES]);
-// terra-quality-ignore single-use -- Keep the exported mode atom as the shared editor state contract for outside consumers.
+// hygiene-ignore single-use -- Keep the exported mode atom as the shared editor state contract for outside consumers.
 /**
  * Current docs editor mode.
  *
@@ -620,7 +620,7 @@ export const $attachmentFilter = atom<AttchType[]>([...ATTCH_TYPES]);
 export const $mode = atom<Mode>(readStorage('docs-mode', 'view', (i): i is Mode => ['view', 'edit', 'attachments'].includes(i as string)));
 /** Shares the active leaf title across Docs surfaces. */
 export const $leafTitle = atom<{ path: string; title: string } | null>(null);
-// terra-quality-ignore single-use -- Keep the exported transition atom available to other Docs surfaces.
+// hygiene-ignore single-use -- Keep the exported transition atom available to other Docs surfaces.
 /**
  * Global transition flag for docs navigation and mutations.
  *
@@ -654,10 +654,10 @@ export const $hydrating = atom<number>(0);
  */
 export const $surfaceReady = atom<Mode | null>(null);
 export const $editReadyPath = atom<string | null>(null);
-// terra-quality-ignore single-use -- Keep the exported cursor atom available to editor overlays.
+// hygiene-ignore single-use -- Keep the exported cursor atom available to editor overlays.
 /** Shared cursor state so toolbar focus can preserve the last insertion point visibly. */
 export const $cursor = atom<EditorSel | null>(null);
-// terra-quality-ignore single-use -- Keep the exported cursor ghost atom available to the simulated caret overlay.
+// hygiene-ignore single-use -- Keep the exported cursor ghost atom available to the simulated caret overlay.
 /** Persisted caret snapshot used for the simulated cursor overlay when focus leaves the editor. */
 export const $cursorGhost = atom<EditorSel | null>(null);
 /** Linear caret bookmark used to simulate the visible cursor without relying on DOM focus. */
@@ -693,7 +693,7 @@ export const $unsavedDrafts = map<Record<string, boolean>>({});
  * @remarks This cache is process-local and intentionally not persisted.
  */
 export const memoryDrafts = new Map<string, { source: string; draft: unknown; metadata: unknown }>();
-// terra-quality-ignore single-use -- Keep the exported sidebar atom as the shared visibility state contract for outside consumers.
+// hygiene-ignore single-use -- Keep the exported sidebar atom as the shared visibility state contract for outside consumers.
 /**
  * Sidebar visibility state for the docs editor.
  *
@@ -748,7 +748,7 @@ export function setTransition(transition: Transition): void {
 	});
 }
 
-// terra-quality-ignore single-use -- Keep the exported clearTransition callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported clearTransition callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Clears the active docs transition state.
  *
@@ -925,9 +925,9 @@ NAVIGATION
  */
 export const keepDeepPath = (curr: string, n: string): string => {
 	// prettier-ignore
-	const cur = curr.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '').replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '').split('/').filter(Boolean);
+	const cur = curr.replace(HygieneRegex.REGEX_DOCS_REGEX(), '').replace(HygieneRegex.REGEX_PATTERN_REGEX_3(), '').split('/').filter(Boolean);
 	// prettier-ignore
-	const nxt = n.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '').replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '').split('/').filter(Boolean);
+	const nxt = n.replace(HygieneRegex.REGEX_DOCS_REGEX(), '').replace(HygieneRegex.REGEX_PATTERN_REGEX_3(), '').split('/').filter(Boolean);
 	if (!nxt.length) return n;
 	if (cur.length > nxt.length && cur.slice(cur.length - nxt.length).join('/') === nxt.join('/')) return curr;
 	return n;

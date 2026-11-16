@@ -20,7 +20,7 @@ export const components: DocsCustomBlock[] = [];
 HELPERS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported setDocsCustomComponents callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported setDocsCustomComponents callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Replaces the custom block renderers registered by the current host.
  *

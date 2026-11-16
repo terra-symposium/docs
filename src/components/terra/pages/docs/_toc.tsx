@@ -63,7 +63,7 @@ const navigateHeading = (id: string, text: string): void => {
 HELPERS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the exported Toc component identity available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported Toc component identity available to external consumers; its one local reference does not replace that contract.
 /**
  * Observes the current Docs surface and renders a table of contents for its headings.
  *

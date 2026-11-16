@@ -21,7 +21,7 @@ import type { JSX } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the test host adapter identity stable across EditorHarness renders.
+// hygiene-ignore single-use -- Keep the test host adapter identity stable across EditorHarness renders.
 const host: DocsHostAdapter = {
 	capabilities: {
 		read: true,

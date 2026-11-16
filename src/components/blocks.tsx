@@ -96,7 +96,7 @@ export const DOCS_BLOCK_FIELDS: Record<DocsBlockType, { name: string; type: 'str
 		{ name: 'markdown', type: 'string' },
 	],
 };
-// terra-quality-ignore single-use -- Keep one module-level default block map so editor insertions reuse the same authored shapes.
+// hygiene-ignore single-use -- Keep one module-level default block map so editor insertions reuse the same authored shapes.
 const defaults: Record<DocsBlockType, RichBlock> = {
 	accordion: { _type: 'accordion', items: [{ title: 'Item', content: [] }] },
 	tabs: { _type: 'tabs', items: [{ title: 'Tab', content: [] }] },
@@ -292,7 +292,7 @@ export function DocsRichBlock({ block }: { block: RichBlock }): JSX.Element {
  * @return
  */
 function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; readOnly: boolean }): JSX.Element {
-	// terra-quality-ignore single-use -- Call the editor hook unconditionally before deriving the active block fields.
+	// hygiene-ignore single-use -- Call the editor hook unconditionally before deriving the active block fields.
 	const editor = useEditor();
 	const [expanded, setExpanded] = useState(false);
 	const type = block._type as DocsBlockType;
@@ -593,7 +593,7 @@ function BlockEditor({ block, path, readOnly }: { block: RichBlock; path: Path; 
 	);
 }
 
-// terra-quality-ignore single-use -- Keep the exported docsBlockNodes callable API available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported docsBlockNodes callable API available to external consumers; its one local reference does not replace that contract.
 /**
  * Creates Portable Text block and inline definitions enabled for a Docs editor.
  *

@@ -273,7 +273,7 @@ test('tree create, rename, duplicate, download, and delete persist through the h
 	await p.getByRole('menuitem', { name: 'Download page', exact: true }).click();
 	const exportDialog = p.getByRole('dialog');
 	await expect(exportDialog).toBeVisible();
-	// terra-quality-ignore single-use -- Subscribe to the download event before clicking so a fast download cannot be missed.
+	// hygiene-ignore single-use -- Subscribe to the download event before clicking so a fast download cannot be missed.
 	const download = p.waitForEvent('download');
 	await exportDialog.getByRole('button', { name: 'Download ZIP', exact: true }).click();
 	expect((await download).suggestedFilename()).toMatch(/\.zip$/i);
@@ -329,7 +329,7 @@ test('group create, rename, reorder, and delete use the shared sidebar actions',
 	await renameDialog.getByRole('button', { name: 'Save', exact: true }).click();
 	const renamedGroup = p.locator(`[data-docs-drop^="branch:${sectionId}/"]`).filter({ hasText: 'Regression renamed' });
 	await expect(renamedGroup).toBeVisible();
-	// terra-quality-ignore single-use -- Read the persisted target ID before starting the drag interaction.
+	// hygiene-ignore single-use -- Read the persisted target ID before starting the drag interaction.
 	const generalGroupId = await p.evaluate(() => {
 		return JSON.parse(localStorage.getItem('terra-docs-workspace-demo-v1') ?? '{}')
 			.tree.find((node: { title?: string }) => node.title === 'Group lifecycle')
@@ -399,7 +399,7 @@ test('attachment upload, open, download, and deletion persist across reloads', X
 		.toBe(true);
 	await expect(p.getByText(filename, { exact: true })).toBeVisible();
 	await p.getByRole('button', { name: `Attachment ${filename}`, exact: true }).click();
-	// terra-quality-ignore single-use -- Subscribe before clicking the asset action to catch an immediate download event.
+	// hygiene-ignore single-use -- Subscribe before clicking the asset action to catch an immediate download event.
 	const download = p.waitForEvent('download');
 	await p.getByRole('button', { name: 'Download Asset', exact: true }).click();
 	expect((await download).suggestedFilename()).toBe(filename);
@@ -517,7 +517,7 @@ test('section rename, hue, and deletion actions persist through the host adapter
 	const hue = colorDialog.getByRole('slider');
 	await hue.focus();
 	await p.keyboard.press('ArrowRight');
-	// terra-quality-ignore single-use -- Capture the slider value before saving because the dialog closes afterward.
+	// hygiene-ignore single-use -- Capture the slider value before saving because the dialog closes afterward.
 	const hueValue = Number(await hue.getAttribute('aria-valuenow'));
 	await p.clock.install();
 	await colorDialog.getByRole('button', { name: 'Save', exact: true }).click();

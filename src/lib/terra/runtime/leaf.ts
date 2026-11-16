@@ -24,7 +24,7 @@ CONFIG
  * @return Portable Text body, or an empty array when content is not an array.
  */
 export const toPortableBody = (value: unknown): DocBody => (Array.isArray(value) ? (value as DocBody) : []);
-// terra-quality-ignore single-use -- Keep body narrowing at this documented boundary before source serialization selects main or content fields.
+// hygiene-ignore single-use -- Keep body narrowing at this documented boundary before source serialization selects main or content fields.
 /**
  * Resolves the current leaf's body from either a direct body or a content object.
  *

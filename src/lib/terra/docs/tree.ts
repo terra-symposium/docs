@@ -11,7 +11,7 @@ IMPORTS
 import { docsRootPath, parseRoute } from '../runtime/shared.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../regex.mjs';
+import * as HygieneRegex from '../regex.mjs';
 
 // TYPES
 import type { Branch, Tree as TreeType } from '../runtime/types.js';
@@ -43,7 +43,7 @@ export const sanitizeName = (name: string): string => name.replace(/[^a-z0-9-]/g
  *
  * @return Whether the path ends in `index.md` or `index.mdx`.
  */
-export const isIndexFile = (path: string): boolean => TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
+export const isIndexFile = (path: string): boolean => HygieneRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
 /**
  * Returns the stable navigation key for a tree node.
  *
@@ -66,9 +66,9 @@ export const getStableKey = (node: TreeType): string => {
  */
 export const keepDeepPath = (curr: string, n: string): string => {
 	// prettier-ignore
-	const cur = curr.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '').replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '').split('/').filter(Boolean);
+	const cur = curr.replace(HygieneRegex.REGEX_DOCS_REGEX(), '').replace(HygieneRegex.REGEX_PATTERN_REGEX_3(), '').split('/').filter(Boolean);
 	// prettier-ignore
-	const nxt = n.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '').replace(TerraQualityRegex.REGEX_PATTERN_REGEX_3(), '').split('/').filter(Boolean);
+	const nxt = n.replace(HygieneRegex.REGEX_DOCS_REGEX(), '').replace(HygieneRegex.REGEX_PATTERN_REGEX_3(), '').split('/').filter(Boolean);
 	if (!nxt.length) return n;
 	if (cur.length > nxt.length && cur.slice(cur.length - nxt.length).join('/') === nxt.join('/')) return curr;
 	return n;

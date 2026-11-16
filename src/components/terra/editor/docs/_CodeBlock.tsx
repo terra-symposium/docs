@@ -29,7 +29,7 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import { AlertError, Button, Select, SelectContent, SelectItem, SelectTrigger } from '@terra-symposium/styling/ui/terra-original';
 import { Checkmark as CheckIcon, Copy as CopyIcon } from '@carbon/icons-react';
 import { Compartment, EditorSelection, EditorState } from '@codemirror/state';
@@ -149,7 +149,7 @@ export function CodeBlock(
 	const code = stringifyCodeValue(config.code);
 	const viewCode = docsSrc
 		? code.replace(/<Code\b([\s\S]*?)>(?:\s*\{`((?:\\.|[^`])*)`\}\s*|\s*([\s\S]*?)\s*)<\/Code>/g, (_match, p, e, v) => {
-				return `\n<Code${p}>\n${/* prettier-ignore */ e !== undefined ? e.replace(TerraQualityRegex.REGEX_G_REGEX_11(), '$1').replace(TerraQualityRegex.REGEX_N_G_REGEX_2(), '\n') : (v || '').trim()}\n</Code>\n`;
+				return `\n<Code${p}>\n${/* prettier-ignore */ e !== undefined ? e.replace(HygieneRegex.REGEX_G_REGEX_11(), '$1').replace(HygieneRegex.REGEX_N_G_REGEX_2(), '\n') : (v || '').trim()}\n</Code>\n`;
 			})
 		: code;
 	const [copied, setCopied] = useState(false);
@@ -604,7 +604,7 @@ export function CodeBlock(
 							{
 								/* prettier-ignore */ config.tone === 'view' ? (
 		<div className='docs-code-block-fb m-0 flex max-w-full flex-col overflow-x-auto overflow-y-hidden bg-transparent p-0 text-sm leading-6' data-docs-code-fb='true'>
-			{(config.tone === 'view' ? resCode.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').split('\n') : []).map((l, i) => (
+			{(config.tone === 'view' ? resCode.replace(HygieneRegex.REGEX_R_N_G_REGEX(), '\n').split('\n') : []).map((l, i) => (
 				<div key={i} className='docs-code-block-fallback-line flex min-w-full text-sm leading-6'>
 					<div className='min-w-10 shrink-0 select-none border-r border-primary-6 px-2 text-right font-mono tabular-nums leading-6 text-primary-10'>{i + 1}</div>
 					<span className='block whitespace-pre px-1 leading-6 text-inherit'>{l || ' '}</span>

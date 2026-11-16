@@ -36,7 +36,7 @@ import type { JSX } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep the renderer registry at module scope so callbacks retain identity across editor renders.
+// hygiene-ignore single-use -- Keep the renderer registry at module scope so callbacks retain identity across editor renders.
 const rendererByType: Record<string, (props: any) => JSX.Element | null> = {
 	accordion: renderSections,
 	callout: renderCallout,

@@ -29,7 +29,7 @@ import { useBlockNav } from './use-block-nav.js';
 import { useMediaPaste } from './use-media-paste.js';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import EditProvider, { Loader, TransitionShell } from './_editable.js';
 import Nav from './_sidebar.js';
 // prettier-ignore
@@ -68,7 +68,7 @@ HOOKS
  * @return The read-only editor view for the supplied document body.
  */
 function View({ body, resetKey }: { body: DocBody; resetKey?: string }): JSX.Element {
-	// terra-quality-ignore single-use -- Preserve this unconditional transition hook call before the page's later hooks.
+	// hygiene-ignore single-use -- Preserve this unconditional transition hook call before the page's later hooks.
 	const transition = useTransitionState();
 	useEffect(() => {
 		return ((timer: number) => () => {
@@ -88,7 +88,7 @@ function View({ body, resetKey }: { body: DocBody; resetKey?: string }): JSX.Ele
 	);
 }
 
-// terra-quality-ignore single-use -- Keep this named custom hook so React hook ordering remains visible to the hooks checker.
+// hygiene-ignore single-use -- Keep this named custom hook so React hook ordering remains visible to the hooks checker.
 /**
  * Reads the editor surface context when a Docs editor provider is present.
  *
@@ -315,7 +315,7 @@ const EditorSurfaces = {
 	},
 };
 
-// terra-quality-ignore single-use -- Preserve the default Scaffold component export used by the Docs page entrypoint.
+// hygiene-ignore single-use -- Preserve the default Scaffold component export used by the Docs page entrypoint.
 /**
  * Renders the Docs shell with navigation, page content, and editing controls.
  *
@@ -399,15 +399,15 @@ export default function Scaffold({
 		}, [sects, dest.section]),
 		finish: useCallback(async () => {
 			if (!dest.section || !dest.group) return;
-			const section = dest.newSection ? dest.section.trim().toLowerCase().replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-') : dest.section;
-			const group = dest.newSection ? dest.group.trim().toLowerCase().replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-') : dest.group;
+			const section = dest.newSection ? dest.section.trim().toLowerCase().replace(HygieneRegex.REGEX_A_Z0_9_G_REGEX(), '-') : dest.section;
+			const group = dest.newSection ? dest.group.trim().toLowerCase().replace(HygieneRegex.REGEX_A_Z0_9_G_REGEX(), '-') : dest.group;
 			const sel = sects.find(i => i.origName === section)?.children?.find(i => i.type === 'branch' && i.origName === group);
 			const selPath = sel?.type === 'branch' ? sel.children?.find(i => i.type === 'leaf' && Boolean(i.path)) : undefined;
 			const leafPath = selPath?.type === 'leaf' ? selPath.path : undefined;
 			const selBase = leafPath ? dirname(leafPath) : '';
 			const destPath = {
 				base: !dest.newSection && selBase && selBase !== '.' ? selBase : `${section}/${group}`,
-				slug: dest.title.trim().toLowerCase().replace(TerraQualityRegex.REGEX_A_Z0_9_G_REGEX(), '-').replace(TerraQualityRegex.REGEX_G_REGEX_20(), '') || 'untitled',
+				slug: dest.title.trim().toLowerCase().replace(HygieneRegex.REGEX_A_Z0_9_G_REGEX(), '-').replace(HygieneRegex.REGEX_G_REGEX_20(), '') || 'untitled',
 			};
 			destRes.current?.({
 				path: `${destPath.base}/${destPath.slug}.mdx`,

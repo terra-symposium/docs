@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import { useEffect, useRef, useState } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import React, { Fragment } from 'react';
 // prettier-ignore
 import { Add as AddIcon, ArrowUpRight as PopOutIcon, Box as BoxIcon, Copy as CopyIcon, Doc as DocumentIcon, Download as DownloadIcon, Draggable as DragIcon, Edit as EditIcon, Link as LinkIcon, MagicWand as MagicIcon, OverflowMenuVertical as OverflowMenuIcon, TrashCan as TrashIcon } from '@carbon/icons-react';
@@ -151,7 +151,7 @@ function Link({
 							toast.error('Failed to load document.');
 							return;
 						}
-						// terra-quality-ignore single-use -- Snapshot loaded content before the animation frames so later host changes cannot alter the editor reset payload.
+						// hygiene-ignore single-use -- Snapshot loaded content before the animation frames so later host changes cannot alter the editor reset payload.
 						const content = toPortableBody(data.content);
 						resetEditorMounts(node.path, ['root']);
 						await new Promise<void>(resolve =>
@@ -399,7 +399,7 @@ LEAF COMPONENTS
 							}[] = [];
 							for (const p of d as string[]) {
 								if (p === path || dirname(p) !== dir) continue;
-								const isMd = TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(p);
+								const isMd = HygieneRegex.REGEX_MD_MDX_I_REGEX().test(p);
 								if (!isIdx && isMd) continue;
 								const sNode = siblingByPath.get(p);
 								sisList.push({
@@ -513,7 +513,7 @@ LEAF COMPONENTS
 			open: true,
 			title: m === 'reference' ? 'Duplicate by Reference' : 'Duplicate by Content',
 			label: 'New page name',
-			value: `${path.split('/').at(-1)?.replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX(), '') ?? ''}-copy`,
+			value: `${path.split('/').at(-1)?.replace(HygieneRegex.REGEX_MD_MDX_I_REGEX(), '') ?? ''}-copy`,
 			onCancel: () => {},
 			onSave: t =>
 				runMutation(async () => {
@@ -602,7 +602,7 @@ LEAF COMPONENTS
 						const file = files[i];
 						if (!file) continue;
 						const tmpId = `temp-${Date.now()}-${i}`;
-						const isMdFile = TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(file.name);
+						const isMdFile = HygieneRegex.REGEX_MD_MDX_I_REGEX().test(file.name);
 						setSis(p => [...p, { id: tmpId, path: tmpId, name: file.name, isMd: isMdFile }]);
 						const finalAsset = await uploadAssetChunked(file, node.path!, {
 							onProgress: ({ bytes }) => {
@@ -645,12 +645,12 @@ LEAF COMPONENTS
 					open: true,
 					title: 'Rename Attachment',
 					label: 'New name',
-					value: s.name.replace(TerraQualityRegex.REGEX_I_REGEX(), ''),
+					value: s.name.replace(HygieneRegex.REGEX_I_REGEX(), ''),
 					onCancel: () => {},
 					onSave: nName =>
 						runMutation(async () => {
 							const fileName = {
-								extension: s.name.match(TerraQualityRegex.REGEX_I_REGEX())?.[0] ?? '',
+								extension: s.name.match(HygieneRegex.REGEX_I_REGEX())?.[0] ?? '',
 								stem: sanitizeName(nName),
 							};
 							const nFilename = `${fileName.stem}${fileName.extension}`;
@@ -702,7 +702,7 @@ LEAF COMPONENTS
 					open: true,
 					title: 'Duplicate Attachment',
 					label: 'New name',
-					value: `${s.name.replace(TerraQualityRegex.REGEX_I_REGEX(), '')}-copy`,
+					value: `${s.name.replace(HygieneRegex.REGEX_I_REGEX(), '')}-copy`,
 					onCancel: () => {},
 					onSave: n =>
 						runMutation(async () => {
@@ -963,7 +963,7 @@ LEAF COMPONENTS
 																		const a = document.createElement('a');
 														a.href = docsPath(s.path);
 																		let dlName = s.name;
-																		const extMatch = s.path.split('?')[0]?.match(TerraQualityRegex.REGEX_A_Z0_9_I_REGEX());
+																		const extMatch = s.path.split('?')[0]?.match(HygieneRegex.REGEX_A_Z0_9_I_REGEX());
 																		if (extMatch && !dlName.toLowerCase().endsWith(extMatch[0].toLowerCase())) dlName = `${dlName}${extMatch[0]}`;
 																		a.download = dlName;
 																		a.target = '_blank';
@@ -1104,7 +1104,7 @@ TREE COMPONENTS
 		const nodeUrl = 'url' in node ? node.url : '';
 		const permission = shellPermission === 'write' ? 'write' : node.permission;
 		const fPath = [bPath, node.type === 'branch' ? node.origName : ''].filter(Boolean).join('/');
-		const slugPath = 'url' in node && node.url ? node.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '';
+		const slugPath = 'url' in node && node.url ? node.url.replace(HygieneRegex.REGEX_DOCS_REGEX(), '') : '';
 		const [renaming, setRenaming] = useState(false);
 		const [contexting, setContexting] = useState(false);
 		const drop = node.type === 'branch' ? `branch:${fPath}` : `leaf:${node.path ?? ''}`;

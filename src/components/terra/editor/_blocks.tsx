@@ -17,7 +17,7 @@ import { cn } from '../../../lib/terra/runtime/runtime.js';
 import { isValidElement, useId, useState } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../lib/terra/regex.mjs';
 import React from 'react';
 // prettier-ignore
 import { Accordion, AccordionContent, AccordionItem as AccordionPrimitiveItem, AccordionTrigger, Button, Card, CardContent, CardHeader, Input, Tabs, TabsList, TabsTrigger } from '@terra-symposium/styling/ui/terra-original';
@@ -157,7 +157,7 @@ export const AccordionItem = ({ title, children, onDelete, onRename }: { childre
 	const id = useId();
 	return (
 		<ErrorBoundary name='AccordionItem'>
-			<AccordionPrimitiveItem value={title.replace(TerraQualityRegex.REGEX_S_G_REGEX(), '-').toLowerCase() || id} className='first:border-0 [&>*]:!my-0'>
+			<AccordionPrimitiveItem value={title.replace(HygieneRegex.REGEX_S_G_REGEX(), '-').toLowerCase() || id} className='first:border-0 [&>*]:!my-0'>
 				{onRename || onDelete ? (
 					<div className='flex w-full items-center gap-1.5 px-4 py-1'>
 						{onRename ? (
@@ -194,7 +194,7 @@ export const AccordionItem = ({ title, children, onDelete, onRename }: { childre
 COMPONENTS
 //////////////////////////////////////////////////*/
 
-// terra-quality-ignore single-use -- Keep this named React tab-list component stable so editing its title does not remount the input.
+// hygiene-ignore single-use -- Keep this named React tab-list component stable so editing its title does not remount the input.
 /**
  * Renders the editor tabs list component.
  *

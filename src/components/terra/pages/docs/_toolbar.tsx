@@ -32,7 +32,7 @@ import { toolbarFocusValue } from '../../../../lib/terra/docs/toolbar.js';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 import React from 'react';
 // prettier-ignore
 import { ArrowUpRight as PopOutIcon, CaretDown as CaretDownIcon, DataShare as ShareIcon, Image as ImageIcon, Link as LinkIcon, ListBulleted as BulletListIcon, ListNumbered as NumberListIcon, Paste as PasteIcon, Redo as RedoIcon, RepoSourceCode as ModuleIcon, Search as SearchIcon, Task as CheckListIcon, TextBold as BoldIcon, TextFont as TextFontIcon, TextItalic as ItalicIcon, TextStrikethrough as StrikethroughIcon, TextUnderline as UnderlineIcon, Undo as UndoIcon } from '@carbon/icons-react';
@@ -118,7 +118,7 @@ function preserveSel(e: MouseEvent<HTMLElement>): void {
  *
  * @return {RegExp | null} The compiled RegExp object or null if no search term exists.
  */
-// terra-quality-ignore single-use -- Keep saved-version parsing in its own documented error boundary so malformed JSON is logged with version metadata before preview rendering.
+// hygiene-ignore single-use -- Keep saved-version parsing in its own documented error boundary so malformed JSON is logged with version metadata before preview rendering.
 /**
  * Normalizes a saved document version into its structured body and preview representations.
  *
@@ -433,13 +433,13 @@ const TOOLBAR_COMPS = {
 							.split('/')
 							.pop()
 							?.split('.')[0]
-							?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ')
-							.replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'attachment';
-					const c = (att.path.startsWith('http') ? att.path : att.name).replace(TerraQualityRegex.REGEX_G_REGEX(), '%20');
+							?.replace(HygieneRegex.REGEX_G_REGEX_7(), ' ')
+							.replace(HygieneRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'attachment';
+					const c = (att.path.startsWith('http') ? att.path : att.name).replace(HygieneRegex.REGEX_G_REGEX(), '%20');
 					let fmt = '';
 					if (insertMode === 'link') fmt = `[${lbl}](<${c}>)`;
 					else {
-						if (TerraQualityRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(att.name)) fmt = `\n![${lbl}](<${c}>)\n`;
+						if (HygieneRegex.REGEX_PNG_JPE_G_GIF_WEBP_SVG_AVIF_I_REGEX_2().test(att.name)) fmt = `\n![${lbl}](<${c}>)\n`;
 						else fmt = `\n<Embed src="${c}" title="${lbl}" />\n`;
 					}
 					insert(fmt);
@@ -523,7 +523,7 @@ const TOOLBAR_COMPS = {
 	GlobalComponentMenuNode({ name, tree, onCopy }: { name: string; tree: MenuTree; onCopy?: (comp: RepoComponentWithLabel) => void }): JSX.Element {
 		return (
 			<DropdownMenuSub>
-				<DropdownMenuSubTrigger className='capitalize'>{name.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ')}</DropdownMenuSubTrigger>
+				<DropdownMenuSubTrigger className='capitalize'>{name.replace(HygieneRegex.REGEX_G_REGEX_7(), ' ')}</DropdownMenuSubTrigger>
 				<DropdownMenuSubContent>
 					{tree.components.map(c => (
 						<DropdownMenuItem
@@ -534,7 +534,7 @@ const TOOLBAR_COMPS = {
 								onCopy?.(c);
 							}}
 						>
-							{c.displayLabel.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase())}
+							{c.displayLabel.replace(HygieneRegex.REGEX_G_REGEX_7(), ' ').replace(HygieneRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase())}
 						</DropdownMenuItem>
 					))}
 					{Object.entries(tree.folders).map(([f, s]) => (
@@ -588,7 +588,7 @@ const TOOLBAR_COMPS = {
 		// 1. FETCH LOCAL FILES (Allows ALL leaves as valid attachments)
 		useEffect(() => {
 			if (!ctx) return;
-			const dir = dirname(TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX_2().test(ctx.split('/').pop() || '') ? dirname(ctx) : ctx);
+			const dir = dirname(HygieneRegex.REGEX_INDEX_MD_MDX_I_REGEX_2().test(ctx.split('/').pop() || '') ? dirname(ctx) : ctx);
 			actions.read.doc
 				.list({ type: 'folderEntries', path: dir })
 				.then(({ data: d }) => {
@@ -613,7 +613,7 @@ const TOOLBAR_COMPS = {
 					return;
 				}
 				const segs = parts[1]!.split('/');
-				const file = segs.pop()!.replace(TerraQualityRegex.REGEX_PATTERN_REGEX(), '');
+				const file = segs.pop()!.replace(HygieneRegex.REGEX_PATTERN_REGEX(), '');
 				if (file !== 'index' && (counts.get(c.path) ?? 0) > 1) segs.push(file);
 				let cur = root;
 				segs.forEach(s => {
@@ -749,8 +749,8 @@ const TOOLBAR_COMPS = {
 				if (isNew) {
 					// scope the new document natively UNDER the current document's path.
 					// this ensures string-based `verifyWrite` auth checks pass by matching the prefix of the inherited warrant.
-					const basePath = ctx ? ctx.replace(TerraQualityRegex.REGEX_PATTERN_REGEX_2(), '') : '';
-					const sName = search.query.trim() ? search.query.replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX_2(), '-').toLowerCase() : 'untitled';
+					const basePath = ctx ? ctx.replace(HygieneRegex.REGEX_PATTERN_REGEX_2(), '') : '';
+					const sName = search.query.trim() ? search.query.replace(HygieneRegex.REGEX_A_Z0_9_GI_REGEX_2(), '-').toLowerCase() : 'untitled';
 					const nId = basePath ? `${basePath}/${sName}-${Date.now()}.mdx` : `${sName}-${Date.now()}.mdx`;
 					finalPath = nId;
 					// create the page purely as a stand-alone document without anchoring to the group
@@ -851,10 +851,10 @@ const TOOLBAR_COMPS = {
 		{
 			label: 'Share attachment',
 			icon: <ShareIcon className={ICON_CLASS} />,
-			items: sis.filter(s => TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(s.name)),
+			items: sis.filter(s => HygieneRegex.REGEX_MD_MDX_I_REGEX().test(s.name)),
 						onSelect: (s: { name: string }) => {
-				const importName = toPascal(s.name.replace(TerraQualityRegex.REGEX_PATTERN_REGEX(), ''));
-				onInsert?.(`import ${importName} from '${TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX_2().test(ctx?.split('/').pop() || '') ? '../' : './'}${s.name}';`, `<${importName} />\n`);
+				const importName = toPascal(s.name.replace(HygieneRegex.REGEX_PATTERN_REGEX(), ''));
+				onInsert?.(`import ${importName} from '${HygieneRegex.REGEX_INDEX_MD_MDX_I_REGEX_2().test(ctx?.split('/').pop() || '') ? '../' : './'}${s.name}';`, `<${importName} />\n`);
 			},
 		},
 			],
@@ -897,7 +897,7 @@ const TOOLBAR_COMPS = {
 											void copyComp(c);
 										}}
 									>
-										{c.displayLabel.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase())}
+										{c.displayLabel.replace(HygieneRegex.REGEX_G_REGEX_7(), ' ').replace(HygieneRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase())}
 									</DropdownMenuItem>
 								))}
 								{Object.entries(menuGroups.globalFolders).map(([f, s]) => (
@@ -1053,9 +1053,9 @@ const TOOLBAR_COMPS = {
 				const { head } = view.state.selection.main;
 				const text = view.state.doc.lineAt(head).text;
 				let n = 'p';
-				if (TerraQualityRegex.REGEX_S_REGEX_5().test(text)) n = 'h3';
-				else if (TerraQualityRegex.REGEX_S_REGEX_6().test(text)) n = 'h4';
-				else if (TerraQualityRegex.REGEX_S_REGEX_4().test(text)) n = 'h2';
+				if (HygieneRegex.REGEX_S_REGEX_5().test(text)) n = 'h3';
+				else if (HygieneRegex.REGEX_S_REGEX_6().test(text)) n = 'h4';
+				else if (HygieneRegex.REGEX_S_REGEX_4().test(text)) n = 'h2';
 				setVal(c => (c === n ? c : n));
 			};
 			sync();
@@ -1137,13 +1137,13 @@ const TOOLBAR_COMPS = {
 							let prefix = '';
 							if (v === 'h2') {
 								prefix = '## ';
-								n = text.replace(TerraQualityRegex.REGEX_S_REGEX_4(), '').trimStart() || 'Heading';
+								n = text.replace(HygieneRegex.REGEX_S_REGEX_4(), '').trimStart() || 'Heading';
 							} else if (v === 'h3') {
 								prefix = '### ';
-								n = text.replace(TerraQualityRegex.REGEX_S_REGEX_5(), '').trimStart() || 'Heading';
+								n = text.replace(HygieneRegex.REGEX_S_REGEX_5(), '').trimStart() || 'Heading';
 							} else if (v === 'h4') {
 								prefix = '#### ';
-								n = text.replace(TerraQualityRegex.REGEX_S_REGEX_6(), '').trimStart() || 'Heading';
+								n = text.replace(HygieneRegex.REGEX_S_REGEX_6(), '').trimStart() || 'Heading';
 							} else n = text.replace(/^#{1,6}\s+/, '').trimStart() || 'Text';
 							const replacementStr = `${prefix}${n}`;
 							view.dispatch({
@@ -1294,7 +1294,7 @@ const TOOLBAR_COMPS = {
 			}
 			const tgtPath = toolbar.path;
 			// prettier-ignore
-			const tgtId = tgtPath.split('/').pop()?.replace(TerraQualityRegex.REGEX_MDX_I_REGEX(), '') || tgtPath;
+			const tgtId = tgtPath.split('/').pop()?.replace(HygieneRegex.REGEX_MDX_I_REGEX(), '') || tgtPath;
 			(async (): Promise<void> => {
 				try {
 					const res = await actions.write.doc.versions.get({ path: tgtPath });

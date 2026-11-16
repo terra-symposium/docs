@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
+import * as HygieneRegex from '../../../../lib/terra/regex.mjs';
 // prettier-ignore
 import { ArrowLeft as LeftArrowIcon, ArrowRight as RightArrowIcon, ButtonCentered as FullWordIcon, CharacterPatterns as ReplaceIcon, CharacterSentenceCase as CaseIcon, Search as SearchIcon } from '@carbon/icons-react';
 import { Button as UiButton, Label, Popover, PopoverContent, PopoverTrigger, Textarea, Toggle } from '@terra-symposium/styling/ui/terra-original';
@@ -45,7 +45,7 @@ function looksLikeJsonBlob(val: string): boolean {
 	return ['{}', '[]'].some(p => v.startsWith(p[0]) && v.endsWith(p[1])) && v.length > 80;
 }
 
-// terra-quality-ignore single-use -- Keep the exported FindReplace component identity available to external consumers; its one local reference does not replace that contract.
+// hygiene-ignore single-use -- Keep the exported FindReplace component identity available to external consumers; its one local reference does not replace that contract.
 /**
  * Complex Popover enabling blind/case-sensitive searches and sequential replacement inside active viewports.
  *
@@ -88,7 +88,7 @@ export function FindReplace({ mode, toolbar }: { mode: ToolbarMode; toolbar: Too
 		if (!cfg.find) return null;
 		const v = cfg.blind ? BLIND_REGEX.reduce((a, r) => a.replace(r, ''), cfg.find) : cfg.find;
 		if (!v) return null;
-		const body = v.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&');
+		const body = v.replace(HygieneRegex.REGEX_G_REGEX_9(), '\\$&');
 		return new RegExp(cfg.full ? `(?<!${FIND_WORD})${body}(?!${FIND_WORD})` : body, `${cfg.case ? 'g' : 'gi'}u`);
 	}, [cfg]);
 	const matches = useMemo(() => (matcher && searchable ? Array.from(searchable.matchAll(matcher), m => m.index ?? 0) : []), [matcher, searchable]);

@@ -13,6 +13,7 @@ Use this skill when a Markdown or MDX page needs a live React component, demo, o
 - Import the TSX component from the MDX page and render it there. The shared Docs layout already owns the page shell, navigation, and table of contents.
 - Do not add an Astro wrapper just to place a TSX component inside the Docs layout. If the shared Markdown route does not render MDX components, fix that route or its slot rendering in the Docs repo. Astro may define a route when the URL needs one, but it must not duplicate or wrap the Docs layout for page content.
 - Let Docs generate the sidebar and page TOC from the Markdown tree and headings. Do not hand-build navigation or manually register page headings.
+- Put the page title in MDX frontmatter; Docs renders it as the H1. Do not write `#` or `<h1>` in the page body. Start section headings at `##` and nest subsequent levels in order.
 - Keep nested pages under their parent leaf path so the default Docs route matching keeps that leaf active and leaves sibling pages visible.
 
 ## Reuse the shared UI

@@ -3,7 +3,7 @@ name: gem
 description: Update and verify the Document Gem in the browser.
 metadata:
   related-files:
-    - src/content/docs/component.md
+    - docs/0-installation/component.md
     - src/components/blocks.tsx
     - src/lib/markdown-model.ts
 ---
@@ -24,11 +24,11 @@ The website checkout's `tests/scripts/generation/playwright.gem.config.ts` targe
 
 The latest prompt source is `geminiPrompt()` in `_gemini.ts`; older journal records may refer to `GEMINI_LEAF_PROMPT` and are historical.
 
-Keep the exact saved Gem instruction, metadata, and knowledge inventory in a local `snapshots/` folder. The prompt source in `_gemini.ts` is not proof of the live saved instruction.
+Keep the exact saved Gem instruction, metadata, and knowledge inventory in a local `gem-snapshots/` folder. The prompt source in `_gemini.ts` is not proof of the live saved instruction.
 
-Prepare instruction and knowledge changes with [content maintenance](references/content.md). Prepare name, description, citation, and identity changes with [metadata maintenance](references/metadata.md). Apply and verify both in one sequential UI session so they cannot overwrite each other.
+Prepare instruction and knowledge changes with [content maintenance](gem-references/content.md). Prepare name, description, citation, and identity changes with [metadata maintenance](gem-references/metadata.md). Apply and verify both in one sequential UI session so they cannot overwrite each other.
 
-Read [`provider-modes.md`](references/provider-modes.md) before selecting a provider. Gemini Gem updates use the Gemini web UI; OpenAI uses `OpenAI.chat()` and `OPENAI_API_KEY`, has no Gem or browser knowledge list, and currently does not upload the shared `files` input.
+Read [`provider-modes.md`](gem-references/provider-modes.md) before selecting a provider. Gemini Gem updates use the Gemini web UI; OpenAI uses `OpenAI.chat()` and `OPENAI_API_KEY`, has no Gem or browser knowledge list, and currently does not upload the shared `files` input.
 
 ## Safety contract
 
@@ -43,8 +43,8 @@ Keep credentials out of prompts, source, logs, and artifacts. Do not call any Do
 
 ## Update procedure
 
-1. Read the [Docs component reference](../../../src/content/docs/component.md) and [Docs authoring skill](../docs-authoring/SKILL.md), the latest numbered [prompt journal](references/prompt-journal.md) entry, current prompt source, schema, and [provider modes](references/provider-modes.md).
-2. In the authenticated Gemini UI, inspect the intended Gem and capture its ID, name, description, exact instructions, citation setting, and every knowledge attachment label before making changes. Save the exact values and attachment manifest in a new snapshot folder under `snapshots/`; never copy authentication state.
+1. Read the [Docs component reference](../../../docs/0-installation/component.md) and [Docs authoring guide](../../../docs/1-authoring/authoring.md), the latest numbered [prompt journal](gem-references/prompt-journal.md) entry, current prompt source, schema, and [provider modes](gem-references/provider-modes.md).
+2. In the authenticated Gemini UI, inspect the intended Gem and capture its ID, name, description, exact instructions, citation setting, and every knowledge attachment label before making changes. Save the exact values and attachment manifest in a new snapshot folder under `gem-snapshots/`; never copy authentication state.
 3. Separate the work into two reviewable parts: Gem content (instructions and knowledge files) and Gem metadata (name, description, citation setting, and target Gem identity). Preserve any field not explicitly being changed. Record repository paths and hashes for local knowledge files.
 4. Edit the repository prompt/context. The current checkout has no `CONTEXT_FILES` list or working Gem update implementation. `package.json` invokes a missing root `playwright.gem.config.ts`; the available config at `tests/scripts/generation/playwright.gem.config.ts` points to a missing `scripts/generation/document-gem.spec.ts`. Do not rely on the update command until both paths are repaired and the updater saves/reload-verifies the intended fields.
 5. If a supported updater exists and the user has explicitly requested a saved-Gem change, use the authenticated in-app browser when the user has required it. Otherwise use the repository's documented isolated updater. Never create a second Gemini session for the same leaf.

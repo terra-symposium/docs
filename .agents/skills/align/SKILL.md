@@ -8,60 +8,53 @@ metadata:
     - tests/blocks.test.mjs
 ---
 
-# Canvas Docs Generation Iteration
+# Align generated Docs content
 
-Use only to improve the Canvas source adapter for Docs generation. For general authoring, follow the [Docs authoring skill](../docs-authoring/SKILL.md); for saved Gem changes, follow the [Docs Gem skill](../gem/SKILL.md). The goal is production-like structure, information density, and block choice, not merely parseable output.
+Use this skill to compare Canvas-derived output with a representative production Docs page and improve the local generation contract. Judge structure, information density, block choice, and source coverage alongside parseability. Apply [author](../../../docs/1-authoring/authoring.md)'s schema-governed writing rules to the generated leaf; this skill adds transport, validation, and comparison rules. For an explicitly requested saved Gem change, read [Gem maintenance](gem-maintenance.md).
 
-This skill lives in Docs, but the generation driver and schema live in Website. Before relying on a command or a provider behavior, inspect the current Website checkout at the paths below. A read-only comparison also needs a saved Canvas capture and a representative production Docs leaf; without both, report the missing evidence rather than claiming the outputs match.
+The generation driver and schema live in Website. Inspect the current Website checkout before relying on a command or provider behavior. A comparison needs a saved Canvas capture and a representative production Docs leaf.
 
-## Safety and inputs
+:::note[Evidence needed]
+If either the source capture or production leaf is missing, report the gap rather than claiming that generated output matches production.
+:::
 
-- Read production examples and target facts through Docs MCP.
-- Never call `docs.leaf.generate`, `docs.leaf.write`, or another Sanity mutation. Save artifacts locally, such as in Downloads.
-- Use the browser and authentication method authorized for the task. Do not substitute another browser for one the user explicitly requested.
-- Inspect the current Website driver before selecting headed or non-headed execution. Stop on authentication failure instead of opening another session.
-- Never expose credentials, cookies, storage state, or environment values. Do not commit unless explicitly asked.
+## Prepare the comparison
 
-Before a prompt change, provide the Gem with:
+Read production examples and target facts through Docs MCP. Use the saved Canvas capture and its attachments for source facts; production examples teach form, not facts. Before changing a prompt, inspect the prompt version, the representative leaf's Markdown, `sanity/schemas/docs.tsx`, the parser and renderer, relevant actions, and the Playwright Canvas scraper. Include the relevant [verbatim schema directives](../../../docs/1-authoring/authoring-schema.md) in the generation context rather than substituting a paraphrase or a filename alone.
 
-1. Representative production leaf Markdown showing content and the block forms actually accepted by its current target parser.
-2. The prompt version being tested.
-3. `sanity/schemas/docs.tsx`, parser/renderer sources, relevant actions, and the Playwright Canvas scraper.
+Keep artifacts local, such as in Downloads. Do not call `docs.leaf.generate`, `docs.leaf.write`, or another Sanity mutation. Use the browser and authentication method authorised for the task. Inspect the Website driver before choosing headed or non-headed execution, and stop on authentication failure. Keep credentials, cookies, storage state, and environment values out of artifacts. Commit only when asked.
 
-Production examples teach form, never source facts.
+## Run a local iteration
 
-## Iteration steps
+1. Save the prior Gem ID, description, knowledge filenames, and exact instructions locally. Record each prompt revision in the [prompt journal](gem-references/prompt-journal.md) with its date, prompt, Gem ID, mode, context files, and validation.
+2. If the requested iteration needs a saved Gem change, follow [Gem maintenance](gem-maintenance.md). Reload and verify the saved instructions and knowledge labels, then keep the local driver prompt in step with the Gem output contract.
+3. Generate from the local Canvas capture or fixture with the current Website driver. Inspect the raw response before normalisation.
+4. Run the shared `HealWorkflow` and `_coverage.mjs` validator described in [Gem maintenance](gem-maintenance.md). Keep raw output and audit diagnostics. Pass exact failures into each retry; the initial attempt plus three retries is the maximum.
+5. Compare the valid output with the production leaf. Revise only for a recorded failure in structure, block choice, source coverage, or the output contract.
 
-1. Save the prior Gem configuration locally: ID, description, knowledge filenames, and exact instructions.
-2. Add an immutable numbered record to the [Docs Gem prompt journal](https://github.com/terra-symposium/docs/blob/development/.agents/skills/gem/references/prompt-journal.md) with date, exact prompt, Gem ID, mode, context files, and validation.
-3. Update Gem context through isolated Playwright Chrome; reload and verify saved instructions and file labels. Uploads may persist even when the save button is disabled.
-4. Keep the local Playwright driver prompt synchronized with the Gem output contract.
-5. Generate from a local Canvas fixture or saved scrape with the current Website driver. Never patch Sanity or reuse Dia without authorization.
-6. Inspect the raw response before normalization. The current prompt asks for one outer `markdown` fence, no outside text, and an H2 first body line. Its extractor accepts three or more backticks and also accepts some unfenced output, so verify the stronger prompt contract yourself. It currently requires `<Code>` for code samples and rejects inner triple backticks. Confirm source facts are retained without invention.
-7. Run the shared `HealWorkflow` and `_coverage.mjs` validator described in the [Docs Gem skill](https://github.com/Terra-Symposium/docs/blob/development/.agents/skills/gem/SKILL.md). Preserve raw/audit output; the initial attempt plus three retries is the maximum. Pass exact failures and requested corrections into the next attempt. Exhaustion is failure, not partial success.
-8. Revise only to address a recorded failure. Repeat until structure, block distribution, and attachment coverage meet the contract.
+The comparison should account for these distinct kinds of evidence.
 
-## Prompt design
+| Check | Evidence to inspect |
+| --- | --- |
+| Source coverage | Full page body and readable attachments; distinct facts, lists, questions, tasks, code, requirements, deliverables, dates, and actionable links. |
+| Synthesis | Concepts and relationships rather than a file inventory, Canvas-week outline, or transcript dump. |
+| Production style | Connected prose, hierarchy, information density, and blocks that expose real relationships. |
+| Validity | Raw transport contract, supported syntax, structural validation, attachment coverage, and bounded retries. |
 
-Put the output contract before style guidance. Require:
+A title-only or link-only item is a source limitation, not permission to infer its contents. Exhausted retries are failure, not partial success.
 
-- one fenced Markdown artifact and no wrapper, labels, prose, or JSON outside it;
-- tables in syntax supported by the target parser; do not assume raw HTML is accepted by the Website generation contract;
-- `<Code language="...">` examples while the current Website driver forbids inner triple backticks;
-- permitted Docs blocks only; no invented components;
+## Check the output contract
 
-concise headings and one idea per bullet, with natural prose and lines under 140 characters where practical;
+Check the current Website prompt and extractor before testing. The old contract requires the response's first bytes to be an opening triple-backtick `markdown` fence and newline, and its final bytes to be the matching closing fence. Require exactly one outer pair, nothing outside it, no citation markers or UI labels, and an H2 as the first body line. The body is Markdown/MDX text, never a `markdown`, `content`, or other field. The extractor accepts three or more backticks and some unfenced output, so verify the stronger raw-response contract directly. Require canonical `<Code language="...">` for multiline code and no triple backticks inside the body.
 
-- inline `<code>` for technical tokens and `$...$` for symbolic relationships;
+Put the output contract first, followed by the schema's authoring directives verbatim, source authority, exact block grammar, then a silent final check. Do not paraphrase the schema's purpose, voices, list-preservation rule, or leaf-body instructions into a different requirement. Use native HTML tables for repeated or multidimensional data when the Website parser accepts them; keep block components out of table cells. Verify each block delimiter and attribute against the target parser, then request a complete corrected artifact after a driver error rather than a repair explanation.
 
-tables for repeated/comparison data, concise asides for salient constraints, `<Nodes>` for real sequences, accordions for secondary detail, and numbered lists only for ordered procedures;
+Keep style rules general. Do not turn a single production example into a rule or mistake a model's repair explanation for a corrected artifact.
 
-- a silent structural self-check and a complete corrected artifact when the driver reports an error.
+:::note[Schema and parser disagreement]
+The supplied Website schema comment labels `===` as tabs and `|||` as accordions, while the Docs parser maps them in the opposite direction. Resolve that disagreement in the current generation target before calling either form canonical. Check the actual block registry and parser for examples rather than relying on a prompt claim that every block has one. The schema's authoring rules govern the writing; executable parser behavior governs syntax.
+:::
 
-Keep style guidance generic; do not turn one source example into a universal rule. Test the output contract, not whether the model explains its repair.
-
-The current Website schema comment labels `===` as tabs and `|||` as accordions, while the Docs parser maps them in the opposite direction. Resolve that disagreement in the target source before claiming either form is canonical for generated content. The current Website prompt also refers to schema examples for every block, but the inspected schema may omit examples; check the actual block registry and parser instead of repeating that claim.
-
-## Test documentation
+## Document fixture changes
 
 Generation fixtures and drivers need TSDoc stating their agent-iteration purpose, local-only boundary, and structural contract. Follow the [Hygiene skill's source readability guidance](../../../../standards/.agents/skills/quality/references/hygiene.md).

@@ -1,6 +1,6 @@
 # Document Gem Content
 
-Use for changes to the saved instruction text or persistent Gem knowledge. Coordinate with the [Gem maintenance skill](../SKILL.md); this skill does not authorize Docs leaf writes.
+Use for changes to the saved instruction text or persistent Gem knowledge. Coordinate with the [Gem maintenance skill](../gem-maintenance.md); this skill does not authorize Docs leaf writes.
 
 ## Prepare the content update
 
@@ -8,7 +8,7 @@ Use for changes to the saved instruction text or persistent Gem knowledge. Coord
 2. Treat `geminiPrompt()` as the current local generation prompt only. Capture the exact live Gem instruction separately before replacing it.
 3. Inventory all existing Gem knowledge labels. Keep, replace, or remove each item deliberately. Conversation attachments are not persistent Gem knowledge.
 4. For every local knowledge source, record its repository path and SHA-256 in the pre-update snapshot. Do not include credentials, browser state, or unrelated course-source attachments.
-5. Keep the new instruction and files in a reviewable staging folder under the shared `gem` skill's `snapshots/<gem-id>/` before interacting with Gemini.
+5. Keep the new instruction and files in a reviewable staging folder under the shared `gem` skill's `gem-snapshots/<gem-id>/` before interacting with Gemini.
 
 ## Apply and verify
 

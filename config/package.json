@@ -31,8 +31,8 @@
 	},
 	"scripts": {
 		"changeset:status": "changeset status",
-		"docs:dev": "pnpm build && mkdir -p dist/cache/astro-types && astro dev --config config/astro.config.mjs --host 127.0.0.1 --open",
-		"docs:build": "pnpm build && mkdir -p dist/cache/astro-types && astro build --config config/astro.config.mjs",
+		"docs:dev": "pnpm build && astro dev --config config/astro.config.mjs --host 127.0.0.1 --open",
+		"docs:build": "pnpm build && astro build --config config/astro.config.mjs",
 		"docs:preview": "pnpm docs:build && astro preview --config config/astro.config.mjs --host 127.0.0.1",
 		"dev:library": "tsc --watch",
 		"build": "rm -rf dist/lib && tsc && tailwindcss -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/docs-workspace-style.css --minify && node scripts/copy-runtime.mjs",
@@ -59,6 +59,7 @@
 		"@eslint/js": "10.0.1",
 		"@playwright/test": "^1.64.1",
 		"@terra-symposium/boundaries": "^0.2.0",
+		"@terra-symposium/docs-site": "npm:@terra-symposium/docs@^0.4.18",
 		"@terra-symposium/hygiene": "^2.4.5",
 		"@terra-symposium/reporting": "^0.8.0",
 		"@terra-symposium/styling": "0.1.34",

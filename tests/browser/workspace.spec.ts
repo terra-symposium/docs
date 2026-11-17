@@ -8,6 +8,7 @@ IMPORTS
 
 // API
 import { expect, test } from '@playwright/test';
+import { readdirSync } from 'node:fs';
 
 // TYPES
 import type { Page } from '@playwright/test';
@@ -76,17 +77,21 @@ test.afterEach(async ({ page: p }) => {
 test('standalone Astro pages mount the extracted read-only workspace with their nested navigation', XL_VIEWPORT_TEST, async ({ page: p }) => {
 	await p.goto('/');
 	await expect(p.getByRole('link', { name: 'Terra Docs', exact: true }).first()).toBeVisible();
-	await expect(p.getByRole('link', { name: 'Create an instance' })).toBeVisible();
 	await expect(p.getByRole('combobox', { name: 'Section' })).toBeVisible();
 	await expect(p.getByRole('combobox', { name: 'Mode' })).toBeVisible();
 	await expect(p.getByRole('textbox', { name: 'Search pages' })).toHaveCount(0);
 	await expect(p.getByRole('heading', { name: 'Install an instance' })).toBeVisible();
 	await p.screenshot({ path: '/tmp/terra-docs-static-desktop.png', fullPage: true });
 	await p.getByRole('combobox', { name: 'Section' }).click();
-	await p.getByRole('option', { name: 'Configure' }).click();
+	const directories = readdirSync(new URL('../../docs/', import.meta.url), { withFileTypes: true })
+		.filter(entry => entry.isDirectory())
+		.map(entry => entry.name.replace(/^\d+-/, '').replace(/-/g, ' ').replace(/\b\w/g, character => character.toUpperCase()));
+	await expect(p.getByRole('option')).toHaveText(['Docs', ...directories]);
+	await p.getByRole('option', { name: 'Installation' }).click();
+	await expect(p.getByRole('link', { name: 'Create an instance' })).toBeVisible();
 	await expect(p.getByRole('link', { name: 'Storage providers' })).toBeVisible();
 	await p.getByRole('link', { name: 'Storage providers' }).click();
-	await expect(p).toHaveURL(/\/storage\//);
+	await expect(p).toHaveURL(/\/0-installation\/storage\//);
 	await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Storage providers');
 });
 test('shared workspace keeps the Terra header, toolbar position, section navigation, and nested leaf actions', XL_VIEWPORT_TEST, async ({ page: p }) => {

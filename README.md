@@ -8,10 +8,10 @@ Requires Node.js 24.12+ and pnpm 10.30.3. From the repository root:
 
 ```sh
 pnpm install
-pnpm dev
+pnpm run docs:dev
 ```
 
-Vite opens the demo at `127.0.0.1`. Build the library with `pnpm build`; see the [interface guide](docs/interface.mdx) for integration details.
+The Docs site serves this repository's [`docs/`](docs/index.md) pages. Build the library with `pnpm build`; see the [component reference](docs/0-installation/component.md) for integration details.
 
 From the repository root, run `pnpm quality:all`, `pnpm test`, `pnpm test:browser`, and `pnpm test:consumer` as applicable.
 
@@ -34,7 +34,7 @@ Quality can apply safe fixes; review the diff before committing.
 
 ## Contributing
 
-`src/` contains exported library components and styles; `docs/` documents the interface, `tests/` contains Node and browser tests, and `template/` provides a consumer starter.
+`src/` contains exported library components and styles; `docs/` is both the site content and repository documentation, `tests/` contains Node and browser tests, and `template/` provides a consumer starter.
 
 Document interface changes and keep consumer examples aligned with the package exports.
 
@@ -43,7 +43,8 @@ Open a pull request against `development` and review the results of [`check.yml`
 ## Documentation
 
 - [Agent skills](.agents/README.md), including the Docs authoring workflow
-- [Interface guide](docs/interface.mdx)
+- [Documentation site source](docs/index.md)
+- [Component reference](docs/0-installation/component.md)
 - [Package exports](package.json)
 - [Apache-2.0 license](LICENSE)
 

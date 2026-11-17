@@ -146,7 +146,19 @@ export function markdownToDocsValue(markdown: string, options: DocsBlockOptions 
 			continue;
 		}
 		if (token.type === 'blockquote') {
-			result.push(textBlock('blockquote', token.tokens, token.text ?? ''));
+			const paragraphs = (token.tokens ?? []).filter(part => part.type === 'paragraph');
+			for (const paragraph of paragraphs) result.push(textBlock('blockquote', paragraph.tokens, paragraph.text ?? ''));
+			if (!paragraphs.length) result.push(textBlock('blockquote', marked.Lexer.lexInline(token.text ?? '') as Token[], token.text ?? ''));
+			continue;
+		}
+		if (token.type === 'table' && enabledDocsBlocks(options).includes('table')) {
+			const cells = (values: unknown) =>
+				(Array.isArray(values) ? values : []).map(value => {
+					const entry = value as { text?: string; tokens?: Token[] };
+					return { _type: 'cell', _key: key(), content: [textBlock('normal', entry.tokens, entry.text ?? '')] };
+				});
+			const rows = [token.header, ...(Array.isArray(token.rows) ? token.rows : [])].map(row => ({ _type: 'row', _key: key(), cells: cells(row) }));
+			result.push({ _type: 'table', _key: key(), rows, markdown: token.raw });
 			continue;
 		}
 		if (token.type === 'code') {

@@ -2924,15 +2924,16 @@ This checklist inventories repository-owned functions, documents, and configurat
 - [ ] [`.changeset/steady-docs-parity.md`](../.changeset/steady-docs-parity.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
 - [ ] [`CHANGELOG.md`](../CHANGELOG.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
 - [ ] [`README.md`](../README.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`docs/README.md`](../docs/README.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`docs/interface.mdx`](../docs/interface.mdx): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`src/content/docs/component.md`](../src/content/docs/component.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`src/content/docs/configuration.md`](../src/content/docs/configuration.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`src/content/docs/deploy.md`](../src/content/docs/deploy.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`src/content/docs/development.md`](../src/content/docs/development.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`src/content/docs/getting-started.md`](../src/content/docs/getting-started.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`src/content/docs/index.md`](../src/content/docs/index.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
-- [ ] [`src/content/docs/storage.md`](../src/content/docs/storage.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/index.md`](../docs/index.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/0-installation/component.md`](../docs/0-installation/component.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/0-installation/configuration.md`](../docs/0-installation/configuration.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/0-installation/deploy.md`](../docs/0-installation/deploy.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/0-installation/getting-started.md`](../docs/0-installation/getting-started.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/0-installation/storage.md`](../docs/0-installation/storage.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/1-authoring/authoring.md`](../docs/1-authoring/authoring.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/1-authoring/authoring-schema.md`](../docs/1-authoring/authoring-schema.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/1-authoring/development.md`](../docs/1-authoring/development.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
+- [ ] [`docs/1-authoring/structured-blocks.md`](../docs/1-authoring/structured-blocks.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
 - [ ] [`template/README.md`](../template/README.md): Render, check links and examples, then review each factual claim and instruction against the current implementation.
 
 ## Configuration and other owned files

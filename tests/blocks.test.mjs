@@ -23,11 +23,11 @@ test('all reusable rich blocks are enabled by default and can be opted out indiv
 	assert.equal(enabledDocsBlocks({ embed: false }).includes('embed'), false);
 	assert.equal(enabledDocsBlocks({ code: false }).includes('math'), true);
 });
-test('authoring skill names every registered block and the separate inline math option', () => {
-	const documented = readFileSync(new URL('../.agents/skills/docs-authoring/SKILL.md', import.meta.url), 'utf8').match(
+test('authoring documentation names every registered block and the separate inline math option', () => {
+	const documented = readFileSync(new URL('../docs/1-authoring/authoring.md', import.meta.url), 'utf8').match(
 		/Its supported types are\s+([\s\S]*?)\. `inlineMath` is a separate option\./,
 	)?.[1];
-	assert.ok(documented, 'skill has a supported block list');
+	assert.ok(documented, 'documentation has a supported block list');
 	assert.deepEqual(
 		[...documented.matchAll(/`([^`]+)`/g)].map(match => match[1]),
 		[...DOCS_BLOCK_TYPES],
@@ -37,6 +37,14 @@ test('Markdown keeps existing accordion syntax and unsupported source across con
 	const result = docsValueToMarkdown(markdownToDocsValue('## Heading\n\n=== [Item]\nOriginal **content**\n===\n\n<custom-widget value="1"></custom-widget>\n'));
 	assert.match(result, /=== \[Item\]\nOriginal \*\*content\*\*\n===/);
 	assert.match(result, /<custom-widget value="1"><\/custom-widget>/);
+});
+test('local documentation renders quoted emphasis and pipe tables as Docs blocks', () => {
+	const value = markdownToDocsValue('> Code explains *how* it works.\n\n| Material | Guidance |\n| --- | --- |\n| Engineering | Explain intent |\n');
+	const quote = value.find(block => block._type === 'block' && block.style === 'blockquote');
+	const table = value.find(block => block._type === 'table');
+	assert.ok(quote?.children?.some(child => child.text === 'how' && child.marks?.includes('em')));
+	assert.equal(table?.rows?.[0]?.cells?.[0]?.content?.[0]?.children?.[0]?.text, 'Material');
+	assert.equal(table?.rows?.[1]?.cells?.[1]?.content?.[0]?.children?.[0]?.text, 'Explain intent');
 });
 test('structured block containers round-trip without losing source fields', () => {
 	for (const type of DOCS_BLOCK_TYPES.filter(item => item !== 'accordion' && item !== 'tabs')) {

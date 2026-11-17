@@ -31,7 +31,7 @@ To disable a member in one instance, set its flag to `false`:
 
 The same options can be passed to `renderMarkdown(markdown, blocks)`. Unknown or disabled structured source stays visible as escaped source, so it is not silently discarded.
 
-`markdownToDocsValue(source)` and `docsValueToMarkdown(value)` bridge local Markdown and visual editing. Existing `=== [Title]` accordions and `||| [Title]` tabs remain supported. Other structured members use a `:::terra-docs type` block containing JSON. Unrecognized Markdown tokens are kept as raw blocks; conversions preserve them verbatim. Store images and attachments beside the Markdown file and use relative paths.
+`markdownToDocsValue(source)` and `docsValueToMarkdown(value)` bridge local Markdown and visual editing. The installed site package parses `=== [Title]` accordions, adjacent `||| [Title]` tabs, `:::note[Title]` callouts, and `<Nodes>` diagrams. It also accepts canonical `<DocsBlock>` data for other structured members. Unrecognized Markdown tokens are kept as raw blocks; conversions preserve them verbatim. Store images and attachments beside the Markdown file and use relative paths.
 
 ## Workspace shell
 

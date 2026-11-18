@@ -277,7 +277,11 @@ export default defineConfig({
   devToolbar: { enabled: false },
   build: { format: 'directory' },
   integrations: [
-    __terraErrorBoundaryIntegration({ endpoint: reportEndpoint, site: reportSite }),
+    __terraErrorBoundaryIntegration({
+      endpoint: reportEndpoint,
+      site: reportSite,
+      delivery: reporting?.delivery ?? 'http',
+    }),
     react(),
     mdx(),
   ],

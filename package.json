@@ -1,6 +1,6 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.4.20",
+  "version": "0.4.21",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
@@ -105,7 +105,7 @@
     "@lexical/rich-text": "^0.35.0",
     "@portabletext/editor": "7.9.0",
     "@radix-ui/react-popover": "^1.1.15",
-    "@terra-symposium/boundaries": "0.2.1",
+    "@terra-symposium/boundaries": "0.2.2",
     "@terra-symposium/styling": "0.1.34",
     "@uiw/codemirror-theme-github": "^4.25.9",
     "@xstate/react": "6.1.0",

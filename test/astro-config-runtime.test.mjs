@@ -66,13 +66,19 @@ test('resolves Styling and Radix without aliasing the consumer React runtime', a
           errorReporting: {
             endpoint: 'http://localhost:4321/api/error-report',
             site: 'docs-owned-consumer',
+            delivery: 'email',
           },
         },
       }),
     );
     process.env.DOCS_ROOT = docsOwnedRoot;
-    const docsOwnedAliases = (await import(`${configUrl}?docs-owned=${Date.now()}`)).default.vite
-      .resolve.alias;
+    const docsOwnedConfig = (await import(`${configUrl}?docs-owned=${Date.now()}`)).default;
+    const docsOwnedAliases = docsOwnedConfig.vite.resolve.alias;
+    const injected = [];
+    docsOwnedConfig.integrations[0].hooks['astro:config:setup']({
+      injectScript: (_stage, content) => injected.push(content),
+    });
+    assert.ok(injected.some((content) => content.includes('"delivery":"email"')));
     assert.equal(findAlias(docsOwnedAliases, 'react'), undefined);
     assert.equal(findAlias(docsOwnedAliases, 'react-dom'), undefined);
     assert.equal(findAlias(docsOwnedAliases, '@radix-ui/react-context'), undefined);

@@ -16,6 +16,7 @@ import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 import { DocsQuizBlock } from './quiz.js';
 import { DocsMarkdown } from './MarkdownContent.js';
 import { NodesBlock } from './terra/editor/docs/_Nodes.js';
+import { CodeBlock } from './terra/editor/docs/_CodeBlock.js';
 
 // DATA
 import { DOCS_BLOCK_TYPES } from '../lib/block-types.js';
@@ -331,9 +332,7 @@ export function DocsRichBlock({
     }
     case 'code':
       return (
-        <pre className="docs-code">
-          <code data-language={text(block.language)}>{text(block.value)}</code>
-        </pre>
+        <CodeBlock code={text(block.value)} language={text(block.language) || 'text'} tone="view" />
       );
     case 'docImage':
       return sUrl(block.url) ? (
@@ -375,7 +374,7 @@ export function DocsRichBlock({
     case 'raw': {
       const markdown = text(block.markdown);
       if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(markdown.trim())) return <hr data-docs-raw-divider />;
-      return <pre>{markdown}</pre>;
+      return <CodeBlock code={markdown} language="text" tone="view" />;
     }
     case 'tsDocs':
       return (
@@ -388,7 +387,9 @@ export function DocsRichBlock({
       return <DocsQuizBlock />;
     default:
       return (
-        <pre data-unsupported-block={block._type}>{block.markdown ?? JSON.stringify(block)}</pre>
+        <div data-unsupported-block={block._type}>
+          <CodeBlock code={block.markdown ?? JSON.stringify(block)} language="text" tone="view" />
+        </div>
       );
   }
 }

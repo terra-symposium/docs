@@ -12,7 +12,7 @@ This audit covers Desktop repositories with an `@terra-symposium/docs` dependenc
 | Docs template     | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Template content and site configuration                                |
 | Standards         | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Markdown and site configuration                                        |
 | Styling           | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Component reference generation and Markdown                            |
-| Business Docs     | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Structure synchronization and Markdown                                 |
+| Systems           | `^0.4.22` / `0.4.22` | `docs` CLI, shared CSS                 | Structure synchronization and Markdown                                 |
 | Compression       | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Assessment content and site configuration                              |
 | Personal Docs     | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Personal content and site configuration                                |
 | Portfolio Styling | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Portfolio content and base path                                        |

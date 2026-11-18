@@ -24,7 +24,7 @@ test('authored blocks parse and render through the shared package', () => {
   for (const [kind, source, marker] of [
     ['table', '| A | B |\n| --- | --- |\n| 1 | 2 |', '<table'],
     ['table', '<table><tr><th>A</th></tr><tr><td>1</td></tr></table>', '<table'],
-    ['code', '```js\nconsole.log(1)\n```', '<code'],
+    ['code', '```js\nconsole.log(1)\n```', 'data-docs-code-block="view"'],
     ['accordion', '===[Title]\nBody\n===', 'data-orientation="vertical"'],
     ['tabs', '|||[Tab]\nBody\n|||', 'role="tablist"'],
     [

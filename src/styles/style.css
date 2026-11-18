@@ -1,8 +1,6 @@
-/* One Tailwind pass generates utilities for both Styling primitives and Docs.
-   This keeps responsive variants after their base utilities in the original
-   cascade, while the host imports only this published stylesheet. */
-@import '../../node_modules/@terra-symposium/styling/dist/docs-base.css';
-@import '../../node_modules/@terra-symposium/styling/dist/ui-base.css';
+/* Styling supplies its compiled control styles; this entrypoint adds Docs prose
+   and the utilities used by the workspace itself. */
+@import '../../node_modules/@terra-symposium/styling/dist/global.css';
 @import '@xyflow/react/dist/style.css';
 @import './docs-theme.css';
 @import './prose.css';

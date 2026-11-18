@@ -75,21 +75,53 @@ test('code.spec: Preserve entered newlines', XL_VIEWPORT_TEST, async ({ page: p 
     )
     .toBe('const answer = 1;\nconst answer = 2;');
 });
-test('code.spec: Preserve literal backslash-n in read-only source', async ({ page: p }) => {
-  await openEditor(
-    p,
-    [
-      {
-        _key: 'literal-newline',
-        _type: 'code',
-        language: 'cpp',
-        value: 'std::cout << "Hello World\\n";\nstd::cout << "second line";',
-      },
-    ],
-    { readOnly: true },
-  );
-  const lines = p.locator('[data-docs-code-block="view"] .docs-code-block-fallback-line > span');
-  await expect(lines).toHaveCount(2);
-  await expect(lines.nth(0)).toHaveText('std::cout << "Hello World\\n";');
-  await expect(lines.nth(1)).toHaveText('std::cout << "second line";');
-});
+test(
+  'code.spec: Preserve literal backslash-n in read-only source',
+  XL_VIEWPORT_TEST,
+  async ({ page: p }) => {
+    await openEditor(
+      p,
+      [
+        {
+          _key: 'literal-newline',
+          _type: 'code',
+          language: 'cpp',
+          value: 'std::cout << "Hello World\\n";\nstd::cout << "second line";',
+        },
+      ],
+      { readOnly: true },
+    );
+    const lines = p.locator('[data-docs-code-block="view"] .cm-line');
+    await expect(lines).toHaveCount(2);
+    await expect(lines.nth(0)).toHaveText('std::cout << "Hello World\\n";');
+    await expect(lines.nth(1)).toHaveText('std::cout << "second line";');
+  },
+);
+
+test(
+  'code.spec: Highlight received source with the shared header and copy control',
+  XL_VIEWPORT_TEST,
+  async ({ page: p }) => {
+    await p.route('**/code-fixture.ts', (route) =>
+      route.fulfill({ contentType: 'text/plain', body: 'const received = 42;' }),
+    );
+    await openEditor(
+      p,
+      [
+        {
+          _key: 'received-code',
+          _type: 'code',
+          language: 'typescript',
+          value: '',
+          source: '/code-fixture.ts',
+        },
+      ],
+      { readOnly: true },
+    );
+    const code = p.locator('[data-docs-code-block="view"]');
+    await expect(code.locator('.docs-code-block-header')).toContainText('typescript');
+    await expect(code.getByRole('button', { name: 'Copy' })).toBeVisible();
+    await expect(code.locator('.cm-line')).toContainText('const received = 42;');
+    await expect(code.locator('.cm-line span').first()).toBeVisible();
+  },
+);

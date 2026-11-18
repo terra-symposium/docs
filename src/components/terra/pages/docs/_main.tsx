@@ -2372,7 +2372,7 @@ const EditorSurfaces = {
 							}}
 							placeholder='Page title'
 							disabled={!editable}
-							className='mb-2 mt-0 h-fit border-none bg-transparent p-0 font-serif italic tracking-tight text-4xl text-primary-12 shadow-none focus-visible:ring-0 md:text-5xl disabled:cursor-default disabled:opacity-100 dark:bg-transparent'
+							className='mb-2 mt-0 h-fit border-none bg-transparent p-0 font-sans tracking-tight text-4xl text-primary-12 shadow-none focus-visible:ring-0 md:text-5xl disabled:cursor-default disabled:opacity-100 dark:bg-transparent'
 							suppressHydrationWarning
 						/>
 					</div>
@@ -3215,7 +3215,7 @@ export default function Scaffold({
                               <div
                                 className={cn(
                                   'prose !max-w-none pb-40 transition-opacity duration-200',
-                                  a === 'edit' ? 'pt-2' : 'pt-8',
+                                  a === 'edit' ? 'pt-6' : 'pt-12',
                                 )}
                                 data-docs-body-content
                                 data-docs-view-root={a === 'view' ? 'true' : undefined}

@@ -789,7 +789,7 @@ aside .title + * {
   /* docs specific typography formatting */
   &:not(.article-copy) {
     h1 {
-      @apply text-5xl italic leading-[65px] text-primary-12;
+      @apply font-sans text-5xl leading-[65px] text-primary-12;
     }
     :is(p, div.p, li) {
       @apply text-sm 2xl:text-base print:text-[15.5px];

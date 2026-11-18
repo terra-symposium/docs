@@ -10,6 +10,8 @@ Write ordinary text as Markdown. The Docs package owns parsing and rendering; a 
 
 Use `##` and deeper headings, paragraphs, links, emphasis, block quotes, numbered steps, and bullet lists as normal Markdown. Use a fenced code block with a language label for multiline code:
 
+Fenced, stored, and received code share a syntax-highlighted surface with a language header and copy control in both view and edit modes.
+
 ````md
 ```c
 printf("Hello, world!\n");

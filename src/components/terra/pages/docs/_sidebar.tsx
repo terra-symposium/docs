@@ -3561,7 +3561,7 @@ function Nav({
         {/* HEADER */}
         <SidebarHeader className="print:hidden" data-docs-navigation="true">
           {/* Keep the original single-brand header; site description is optional. */}
-          <a className="font-serif text-2xl italic hover:tracking-tight" href={homePath}>
+          <a className="font-serif text-2xl hover:italic hover:tracking-tight" href={homePath}>
             {siteTitle}
           </a>
           {siteDescription && (
@@ -3607,7 +3607,7 @@ function Nav({
                       </ContextMenuContent>
                     )}
                   </ContextMenu>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)] border-primary-6 !bg-primary-3 text-primary-12 shadow-lg">
+                  <SelectContent className="w-[var(--radix-select-trigger-width)] shadow-lg">
                     {sects.map((s) => {
                       if (s.simulated) {
                         return (

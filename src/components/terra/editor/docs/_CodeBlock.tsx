@@ -36,7 +36,7 @@ import {
   stringifyCodeValue,
 } from '../../../../lib/terra/runtime/content/markdown.js';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../../lib/terra/regex.mjs';
@@ -223,7 +223,6 @@ export function CodeBlock(
 
   // REFS
   const host = useRef<HTMLDivElement>(null);
-  const received = useRef<HTMLElement>(null);
   const view = useRef<EditorView | null>(null);
   const theme = useRef(new Compartment());
   /** Returns the source code snapshot used to synchronize the editor view.
@@ -307,10 +306,9 @@ export function CodeBlock(
     };
   }, [docsSrc, blockOptions.code, blockOptions.source, src]);
   useEffect(() => {
-    if (blockOptions.tone === 'view') return;
     let a = true;
     let aEnterHandler: ((event: KeyboardEvent) => void) | undefined;
-    $hydrating.set($hydrating.get() + 1);
+    if (blockOptions.tone === 'edit') $hydrating.set($hydrating.get() + 1);
     const hydration = {
       finished: false,
       fallback: undefined as ReturnType<typeof setTimeout> | undefined,
@@ -319,15 +317,11 @@ export function CodeBlock(
         hydration.finished = true;
         if (hydration.fallback) clearTimeout(hydration.fallback);
         hydration.fallback = undefined;
-        $hydrating.set(Math.max(0, $hydrating.get() - 1));
+        if (blockOptions.tone === 'edit') $hydrating.set(Math.max(0, $hydrating.get() - 1));
       },
     };
     hydration.fallback = setTimeout(() => hydration.release(), 3000);
     void (async () => {
-      if (src) {
-        hydration.release();
-        return;
-      }
       if (!host.current) return;
       const n = host.current;
       let exts: Promise<Extension[]> | Extension[] = (async (): Promise<Extension[]> => {
@@ -619,10 +613,6 @@ export function CodeBlock(
     if (expAll) expand(view.current);
     view.current.requestMeasure();
   }, [expAll, resCode, src]);
-  useLayoutEffect(() => {
-    if (received.current && received.current.textContent !== resCode)
-      received.current.textContent = resCode;
-  }, [resCode]);
   useEffect(() => {
     if (!host.current || typeof ResizeObserver === 'undefined') return;
     let frame = 0;
@@ -698,12 +688,10 @@ export function CodeBlock(
             aria-label={copied ? 'Copied' : 'Copy'}
             title={copied ? 'Copied' : 'Copy'}
             onClick={() => {
-              void navigator.clipboard
-                .writeText(src ? received.current?.textContent || resCode : resCode)
-                .then(() => {
-                  setCopied(true);
-                  window.setTimeout(() => setCopied(false), 1200);
-                });
+              void navigator.clipboard.writeText(resCode).then(() => {
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1200);
+              });
             }}
           >
             {copied ? <CheckIcon aria-hidden="true" /> : <CopyIcon aria-hidden="true" />}
@@ -728,10 +716,10 @@ export function CodeBlock(
               <div hidden={receivedState !== 'error'}>
                 <AlertError title="API value unavailable" description={receivedErr} />
               </div>
-              <code
-                ref={received}
+              <div
+                ref={host}
                 hidden={receivedState !== 'received'}
-                className="block whitespace-pre p-3"
+                className="min-w-0 max-w-full overflow-x-auto overflow-y-hidden"
                 data-docs-code-received
                 data-docs-code-source={src}
                 data-state={receivedState}

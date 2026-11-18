@@ -57,7 +57,7 @@ const siteIslandProps = {
 };
 ---
 
-<AstroErrorBoundary title="Documentation could not load" description="The Docs interface failed to start. The error has been recorded for diagnosis." reloadLabel="Reload Docs">
+<AstroErrorBoundary title="Documentation could not load" description="The Docs interface failed to start. Reload to try again." reloadLabel="Reload Docs">
 	{hasStaticSlot ? (
 		<DocsSiteIsland client:load {...siteIslandProps}>
 			<slot />

@@ -60,7 +60,15 @@ test('resolves Styling and Radix without aliasing the consumer React runtime', a
     await mkdir(docsOwnedRoot, { recursive: true });
     await writeFile(
       join(docsOwnedRoot, 'package.json'),
-      JSON.stringify({ name: 'docs-owned-consumer' }),
+      JSON.stringify({
+        name: 'docs-owned-consumer',
+        docs: {
+          errorReporting: {
+            endpoint: 'http://localhost:4321/api/error-report',
+            site: 'docs-owned-consumer',
+          },
+        },
+      }),
     );
     process.env.DOCS_ROOT = docsOwnedRoot;
     const docsOwnedAliases = (await import(`${configUrl}?docs-owned=${Date.now()}`)).default.vite
@@ -80,6 +88,12 @@ test('resolves Styling and Radix without aliasing the consumer React runtime', a
       join(consumerRoot, 'package.json'),
       JSON.stringify({
         name: 'consumer-owned-runtime',
+        docs: {
+          errorReporting: {
+            endpoint: 'http://localhost:4321/api/error-report',
+            site: 'consumer-owned-runtime',
+          },
+        },
         dependencies: {
           '@terra-symposium/styling': '1.0.0',
           react: '19.0.0',

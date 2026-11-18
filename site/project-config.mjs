@@ -25,7 +25,30 @@ HELPERS
  * @returns Consumer root, its parsed manifest when present, and a resolver based there.
  */
 export function createConsumerProject(siteRoot, packageRoot = '.') {
-  const consumerRoot = resolve(siteRoot, packageRoot);
+  const rootManifest = (() => {
+    try {
+      return JSON.parse(readFileSync(resolve(siteRoot, 'package.json'), 'utf8'));
+    } catch {
+      return {};
+    }
+  })();
+  const configManifest = (() => {
+    try {
+      return JSON.parse(readFileSync(resolve(siteRoot, 'config/package.json'), 'utf8'));
+    } catch {
+      return {};
+    }
+  })();
+  const hasDocs = (manifest) =>
+    Boolean(
+      manifest.dependencies?.['@terra-symposium/docs'] ||
+      manifest.devDependencies?.['@terra-symposium/docs'],
+    );
+  const selectedRoot =
+    packageRoot === '.' && !hasDocs(rootManifest) && hasDocs(configManifest)
+      ? 'config'
+      : packageRoot;
+  const consumerRoot = resolve(siteRoot, selectedRoot);
   const manifestPath = resolve(consumerRoot, 'package.json');
   const manifest = (() => {
     try {

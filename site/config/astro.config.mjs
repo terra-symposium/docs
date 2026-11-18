@@ -47,6 +47,13 @@ const consumerProject = createConsumerProject(projectRoot, process.env.DOCS_PACK
 const consumerRoot = consumerProject.root;
 const projectManifest = consumerProject.manifest;
 const requireFromProject = consumerProject.require;
+const reporting = projectManifest.docs?.errorReporting;
+const reportEndpoint = process.env.DOCS_ERROR_REPORT_ENDPOINT || reporting?.endpoint;
+const reportSite = reporting?.site || projectManifest.name;
+if (!reportEndpoint || !reportSite)
+  throw new Error(
+    'Docs error reporting requires docs.errorReporting.endpoint and a site name in the consumer package.json.',
+  );
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -90,6 +97,11 @@ function astroPackageExportAliases() {
       // does not expose through package exports. Resolve it from Docs' Astro.
       find: /^astro\/runtime\/(.+)$/,
       replacement: resolve(dirname(astroManifestPath), 'dist/runtime/$1'),
+    },
+    {
+      // astro:assets imports Image.astro through this wildcard export.
+      find: /^astro\/components\/(.+)$/,
+      replacement: resolve(dirname(astroManifestPath), 'components/$1'),
     },
     ...Object.keys(astroManifest.exports)
       .filter((k) => k.startsWith('./') && !k.includes('*'))
@@ -256,7 +268,7 @@ function stylingDependencyAliases() {
 }
 
 export default defineConfig({
-  root: projectRoot,
+  root: consumerRoot,
   srcDir: resolve(packageRoot, 'site/src'),
   publicDir: resolve(projectRoot, 'dist/public'),
   outDir: resolve(projectRoot, process.env.DOCS_OUT ?? 'dist/docs'),
@@ -264,11 +276,17 @@ export default defineConfig({
   base,
   devToolbar: { enabled: false },
   build: { format: 'directory' },
-  integrations: [__terraErrorBoundaryIntegration(), react(), mdx()],
+  integrations: [
+    __terraErrorBoundaryIntegration({ endpoint: reportEndpoint, site: reportSite }),
+    react(),
+    mdx(),
+  ],
   markdown: { processor: unified({ remarkPlugins: [[basePathRemarkPlugin, { base }]] }) },
   vite: {
     plugins: [docsContentPlugin({ root: projectRoot, base })],
-    optimizeDeps: { include: [...DOCS_VITE_OPTIMIZE_DEPS] },
+    optimizeDeps: {
+      include: [...DOCS_VITE_OPTIMIZE_DEPS, 'react', 'react/jsx-runtime', 'react-dom/client'],
+    },
     resolve: {
       // Astro's virtual build entries are resolved from the consumer project
       // root. Consumers only need the Docs package, so map Astro's exported

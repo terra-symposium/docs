@@ -3090,7 +3090,7 @@ export default function Scaffold({
           <div className={cn('mx-auto w-full px-6 md:px-10', full ? 'max-w-none' : 'max-w-5xl')}>
             <div data-docs-body className="relative h-full min-h-[50vh] text-primary-12">
               <div
-                className="prose !max-w-none pb-40 pt-8 transition-opacity duration-200"
+                className="prose !max-w-none pb-40 pt-12 transition-opacity duration-200"
                 data-docs-body-content
                 data-docs-view-root="true"
               >
@@ -3215,7 +3215,7 @@ export default function Scaffold({
                               <div
                                 className={cn(
                                   'prose !max-w-none pb-40 transition-opacity duration-200',
-                                  a === 'edit' ? 'pt-6' : 'pt-12',
+                                  a === 'edit' ? 'pt-10' : 'pt-20',
                                 )}
                                 data-docs-body-content
                                 data-docs-view-root={a === 'view' ? 'true' : undefined}

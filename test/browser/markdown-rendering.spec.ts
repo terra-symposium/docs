@@ -109,7 +109,7 @@ test(
       );
     });
     expect(spacing).not.toBeNull();
-    expect(spacing!).toBeGreaterThanOrEqual(24);
+    expect(spacing!).toBeGreaterThanOrEqual(48);
 
     const mode = page.getByRole('combobox', { name: 'Mode' });
     await mode.focus();

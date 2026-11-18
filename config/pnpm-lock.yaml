@@ -54,8 +54,8 @@ importers:
         specifier: ^1.1.15
         version: 1.3.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@terra-symposium/boundaries':
-        specifier: 0.2.2
-        version: 0.2.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 0.2.3
+        version: 0.2.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@terra-symposium/styling':
         specifier: 0.1.34
         version: 0.1.34(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(yaml@2.9.1)
@@ -1975,8 +1975,8 @@ packages:
       react: '>=18'
       react-dom: '>=18'
 
-  '@terra-symposium/boundaries@0.2.2':
-    resolution: {integrity: sha512-ESaI+zx/SzHy/sKs324C98elqmtzZxLLjgx2RU6hqnVa6K32v913Yf4A1fGBRDi6v/mW2uyD7M4UAsLRO6FBQw==}
+  '@terra-symposium/boundaries@0.2.3':
+    resolution: {integrity: sha512-dNwAwW3OuAMCbDLYZj8xV8jw8pCKfa7OUjAY1BoD0O7VuUF9uMTsqIGU2V7jmQAvwoC4wxsjYLm5oP0/A9I2tw==}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
@@ -6730,7 +6730,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@terra-symposium/boundaries@0.2.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@terra-symposium/boundaries@0.2.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)

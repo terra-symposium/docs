@@ -19,11 +19,9 @@ Capture the full readable page body and attachment contents, including explicit 
 
 Give the next stage the local paths and coverage record. State missing and excluded items so it does not claim complete coverage.
 
-| Intended result | Next skill |
-| --- | --- |
-| A reader-facing Docs page | [author](../../../docs/1-authoring/authoring.md) |
-| A local comparison of generated content with production Docs | [align](../align/SKILL.md) |
+| Intended result                                              | Next skill                                       |
+| ------------------------------------------------------------ | ------------------------------------------------ |
+| A reader-facing Docs page                                    | [author](../../../docs/1-authoring/authoring.md) |
+| A local comparison of generated content with production Docs | [align](../align/SKILL.md)                       |
 
-:::note[Collection boundary]
-Collection alone does not authorise publishing a page, changing the saved Gem, or writing a Docs leaf.
-:::
+:::note[Collection boundary] Collection alone does not authorise publishing a page, changing the saved Gem, or writing a Docs leaf. :::

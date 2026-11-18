@@ -83,10 +83,16 @@ test('standalone Astro pages mount the extracted read-only workspace with their 
 	await expect(p.getByRole('heading', { name: 'Install an instance' })).toBeVisible();
 	await p.screenshot({ path: '/tmp/terra-docs-static-desktop.png', fullPage: true });
 	await p.getByRole('combobox', { name: 'Section' }).click();
-	const directories = readdirSync(new URL('../../docs/', import.meta.url), { withFileTypes: true })
+	// hygiene-ignore single-use -- Build the expected labels once before asserting the full rendered option list.
+	const dirs = readdirSync(new URL('../../docs/', import.meta.url), { withFileTypes: true })
 		.filter(entry => entry.isDirectory())
-		.map(entry => entry.name.replace(/^\d+-/, '').replace(/-/g, ' ').replace(/\b\w/g, character => character.toUpperCase()));
-	await expect(p.getByRole('option')).toHaveText(['Docs', ...directories]);
+		.map(entry =>
+			entry.name
+				.replace(/^\d+-/, '')
+				.replace(/-/g, ' ')
+				.replace(/\b\w/g, character => character.toUpperCase()),
+		);
+	await expect(p.getByRole('option')).toHaveText(['Docs', ...dirs]);
 	await p.getByRole('option', { name: 'Installation' }).click();
 	await expect(p.getByRole('link', { name: 'Create an instance' })).toBeVisible();
 	await expect(p.getByRole('link', { name: 'Storage providers' })).toBeVisible();

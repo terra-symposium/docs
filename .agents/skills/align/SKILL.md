@@ -14,9 +14,7 @@ Use this skill to compare Canvas-derived output with a representative production
 
 The generation driver and schema live in Website. Inspect the current Website checkout before relying on a command or provider behavior. A comparison needs a saved Canvas capture and a representative production Docs leaf.
 
-:::note[Evidence needed]
-If either the source capture or production leaf is missing, report the gap rather than claiming that generated output matches production.
-:::
+:::note[Evidence needed] If either the source capture or production leaf is missing, report the gap rather than claiming that generated output matches production. :::
 
 ## Prepare the comparison
 
@@ -34,12 +32,12 @@ Keep artifacts local, such as in Downloads. Do not call `docs.leaf.generate`, `d
 
 The comparison should account for these distinct kinds of evidence.
 
-| Check | Evidence to inspect |
-| --- | --- |
-| Source coverage | Full page body and readable attachments; distinct facts, lists, questions, tasks, code, requirements, deliverables, dates, and actionable links. |
-| Synthesis | Concepts and relationships rather than a file inventory, Canvas-week outline, or transcript dump. |
-| Production style | Connected prose, hierarchy, information density, and blocks that expose real relationships. |
-| Validity | Raw transport contract, supported syntax, structural validation, attachment coverage, and bounded retries. |
+| Check            | Evidence to inspect                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Source coverage  | Full page body and readable attachments; distinct facts, lists, questions, tasks, code, requirements, deliverables, dates, and actionable links. |
+| Synthesis        | Concepts and relationships rather than a file inventory, Canvas-week outline, or transcript dump.                                                |
+| Production style | Connected prose, hierarchy, information density, and blocks that expose real relationships.                                                      |
+| Validity         | Raw transport contract, supported syntax, structural validation, attachment coverage, and bounded retries.                                       |
 
 A title-only or link-only item is a source limitation, not permission to infer its contents. Exhausted retries are failure, not partial success.
 
@@ -51,9 +49,7 @@ Put the output contract first, followed by the schema's authoring directives ver
 
 Keep style rules general. Do not turn a single production example into a rule or mistake a model's repair explanation for a corrected artifact.
 
-:::note[Schema and parser disagreement]
-The supplied Website schema comment labels `===` as tabs and `|||` as accordions, while the Docs parser maps them in the opposite direction. Resolve that disagreement in the current generation target before calling either form canonical. Check the actual block registry and parser for examples rather than relying on a prompt claim that every block has one. The schema's authoring rules govern the writing; executable parser behavior governs syntax.
-:::
+:::note[Schema and parser disagreement] The supplied Website schema comment labels `===` as tabs and `|||` as accordions, while the Docs parser maps them in the opposite direction. Resolve that disagreement in the current generation target before calling either form canonical. Check the actual block registry and parser for examples rather than relying on a prompt claim that every block has one. The schema's authoring rules govern the writing; executable parser behavior governs syntax. :::
 
 ## Document fixture changes
 

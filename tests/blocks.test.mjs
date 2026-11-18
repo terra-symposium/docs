@@ -24,9 +24,7 @@ test('all reusable rich blocks are enabled by default and can be opted out indiv
 	assert.equal(enabledDocsBlocks({ code: false }).includes('math'), true);
 });
 test('authoring documentation names every registered block and the separate inline math option', () => {
-	const documented = readFileSync(new URL('../docs/1-authoring/authoring.md', import.meta.url), 'utf8').match(
-		/Its supported types are\s+([\s\S]*?)\. `inlineMath` is a separate option\./,
-	)?.[1];
+	const documented = readFileSync(new URL('../docs/1-authoring/authoring.md', import.meta.url), 'utf8').match(/Its supported types are\s+([\s\S]*?)\. `inlineMath` is a separate option\./)?.[1];
 	assert.ok(documented, 'documentation has a supported block list');
 	assert.deepEqual(
 		[...documented.matchAll(/`([^`]+)`/g)].map(match => match[1]),
@@ -40,6 +38,7 @@ test('Markdown keeps existing accordion syntax and unsupported source across con
 });
 test('local documentation renders quoted emphasis and pipe tables as Docs blocks', () => {
 	const value = markdownToDocsValue('> Code explains *how* it works.\n\n| Material | Guidance |\n| --- | --- |\n| Engineering | Explain intent |\n');
+	// hygiene-ignore single-use -- Keep the matched block stable for the two independent assertions below.
 	const quote = value.find(block => block._type === 'block' && block.style === 'blockquote');
 	const table = value.find(block => block._type === 'table');
 	assert.ok(quote?.children?.some(child => child.text === 'how' && child.marks?.includes('em')));
@@ -78,8 +77,8 @@ test('structured tabs, table, and nodes survive conversion and render as content
 		},
 	];
 	for (const block of blocks) {
-		const source = `:::terra-docs ${block._type}\n${JSON.stringify(block)}\n:::\n`;
-		const restored = markdownToDocsValue(source);
+		const src = `:::terra-docs ${block._type}\n${JSON.stringify(block)}\n:::\n`;
+		const restored = markdownToDocsValue(src);
 		assert.equal(restored[0]._type, block._type);
 		const roundTrip = markdownToDocsValue(docsValueToMarkdown(restored))[0];
 		assert.equal(roundTrip._type, block._type);
@@ -88,7 +87,7 @@ test('structured tabs, table, and nodes survive conversion and render as content
 				roundTrip.items.map(item => item.title),
 				['pnpm', 'npm'],
 			);
-		const html = renderMarkdown(source);
+		const html = renderMarkdown(src);
 		assert.doesNotMatch(html, /:::terra-docs/);
 		if (block._type === 'nodes') {
 			assert.equal(roundTrip.nodes[0].data.title, 'Source');

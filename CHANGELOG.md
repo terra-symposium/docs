@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.28
+
+### Patch Changes
+
+- Load the published Nodes renderer from the files included in the npm package.
+
 ## 0.4.27
 
 ### Patch Changes

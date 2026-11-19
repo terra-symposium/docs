@@ -3215,7 +3215,7 @@ export default function Scaffold({
                               <div
                                 className={cn(
                                   'prose !max-w-none pb-40 transition-opacity duration-200',
-                                  a === 'edit' ? 'pt-10' : 'pt-20',
+                                  a === 'edit' ? 'pt-10' : 'pt-28',
                                 )}
                                 data-docs-body-content
                                 data-docs-view-root={a === 'view' ? 'true' : undefined}
@@ -3260,7 +3260,7 @@ export default function Scaffold({
                                 </ErrorBoundary>
                               </div>
                             </div>
-                            <aside className="order-1 max-h-[35vh] min-w-0 overflow-y-auto overscroll-contain rounded-lg border border-primary-6 bg-primary-2/50 p-3 xl:sticky xl:top-24 xl:order-2 xl:max-h-[calc(100svh-9rem)] xl:self-start xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0">
+                            <aside className="order-1 max-h-[35vh] min-w-0 overflow-y-auto overscroll-contain rounded-lg border border-primary-6 bg-primary-2/50 p-3 xl:sticky xl:top-32 xl:order-2 xl:mt-28 xl:max-h-[calc(100svh-11rem)] xl:self-start xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0">
                               {tocHeadings.length > 0 && (
                                 <nav aria-label="On this page" className="space-y-1">
                                   <p className="m-0 px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-primary-11">

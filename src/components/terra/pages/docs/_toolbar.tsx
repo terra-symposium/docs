@@ -2186,7 +2186,7 @@ const { DocsToolbarActions, Toolbar, GlobalComponentMenuNode, BlockType, Undo, U
       return (
         <ErrorBoundary name="Toolbar">
           <div
-            className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto -mt-5 mb-5 !w-full !max-w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
+            className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto mb-5 !w-full !max-w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
             data-docs-toolbar-frame
             data-docs-toolbar-scroll
             data-can-edit={editable ? 'true' : 'false'}

@@ -498,6 +498,9 @@ test.describe('Docs workspace browser contracts', () => {
           const toolbar = document.querySelector('[data-docs-toolbar-frame]');
           const mode = document.querySelector<HTMLElement>('[aria-label="Mode"]');
           const proseHeading = document.querySelector<HTMLElement>('[data-docs-view-root] h2');
+          const pageContents = document.querySelector<HTMLElement>(
+            'nav[aria-label="On this page"]',
+          );
           const workspace = document.querySelector<HTMLElement>('.docs-workspace');
           return {
             followsHeader:
@@ -509,6 +512,18 @@ test.describe('Docs workspace browser contracts', () => {
             fontFamily: workspace ? getComputedStyle(workspace).fontFamily : '',
             headingWidth: proseHeading?.getBoundingClientRect().width ?? 0,
             headingFontSize: proseHeading ? getComputedStyle(proseHeading).fontSize : '',
+            headingGap:
+              proseHeading && toolbar
+                ? proseHeading.getBoundingClientRect().top - toolbar.getBoundingClientRect().bottom
+                : 0,
+            contentsGap:
+              pageContents && toolbar
+                ? pageContents.getBoundingClientRect().top - toolbar.getBoundingClientRect().bottom
+                : 0,
+            toolbarMarginTop: toolbar ? getComputedStyle(toolbar).marginTop : '',
+            headingScrollMargin: proseHeading
+              ? parseFloat(getComputedStyle(proseHeading).scrollMarginTop)
+              : 0,
           };
         });
         expect(toolbarPosition.followsHeader).toBeTruthy();
@@ -519,6 +534,10 @@ test.describe('Docs workspace browser contracts', () => {
         expect(toolbarPosition.fontFamily).toContain('Inter');
         expect(toolbarPosition.headingWidth).toBeCloseTo(720, 0);
         expect(toolbarPosition.headingFontSize).toBe('30px');
+        expect(toolbarPosition.headingGap).toBeGreaterThan(48);
+        expect(toolbarPosition.contentsGap).toBeGreaterThan(48);
+        expect(toolbarPosition.toolbarMarginTop).toBe('0px');
+        expect(toolbarPosition.headingScrollMargin).toBeGreaterThanOrEqual(160);
         const hostPalette = await p.evaluate(() => {
           const host = document.querySelector('.workspace-demo-theme');
           const workspace = document.querySelector('.docs-workspace');

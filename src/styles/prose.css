@@ -824,7 +824,7 @@ aside .title + * {
       @apply my-16 border-primary-6 print:hidden;
     }
     :is(h2, h3, h4, h5, h6) {
-      @apply scroll-mt-20;
+      @apply scroll-mt-40;
     }
     h2 {
       @apply mt-12 mb-6 border-t border-primary-6 pt-10 print:my-4 print:mt-10 print:text-primary-12;

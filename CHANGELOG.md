@@ -1,5 +1,12 @@
 # @terra-symposium/docs
 
+## 0.4.23
+
+### Patch Changes
+
+- 8910f36: Give document content more space below the sticky toolbar in every Docs view.
+- 68f3004: Route nested Docs render failures through the shared reporting boundary.
+
 ## 0.4.16
 
 ### Patch Changes

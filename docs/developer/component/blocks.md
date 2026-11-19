@@ -39,7 +39,7 @@ The same options can be passed to `renderMarkdown(markdown, blocks)`. Unknown or
 - A standalone `![alt](./image.png "Title")` paragraph imports as an image block. An image embedded within prose remains in the paragraph source.
 - Fenced code blocks with a language identifier are the authored block syntax. Single backticks remain inline code. Display math uses `$$` delimiters.
 - `:::` is reserved for Astro Starlight asides: `note`, `tip`, `caution`, `danger`, `example`, and `warning`, with an optional `[Title]`, Markdown body, and a closing `:::`.
-- Accordions use `===[Title]` and tabs use `|||[Title]`; the body between the opening and closing delimiter is Markdown.
+- Accordions use `===[Title]` and tabs use `|||[Title]`. Put the opening delimiter on its own line, a blank line before the Markdown body, and another blank line before the closing delimiter. Keep the closing delimiter on its own line.
 - Node diagrams use `<Nodes direction={"TB"} nodes={[...]} edges={[...]} />`; embedded content uses `<Embed src="..." title="..." />`.
 
 Unknown Markdown tokens and disabled block syntax are kept as raw source. Store images and attachments beside the Markdown file and use relative paths.

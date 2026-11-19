@@ -93,7 +93,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
           '## Heading\n\n===[Item]\nOriginal **content**\n===\n\n<custom-widget value="1"></custom-widget>\n',
         ),
       );
-      assert.match(result, /===\[Item\]\nOriginal \*\*content\*\*\n===/);
+      assert.match(result, /===\[Item\]\n\nOriginal \*\*content\*\*\n\n===/);
       assert.match(result, /<custom-widget value="1"><\/custom-widget>/);
     });
     test('persisted Portable Text groups migrate to Markdown and the shared renderer', () => {
@@ -138,8 +138,8 @@ test.describe('Docs block conversion and rendering contracts', () => {
         content: [tabBlock, accordionBlock],
       };
       const canonicalMarkdown = docsValueToMarkdown([legacyContent]);
-      assert.match(canonicalMarkdown, /\|\|\|\[Overview\]/);
-      assert.match(canonicalMarkdown, /===\[Details\]/);
+      assert.match(canonicalMarkdown, /\|\|\|\[Overview\]\n\nShared tab body\n\n\|\|\|/);
+      assert.match(canonicalMarkdown, /===\[Details\]\n\nShared accordion body\n\n===/);
       const migrated = renderToStaticMarkup(createElement(DocsRichBlock, { block: legacyContent }));
       const markdownRenderer = renderToStaticMarkup(
         createElement(DocsMarkdown, { markdown: canonicalMarkdown }),

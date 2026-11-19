@@ -2671,9 +2671,9 @@ export function docsValueToMarkdown(value: DocsValue): string {
               delimiter +
               '[' +
               (typeof e.title === 'string' ? e.title : 'Item').replace(G_CLASS_2_3_4(), '\\$&') +
-              ']\n' +
+              ']\n\n' +
               nestedMarkdown(e).replace(N_CLASS_2, '') +
-              '\n' +
+              '\n\n' +
               delimiter,
           )
           .join('\n\n'),

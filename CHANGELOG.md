@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.29
+
+### Patch Changes
+
+- Serialize tabs and accordions with blank lines around their Markdown bodies so formatting keeps the delimiters separate.
+
 ## 0.4.28
 
 ### Patch Changes

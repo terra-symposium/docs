@@ -1,0 +1,15 @@
+---
+title: Nodes fixture
+description: Verifies that MDX diagrams receive their graph data.
+---
+
+# Nodes fixture
+
+<Nodes
+  nodes={[
+    { id: 'start', type: 'origin', data: { title: 'Start' } },
+    { id: 'finish', type: 'terminal', data: { title: 'Finish' } },
+  ]}
+  edges={[{ id: 'start-finish', source: 'start', target: 'finish' }]}
+  direction="LR"
+/>

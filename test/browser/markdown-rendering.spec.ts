@@ -43,6 +43,17 @@ test(
   },
 );
 
+test(
+  'published MDX nodes fixture renders graph data',
+  { tag: '@viewport:xl' },
+  async ({ page }) => {
+    await page.goto('/fixture/nodes/');
+    await expect(page.locator('[data-docs-editor-block="Nodes"]')).toBeVisible();
+    await expect(page.getByText('Start', { exact: true })).toBeVisible();
+    await expect(page.getByText('Finish', { exact: true })).toBeVisible();
+  },
+);
+
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/

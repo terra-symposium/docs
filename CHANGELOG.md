@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.27
+
+### Patch Changes
+
+- Render authored `<Nodes>` diagrams in published MDX pages with their graph data, and verify the result in the browser fixture.
+
 ## 0.4.26
 
 ### Patch Changes

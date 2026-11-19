@@ -1,0 +1,7 @@
+---
+import { DocsRichBlock } from '../../../src/components/blocks.js';
+
+const { nodes = [], edges = [], ...options } = Astro.props;
+---
+
+<DocsRichBlock client:load block={{ _type: 'nodes', nodes, edges, ...options }} />

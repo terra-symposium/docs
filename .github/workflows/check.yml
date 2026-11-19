@@ -20,6 +20,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: config/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run docs:sanitize
       - run: pnpm run build
       - run: pnpm run quality:check
 

@@ -4,7 +4,11 @@ The basic component uses Portable Text block arrays (`DocsValue`) and supports p
 
 One React component supports two modes:
 
-<CodeBlock language="tsx" code={"<Docs mode=\"edit\" value={document} onChange={setDocument} />\n\n<Docs mode=\"view\" value={document} />"} />
+```tsx
+<Docs mode="edit" value={document} onChange={setDocument} />
+
+<Docs mode="view" value={document} />
+```
 
 | Prop                 | Purpose                                                                                        |
 | -------------------- | ---------------------------------------------------------------------------------------------- |
@@ -25,7 +29,12 @@ The formatting toolbar follows Terra’s compact, sticky layout: a block-style d
 
 Image blocks and `onUpload` are not implemented yet. The agreed future callback lets the host choose where files are stored:
 
-<CodeBlock language="tsx" code={"async function uploadFile(file: File): Promise<{ url: string }> {\n const url = await storage.upload(file);\n return { url };\n}"} />
+```tsx
+async function uploadFile(file: File): Promise<{ url: string }> {
+  const url = await storage.upload(file);
+  return { url };
+}
+```
 
 The intended behavior is for Docs to store the returned URL in an image block, report it through `onChange`, and render the image from that URL. Upload failures should be shown without adding a broken image block.
 

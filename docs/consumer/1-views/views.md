@@ -7,7 +7,10 @@ The library has no global configuration object, each instance is selt hosted thr
 
 ## Component props
 
-<CodeBlock language="tsx" code={"<Docs mode=\"edit\" value={document} onChange={setDocument} className=\"article-editor\" />\n<Docs mode=\"view\" value={document} />"} />
+```tsx
+<Docs mode="edit" value={document} onChange={setDocument} className="article-editor" />
+<Docs mode="view" value={document} />
+```
 
 `mode` is `edit` or `view`. Edit mode requires `onChange`; view mode is read-only. `value` is a Portable Text block array. `className` adds a class to the component container.
 

@@ -3,7 +3,11 @@ title: Component reference
 description: Supported modes, props, and document content.
 ---
 
-<CodeBlock language="tsx" code={"import { Docs } from '@terra-symposium/docs';\nimport type { DocsProps, DocsValue, DocsMode } from '@terra-symposium/docs';\nimport '@terra-symposium/docs/style.css';"} />
+```tsx
+import { Docs } from '@terra-symposium/docs';
+import type { DocsProps, DocsValue, DocsMode } from '@terra-symposium/docs';
+import '@terra-symposium/docs/style.css';
+```
 
 `DocsValue` is a Portable Text block array. The editor and viewer support paragraphs, headings 2–6, quotes, bold, italic, underline, strikethrough, links, and the reusable rich blocks below. The host controls persistence and authorization.
 
@@ -21,7 +25,9 @@ Markdown tabs (`|||[Title]`) and accordions (`===[Title]`) render with the share
 
 To disable a member in one instance, set its flag to `false`:
 
-<CodeBlock language="tsx" code={"<Docs mode=\"edit\" value={value} onChange={setValue} blocks={{ embed: false, nodes: false }} />"} />
+```tsx
+<Docs mode="edit" value={value} onChange={setValue} blocks={{ embed: false, nodes: false }} />
+```
 
 The same options can be passed to `renderMarkdown(markdown, blocks)`. Unknown or disabled structured source stays visible as escaped source, so it is not silently discarded.
 
@@ -31,7 +37,7 @@ The same options can be passed to `renderMarkdown(markdown, blocks)`. Unknown or
 - Ordered and unordered lists, including nested list levels, use Markdown list syntax.
 - GFM pipe tables and native HTML tables import as editable table blocks and export as pipe tables. Add an optional bold Markdown caption on the line before the table.
 - A standalone `![alt](./image.png "Title")` paragraph imports as an image block. An image embedded within prose remains in the paragraph source.
-- `<CodeBlock language="..." code={"..."} />` is the authored block syntax. Fenced code imports for compatibility. Single backticks remain inline code. Display math uses `$$` delimiters.
+- Fenced code blocks with a language identifier are the authored block syntax. Single backticks remain inline code. Display math uses `$$` delimiters.
 - `:::` is reserved for Astro Starlight asides: `note`, `tip`, `caution`, `danger`, `example`, and `warning`, with an optional `[Title]`, Markdown body, and a closing `:::`.
 - Accordions use `===[Title]` and tabs use `|||[Title]`; the body between the opening and closing delimiter is Markdown.
 - Node diagrams use `<Nodes direction={"TB"} nodes={[...]} edges={[...]} />`; embedded content uses `<Embed src="..." title="..." />`.

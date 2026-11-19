@@ -157,8 +157,12 @@ export function markdownToDocsValue(markdown: string, options: DocsBlockOptions 
 					const entry = value as { text?: string; tokens?: Token[] };
 					return { _type: 'cell', _key: key(), content: [textBlock('normal', entry.tokens, entry.text ?? '')] };
 				});
-			const rows = [token.header, ...(Array.isArray(token.rows) ? token.rows : [])].map(row => ({ _type: 'row', _key: key(), cells: cells(row) }));
-			result.push({ _type: 'table', _key: key(), rows, markdown: token.raw });
+			result.push({
+				_type: 'table',
+				_key: key(),
+				rows: [token.header, ...(Array.isArray(token.rows) ? token.rows : [])].map(row => ({ _type: 'row', _key: key(), cells: cells(row) })),
+				markdown: token.raw,
+			});
 			continue;
 		}
 		if (token.type === 'code') {

@@ -64,7 +64,7 @@ test('Docs sanitizer removes a Nodes shim and content divider but preserves fron
     const path = join(dir, 'page.mdx');
     writeFileSync(
       path,
-      `---\ntitle: Example\n---\n\nimport { NodesBlock } from '@terra-symposium/docs';\nexport const Nodes = props => <NodesBlock block={props} />;\n\nBefore\n\n---\n\nAfter\n\n\`\`\`mdx\n---\nimport { NodesBlock } from '@terra-symposium/docs';\n\`\`\`\n`,
+      `---\ntitle: Example\n---\n\nimport { NodesBlock } from '@terra-symposium/docs';\nexport const Nodes = props => <NodesBlock block={props} />;\n\nBefore\n\n---\n\nAfter\n\n\`\`\`mdx\n---\nimport { NodesBlock } from '@terra-symposium/docs';\n<NodesBlock block={{ nodes: [], edges: [] }} />\n\`\`\`\n`,
     );
     assert.equal(run('check', path).status, 1);
     assert.equal(run('fix', path).status, 0);

@@ -49,7 +49,8 @@ def convert(source, visible=None):
         contents = json.loads(code.group(1)) if code.group(1).startswith('"') else ast.literal_eval(code.group(1))
         language = lang.group(2) or lang.group(4)
         fence = '`' * max(3, max((len(m.group(0)) for m in re.finditer(r'`+', contents)), default=0) + 1)
-        changes.append((match.start(), end, f'{fence}{language}\n{contents.rstrip(chr(10))}\n{fence}'))
+        body = '\n'.join(line.rstrip() for line in contents.rstrip('\n').split('\n'))
+        changes.append((match.start(), end, f'{fence}{language}\n{body}\n{fence}'))
         cursor = end
     for start, end, replacement in reversed(changes):
         source = source[:start] + replacement + source[end:]

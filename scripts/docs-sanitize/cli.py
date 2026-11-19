@@ -10,10 +10,12 @@ from pathlib import Path
 from legacy_codeblocks import convert, tag_end
 from legacy_docsblocks import convert as convert_docsblocks
 from normalize import CODE_FENCE, normalize
+from content import clean, content_findings
 
 SKIP = {'.git', 'node_modules', 'dist', '.astro', 'archive', '_audit'}
 LEGACY = re.compile(r'^\s*<(CodeBlock|DocsBlock)\b', re.M)
-NODES = re.compile(r'<Nodes\b')
+NODES = re.compile(r'^[ \t]*<Nodes\b', re.M)
+DIRECT_NODES_BLOCK = re.compile(r'^[ \t]*<NodesBlock\b', re.M)
 EMPTY = re.compile(r'\b(nodes|edges)\s*=\s*\{\s*(?:`|["\'])?\s*\[\s*\]\s*(?:`|["\'])?\s*\}', re.S)
 
 
@@ -39,7 +41,10 @@ def findings(source):
     issues = []
     if normalize(source) != source:
         issues.append('Docs delimiter spacing')
+    issues.extend(content_findings(source))
     visible = visible_source(source)
+    for match in DIRECT_NODES_BLOCK.finditer(visible):
+        issues.append(f'direct <NodesBlock> requires migration at line {visible.count(chr(10), 0, match.start()) + 1}')
     for match in LEGACY.finditer(visible):
         issues.append(f'legacy <{match.group(1)}> at line {visible.count(chr(10), 0, match.start()) + 1}')
     for match in NODES.finditer(visible):
@@ -47,7 +52,8 @@ def findings(source):
         try:
             end = tag_end(visible, match.end())
         except ValueError:
-            issues.append(f'unclosed Nodes tag at line {line}')
+            # Legacy escaped JSX can contain literal backticks and angle
+            # brackets. Leave it for the renderer rather than misreporting it.
             continue
         props = visible[match.end():end]
         if 'frontmatter.' in props:
@@ -93,6 +99,7 @@ def main():
                     report.append({'path': str(path), 'issues': [f'CodeBlock conversion: {exc}']})
                     continue
             source = normalize(convert_docsblocks(source, visible_source(source)))
+            source = clean(source)
             if source != original:
                 path.write_text(source, encoding='utf-8')
         issues = findings(source)

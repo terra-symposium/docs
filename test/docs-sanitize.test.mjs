@@ -57,3 +57,41 @@ test('Docs sanitizer converts supported literal rich blocks without changing fen
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('Docs sanitizer removes a Nodes shim and content divider but preserves frontmatter and code', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'docs-sanitize-'));
+  try {
+    const path = join(dir, 'page.mdx');
+    writeFileSync(
+      path,
+      `---\ntitle: Example\n---\n\nimport { NodesBlock } from '@terra-symposium/docs';\nexport const Nodes = props => <NodesBlock block={props} />;\n\nBefore\n\n---\n\nAfter\n\n\`\`\`mdx\n---\nimport { NodesBlock } from '@terra-symposium/docs';\n\`\`\`\n`,
+    );
+    assert.equal(run('check', path).status, 1);
+    assert.equal(run('fix', path).status, 0);
+    const fixed = readFileSync(path, 'utf8');
+    assert.match(fixed, /^---\ntitle: Example\n---/);
+    assert.doesNotMatch(fixed, /export const Nodes/);
+    assert.match(fixed, /Before\n\nAfter/);
+    assert.match(fixed, /```mdx\n---\nimport \{ NodesBlock \}/);
+    assert.equal(run('check', path).status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Docs sanitizer flags direct NodesBlock use without removing its required import', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'docs-sanitize-'));
+  try {
+    const path = join(dir, 'page.mdx');
+    writeFileSync(
+      path,
+      "import { NodesBlock } from '@terra-symposium/docs';\n\n<NodesBlock block={{ nodes: [], edges: [] }} />\n",
+    );
+    const result = run('fix', path);
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /direct <NodesBlock> requires migration/);
+    assert.match(readFileSync(path, 'utf8'), /import \{ NodesBlock \}/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

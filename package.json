@@ -56,7 +56,7 @@
     "out": "dist/docs"
   },
   "scripts": {
-    "dev": "pnpm run build && node bin/docs.mjs dev --host 127.0.0.1",
+    "dev": "pnpm run build:dev && node bin/docs.mjs dev --host 127.0.0.1",
     "docs:dev": "pnpm run dev",
     "quality": "pnpm run quality:check",
     "quality:check": "node scripts/quality.mjs quality --all --warn",
@@ -65,6 +65,7 @@
     "docs:sanitize:fix": "python3 scripts/docs-sanitize/cli.py fix",
     "docs": "pnpm run build && node bin/docs.mjs build",
     "build": "rm -rf dist/lib && tsc -p config/tsconfig.json && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
+    "build:dev": "tsc --noEmitOnError -p config/tsconfig.json && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss config/tailwind.postcss.config.cjs -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
     "test:browser": "pnpm run build && pnpm exec astro build --config config/astro.config.mjs && node bin/docs.mjs build && playwright test --config config/playwright.config.ts && playwright test --config config/playwright.published.config.ts",
     "check": "prettier --config config/.prettierrc.json --ignore-path config/.prettierignore --check . && eslint --config config/eslint.config.js . && tsc --noEmit -p config/tsconfig.json",
     "test:unit": "pnpm run build && node --test test/*.test.mjs",

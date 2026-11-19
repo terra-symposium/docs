@@ -28,7 +28,7 @@ export function localSourceRebuildPlugin({ root }) {
         building = true;
         try {
           const code = await new Promise((done) => {
-            const child = spawn('pnpm', ['run', 'build'], { cwd: root, stdio: 'inherit' });
+            const child = spawn('pnpm', ['run', 'build:dev'], { cwd: root, stdio: 'inherit' });
             child.once('error', (error) => {
               console.error(`Docs source rebuild could not start: ${error.message}`);
               done(1);

@@ -12,7 +12,7 @@ pnpm run dev
 pnpm run docs
 ```
 
-`pnpm dev` (or `pnpm run docs:dev`) builds the package and starts its Astro Docs site from this repository's `docs/` folder. The site renders checked-out Markdown as a read-only workspace, refreshes its search index when Markdown changes, and rebuilds the package and reloads the page when Docs UI source changes. `pnpm run docs` builds the package and a static copy of its Docs site. The development command uses port `2020`; set `DOCS_DEV_PORT` to use another port.
+`pnpm dev` (or `pnpm run docs:dev`) builds the package and starts its Astro Docs site from this repository's `docs/` folder. The site renders checked-out Markdown as a read-only workspace, refreshes its search index when Markdown changes, and rebuilds the package and reloads the page when Docs UI source changes. Live rebuilds keep the current `dist/lib` output in place while compiling, so an in-progress build cannot remove a stylesheet that Astro is serving. `pnpm run docs` builds the package and a static copy of its Docs site. The development command uses port `2020`; set `DOCS_DEV_PORT` to use another port.
 
 Build the library with `pnpm run build` and run package checks with `pnpm run check`.
 

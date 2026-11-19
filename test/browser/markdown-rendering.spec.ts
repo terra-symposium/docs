@@ -22,6 +22,27 @@ const [stylingMajor, stylingMinor, stylingPatch] = stylingVersion.version.split(
 const controlVariantAvailable =
   stylingMajor! > 0 || stylingMinor! > 1 || (stylingMinor === 1 && stylingPatch! >= 39);
 
+test(
+  'published MDX code fixture has a language header and copy control',
+  {
+    tag: '@viewport:xl',
+    annotation: {
+      type: 'viewport-reason',
+      description: 'Code controls are verified in the desktop Docs layout.',
+    },
+  },
+  async ({ page }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/fixture/code/');
+    const block = page.locator('.docs-static-code-block');
+    await expect(block).toBeVisible();
+    await expect(block.locator('.docs-static-code-language')).toHaveText('sh');
+    await expect(block.locator('pre.astro-code .line span').first()).toBeVisible();
+    await block.getByRole('button', { name: 'Copy sh code' }).click();
+    await expect(block.getByRole('button')).toHaveText('Copied');
+  },
+);
+
 /*//////////////////////////////////////////////////
 HELPERS
 //////////////////////////////////////////////////*/

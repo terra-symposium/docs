@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.24
+
+### Patch Changes
+
+- Add a language header and copy control to highlighted MDX code fences in published Docs pages.
+
 ## 0.4.23
 
 ### Patch Changes

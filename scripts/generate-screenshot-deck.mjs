@@ -20,5 +20,5 @@ const outputFile = path.resolve('tests/results/visual/combined/report.pptx');
 if (!fs.existsSync(screenshotsDir)) throw new Error(`Screenshot folder does not exist: ${screenshotsDir}`);
 await fs.promises.mkdir(path.dirname(outputFile), { recursive: true });
 await writeScreenshotSlideshowFromDirectory(screenshotsDir, outputFile, {
-	title: 'Terra Docs Playwright screenshots',
+	title: 'Docs Playwright screenshots',
 });

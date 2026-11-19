@@ -1,6 +1,6 @@
-# Terra Docs
+# Docs
 
-Terra Docs lets teams write, read, and share rich documents in their applications.
+Docs lets teams write, read, and share rich documents in their applications.
 
 ## Get started
 

@@ -12,10 +12,14 @@ metadata:
 
 Use this skill to compare Canvas-derived output with a representative production Docs page and improve the local generation contract. Judge structure, information density, block choice, and source coverage alongside parseability. Apply [author](../../../docs/1-authoring/authoring.md)'s schema-governed writing rules to the generated leaf; this skill adds transport, validation, and comparison rules. For an explicitly requested saved Gem change, read [Gem maintenance](gem-maintenance.md).
 
+When editing Docs Markdown callouts, leave a blank line immediately after the opening fence and immediately before the closing `:::`. Keep the callout body between those blank lines so Prettier and the Docs parser retain its block structure. Apply the same spacing to other fenced Docs blocks when the formatter would otherwise wrap body text onto a fence line.
+
 The generation driver and schema live in Website. Inspect the current Website checkout before relying on a command or provider behavior. A comparison needs a saved Canvas capture and a representative production Docs leaf.
 
 :::note[Evidence needed]
+
 If either the source capture or production leaf is missing, report the gap rather than claiming that generated output matches production.
+
 :::
 
 ## Prepare the comparison
@@ -34,12 +38,12 @@ Keep artifacts local, such as in Downloads. Do not call `docs.leaf.generate`, `d
 
 The comparison should account for these distinct kinds of evidence.
 
-| Check | Evidence to inspect |
-| --- | --- |
-| Source coverage | Full page body and readable attachments; distinct facts, lists, questions, tasks, code, requirements, deliverables, dates, and actionable links. |
-| Synthesis | Concepts and relationships rather than a file inventory, Canvas-week outline, or transcript dump. |
-| Production style | Connected prose, hierarchy, information density, and blocks that expose real relationships. |
-| Validity | Raw transport contract, supported syntax, structural validation, attachment coverage, and bounded retries. |
+| Check            | Evidence to inspect                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Source coverage  | Full page body and readable attachments; distinct facts, lists, questions, tasks, code, requirements, deliverables, dates, and actionable links. |
+| Synthesis        | Concepts and relationships rather than a file inventory, Canvas-week outline, or transcript dump.                                                |
+| Production style | Connected prose, hierarchy, information density, and blocks that expose real relationships.                                                      |
+| Validity         | Raw transport contract, supported syntax, structural validation, attachment coverage, and bounded retries.                                       |
 
 A title-only or link-only item is a source limitation, not permission to infer its contents. Exhausted retries are failure, not partial success.
 
@@ -49,10 +53,14 @@ Check the current Website prompt and extractor before testing. The old contract 
 
 Put the output contract first, followed by the schema's authoring directives verbatim, source authority, exact block grammar, then a silent final check. Do not paraphrase the schema's purpose, voices, list-preservation rule, or leaf-body instructions into a different requirement. Use native HTML tables for repeated or multidimensional data when the Website parser accepts them; keep block components out of table cells. Verify each block delimiter and attribute against the target parser, then request a complete corrected artifact after a driver error rather than a repair explanation.
 
+For inline `<Nodes>` data, put one complete node or edge object on each line. Keep that object's fields and nested objects together on the same line; do not expand its keys across multiple lines. If Prettier would expand those objects, put `<!-- prettier-ignore -->` immediately before the `<Nodes>` tag.
+
 Keep style rules general. Do not turn a single production example into a rule or mistake a model's repair explanation for a corrected artifact.
 
 :::note[Schema and parser disagreement]
+
 The supplied Website schema comment labels `===` as tabs and `|||` as accordions, while the Docs parser maps them in the opposite direction. Resolve that disagreement in the current generation target before calling either form canonical. Check the actual block registry and parser for examples rather than relying on a prompt claim that every block has one. The schema's authoring rules govern the writing; executable parser behavior governs syntax.
+
 :::
 
 ## Document fixture changes

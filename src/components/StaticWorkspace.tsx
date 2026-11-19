@@ -62,7 +62,7 @@ const toLeaf = (node: DocsNavNode): DocsLeaf | null =>
 		: null;
 
 /**
- * Adapts a host's local Markdown pages to the original, read-only Terra Docs workspace.
+ * Adapts a host's local Markdown pages to the original, read-only Docs workspace.
  *
  * @param title Name of the Docs site shown in the workspace chrome.
  * @param homeHref Link target for the home navigation action.
@@ -79,7 +79,7 @@ const toLeaf = (node: DocsNavNode): DocsLeaf | null =>
  * @param updatedAt Last update timestamp supplied for the selected page.
  * @param renderContent Optional host-rendered content displayed in the workspace.
  *
- * @return A read-only Terra Docs workspace element.
+ * @return A read-only Docs workspace element.
  */
 export function DocsStaticWorkspace({
 	title,

@@ -179,7 +179,7 @@ function nestedMarkdown(item: Record<string, unknown>): string {
 }
 
 /**
- * Read-only rendering for every reusable Terra Docs member. Unknown data stays in the value.
+ * Read-only rendering for every reusable Docs member. Unknown data stays in the value.
  *
  * @param block Portable Text block to render.
  *

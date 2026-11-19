@@ -1,6 +1,6 @@
 ---
 title: Create an instance
-description: Set up a separate React app that uses Terra Docs.
+description: Set up a separate React app that uses Docs.
 ---
 
 ## Requirements

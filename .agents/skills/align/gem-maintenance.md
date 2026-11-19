@@ -64,7 +64,7 @@ pnpm run generation:gem:update
 This command currently points to a missing `document-gem.spec.ts` test target, so it is not a working updater in this checkout. Repair and verify that implementation before invoking it. Do not treat the command's presence as evidence of a successful update.
 
 8. If state is invalid, stop and refresh it through the shared `authenticate()` helper in the website checkout's `scripts/generation/_auth.ts` only when that workflow is authorized. Do not put credentials in files or use a native file picker.
-9. Use a locally saved Canvas capture obtained through the approved in-app browser workflow. The Canvas exporter now lives in the private Uni Notes repository and only prepares local source files; it is not a Terra Docs generation harness. Keep the source capture and provider output under Downloads for review.
+9. Use a locally saved Canvas capture obtained through the approved in-app browser workflow. The Canvas exporter now lives in the private Uni Notes repository and only prepares local source files; it is not a Docs generation harness. Keep the source capture and provider output under Downloads for review.
 
 10. Inspect raw output before normalization: one outer fenced `markdown` body, first body line H2, supported fenced code and tables, no unsupported blocks or citation markers. The current Website extractor accepts fences of three or more backticks; confirm the prompt's requested length in current source. Preserve raw and normalized artifacts together.
 11. On a syntax/schema/coverage failure, pass the exact failure to the bounded healer and make the smallest prompt/driver correction. After retries are exhausted, stop and report the final error and diagnostic path.

@@ -88,7 +88,7 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
 }
 
 /**
- * Renders repository-owned Markdown in the original Terra Docs workspace.
+ * Renders repository-owned Markdown in the original Docs workspace.
  * This adapter has no write operations, account dependency, or server requirement.
  *
  * @param tree Navigation tree displayed by the workspace.
@@ -101,7 +101,7 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
  * @param homePath Optional route used by the home link.
  * @param customBlocks Optional host-defined Portable Text block renderers.
  *
- * @return Read-only Terra Docs workspace element.
+ * @return Read-only Docs workspace element.
  */
 export function DocsLocalWorkspace({ tree, pages, pathname, title, description: desc, hue = 145, rootPath = '/', homePath, customBlocks }: DocsLocalWorkspaceProps): JSX.Element {
 	const page = findPage(pages, pathname) ?? pages[0];

@@ -1,5 +1,5 @@
 ---
-title: Develop Terra Docs
+title: Develop Docs
 description: Work on the package and documentation site.
 ---
 
@@ -20,3 +20,5 @@ The guide reads its pages from this repository's `docs/` directory and renders t
 Each Markdown file becomes a route. The section selector and page tree follow the directory structure, so adding or moving a page does not require editing a navigation list. The local dev and preview servers send `Cache-Control: no-store` for live content.
 
 After a package release, update the installed workspace with `pnpm update @terra-symposium/docs-site`. The running Astro guide reloads when the lockfile changes; edits to local pages also appear during development. The lockfile records the package version used for a reproducible build.
+
+See [recovered development notes](/1-authoring/recovered-documentation/) for backup-era context; current guidance on this page remains authoritative.

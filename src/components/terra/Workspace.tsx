@@ -21,7 +21,7 @@ HELPERS
 //////////////////////////////////////////////////*/
 
 /**
- * The source-preserving shared Terra Docs workspace used by host route adapters.
+ * The source-preserving shared Docs workspace used by host route adapters.
  *
  * @param host Host adapter that supplies routes, permissions, and document actions.
  * @param customBlocks Optional host-provided Portable Text block renderers.
@@ -41,7 +41,7 @@ HELPERS
  * @param full Whether the workspace fills the available page area.
  * @param mode Initial view or editing mode.
  *
- * @return Shared Terra Docs workspace element.
+ * @return Shared Docs workspace element.
  */
 export function TerraDocsWorkspace({
 	host,

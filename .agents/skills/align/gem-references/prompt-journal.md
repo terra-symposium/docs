@@ -2,7 +2,6 @@
 
 Immutable prompt, Gem-update, failure, and validation records for the Docs Document Gem. Records are preserved in numeric order.
 
----
 
 ## Journal record: 000-document-gem-baseline.md
 
@@ -18,7 +17,6 @@ Immutable prompt, Gem-update, failure, and validation records for the Docs Docum
 
 You are only permitted to return code blocks containing markdown compatible with the Terra Symposium documentation tool. Do not render rich text. Render code blocks with MDX.
 
----
 
 ## Journal record: 002-docs-production-style-context.md
 
@@ -32,7 +30,7 @@ This file is a read-only reference for agents iterating on Canvas-to-Docs genera
 - Prefer concise explanatory prose, then use the block that best represents the information.
 - Use native HTML `<table>` blocks for repeated or multidimensional information such as comparisons, artefact inventories, requirements, schedules, and definitions. Do not replace these with pipe tables.
 - Use `:::note[Title]`, `:::tip[Title]`, `:::example[Title]`, and `:::warning[Title]` for bounded guidance or emphasis.
-- Use `<Nodes>` only for a real process or relationship diagram, not as decoration for an ordinary list.
+- Use `<!-- prettier-ignore -->` immediately before `<Nodes>` only when the formatter would break the one-object-per-line layout; use a diagram for a real process or relationship, not an ordinary list.
 - Use `<Code language="plaintext">{` ... `}</Code>` for code or literal examples. The template-literal braces are part of the canonical syntax.
 - Preserve lists and source facts, but synthesise lecture material into atomic, retrieval-oriented concepts rather than reproducing a transcript.
 - End substantial university notes by making the practical implication explicit.
@@ -97,7 +95,17 @@ In this subject, all ERDs must use Crow's Foot notation, not Chen notation.
 
 Creating an ERD follows a systematic process.
 
-<Nodes direction="TB" nodes={`[ 		{ "_key": "narrative", "data": { "title": "1. Create Narrative" }, "id": "narrative", "type": "terminator" }, 		{ "_key": "rules", "data": { "title": "2. Identify Business Rules" }, "id": "rules", "type": "process" }, 		{ "_key": "entities", "data": { "title": "3. Identify Entities & Relationships" }, "id": "entities", "type": "process" }, 		{ "_key": "review", "data": { "title": "4. Review ERD" }, "id": "review", "type": "terminator" } 	]`} edges={`[ 		{ "_key": "e1", "data": { "arrowHead": true }, "id": "e1", "source": "narrative", "target": "rules" }, 		{ "_key": "e2", "data": { "arrowHead": true }, "id": "e2", "source": "rules", "target": "entities" }, 		{ "_key": "e3", "data": { "arrowHead": true }, "id": "e3", "source": "entities", "target": "review" } 	]`} />
+<!-- prettier-ignore -->
+<Nodes direction="TB" nodes={`[
+	{"_key":"narrative","data":{"title":"1. Create Narrative"},"id":"narrative","type":"terminator"},
+	{"_key":"rules","data":{"title":"2. Identify Business Rules"},"id":"rules","type":"process"},
+	{"_key":"entities","data":{"title":"3. Identify Entities & Relationships"},"id":"entities","type":"process"},
+	{"_key":"review","data":{"title":"4. Review ERD"},"id":"review","type":"terminator"}
+]`} edges={`[
+	{"_key":"e1","data":{"arrowHead":true},"id":"e1","source":"narrative","target":"rules"},
+	{"_key":"e2","data":{"arrowHead":true},"id":"e2","source":"rules","target":"entities"},
+	{"_key":"e3","data":{"arrowHead":true},"id":"e3","source":"entities","target":"review"}
+]`} />
 
 ### Data Dictionary
 
@@ -195,7 +203,6 @@ This production leaf uses polished H2 sections, brief connective prose, a bounde
 
 The examples above are style and parser references only. When generating a Canvas leaf, keep all factual claims traceable to the supplied Canvas page and attachments. Do not copy unrelated subject facts from these examples, invent missing metadata, or add citations or generation commentary.
 
----
 
 ## Journal record: 003-fast-mode-contract.md
 
@@ -263,7 +270,6 @@ Before sending, inspect the complete response silently. Reject and regenerate yo
 
 Use a non-headed Chrome/Playwright session with a saved local Canvas capture. Do not call a Sanity mutation. A response is successful only when the raw response satisfies the complete output protocol and the normalised body contains valid Docs blocks.
 
----
 
 ## Journal record: 004-document-gem-fast-instructions.md
 
@@ -305,7 +311,6 @@ Verify the raw response starts exactly with the markdown fence, has one outer pa
 
 The longer local driver prompt is retained separately in `003-fast-mode-contract.md`; it is intentionally more explicit than the Gem copy until a real Fast-mode response can be inspected.
 
----
 
 ## Journal record: 005-document-gem-playwright-update.md
 
@@ -328,7 +333,6 @@ The attached context is deliberately local and includes:
 
 No Sanity mutation, generated document patch, Dia automation, or repository commit is part of this iteration.
 
----
 
 ## Journal record: 006-document-gem-playwright-saved.md
 
@@ -351,7 +355,6 @@ The exact instruction is the shared `GEMINI_LEAF_PROMPT` in `scripts/generation/
 
 This iteration used a temporary Chrome binary outside the repository, a saved browser state, and no Dia automation, Sanity mutation, generated-document patch, or repository commit.
 
----
 
 ## Journal record: 007-fast-response-wrapper.md
 
@@ -381,7 +384,6 @@ The instruction was strengthened with this exact transport rule before the exist
 
 The local driver now recognises only that exact four-line Gemini wrapper, reconstructs the required single fence for local validation, and rejects unknown wrappers or inner triple-backticks. Raw and normalised outputs are both retained in the OS Downloads directory.
 
----
 
 ## Journal record: 008-fast-inner-fence.md
 
@@ -395,7 +397,6 @@ The local driver now recognises only that exact four-line Gemini wrapper, recons
 
 The response wrapper was normalised successfully, and the document used the expected tables, callouts, and Terra `<Code>` blocks. It still emitted a language-labelled triple-backtick code fence inside the leaf. The transport rule was therefore strengthened to explicitly ban three backticks anywhere in the body, including fences labelled `struct`, and to require the canonical `<Code language="plaintext">{` ... `}</Code>` form for every literal example.
 
----
 
 ## Journal record: 009-knowledge-citations.md
 
@@ -409,7 +410,6 @@ The response wrapper was normalised successfully, and the document used the expe
 
 The response now reliably normalises to one outer Markdown fence, uses native HTML tables and canonical Terra `<Code language="plaintext">` blocks, and contains no inner triple-backtick fence. The remaining defect was citation-token injection from the Gem knowledge system, so the next iteration explicitly bans `[cite: N]` markers and checks Gemini’s **Disable knowledge citations** control through the Playwright Gem updater before saving.
 
----
 
 ## Journal record: 010-fast-output-passed.md
 
@@ -436,7 +436,6 @@ The resulting local leaf passed these checks:
 
 The raw response and the validated normalised response remain side by side in Downloads. No Sanity mutation, generated-document patch, Dia automation, or repository commit was performed.
 
----
 
 ## Journal record: 011-playwright-response-extraction.md
 
@@ -463,7 +462,6 @@ The raw response now passes the transport contract directly:
 
 The raw and normalised responses remain side by side in Downloads. No Sanity mutation, generated document patch, Dia automation, or repository commit was performed.
 
----
 
 ## Journal record: 012-visual-hierarchy-brevity.md
 
@@ -484,7 +482,6 @@ The guidance describes the underlying salience, relationship, and scanning princ
 
 The exact prompt is shared between the Document Gem instruction and the Gemini composer text. The Gem update must reload and verify the saved instruction, citation setting, and knowledge labels. The local harness must preserve raw output and validate the strict Markdown/MDX contract without writing to Sanity. No document mutation, Dia automation, or repository commit is part of this iteration.
 
----
 
 ## Journal record: 013-visual-hierarchy-line-length.md
 
@@ -503,7 +500,6 @@ This revision strengthens the generic visual-authoring contract after iteration 
 
 The prompt remains shared between the saved Gem instruction and the Gemini composer text. The Gem must be reloaded and verified after update. The local harness must preserve raw output and validate the strict Markdown/MDX contract without writing to Sanity. No document mutation, Dia automation, or repository commit is part of this iteration.
 
----
 
 ## Journal record: 014-visual-hierarchy-grammar.md
 
@@ -522,7 +518,6 @@ This revision makes visual hierarchy and line layout executable. Secondary colle
 
 The instructions remain generic and source-agnostic. They describe salience, grouping, grammar, and scanning principles without naming a document-specific correction. The local harness will preserve the raw response and normalized result in Downloads only; it will not write to Sanity or commit the repository.
 
----
 
 ## Journal record: 015-rendering-grammar.md
 
@@ -541,7 +536,6 @@ This revision adds a generic rendering-grammar safeguard. Exact delimiter counts
 
 The prompt contains no source-specific correction. It expresses reusable principles for salience, block validity, sentence splitting, and visual scanning. The local harness writes only to Downloads.
 
----
 
 ## Journal record: 016-sentence-line-discipline.md
 
@@ -560,7 +554,6 @@ This revision makes short-line output more explicit. Each sentence must occupy i
 
 The revision remains blind to the source document. It encodes the underlying reading and rendering principles rather than naming a particular task, heading, or generated defect.
 
----
 
 ## Journal record: 017-secondary-collection-outline.md
 
@@ -579,7 +572,6 @@ This revision clarifies the outline boundary. Headings are reserved for concepts
 
 The guidance is generic and source-agnostic. It describes how to classify and render collections without naming a particular document or prescribing a one-off correction.
 
----
 
 ## Journal record: 018-authoring-context.md
 
@@ -600,7 +592,6 @@ The Gem update removes prior scraper attachments and retains only authoring styl
 
 Instruction-only Gem save was verified through non-headed Chrome. The final sample contains one native table, five canonical code blocks, four titled task accordions, no citation markers, no inner triple-backtick fence, and no ordinary line at or above the 90-character presentation guard.
 
----
 
 ## Journal record: 019-source-synthesis-and-canvas-download.md
 
@@ -627,7 +618,6 @@ Canvas file links are preview pages, not file bytes. The exporter now requests t
 
 Canvas source routes are matched through a normalised source identity rather than the Docs leaf title. A renamed leaf therefore remains addressable, and multiple module routes may continue to point at one merged leaf without creating duplicates. The registry remains the authority for the number of generation requests: one request per unique routed leaf.
 
----
 
 ## Journal record: 020-alignment-baseline.md
 
@@ -645,7 +635,6 @@ This record preserves the prompt and Gem context used for the previous local sam
 
 The exact baseline instruction remains in `GEMINI_LEAF_PROMPT` at the revision represented by this record. The Gem was not changed while capturing this record.
 
----
 
 ## Journal record: 021-production-style-alignment.md
 
@@ -664,7 +653,6 @@ This revision is based on an align review of the Week 7 output against the produ
 
 The revision also makes block selection an explicit final audit. Definitions and constraints should use concise asides, repeated records should use tables, genuine sequences or dependency chains should use a valid `<Nodes>` diagram with complete JSON attributes, and secondary task collections should use titled accordions. `<Code>` must never be nested inside a Nodes attribute. These are generic alignment rules rather than instructions tied to one Week 7 example.
 
----
 
 ## Journal record: 022-nodes-normalisation-fix.md
 
@@ -681,7 +669,6 @@ The revision also makes block selection an explicit final audit. Definitions and
 
 The alignment run exposed a normaliser bug rather than a Gemini formatting failure. The normaliser treated object literals inside a valid `<Nodes>` `nodes` or `edges` attribute as standalone code objects and wrapped them in `<Code>`. The normaliser now tracks the Nodes attribute shell and leaves its JSON/object lines untouched; the structural guard still rejects a model response that genuinely nests `<Code>` inside a Nodes block. No prompt or Gem instruction changed for this handling fix.
 
----
 
 ## Journal record: 023-alignment-review-022.md
 
@@ -698,7 +685,6 @@ The alignment run exposed a normaliser bug rather than a Gemini formatting failu
 
 The 022 sample is materially closer to the handwritten production leaves: its prose is connected, its section hierarchy is concept-led, and it uses tables, asides, an accordion, a valid Nodes diagram, inline code, and inline maths. The remaining alignment gaps are generic block-choice and notation issues. Technical acronyms are still inconsistently marked as inline code, comparison cases remain a numbered list even though a table would expose the relationship more clearly, and some bold-label bullets still carry information that should be a table, aside, or short prose.
 
----
 
 ## Journal record: 024-inline-technical-token-guard.md
 
@@ -714,7 +700,6 @@ The 022 sample is materially closer to the handwritten production leaves: its pr
 
 The 023 sample used inline notation well in many places but left technical acronyms unmarked in ordinary prose and table cells. The presentation guard now marks uppercase technical tokens and IPv-style protocol names as inline `<code>` spans while protecting existing code, maths, HTML, and Nodes attributes. This is a generic presentation safeguard; it does not add facts or alter source content. The model prompt remains responsible for choosing notation and for distinguishing ordinary capitalisation from technical tokens.
 
----
 
 ## Journal record: 025-alignment-accepted.md
 
@@ -732,7 +717,6 @@ The final local Week 7 artifact is concept-led and follows the production handwr
 
 The normalized source was parsed through the repository's `mdToDocBody` and `compactDocBody` path into 47 Docs blocks. The artifact contains no resource-index heading or source-catalogue language. It remains a local Downloads artifact; no Sanity or production mutation was made during alignment.
 
----
 
 ## Journal record: 026-source-completeness-gate.md
 
@@ -752,7 +736,6 @@ This revision closes a silent-quality gap exposed by Network Fundamentals Week5.
 
 The programmatic boundary is implemented separately from prompt style. `_coverage.ts` measures source-weighted output size and distinctive attachment evidence, then requests a strict semantic coverage audit from Gemini. `_heal.ts` communicates each exact failure to the next attempt and stops after three retries. Neither audit metadata nor diagnostic evidence is written into the leaf source.
 
----
 
 ## Journal record: 027-code-math-rendering-fix.md
 
@@ -773,7 +756,6 @@ The programmatic boundary is implemented separately from prompt style. `_coverag
 
 This revision addresses two independent failures exposed by the Week2 document. The read-only Docs renderer now renders structured inline math nodes, while the server parser restores braces and angle brackets escaped during MDX protection and maps inline HTML code to the Docs `code` mark. List items now retain block-level canonical `<Code>` children instead of silently dropping them. The Gemini prompt adds the corresponding delimiter guidance, and `mcp.ts` rejects raw fallback blocks so malformed generation cannot be written as apparently valid content.
 
----
 
 ## Journal record: 028-source-priority-and-inline-markup.md
 
@@ -793,7 +775,6 @@ This revision addresses two independent failures exposed by the Week2 document. 
 
 This prompt revision responds to the fresh Gemini retry selecting unrelated Gem-knowledge topics after a transient transport failure. It makes source precedence explicit and adds a concrete markup-boundary rule for the MDX parser. It does not broaden the factual source set or alter the Docs data model.
 
----
 
 ## Journal record: 029-source-package-healing.md
 

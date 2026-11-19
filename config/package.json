@@ -59,7 +59,7 @@
 		"@eslint/js": "10.0.1",
 		"@playwright/test": "^1.64.1",
 		"@terra-symposium/boundaries": "^0.2.0",
-		"@terra-symposium/docs-site": "npm:@terra-symposium/docs@^0.4.18",
+		"@terra-symposium/docs-site": "npm:@terra-symposium/docs@^0.4.21",
 		"@terra-symposium/hygiene": "^2.4.5",
 		"@terra-symposium/reporting": "^0.8.0",
 		"@terra-symposium/styling": "0.1.34",

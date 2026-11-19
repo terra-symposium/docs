@@ -30,7 +30,7 @@ HELPERS
  * @return Themed not-found page element.
  */
 export function DocsNotFound({
-	appName = 'Terra Docs',
+	appName = 'Docs',
 	homeHref = '/',
 	description: desc = 'The page may have moved, or the link may be out of date.',
 }: {

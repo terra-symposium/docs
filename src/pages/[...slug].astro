@@ -19,7 +19,7 @@ const p = docsPages.find(e => e.id === pageId) ?? docsPages[0];
 	<head>
 		<meta charset='utf-8' />
 		<meta name='viewport' content='width=device-width, initial-scale=1' />
-		<title>{p?.title ?? 'Terra Docs'}</title>
+		<title>{p?.title ?? 'Docs'}</title>
 	</head>
 	<body>
 		<DocsSiteWorkspace
@@ -27,8 +27,8 @@ const p = docsPages.find(e => e.id === pageId) ?? docsPages[0];
 			tree={docsTree}
 			pages={docsPages}
 			pathname={Astro.url.pathname}
-			title='Terra Docs'
-			description='Install and configure independent Terra Docs instances.'
+			title='Docs'
+			description='Install and configure independent Docs instances.'
 			rootPath='/'
 			homePath='/'
 		/>

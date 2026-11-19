@@ -1,6 +1,6 @@
 ---
 name: scrape
-description: Collect authorized Canvas source material for a local Terra Docs drafting or alignment task.
+description: Collect authorized Canvas source material for a local Docs drafting or alignment task.
 ---
 
 # Scrape
@@ -15,15 +15,19 @@ Keep the capture and `coverage.json` together outside this repository. The cover
 
 Capture the full readable page body and attachment contents, including explicit lists, questions, tasks, code, dates, and links. A title, filename, or module-item URL is not a substitute for the source body. Preserve source wording and provenance; [author](../../../docs/1-authoring/authoring.md) owns synthesis and reader-facing prose.
 
+When handing captured material off as Docs Markdown, format callouts with a blank line immediately after the opening fence and immediately before the closing `:::`. Keep the callout body between those lines so formatters preserve the block.
+
 ## Hand off the capture
 
 Give the next stage the local paths and coverage record. State missing and excluded items so it does not claim complete coverage.
 
-| Intended result | Next skill |
-| --- | --- |
-| A reader-facing Docs page | [author](../../../docs/1-authoring/authoring.md) |
-| A local comparison of generated content with production Docs | [align](../align/SKILL.md) |
+| Intended result                                              | Next skill                                       |
+| ------------------------------------------------------------ | ------------------------------------------------ |
+| A reader-facing Docs page                                    | [author](../../../docs/1-authoring/authoring.md) |
+| A local comparison of generated content with production Docs | [align](../align/SKILL.md)                       |
 
 :::note[Collection boundary]
+
 Collection alone does not authorise publishing a page, changing the saved Gem, or writing a Docs leaf.
+
 :::

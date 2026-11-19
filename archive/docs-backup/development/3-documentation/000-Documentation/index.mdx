@@ -1,0 +1,347 @@
+---
+title: Documentation
+description: Developer notes covering key flows, constraints, and implementation decisions of the documentation system..
+---
+
+## Architecture
+
+The Documentation Engine is a hybrid system combining static site generation with dynamic, permission-aware navigation. It transforms a flat directory of MDX files into a structured knowledge base, enforcing role-based access control at the routing level while providing rich content rendering capabilities.
+
+### Purpose
+
+The system operates as a pipeline that ingests source files, filters them based on user warrants, and renders the resulting navigation tree.
+
+### Routing
+
+The engine uses a bespoke routing utility to generate the site structure at runtime. It maps the physical file system to a logical navigation tree.
+
+```plaintext
+📂 Section                            Sidebar UI
+└── 📂 001-Group                      ▾ Intro
+    ├── 001-Leaf/
+	│	├── index.mdx         ==>      • Leaf
+	│   └── attachment.pdf
+    │
+	└── 002-Legacy.mdx                 • Legacy
+```
+
+<table>
+	<thead>
+		<tr>
+			<th>⚙️ Stage</th>
+			<th>🧠 Logic</th>
+			<th>📄 Description</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>Discovery</td>
+			<td><code>import.meta.glob</code></td>
+			<td>Scans the <code>/src/pages/docs</code> directory for all <code>.md</code>, <code>.mdx</code>, and <code>.astro</code> files.</td>
+		</tr>
+		<tr>
+			<td>Security</td>
+			<td><code>userWarrants</code></td>
+			<td>Intercepts the top-level folder of every file. If the active user lacks the specific warrant, the file is excluded from the tree entirely.</td>
+		</tr>
+		<tr>
+			<td>Ordering</td>
+			<td><code>convertAndSort</code></td>
+			<td>Sorts the hierarchy first by explicit frontmatter <code>order</code>, then by numeric filename prefix, and finally alphabetically.</td>
+		</tr>
+	</tbody>
+</table>
+
+### Sidebar States
+
+The navigation interface is decoupled from the content rendering, allowing for persistent state management across page navigations.
+
+The sidebar state is managed by Nanostores to ensure continuity.
+
+<table>
+	<thead>
+		<tr>
+			<th>🧭 State</th>
+			<th>💾 Store</th>
+			<th>🎯 Purpose</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>Expansion</td>
+			<td>URL matching</td>
+			<td>Branch nodes automatically expand or collapse based on the currently active route URL.</td>
+		</tr>
+	</tbody>
+</table>
+
+The `Tree` component acts as a recursive factory that dynamically maps structural layers and evaluates context dependencies to render the navigation interface.
+
+===[Branches]
+
+Rendered as `SidebarGroup` components, branches represent collapsible folder containers.
+
+* **Context Menus**: Branches provide administrative actions to add new pages, download the entire group (as a preserved ZIP, merged PDF, or visual snapshot), rename the group, or delete the section.
+* **Drag and Drop**: Branch drop-zones accept both files and other folders, recalculating the `000-prefix` ordering architecture sequentially upon drop.
+
+===
+
+===[Leaves]
+
+Rendered as `SidebarMenuItem` components, leaves represent individual markdown documents.
+
+* **Context Menus**: Leaves include comprehensive file operations, such as renaming, duplicating, downloading, and deleting.
+* **Attachments Management**: A dedicated "Files" submenu allows authors to upload local assets, rename attachments, duplicate them, or execute LLM content synthesis directly against them.
+
+===
+
+===[Table of Contents]
+
+Active leaves automatically mount a `Toc` component that generates a dynamic scroll-spy navigation list.
+
+* **Tracking**: It utilizes a `MutationObserver` and event listeners (`scroll`, `resize`) to scan the active viewport for `<h2>` headings.
+* **Visibility**: Headings are mapped to their respective IDs and dynamically highlighted in the sidebar as the user reads through the document.
+
+===
+
+===[Drag and Drop]
+
+Both branches and leaves utilize a unified drag-and-drop state machine (`ReorderDropState`).
+
+* **Geometric Resolution**: Hover coordinates determine if a dropped item should be placed `before` or `after` a target node.
+* **Cross-Layer Support**: The `uploadAsLeaf` and `mvLeaf` utilities safely transition nodes between entirely different branch directories natively.
+
+===
+
+## Blocks
+
+The MDX engine is augmented with custom components and global styles to support technical documentation requirements.
+
+===[Accordions]
+
+Consolidates lengthy content into collapsible sections for progressive disclosure. Uses the \=\=\= syntax.
+
+===
+
+===[Tabs]
+
+Groups distinct sections into a compact, switchable interface. Uses the ||| syntax.
+
+===
+
+===[Steps]
+
+Renders sequential instructions with visual tracking lines. Uses the ^^^ syntax.
+
+===
+
+===[Asides]
+
+Highlights contextual information using categorized colored blockquotes (Note, Tip, Caution, Danger). Uses the ::: syntax.
+
+===
+
+===[Flowcharts]
+
+Visual layout engine for diagrams. Utilizes **React Flow** and **Dagre** to automatically position nodes defined via YAML frontmatter.
+
+* **Auto-Layout**: Dagre automatically calculates coordinates based on graph topology (TB or LR).
+* **Static Positioning**: Explicit coordinates provided in the frontmatter override Dagre's auto-layout.
+* **Proximity Connections**: Handles can dynamically assign themselves based on the geometric relationship between nodes rather than strict directional anchoring.
+
+===
+
+===[Code]
+
+Integrates **CodeMirror** for syntax highlighting and raw editing.
+
+* **Capabilities**: Supports real-time theme swapping, line boundary selections, and robust clipboard interception to automatically convert pasted HTML into valid markdown.
+* **Styling**: Inline code blocks use `bg-primary-4` and `text-primary-12` with a rounded border radius to cleanly stand out from regular prose.
+
+===
+
+===[Math]
+
+Renders LaTeX expressions securely via **KaTeX**.
+
+* **Inline vs Block**: Supports both inline (`\$`) and block (`\$\$`) display modes.
+* **Visual Editor**: Managed through a dedicated Radix UI popover editor that allows authors to type and preview formulas in real-time, completely bypassing brittle remark AST plugins.
+
+===
+
+===[Tables]
+
+Renders as a native HTML `contenteditable` grid to support inline markdown formatting, bypassing deep nesting limitations in standard MDX editors.
+
+* **Toolkit**: Features a spreadsheet-like cell manipulation toolkit allowing authors to add, delete, and merge rows or columns intuitively.
+* **Responsive**: Markdown tables use `border-collapse: separate` with rounded corners, dynamically wrapping in an overflow container for mobile viewports.
+
+===
+
+===[Images]
+
+Provides dialog controls for device uploads and remote URL parsing.
+
+* **Interception**: Intercepts `dragover` and `paste` clipboard events to instantly transform dropped files or remote `<img>` tags into inline markdown syntax.
+* **Context Actions**: Injects a floating hover-menu over active editor image nodes to quickly access dimension settings, alt-text parameters, or deletion commands.
+
+===
+
+===[TsDocs]
+
+Queries the content collection to dynamically list and link to auto-generated TypeScript definition pages. The output can be scoped to specific directories using the `filter` prop.
+
+===
+
+## Actions
+
+The backend operations power the documentation engine, handling file system modifications, access control, and structural integrity.
+
+===[parse.ts]
+
+The `parse` utility handles string manipulations, path resolution, and MDX compilation.
+
+<table>
+	<thead>
+		<tr>
+			<th>🧠 Function</th>
+			<th>🎯 Purpose</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td><code>path</code></td>
+			<td>Normalizes routing paths based on semantic entity types (<code>file</code>, <code>folder</code>, <code>asset</code>, <code>store</code>). Validates paths rigidly to ensure execution stays strictly within the documentation directory.</td>
+		</tr>
+		<tr>
+			<td><code>src</code></td>
+			<td>Deserializes markdown source into discrete content and frontmatter payloads. Strategically encapsulates fragile components (like tables and math) before passing them to the AST parser to prevent Acorn syntax crashes.</td>
+		</tr>
+		<tr>
+			<td><code>fmt</code></td>
+			<td>Injects raw code into <strong>Prettier</strong> for syntax-tree standardization. Preserves custom block delimiters (like <code>&#61;&#61;&#61;</code> or <code>&#94;&#94;&#94;</code>) by temporarily mapping them to standard markdown fenced blocks during the formatting phase.</td>
+		</tr>
+		<tr>
+			<td><code>mdx</code></td>
+			<td>Compiles the formatted string into an executable React function body using <code>@mdx-js/mdx</code>. Integrates specialized remark plugins to transform directives and asides during compilation.</td>
+		</tr>
+	</tbody>
+</table>
+
+===
+
+===[read.ts]
+
+The `read` utility manages database queries, directory listings, and third-party extractions.
+
+<table>
+	<thead>
+		<tr>
+			<th>🧠 Function</th>
+			<th>🎯 Purpose</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td><code>verify</code></td>
+			<td>Checks specific path parameters against user RBAC warrants to confirm read permissions. Extends auth checks directly across binary store entries to ensure restricted assets cannot be bypassed via direct URL access.</td>
+		</tr>
+		<tr>
+			<td><code>nav</code></td>
+			<td>Constructs strictly scoped AST models mapping available navigation blocks globally. Sorts hierarchies numerically and filters out unauthorized paths or hidden attachment files automatically.</td>
+		</tr>
+		<tr>
+			<td><code>youtube</code></td>
+			<td>Fetches and processes YouTube transcripts using <code>youtube-transcript</code>, saving them to a structured JSON registry so they can be queried rapidly inside the attachments view without re-fetching.</td>
+		</tr>
+		<tr>
+			<td><code>pdf</code></td>
+			<td>Generates static PDF snapshots of provided URLs using headless <strong>Playwright</strong> browser instances, storing the resulting buffers directly in the asset bucket.</td>
+		</tr>
+	</tbody>
+</table>
+
+===
+
+===[write.ts]
+
+The `write` utility executes rendering chains and saves payload parameters into native storage.
+
+<table>
+	<thead>
+		<tr>
+			<th>🧠 Function</th>
+			<th>🎯 Purpose</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td><code>doc</code></td>
+			<td>Normalizes and saves markdown files, triggering subsequent render cache updates. Ensures path uniqueness and creates localized file AST variants physically isolated in local caches.</td>
+		</tr>
+		<tr>
+			<td><code>uploadAsset</code></td>
+			<td>Assembles chunked file uploads and applies aggressive dynamic server-side compression to enforce size limits (10MB). Uses <strong>Ghostscript</strong> for PDFs and <strong>Sharp</strong> for images.</td>
+		</tr>
+		<tr>
+			<td><code>moveWarrants</code></td>
+			<td>Updates associated user access warrants in the PostgreSQL database when directory structures change. Ensures inherited read/write rules shift smoothly.</td>
+		</tr>
+		<tr>
+			<td><code>commit</code></td>
+			<td>A macro orchestration endpoint consolidating sequence moves, asset mapping, and content saving into a single transactional operation, drastically reducing client-side latency.</td>
+		</tr>
+	</tbody>
+</table>
+
+===
+
+===[reorder.ts]
+
+The `reorder` utilities maintain the structural hierarchy and manage document sequencing.
+
+<table>
+	<thead>
+		<tr>
+			<th>🧠 Function</th>
+			<th>🎯 Purpose</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td><code>moveNode</code></td>
+			<td>The central orchestrator for moving nodes. Translates directory strings, resolves child dependencies, and shifts internal keys automatically.</td>
+		</tr>
+		<tr>
+			<td><code>placeNode</code></td>
+			<td>Resolves index injections, maintaining hierarchical structures natively to prevent client collisions when files are dropped between two existing numeric sequence boundaries.</td>
+		</tr>
+		<tr>
+			<td><code>normDir</code></td>
+			<td>Repairs sequences and normalizes lists within a directory. It resolves naming clashes and cleans paths structurally to maintain the rigorous <code>000-name</code> ordering convention behind the scenes.</td>
+		</tr>
+	</tbody>
+</table>
+
+===
+
+===[delete.ts]
+
+The `delete` utility cleans up orphaned assets and removes structural nodes.
+
+<table>
+	<thead>
+		<tr>
+			<th>🧠 Function</th>
+			<th>🎯 Purpose</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td><code>remove</code></td>
+			<td>Removes discrete targets across all storage layers. Once a file or folder is wiped, it automatically triggers sibling sequence normalization to close the newly created numeric gap.</td>
+		</tr>
+	</tbody>
+</table>
+
+===

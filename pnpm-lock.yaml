@@ -94,8 +94,8 @@ importers:
         specifier: ^0.2.0
         version: 0.2.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@terra-symposium/docs-site':
-        specifier: npm:@terra-symposium/docs@^0.4.18
-        version: '@terra-symposium/docs@0.4.18(@astrojs/markdown-satteri@0.4.5)(@types/node@24.19.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.3)'
+        specifier: npm:@terra-symposium/docs@^0.4.21
+        version: '@terra-symposium/docs@0.4.21(@astrojs/markdown-satteri@0.4.5)(@types/node@24.19.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.3)'
       '@terra-symposium/hygiene':
         specifier: ^2.4.5
         version: 2.4.5(eslint@10.13.0(jiti@1.21.7))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1960,8 +1960,14 @@ packages:
       react: '>=18'
       react-dom: '>=18'
 
-  '@terra-symposium/docs@0.4.18':
-    resolution: {integrity: sha512-uTjt3dEulDA/D1Q7/tmHt0CW2aTB+X+fdcj0YOTwKBFUZZJJ+kjlnYTqp4Hqtjn9Bz6/a529gwCt2S4Y/NJxuQ==}
+  '@terra-symposium/boundaries@0.2.2':
+    resolution: {integrity: sha512-ESaI+zx/SzHy/sKs324C98elqmtzZxLLjgx2RU6hqnVa6K32v913Yf4A1fGBRDi6v/mW2uyD7M4UAsLRO6FBQw==}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+
+  '@terra-symposium/docs@0.4.21':
+    resolution: {integrity: sha512-AL2450s3Bf+h6kEPAwYGtaE+Gb7L2JVbOaQsP5Ril/aHbrtlE+syUlzA9GUZu7UQiblave6Eqm3dDjCT/MMifw==}
     engines: {node: '>=24.12.0'}
     hasBin: true
 
@@ -4883,7 +4889,7 @@ snapshots:
       unified: 11.0.5
       unist-util-remove-position: 5.0.0
       unist-util-visit: 5.1.0
-      unist-util-visit-parents: 6.0.2
+      unist-util-visit-parents: 6.1.0
       vfile: 6.0.3
     transitivePeerDependencies:
       - supports-color
@@ -6772,7 +6778,12 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@terra-symposium/docs@0.4.18(@astrojs/markdown-satteri@0.4.5)(@types/node@24.19.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.3)':
+  '@terra-symposium/boundaries@0.2.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    dependencies:
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
+  '@terra-symposium/docs@0.4.21(@astrojs/markdown-satteri@0.4.5)(@types/node@24.19.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(xstate@5.33.3)':
     dependencies:
       '@astrojs/markdown-remark': 7.3.5
       '@astrojs/mdx': 8.1.2(@astrojs/markdown-remark@7.3.5)(@astrojs/markdown-satteri@0.4.5)(astro@7.4.2(@astrojs/markdown-remark@7.3.5)(@types/node@24.19.2)(jiti@1.21.7)(yaml@2.9.1))
@@ -6789,7 +6800,7 @@ snapshots:
       '@lexical/rich-text': 0.35.0
       '@portabletext/editor': 7.9.0(@types/react@19.3.0)(react@19.3.1)
       '@radix-ui/react-popover': 1.3.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@terra-symposium/boundaries': 0.2.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@terra-symposium/boundaries': 0.2.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@terra-symposium/styling': 0.1.34(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(yaml@2.9.1)
       '@uiw/codemirror-theme-github': 4.25.12(@codemirror/language@6.13.1)(@codemirror/state@6.7.6)(@codemirror/view@6.43.15)
       '@xstate/react': 6.1.0(@types/react@19.3.0)(react@19.3.1)(xstate@5.33.3)

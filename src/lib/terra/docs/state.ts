@@ -1,6 +1,6 @@
 /**
  * src/lib/terra/docs/state.ts
- * Shared state, transitions, contexts, and surface readiness for Terra Docs.
+ * Shared state, transitions, contexts, and surface readiness for Docs.
  */
 
 /*//////////////////////////////////////////////////

@@ -386,7 +386,7 @@ export type PortableEditorBlock = PortableBlock;
 
 /** Nested Portable Text content stored inside a Docs block. */
 export type DocsNestedContent = PortableBlock[];
-/** Portable Text document content handled by Terra Docs. */
+/** Portable Text document content handled by Docs. */
 export type TerraContent = PortableBlock[];
 /** Problem document record used by problem content views. */
 export type Problem = { _id?: string; title?: string; [key: string]: unknown };

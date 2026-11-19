@@ -38,7 +38,7 @@ HELPERS
  * @param markdown Markdown source used when structured content is absent.
  * @param content Structured Docs content for the current page.
  *
- * @return A static Terra Docs workspace element.
+ * @return A static Docs workspace element.
  */
 export function DocsSiteLayout({
 	title,

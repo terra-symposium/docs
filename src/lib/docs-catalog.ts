@@ -93,18 +93,19 @@ function childrenFor(pages: DocsLocalPage[], folder: string): DocsHostTreeNode[]
 	return [...direct.map(leaf), ...branches];
 }
 
-/** Sections and leaves follow the current docs/ directory tree. */
-
-const sectionIds = new Set(docsPages.map(page => page.id.includes('/') ? page.id.split('/')[0]! : 'docs-root'));
-const sortedSections = [...sectionIds].sort((a, b) => a === 'docs-root' ? -1 : b === 'docs-root' ? 1 : a.localeCompare(b, undefined, { numeric: true }));
+/** Sections and leaves follow the current docs/ directory tree. The root index is the
+ * site landing page, so it is addressable at `/` but is not a section or sidebar leaf.
+ */
+const navigationPages = docsPages.filter(page => page.id !== 'index');
+const sectionIds = new Set(navigationPages.map(page => page.id.split('/')[0]!));
+const sortedSections = [...sectionIds].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 export const docsTree: DocsHostTreeNode[] = sortedSections.map(section => {
-		const isRoot = section === 'docs-root';
-		const pages = docsPages.filter(page => isRoot ? !page.id.includes('/') : page.id.startsWith(`${section}/`));
+		const pages = navigationPages.filter(page => page.id.startsWith(`${section}/`));
 		return {
 			type: 'branch',
 			origName: section,
-			title: isRoot ? 'Docs' : displayName(section),
-			path: isRoot ? 'docs' : section,
+			title: displayName(section),
+			path: section,
 			permission: 'read',
 			children: [{
 				type: 'branch',
@@ -112,7 +113,7 @@ export const docsTree: DocsHostTreeNode[] = sortedSections.map(section => {
 				title: 'Pages',
 				path: `${section}/pages`,
 				permission: 'read',
-				children: childrenFor(pages, isRoot ? '' : section),
+				children: childrenFor(pages, section),
 			}],
 		};
 	});

@@ -76,7 +76,7 @@ test.afterEach(async ({ page: p }) => {
 });
 test('standalone Astro pages mount the extracted read-only workspace with their nested navigation', XL_VIEWPORT_TEST, async ({ page: p }) => {
 	await p.goto('/');
-	await expect(p.getByRole('link', { name: 'Terra Docs', exact: true }).first()).toBeVisible();
+	await expect(p.getByRole('link', { name: 'Docs', exact: true }).first()).toBeVisible();
 	await expect(p.getByRole('combobox', { name: 'Section' })).toBeVisible();
 	await expect(p.getByRole('combobox', { name: 'Mode' })).toBeVisible();
 	await expect(p.getByRole('textbox', { name: 'Search pages' })).toHaveCount(0);

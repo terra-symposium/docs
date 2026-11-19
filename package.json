@@ -52,10 +52,12 @@
       "site": "docs"
     },
     "description": "Docs workspace and Markdown site generator.",
+    "port": 2020,
     "out": "dist/docs"
   },
   "scripts": {
-    "dev": "DOCS_DEV_PORT=2020 terra-quality-dev -- vite --config config/vite.config.ts --host 127.0.0.1 --open",
+    "dev": "pnpm run build && node bin/docs.mjs dev --host 127.0.0.1",
+    "docs:dev": "pnpm run dev",
     "quality": "pnpm run quality:check",
     "quality:check": "node scripts/quality.mjs quality --all --warn",
     "quality:fix": "node scripts/quality.mjs quality --all --fix",

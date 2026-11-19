@@ -56,7 +56,10 @@ const configuredAgents = docsConfig.includeAgents ?? docsConfig.includeSkills ??
 const agentsOption = options.get('--agents') ?? options.get('--skills');
 const requestedBase = (options.get('--base') ?? docsConfig.base ?? '/').trim();
 const base = requestedBase.endsWith('/') ? requestedBase : `${requestedBase}/`;
-const port = options.get('--port') ?? docsConfig.port;
+const port =
+  options.get('--port') ??
+  (mode === 'dev' ? process.env.DOCS_DEV_PORT : undefined) ??
+  docsConfig.port;
 const host = options.get('--host') ?? docsConfig.host;
 /*//////////////////////////////////////////////////
 HELPERS

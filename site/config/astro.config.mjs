@@ -19,6 +19,7 @@ import { createRequire } from 'node:module';
 import { defineConfig } from 'astro/config';
 import { dirname, resolve } from 'node:path';
 import { docsContentPlugin } from '../docs-content-plugin.mjs';
+import { localSourceRebuildPlugin } from '../local-source-rebuild-plugin.mjs';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/boundaries/astro-integration';
@@ -287,7 +288,12 @@ export default defineConfig({
   ],
   markdown: { processor: unified({ remarkPlugins: [[basePathRemarkPlugin, { base }]] }) },
   vite: {
-    plugins: [docsContentPlugin({ root: projectRoot, base })],
+    plugins: [
+      docsContentPlugin({ root: projectRoot, base }),
+      ...(resolve(consumerRoot) === resolve(packageRoot)
+        ? [localSourceRebuildPlugin({ root: packageRoot })]
+        : []),
+    ],
     optimizeDeps: {
       include: [...DOCS_VITE_OPTIMIZE_DEPS, 'react', 'react/jsx-runtime', 'react-dom/client'],
     },

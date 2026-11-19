@@ -12,7 +12,7 @@ pnpm run dev
 pnpm run docs
 ```
 
-`pnpm dev` (or `pnpm run docs:dev`) builds the package and starts its Astro Docs site from this repository's `docs/` folder. The site renders checked-out Markdown as a read-only workspace, refreshes its search index when Markdown changes, and hot-reloads Docs UI source changes such as toolbar edits. `pnpm run docs` builds the package and a static copy of its Docs site. The development command prefers port `2020`; the shared launcher delegates port acquisition to Terra Quality and uses a free port when needed. Host apps use this launcher too; set `DOCS_DEV_PORT` to override their preferred port.
+`pnpm dev` (or `pnpm run docs:dev`) builds the package and starts its Astro Docs site from this repository's `docs/` folder. The site renders checked-out Markdown as a read-only workspace, refreshes its search index when Markdown changes, and rebuilds the package and reloads the page when Docs UI source changes. `pnpm run docs` builds the package and a static copy of its Docs site. The development command uses port `2020`; set `DOCS_DEV_PORT` to use another port.
 
 Build the library with `pnpm run build` and run package checks with `pnpm run check`.
 

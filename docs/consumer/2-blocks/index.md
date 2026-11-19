@@ -8,15 +8,11 @@ Write ordinary text as Markdown. The Docs package owns parsing and rendering; a 
 
 ## Text and structure
 
-Use `##` and deeper headings, paragraphs, links, emphasis, block quotes, numbered steps, and bullet lists as normal Markdown. Use a fenced code block with a language label for multiline code:
+Use `##` and deeper headings, paragraphs, links, emphasis, block quotes, numbered steps, and bullet lists as normal Markdown. Use single backticks for inline code; inline code never has a language header or copy button. Author multiline code with a language-labelled `<CodeBlock>`:
 
 Fenced, stored, and received code share a syntax-highlighted surface with a language header and copy control in both view and edit modes.
 
-````md
-```c
-printf("Hello, world!\n");
-```
-````
+<CodeBlock language="mdx" code={"<CodeBlock language=\"c\" code={\"printf(\\\"Hello, world!\\\\n\\\");\"} />"} />
 
 Use `$x$` for inline math and `$$` lines around display math. Use `![Alt text](./image.png)` for an image beside its owning leaf. Keep downloadable attachments with that leaf rather than duplicating them in navigation.
 
@@ -24,11 +20,7 @@ Use `$x$` for inline math and `$$` lines around display math. Use `![Alt text](.
 
 Both GitHub Flavored Markdown pipe tables and native HTML tables are supported. Use a pipe table for a simple grid:
 
-```md
-| Item     | Purpose            |
-| -------- | ------------------ |
-| Register | Track stakeholders |
-```
+<CodeBlock language="md" code={"| Item | Purpose |\n| -------- | ------------------ |\n| Register | Track stakeholders |"} />
 
 Use native `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, and `<td>` when its structure needs HTML. Keep existing table titles and table content as authored; a table title does not make the table an aside.
 
@@ -36,13 +28,7 @@ Use native `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, and `<td>` when its 
 
 For new hand-authored blocks, use `:::` only for asides. The six supported types are `note`, `tip`, `caution`, `danger`, `example`, and `warning`. Give the aside a short title and put normal Markdown between its fences:
 
-```md
-:::warning[Check the source]
-
-Confirm the date against the official brief.
-
-:::
-```
+<CodeBlock language="md" code={":::warning[Check the source]\n\nConfirm the date against the official brief.\n\n:::"} />
 
 The type is preserved when a page is opened and exported from the editor. Tables, lists, and code can appear inside an aside when the whole group needs that emphasis.
 
@@ -50,31 +36,19 @@ The type is preserved when a page is opened and exported from the editor. Tables
 
 Use an accordion for secondary detail and tabs for genuine alternatives. Each item has an opening title and a matching closing delimiter:
 
-```md
-===[Further detail]
-Supporting explanation.
-===
-
-|||[Linux]
-Linux instructions.
-|||
-```
+<CodeBlock language="md" code={"===[Further detail]\nSupporting explanation.\n==="} />
 
 The rendered example uses the shared Styling tabs and accordion components directly:
 
 |||[npm]
 
-```sh
-pnpm add @terra-symposium/docs
-```
+<CodeBlock language="sh" code={"pnpm add @terra-symposium/docs"} />
 
 |||
 
 |||[Git]
 
-```sh
-git tag docs-release
-```
+<CodeBlock language="sh" code={"git tag docs-release"} />
 
 |||
 

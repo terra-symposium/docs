@@ -5,6 +5,7 @@ IMPORTS
 
 // COMPONENTS
 import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
+import DocsCodeBlock from '../components/DocsCodeBlock.astro';
 
 // DATA
 import { pageForSlug, pageHref, siteNavigation, sitePages } from '../lib/catalog.js';
@@ -49,7 +50,7 @@ const layoutProps = {
 		<body>
 			{Content ? (
 				<DocsSiteLayout {...layoutProps}>
-					<main class="docs-page-content"><Content /></main>
+					<main class="docs-page-content"><Content components={{ CodeBlock: DocsCodeBlock }} /></main>
 				</DocsSiteLayout>
 			) : (
 				<DocsSiteLayout {...layoutProps} />

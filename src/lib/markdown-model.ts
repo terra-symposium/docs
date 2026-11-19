@@ -762,11 +762,14 @@ function jsxComponentRange(
   opening: JsxOpeningTag,
 ): { bodyEnd: number; end: number } | undefined {
   if (opening.selfClosing) return { bodyEnd: opening.end, end: opening.end };
-  const expr = opening.name === 'Code' ? codeBodyExpr(source, opening.end) : undefined;
+  const expr =
+    opening.name === 'Code' || opening.name === 'CodeBlock'
+      ? codeBodyExpr(source, opening.end)
+      : undefined;
   const closePattern = new RegExp(`<\\/${opening.name}\\s*>`, 'g');
   closePattern.lastIndex = expr?.end ?? opening.end;
   const close = closePattern.exec(source);
-  if (opening.name === 'Code') {
+  if (opening.name === 'Code' || opening.name === 'CodeBlock') {
     // Older exported leaves can omit an end tag before the next Code block. Treat that next
     // opening tag as the boundary instead of swallowing every following code sample.
     const nOpening = source.indexOf('<Code', expr?.end ?? opening.end);
@@ -848,6 +851,7 @@ export function replaceCanonicalComponents(
       !(
         opening.name === 'Nodes' ||
         opening.name === 'Code' ||
+        opening.name === 'CodeBlock' ||
         opening.name === 'Embed' ||
         opening.name === 'TsDocs' ||
         opening.name === 'Quiz' ||
@@ -889,7 +893,7 @@ export function replaceCanonicalComponents(
             };
           }
           if (opening.name === 'Quiz') return { _type: 'quiz', _key: key(), ...attrs };
-          if (opening.name === 'Code') {
+          if (opening.name === 'Code' || opening.name === 'CodeBlock') {
             const codeSource = typeof attrs.source === 'string' ? attrs.source : undefined;
             const codeAttr = typeof attrs.code === 'string' ? attrs.code : undefined;
             return {
@@ -923,9 +927,14 @@ export function replaceCanonicalComponents(
           return undefined;
         })(),
         source.slice(index, end),
-        opening.name === 'Code' &&
-          source.slice(0, index).toLowerCase().lastIndexOf('<table') >
-            source.slice(0, index).toLowerCase().lastIndexOf('</table'),
+        (opening.name === 'Code' || opening.name === 'CodeBlock') &&
+          (() => {
+            const preceding = source
+              .slice(0, index)
+              .replace(/`[^`]*`/g, '')
+              .toLowerCase();
+            return preceding.lastIndexOf('<table') > preceding.lastIndexOf('</table');
+          })(),
       );
     copiedUntil = end;
     index = end - 1;

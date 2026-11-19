@@ -22,13 +22,7 @@ Inspect package resolution and installed artifacts. A consumer may load a vendor
 
 Follow one affected page all the way through:
 
-```text
-Markdown + assets or remote record + attachments
-  -> host adapter and normalization
-  -> canonical Docs model and TOC
-  -> renderer / editor / attachment view
-  -> DOM, links, and opened files
-```
+<CodeBlock language="text" code={"Markdown + assets or remote record + attachments\n -> host adapter and normalization\n -> canonical Docs model and TOC\n -> renderer / editor / attachment view\n -> DOM, links, and opened files"} />
 
 For each source block, record its position or stable key, source type, normalized type, and where its meaning appears in the rendered page. Compare ordered meaning, not just totals: text, headings, marks, list nesting, table headers/cells, block attributes, references, media, title, description, and attachment ownership. A block count can match while an important block is lost or replaced.
 
@@ -59,12 +53,7 @@ The TOC contains sections, groups, and leaves. Attachments belong to leaves; the
 
 For repository-backed content, keep each leaf’s `index.md` and its files together, for example:
 
-```text
-content/<section>/<group>/<leaf>/
-  index.md
-  attachment.pdf
-  diagram.png
-```
+<CodeBlock language="text" code={"content/<section>/<group>/<leaf>/\n index.md\n attachment.pdf\n diagram.png"} />
 
 Store title, route, order, stable source ID, and attachment metadata in the TOC or host config. Put group-owned files on an explicit group Overview leaf. Use relative links for sibling assets. Keep raw exports, checksums, and audit manifests in an archive location only when they are needed for provenance or recovery; do not maintain redundant generated copies in active content, `public`, and build output.
 
@@ -88,20 +77,13 @@ If browser suites disagree about a layout invariant, treat that as a test-oracle
 
 Inspect the repository scripts first, then run the complete relevant suites rather than selecting only a representative page. In this repo, the usual package-level checks are:
 
-```sh
-pnpm test
-pnpm test:browser
-pnpm test:consumer
-```
+<CodeBlock language="sh" code={"pnpm test\npnpm test:browser\npnpm test:consumer"} />
 
 Also run applicable consumer checks against the artifact/version each host actually resolves. Cover local read-only and remote authorized/unauthorized paths as applicable, including published-versus-draft selection, save/reload, history, and attachment mutations when in scope. Exercise direct routes, section and leaf navigation, keyboard controls, context menus, tree actions and reordering, export, and all registered block types in view and edit states. Inspect browser console and network failures. Keep test servers isolated from builds that rewrite their served files; stale-server errors can invalidate screenshot and browser results.
 
 The evidence should include both directions:
 
-```text
-source -> canonical model -> rendered DOM / opened asset
-editor change -> saved source -> reload -> same rendered meaning
-```
+<CodeBlock language="text" code={"source -> canonical model -> rendered DOM / opened asset\neditor change -> saved source -> reload -> same rendered meaning"} />
 
 Check that source content is accounted for, unsupported values remain recoverable, Markdown is readable, TOC leaves have correct individual titles, attachments remain with their owner, links resolve, and capabilities match the host. Review full-page screenshots for each important state and viewport; do not call the task complete based on compilation, a single green route, or a passing pixel threshold alone.
 

@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.26
+
+### Patch Changes
+
+- Accept authored `<CodeBlock>` components and preserve inline backtick code as inline text. Document the block syntax and convert the Docs examples.
+
 ## 0.4.24
 
 ### Patch Changes

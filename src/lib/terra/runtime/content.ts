@@ -357,6 +357,8 @@ export const codeSrcJsx = (lang: string | undefined, src: string): string =>
  */
 export function toCodeJsx(src: string): string {
   if (!src) return '';
+  // CodeBlock is the authored Markdown form; retain Code as the internal legacy form.
+  src = src.replace(/<CodeBlock\b/g, '<Code').replace(/<\/CodeBlock>/g, '</Code>');
   const out: string[] = [];
   let fenced = false;
   let lang = '';
@@ -390,6 +392,16 @@ export function toCodeJsx(src: string): string {
       TerraQualityRegex.REGEX_PRE_CODE_S_CLASS_LANGUAGE_S_S_CODE_PRE_GI_REGEX(),
       (_, l: string, v: string) => codeJsx(l || '', v),
     );
+  res = res.replace(
+    /<Code\b([^>]*?)\s+code=\{("(?:\\.|[^"\\])*")\}\s*\/>/g,
+    (_match, attrs: string, value: string) => {
+      try {
+        return `<Code${attrs} source=${quote(JSON.parse(value) as string)} />`;
+      } catch {
+        return _match;
+      }
+    },
+  );
   res = res.replace(
     TerraQualityRegex.REGEX_CODE_B_S_S_S_CODE_S_S_S_G_REGEX(),
     (_match, p, q, e) => {

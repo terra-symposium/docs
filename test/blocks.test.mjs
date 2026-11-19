@@ -178,6 +178,16 @@ test.describe('Docs block conversion and rendering contracts', () => {
         assert.equal(markdownToDocsValue(docsValueToMarkdown(restored))[0].extra.nested, true);
       }
     });
+    test('authored CodeBlock stays a block while single backticks stay inline', () => {
+      const blocks = markdownToDocsValue(
+        '<CodeBlock language="typescript" code={"const value = 1;"} />\n\nUse `value` here.',
+      );
+      assert.equal(blocks[0]._type, 'code');
+      assert.equal(blocks[0].language, 'typescript');
+      assert.equal(blocks[0].value, 'const value = 1;');
+      assert.equal(blocks[1]._type, 'block');
+      assert.equal(blocks[1].children.find((child) => child.text === 'value')?.marks?.[0], 'code');
+    });
     test('the quiz component round-trips as a shared renderable Docs block', () => {
       const value = markdownToDocsValue('<Quiz />\n');
       assert.equal(value.length, 1);
@@ -1558,6 +1568,10 @@ Identify suitable companies and provide:
       assert.doesNotMatch(markdown, /&amp;#39;|&amp;lt;|<Code>/);
       const source = '<table><tr><td><code>mode !== &#39;autonomous&#39;</code></td></tr></table>';
       assert.equal(toCodeJsx(source), source);
+      assert.equal(
+        toCodeJsx('<CodeBlock language="typescript" code={"const value = 1;"} />'),
+        '<Code language="typescript" source="const value = 1;" />',
+      );
     });
     test('HTML table math with letter subscripts is parsed before Markdown emphasis', () => {
       const formula = String.raw`\vec{F}_{A \to B} = -\vec{F}_{B \to A}`;

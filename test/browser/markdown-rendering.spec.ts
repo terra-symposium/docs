@@ -34,8 +34,21 @@ test(
   async ({ page }) => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto('/fixture/code/');
+    const prose = page.locator('.docs-page-content');
+    const firstParagraph = prose.locator('> p').first();
+    const firstHeading = prose.locator('> h2').first();
+    await expect(firstParagraph).toHaveCSS('margin-top', '0px');
+    const headingGap = await firstHeading.evaluate((heading) => {
+      const previous = heading.previousElementSibling;
+      return previous
+        ? heading.getBoundingClientRect().top - previous.getBoundingClientRect().bottom
+        : 0;
+    });
+    expect(headingGap).toBeGreaterThanOrEqual(40);
     const block = page.locator('.docs-static-code-block');
     await expect(block).toBeVisible();
+    await expect(block.locator('.docs-code-block-header')).toHaveCSS('display', 'flex');
+    await expect(block.locator('.docs-code-block-header')).toHaveCSS('border-bottom-width', '1px');
     await expect(block.locator('.docs-static-code-language')).toHaveText('sh');
     await expect(block.locator('pre.astro-code .line span').first()).toBeVisible();
     await block.getByRole('button', { name: 'Copy sh code' }).click();

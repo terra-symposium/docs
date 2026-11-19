@@ -136,6 +136,35 @@ DOCS
   padding-block-start: 0 !important;
   border-block-start-width: 0 !important;
 }
+/* Static MDX code is part of the article, not an aside. */
+.docs-static-code-block {
+  overflow: hidden;
+  border: 1px solid rgb(var(--primary-6));
+  border-radius: 0.125rem;
+  background: rgb(var(--primary-1));
+}
+.docs-static-code-block .docs-code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid rgb(var(--primary-6));
+  background: rgb(var(--primary-2));
+  color: rgb(var(--primary-12));
+  font-size: 0.8125rem;
+}
+.docs-static-code-block .docs-code-block-header button {
+  padding: 0.125rem 0.5rem;
+  border: 1px solid rgb(var(--primary-6));
+  border-radius: 0.125rem;
+  color: inherit;
+}
+.docs-static-code-block > pre.astro-code {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: rgb(var(--primary-1)) !important;
+}
 :is(
     .prose[data-docs-body-content],
     .docs-page-content,
@@ -705,32 +734,6 @@ SHARED
   .docs-code-block-header button:not(:disabled):hover {
     background-color: color-mix(in srgb, rgb(var(--primary-7)) 20%, transparent) !important;
   }
-  .docs-static-code-block {
-    overflow: hidden;
-    border: 1px solid rgb(var(--primary-6));
-    border-radius: 0.125rem;
-    background: rgb(var(--primary-1));
-  }
-  .docs-static-code-block .docs-code-block-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.25rem 0.5rem;
-    border-bottom: 1px solid rgb(var(--primary-6));
-    background: rgb(var(--primary-2));
-    font-size: 0.8125rem;
-  }
-  .docs-static-code-block .docs-code-block-header button {
-    padding: 0.125rem 0.5rem;
-    border: 1px solid rgb(var(--primary-6));
-    border-radius: 0.125rem;
-  }
-  .docs-static-code-block > pre.astro-code {
-    margin: 0 !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background: rgb(var(--primary-1)) !important;
-  }
   .docs-code-block-fallback-line > div:first-child {
     border-color: color-mix(in srgb, rgb(var(--primary-7)) 50%, transparent) !important;
   }
@@ -829,13 +832,11 @@ aside .title + * {
     h2 {
       @apply mt-12 mb-6 border-t border-primary-6 pt-10 print:my-4 print:mt-10 print:text-primary-12;
     }
-    > h2:first-of-type,
-    &[data-docs-view-root] h2:first-of-type,
-    :is([data-docs-view-root], .docs-editor-copy) > h2:first-of-type,
-    [data-docs-view-root] > .docs-block > h2:first-of-type,
-    [data-docs-view-root] > :first-child > .docs-block > h2:first-of-type,
-    [data-docs-view-root] h2:first-of-type,
-    [data-docs-json-editor] h2:first-of-type {
+    > h2:first-child,
+    :is([data-docs-view-root], .docs-editor-copy, .docs-page-content) > h2:first-child,
+    [data-docs-view-root] > .docs-block:first-child > h2:first-child,
+    [data-docs-view-root] > :first-child > .docs-block:first-child > h2:first-child,
+    [data-docs-json-editor] > h2:first-child {
       @apply !mt-0 !border-t-0 !pt-0 print:!mt-0;
     }
     h3 {

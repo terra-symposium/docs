@@ -422,7 +422,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             }
             if (op === 'read.source.body')
               return { data: markdownToDocsValue(String(args.source ?? '')) as T };
-            if (op === 'read.util.pathname') return { data: String(args.path ?? pathname) as T };
+            if (op === 'read.util.pathname') return { data: String(args.path ?? aPath) as T };
             if (op === 'read.util.node') {
               const document = resolvePage(args);
               return {
@@ -447,9 +447,9 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             return { data: null as T };
           },
         };
-      }, [description, homePath, hue, page, pages, pathname, rootPath, title, tree])}
+      }, [aPath, description, homePath, hue, page, pages, rootPath, title, tree])}
       tree={tree}
-      pathname={pathname}
+      pathname={aPath}
       permission="read"
       staticContent
       title={page?.title ?? title}

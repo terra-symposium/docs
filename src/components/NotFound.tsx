@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardHeading,
 } from '@terra-symposium/styling/ui';
+import { docsHueTheme } from '../lib/docs-theme.js';
 
 // TYPES
 import type { JSX } from 'react';
@@ -43,7 +44,7 @@ export function DocsNotFound({
   description?: string;
 }): JSX.Element {
   return (
-    <div className="docs-theme-scope">
+    <div className="docs-theme-scope" style={docsHueTheme(145)}>
       <main className="docs-workspace flex min-h-screen items-center justify-center bg-background px-5 py-12 text-primary-12">
         <Card variant="primary-outline" size="sm" className="w-full text-center sm:max-w-lg">
           <CardHeader className="items-center text-center">

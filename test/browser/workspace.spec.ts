@@ -112,6 +112,75 @@ test.describe('Docs workspace browser contracts', () => {
       },
     );
     test(
+      'local workspace navigation keeps the active leaf, URL, and document aligned',
+      XL_VIEWPORT_TEST,
+      async ({ page: p }) => {
+        await p.addInitScript(
+          (fixture) => {
+            Object.assign(window, { __docsLocalWorkspaceFixture: fixture });
+          },
+          {
+            tree: [
+              {
+                type: 'branch',
+                origName: 'guides',
+                title: 'Guides',
+                path: 'guides',
+                children: [
+                  {
+                    type: 'leaf',
+                    origName: 'first',
+                    title: 'First guide',
+                    path: 'content/first.md',
+                    url: '/docs/first/',
+                  },
+                  {
+                    type: 'leaf',
+                    origName: 'second',
+                    title: 'Second guide',
+                    path: 'content/second.md',
+                    url: '/docs/second/',
+                  },
+                ],
+              },
+            ],
+            pages: [
+              {
+                id: 'first',
+                path: 'content/first.md',
+                pathname: '/docs/first/',
+                title: 'First guide',
+                markdown: '## First body',
+              },
+              {
+                id: 'second',
+                path: 'content/second.md',
+                pathname: '/docs/second/',
+                title: 'Second guide',
+                markdown: '## Second body',
+              },
+            ],
+            pathname: '/docs/first/',
+            title: 'Fixture Docs',
+            rootPath: '/docs/',
+          },
+        );
+        await p.goto('/strict-local-workspace-harness/');
+        await waitForWorkspaceReady(p);
+        const first = p.getByRole('link', { name: 'First guide', exact: true });
+        const second = p.getByRole('link', { name: 'Second guide', exact: true });
+        await expect(first.locator('..')).toHaveAttribute('data-active', 'true');
+        await second.click();
+        await expect(p).toHaveURL(/\/docs\/second\/$/);
+        await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Second guide');
+        await expect(second.locator('..')).toHaveAttribute('data-active', 'true');
+        await expect(first.locator('..')).toHaveAttribute('data-active', 'false');
+        await first.click();
+        await expect(p).toHaveURL(/\/docs\/first\/$/);
+        await expect(first.locator('..')).toHaveAttribute('data-active', 'true');
+      },
+    );
+    test(
       'read-only Docs hides the section selector when the navigation has one section',
       {
         tag: '@viewport:xl @viewport:md @viewport:mobile',

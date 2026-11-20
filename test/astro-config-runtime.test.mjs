@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import process from 'node:process';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { tmpdir } from 'node:os';
@@ -36,6 +36,35 @@ const configUrl = new URL('../site/config/astro.config.mjs', import.meta.url).hr
  */
 const findAlias = (aliases, specifier) =>
   aliases.find(({ find: f }) => (typeof f === 'string' ? f === specifier : f.test(specifier)));
+
+test('injects the Docs 404 route and rejects host overrides', async () => {
+  const originalDocsRoot = process.env.DOCS_ROOT;
+  const fixtureRoot = await mkdtemp(join(tmpdir(), 'terra-docs-404-'));
+  try {
+    process.env.DOCS_ROOT = packageRoot;
+    const config = (await import(`${configUrl}?not-found=${Date.now()}`)).default;
+    const integration = config.integrations.find((item) => item.name === 'terra-docs-not-found');
+    assert.ok(integration);
+    const pagesDir = join(fixtureRoot, 'src/pages');
+    await mkdir(pagesDir, { recursive: true });
+    const routes = [];
+    const setup = () =>
+      integration.hooks['astro:config:setup']({
+        config: { srcDir: pathToFileURL(`${join(fixtureRoot, 'src')}/`) },
+        injectRoute: (route) => routes.push(route),
+      });
+    setup();
+    assert.equal(routes.length, 1);
+    assert.equal(routes[0].pattern, '/404');
+    assert.match(routes[0].entrypoint, /site\/src\/routes\/404\.astro$/);
+    await writeFile(join(pagesDir, '404.astro'), '<h1>Override</h1>');
+    assert.throws(setup, /Docs owns the 404 route/);
+  } finally {
+    if (originalDocsRoot === undefined) delete process.env.DOCS_ROOT;
+    else process.env.DOCS_ROOT = originalDocsRoot;
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
 
 test('leaves React and ReactDOM external to SSR bundles', async () => {
   const originalDocsRoot = process.env.DOCS_ROOT;

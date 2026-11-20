@@ -47,6 +47,39 @@ const B_P_L_GU_REGEX = () => TerraQualityRegex.REGEX_B_P_L_GU_REGEX();
 const G_CLASS_2 = () => TerraQualityRegex.REGEX_G_REGEX_35();
 /** Matches a leading YAML frontmatter block in a Markdown or MDX page. */
 const S_N_S_S_N_S_N_REGEX = /^---\s*\n[\s\S]*?\n---\s*\n/;
+
+/** Resolve authored image paths to the assets copied beside the generated Docs site. */
+function siteImageUrls(markdown: string, relativeFile: string): string {
+  let fence: { character: string; length: number } | null = null;
+  const sourceUrl = new URL(relativeFile, 'https://docs.local/');
+  return markdown
+    .split('\n')
+    .map((line) => {
+      const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
+      if (marker) {
+        if (!fence) fence = { character: marker[0], length: marker.length };
+        else if (marker[0] === fence.character && marker.length >= fence.length) fence = null;
+        return line;
+      }
+      if (fence) return line;
+      const image = /(!\[[^\]]*\]\()([^\s)]+)([^)]*\))/g;
+      const rewrite = (match: string, opener: string, target: string, closer: string) => {
+        if (/^(?:[a-z][a-z\d+.-]*:|\/\/|\/|#)/i.test(target)) return match;
+        const assetPath = new URL(target, sourceUrl).pathname.slice(1);
+        return `${opener}${base}_docs/assets/${assetPath}${closer}`;
+      };
+      if (/<img\b/i.test(line))
+        return line.replace(/(<img\b[^>]*\bsrc=["'])([^"']+)(["'])/gi, rewrite);
+      if (/^\s*\|/.test(line)) {
+        const cells = line.split('|');
+        const uiCell = cells.length - 2;
+        cells[uiCell] = cells[uiCell].replace(image, rewrite);
+        return cells.join('|');
+      }
+      return line.replace(/^(\s*!\[[^\]]*\]\()([^\s)]+)([^)]*\))/, rewrite);
+    })
+    .join('\n');
+}
 /**
  * Renderable Docs page metadata derived from its Markdown source and frontmatter.
  */
@@ -58,7 +91,6 @@ export type SitePage = {
   description: string;
   hue?: number | null;
   hidden: boolean;
-  order: number;
   content: unknown;
   markdown: string;
 };
@@ -71,10 +103,9 @@ const pageInputs = {
       description?: string;
       hue?: number | null;
       label?: string;
-      order?: number;
       hidden?: boolean;
       visibility?: 'visible' | 'hidden';
-      sidebar?: { label?: string; order?: number; hidden?: boolean };
+      sidebar?: { label?: string; hidden?: boolean };
     };
   }>('/docs/**/*.{md,mdx}', { eager: true }),
   sources: import.meta.glob<string>('/docs/**/*.{md,mdx}', {
@@ -85,7 +116,7 @@ const pageInputs = {
 };
 const base = import.meta.env.BASE_URL;
 const routes = new Map<string, string>();
-/** Visible Docs pages sorted by configured sidebar order and source path. */
+/** Docs pages sorted by their source paths, including numeric filename prefixes. */
 export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
   .filter(
     ([f]) =>
@@ -109,6 +140,8 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
     routes.set(slug, f);
     const markdown = pageInputs.sources[f] ?? '';
     const frontmatter = m.frontmatter ?? {};
+    if ('order' in frontmatter || (frontmatter.sidebar && 'order' in frontmatter.sidebar))
+      throw new Error(`Docs page order comes from its filename, not frontmatter: ${f}`);
     return {
       file: f,
       slug,
@@ -127,12 +160,11 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
       ...(frontmatter.hue !== undefined ? { hue: frontmatter.hue } : {}),
       hidden:
         frontmatter.sidebar?.hidden ?? frontmatter.hidden ?? frontmatter.visibility === 'hidden',
-      order: frontmatter.sidebar?.order ?? frontmatter.order ?? Number.MAX_SAFE_INTEGER,
       content: m.Content ?? m.default,
-      markdown: markdown.replace(S_N_S_S_N_S_N_REGEX, ''),
+      markdown: siteImageUrls(markdown.replace(S_N_S_S_N_S_N_REGEX, ''), relativeFile),
     };
   })
-  .sort((l, r) => l.order - r.order || l.file.localeCompare(r.file));
+  .sort((l, r) => l.file.localeCompare(r.file, undefined, { numeric: true }));
 /** In-progress navigation node whose children are indexed by route segment. */
 type MutableNode = Omit<DocsNavNode, 'children'> & { children: Map<string, MutableNode> };
 const rootNodes = new Map<string, MutableNode>();
@@ -205,14 +237,17 @@ export function pageForSlug(slug: string): SitePage | undefined {
  */
 export function firstAvailableLeafHref(): string | undefined {
   const pending = [...siteNavigation].reverse();
+  let agentLeaf: string | undefined;
   while (pending.length) {
     const node = pending.pop();
     if (!node) continue;
     if (node.children?.length) pending.push(...[...node.children].reverse());
     else if (node.href && node.href !== pageHref('', base)) {
-      return node.href;
+      if (!node.id.startsWith('agents/')) return node.href;
+      agentLeaf ??= node.href;
     }
   }
+  if (agentLeaf) return agentLeaf;
   const page = sitePages.find((i) => !i.hidden && i.slug && i.slug !== '404');
   return page ? pageHref(page.slug, base) : undefined;
 }

@@ -168,3 +168,27 @@ test('Docs CLI parses server and content options before resolving their defaults
 test('Docs CLI reports missing option values without producing a stack trace', () => {
   assert.throws(() => parseDocsArguments(['--port']), /Missing value for --port/);
 });
+test('Docs init creates a Markdown site and refuses to overwrite it', async () => {
+  const parent = await mkdtemp(join(tmpdir(), 'terra-docs-init-'));
+  const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const destination = join(parent, 'my-docs');
+  try {
+    const command = [join(packageRoot, 'bin/docs.mjs'), 'init', destination, '--no-install'];
+    const created = spawnSync(process.execPath, command, {
+      cwd: packageRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(created.status, 0, created.stderr);
+    assert.match(await readFile(join(destination, 'docs/index.md'), 'utf8'), /## Welcome/);
+    const manifest = JSON.parse(await readFile(join(destination, 'package.json'), 'utf8'));
+    assert.equal(manifest.scripts.build, 'docs build');
+    const repeated = spawnSync(process.execPath, command, {
+      cwd: packageRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(repeated.status, 1);
+    assert.match(repeated.stderr, /EEXIST/);
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});

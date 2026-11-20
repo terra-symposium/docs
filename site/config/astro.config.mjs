@@ -21,7 +21,7 @@ import { dirname, resolve } from 'node:path';
 import { docsContentPlugin } from '../docs-content-plugin.mjs';
 import { localSourceRebuildPlugin } from '../local-source-rebuild-plugin.mjs';
 import { fileURLToPath } from 'node:url';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/boundaries/astro-integration';
 import { unified } from '@astrojs/markdown-remark';
 
@@ -268,6 +268,26 @@ function stylingDependencyAliases() {
     });
 }
 
+/** Registers the one Docs-owned 404 route for every generated Docs site. */
+function docsNotFoundRoute() {
+  return {
+    name: 'terra-docs-not-found',
+    hooks: {
+      'astro:config:setup': ({ config, injectRoute }) => {
+        for (const extension of ['astro', 'md', 'mdx']) {
+          const override = fileURLToPath(new URL(`pages/404.${extension}`, config.srcDir));
+          if (existsSync(override))
+            throw new Error(`Docs owns the 404 route; remove the host override: ${override}`);
+        }
+        injectRoute({
+          pattern: '/404',
+          entrypoint: fileURLToPath(new URL('../src/routes/404.astro', import.meta.url)),
+        });
+      },
+    },
+  };
+}
+
 export default defineConfig({
   root: consumerRoot,
   srcDir: resolve(packageRoot, 'site/src'),
@@ -283,6 +303,7 @@ export default defineConfig({
       site: reportSite,
       delivery: reporting?.delivery ?? 'http',
     }),
+    docsNotFoundRoute(),
     react(),
     mdx(),
   ],

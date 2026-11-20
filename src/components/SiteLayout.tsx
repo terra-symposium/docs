@@ -47,6 +47,7 @@ export function DocsSiteLayout({
   homeHref = '/',
   description,
   pageTitle,
+  breadcrumbParent,
   nodes,
   currentPath,
   hue = 145,
@@ -62,6 +63,7 @@ export function DocsSiteLayout({
   homeHref?: string;
   description?: string;
   pageTitle?: string;
+  breadcrumbParent?: { title: string; href: string };
   nodes: DocsNavNode[];
   currentPath: string;
   hue?: number | null;
@@ -79,6 +81,7 @@ export function DocsSiteLayout({
       homeHref={homeHref}
       {...(description ? { description } : {})}
       {...(pageTitle ? { pageTitle } : {})}
+      {...(breadcrumbParent ? { breadcrumbParent } : {})}
       hue={hue}
       nodes={nodes}
       {...(sections ? { sections } : {})}

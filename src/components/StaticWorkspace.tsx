@@ -222,6 +222,7 @@ export function DocsStaticWorkspace({
   description,
   pageTitle,
   pageDescription,
+  breadcrumbParent,
   hue,
   nodes = [],
   sections,
@@ -241,6 +242,7 @@ export function DocsStaticWorkspace({
   description?: string;
   pageTitle?: string;
   pageDescription?: string;
+  breadcrumbParent?: { title: string; href: string };
   hue?: number | null;
   nodes?: DocsNavNode[];
   sections?: DocsSection[];
@@ -547,6 +549,21 @@ export function DocsStaticWorkspace({
           content={docContent}
           staticContent={staticContent}
           {...(quiz ? { quiz } : {})}
+          {...(breadcrumbParent
+            ? {
+                beforeContent: (
+                  <nav aria-label="Breadcrumb" className="mb-6 text-sm text-primary-11">
+                    <ol className="m-0 flex list-none items-center gap-2 p-0">
+                      <li>
+                        <a href={breadcrumbParent.href}>{breadcrumbParent.title}</a>
+                      </li>
+                      <li aria-hidden="true">/</li>
+                      <li aria-current="page">{pageTitle ?? a?.leaf.title ?? title}</li>
+                    </ol>
+                  </nav>
+                ),
+              }
+            : {})}
           {...(readyContent !== undefined ? { renderContent: readyContent } : {})}
         />
       </ErrorBoundary>

@@ -1349,6 +1349,7 @@ export default function Nodes({
   const [internalHeight, setInternalHeight] = useState(384);
   const graphRef = useRef(graph);
   const flowRef = useRef(flow);
+  const flowContainerRef = useRef<HTMLDivElement>(null);
   const permitted = editable && !disabled;
   const normLockedTypes = lockedTypes.filter((t): t is FlowNodeType => t in NODE_TYPES);
   const fns = useRef({ onCommit, onAddContent });
@@ -1569,7 +1570,7 @@ export default function Nodes({
     });
   }, [editorAdapter, disabled, editorSelection, editorWrite]);
   useEffect((): (() => void) | void => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !permitted) return;
     /**
      * Routes copy, cut, paste, and duplicate shortcuts to the active flow editor.
      * @param event Browser key event to inspect and handle.
@@ -1577,6 +1578,9 @@ export default function Nodes({
      */
     const keydown = (event: KeyboardEvent): void => {
       if (
+        !(event.target instanceof Node) ||
+        !flowContainerRef.current?.contains(event.target) ||
+        window.getSelection()?.toString() ||
         !(event.metaKey || event.ctrlKey) ||
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
@@ -1601,7 +1605,7 @@ export default function Nodes({
     return () => {
       window.removeEventListener('keydown', keydown);
     };
-  }, [editorCopy, editorCut, editorDuplicate, editorPaste]);
+  }, [editorCopy, editorCut, editorDuplicate, editorPaste, permitted]);
   useCallback(
     (c: EdgeChange<Edge>[]): void => {
       const permittedChanges = disabled ? c.filter((change) => change.type === 'select') : c;
@@ -1770,6 +1774,7 @@ export default function Nodes({
   return (
     <ErrorBoundary name="Nodes">
       <div
+        ref={flowContainerRef}
         style={{ height: height ?? internalHeight, ...style }}
         className={cn(
           'docs-flow size-full overflow-hidden rounded-md border border-primary-6',

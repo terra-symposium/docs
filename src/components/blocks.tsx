@@ -14,7 +14,7 @@ import { docsValueToMarkdown } from '../lib/markdown-model.js';
 // COMPONENTS
 import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 import { DocsQuizBlock } from './quiz.js';
-import { DocsMarkdown } from './MarkdownContent.js';
+import { DocsBlocks, DocsMarkdown } from './MarkdownContent.js';
 import { NodesBlock } from './terra/editor/docs/_Nodes.js';
 import { CodeBlock } from './terra/editor/docs/_CodeBlock.js';
 
@@ -235,7 +235,11 @@ function NestedContent({
   options?: DocsBlockOptions | undefined;
 }): JSX.Element {
   if (Array.isArray(value))
-    return (
+    return value.every(
+      (item) => item && typeof item === 'object' && typeof item._type === 'string',
+    ) ? (
+      <DocsBlocks blocks={value as RichBlock[]} options={options} />
+    ) : (
       <>
         {value.map((m, i) => (
           <NestedContent key={i} value={m} options={options} />
@@ -314,12 +318,13 @@ export function DocsRichBlock({
     }
     case 'callout': {
       const content = Array.isArray(block.content) ? (block.content as RichBlock[]) : [];
+      const kind =
+        text(block.kind).toLowerCase().replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX(), '') ||
+        'note';
       return (
-        <aside
-          className={`docs-callout docs-callout-${text(block.kind).replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX(), '') || 'info'}`}
-        >
-          <strong>{text(block.title)}</strong>
-          <div>
+        <aside className={`docs-callout docs-callout-${kind}`} data-docs-aside={kind}>
+          <strong className="aside-title">{text(block.title)}</strong>
+          <div className="docs-block-flow docs-callout-body">
             <NestedContent
               value={
                 content.length ? content : typeof block.markdown === 'string' ? block.markdown : ''

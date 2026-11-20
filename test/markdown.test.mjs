@@ -54,6 +54,21 @@ test('renders CommonMark thematic breaks as horizontal rules', () => {
   assert.match(html, /<hr data-docs-raw-divider="true"\s*\/?\s*>/);
   assert.doesNotMatch(html, /<pre>---<\/pre>/);
 });
+test('renders a labelled code block and image inside an HTML table cell', () => {
+  const source =
+    '<table><tr><th>Code</th><th>UI</th></tr><tr>' +
+    '<td><pre data-language="md">Energy is &#36;E = mc^2&#36;.&#10;&#36;&#36;&#10;\\frac{a^2}{b_n}&#10;&#36;&#36;</pre></td>' +
+    '<td><p><strong>Step 1:</strong> Choose Math.</p><img src="/example.png" alt="Math menu" /></td>' +
+    '</tr></table>';
+  const html = renderMarkdown(source);
+  assert.match(html, /docs-code-block/);
+  assert.match(html, />md</);
+  assert.match(html, /Energy is \$E = mc\^2\$\./);
+  assert.match(html, /\\frac\{a\^2\}\{b_n\}/);
+  assert.match(html, /Step 1:/);
+  assert.match(html, /alt="Math menu"/);
+  assert.doesNotMatch(html, /DOCSMATH/);
+});
 test('sanitizes script markup and dangerous links', () => {
   const html = renderMarkdown('===[<script>bad()</script>Safe]\n[bad](javascript:alert(1))\n===');
   assert.doesNotMatch(html, /<script|<a[^>]+javascript:/i);
@@ -62,7 +77,7 @@ test('sanitizes script markup and dangerous links', () => {
 test('renders Docs callout directives as shared rich blocks', () => {
   const html = renderMarkdown(':::warning[Check this]\nReview **the source**.\n:::');
   assert.match(html, /docs-callout docs-callout-warning/);
-  assert.match(html, /<strong>Check this<\/strong>/);
+  assert.match(html, /data-docs-aside="warning"><strong class="aside-title">Check this<\/strong>/);
   assert.match(html, /Review <\/span><span><strong>the source<\/strong>/);
   assert.doesNotMatch(
     renderMarkdown(':::warning[Check this]\nBody.\n:::', { callout: false }),

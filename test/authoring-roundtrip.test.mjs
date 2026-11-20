@@ -17,7 +17,9 @@ test('all authored aside types retain their type and render', () => {
     assert.equal(blocks[0]?.kind, kind);
     const exported = docsValueToMarkdown(blocks);
     assert.match(exported, new RegExp(`^:::${kind}\\[Title\\]`));
-    assert.match(renderMarkdown(exported), new RegExp(`docs-callout-${kind}`));
+    const rendered = renderMarkdown(exported);
+    assert.match(rendered, new RegExp(`docs-callout-${kind}`));
+    assert.match(rendered, new RegExp(`data-docs-aside="${kind}"`));
   }
 });
 test('authored blocks parse and render through the shared package', () => {

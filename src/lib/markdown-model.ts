@@ -1574,6 +1574,9 @@ function parseMarkdown(
         const bodyTokens: Token[] = [];
         const nestedLists: Token[] = [];
         for (const child of Array.isArray(item.tokens) ? item.tokens : []) {
+          // Marked exposes task markers as their own token. We add the literal marker
+          // below, so keeping this token would duplicate it and split the item text.
+          if (item.task && child.type === 'checkbox') continue;
           if (child.type === 'list') {
             nestedLists.push(child);
             continue;
@@ -1646,18 +1649,22 @@ function parseMarkdown(
                   let markdown = '';
                   let copiedUntil = 0;
                   let match: RegExpExecArray | null;
+                  const cellText = (text: string) =>
+                    stack.some((tag) => tag.name === 'pre')
+                      ? decodeHtmlRepeated(text)
+                      : escapeHtmlTableText(text, inlineMath);
                   while ((match = tagPattern.exec(html))) {
                     const index = match.index ?? 0;
                     const raw = match[0];
                     const name = match[1]?.toLowerCase();
                     if (!name) {
-                      markdown += escapeHtmlTableText(html.slice(copiedUntil, index), inlineMath);
+                      markdown += cellText(html.slice(copiedUntil, index));
                       copiedUntil = index + raw.length;
                       continue;
                     }
                     const selfClosing = /\/\s*>$/.test(raw);
                     const attrs = match[2] ?? '';
-                    markdown += escapeHtmlTableText(html.slice(copiedUntil, index), inlineMath);
+                    markdown += cellText(html.slice(copiedUntil, index));
                     copiedUntil = tagPattern.lastIndex;
                     if (/^<\//.test(raw)) {
                       const openIndex = stack.map((tag) => tag.name).lastIndexOf(name);
@@ -1707,7 +1714,13 @@ function parseMarkdown(
                       [open, close] = ['~~', '~~'];
                     else if (name === 'p' || name === 'div') [open, close] = ['\n\n', '\n\n'];
                     else if (name === 'li') [open, close] = ['\n- ', '\n'];
-                    else if (name === 'pre') [open, close] = ['\n\n```\n', '\n```\n\n'];
+                    else if (name === 'pre') {
+                      const language = (htmlAttr(attrs, 'data-language') ?? '').replace(
+                        /[^a-z\d-]/gi,
+                        '',
+                      );
+                      [open, close] = [`\n\n\`\`\`${language}\n`, '\n```\n\n'];
+                    }
                     markdown += open;
                     if (open && !selfClosing) stack.push({ name, close });
                     else if (
@@ -1716,7 +1729,7 @@ function parseMarkdown(
                     )
                       stack.push({ name, close });
                   }
-                  markdown += escapeHtmlTableText(html.slice(copiedUntil), inlineMath);
+                  markdown += cellText(html.slice(copiedUntil));
                   while (stack.length) markdown += stack.pop()!.close;
                   markdown = markdown.replace(N_3_G_REGEX(), '\n\n').trim();
                   const cellBlocks: RichBlock[] = [];
@@ -2354,14 +2367,12 @@ export function docsValueToMarkdown(value: DocsValue): string {
         // A nested list must be indented far enough to clear the parent marker. Two spaces
         // are not enough after an ordered marker (`1. `) in CommonMark and flatten the item.
         const indentation = '   '.repeat(level - 1);
+        const content = blockContentToMarkdown(block).replace(/^\\\[( |x)\\\](?= )/, '[$1]');
         lines.push(
           indentation +
             marker +
             ' ' +
-            blockContentToMarkdown(block).replace(
-              N_G_CLASS_2_3(),
-              '\n' + indentation + ' '.repeat(marker.length + 1),
-            ),
+            content.replace(N_G_CLASS_2_3(), '\n' + indentation + ' '.repeat(marker.length + 1)),
         );
         index += 1;
       }

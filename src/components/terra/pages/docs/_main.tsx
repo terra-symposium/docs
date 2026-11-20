@@ -2987,7 +2987,12 @@ export default function Scaffold({
           for (const element of Array.from(root.querySelectorAll<HTMLElement>('h2') ?? [])) {
             if (
               element.closest('[data-placeholder], [data-tabs-placeholder]') ||
-              element.closest('[hidden]')
+              element.closest('[hidden]') ||
+              // Headings inside rich content belong to that block, not the page outline.
+              // Keep the outer ContentEditor section, which contains ordinary page headings.
+              element.closest(
+                'aside, blockquote, details, figure, li, table, section:not([data-content-editor]):not([data-docs-toc-section]), [role="tabpanel"], [role="region"]',
+              )
             )
               continue;
             let text = '';
@@ -3213,10 +3218,7 @@ export default function Scaffold({
                             <div className="order-2 min-w-0 xl:order-1">
                               {/* content */}
                               <div
-                                className={cn(
-                                  'prose !max-w-none pb-40 transition-opacity duration-200',
-                                  a === 'edit' ? 'pt-10' : 'pt-28',
-                                )}
+                                className="prose !max-w-none pb-40 pt-12"
                                 data-docs-body-content
                                 data-docs-view-root={a === 'view' ? 'true' : undefined}
                               >

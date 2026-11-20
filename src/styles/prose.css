@@ -191,7 +191,8 @@ aside[data-docs-aside] > :is(.title, .aside-title) {
   margin-block: 0 !important;
 }
 aside[data-docs-aside] > * + * {
-  margin-block: 1rem 0 !important;
+  margin-block: 0 !important;
+  margin-block-start: 0.75rem !important;
 }
 :is(
     .prose[data-docs-body-content],
@@ -202,7 +203,7 @@ aside[data-docs-aside] > * + * {
     .docs-block-flow
   )
   > h2:not(:first-child) {
-  margin-block-start: 3rem !important;
+  margin-block-start: 4rem !important;
 }
 :is(
     .prose[data-docs-body-content],
@@ -213,7 +214,7 @@ aside[data-docs-aside] > * + * {
     .docs-block-flow
   )
   > h3:not(:first-child) {
-  margin-block-start: 2rem !important;
+  margin-block-start: 1rem !important;
 }
 :is(
     .prose[data-docs-body-content],
@@ -236,6 +237,22 @@ aside[data-docs-aside] > * + * {
   )
   > h6:not(:first-child) {
   margin-block-start: 1.25rem !important;
+}
+
+/* Callout bodies use the article's block rhythm at a tighter, fixed interval.
+   The body may be static Markdown or nested Portable Text. */
+aside[data-docs-aside] :is(.docs-callout-body, .docs-content, .aside-copy, .docs-block-copy) {
+  --docs-block-gap: 0.75rem;
+}
+aside[data-docs-aside]
+  :is(.docs-callout-body, .docs-content, .aside-copy, .docs-block-copy)
+  > :is(h2, h3, h4, h5, h6):not(:first-child) {
+  margin-block-start: var(--docs-block-gap) !important;
+}
+aside[data-docs-aside]
+  :is(.docs-callout-body, .docs-content, .aside-copy, .docs-block-copy)
+  > :last-child {
+  margin-block-end: 0 !important;
 }
 
 /* Portable Text emits one list wrapper per block. Match the original Docs
@@ -274,7 +291,7 @@ aside[data-docs-aside] > * + * {
       @apply my-2;
     }
     li {
-      @apply my-0.5;
+      @apply my-0;
     }
     &:not(.docs-editor-copy) table {
       @apply my-2;
@@ -330,7 +347,7 @@ aside[data-docs-aside] > * + * {
     @apply border-t border-primary-6;
   }
   thead th {
-    @apply text-primary-12;
+    @apply h-auto text-primary-12;
   }
 }
 
@@ -795,7 +812,10 @@ aside .title + * {
     @apply my-1;
   }
   li {
-    @apply my-0.5;
+    @apply my-0;
+  }
+  li > p {
+    @apply my-0;
   }
   .not-prose :is(table, th, td) {
     border: revert;
@@ -830,7 +850,7 @@ aside .title + * {
       @apply scroll-mt-40;
     }
     h2 {
-      @apply mt-12 mb-6 border-t border-primary-6 pt-10 print:my-4 print:mt-10 print:text-primary-12;
+      @apply mt-16 mb-6 border-t border-primary-6 pt-10 print:my-4 print:mt-10 print:text-primary-12;
     }
     > h2:first-child,
     :is([data-docs-view-root], .docs-editor-copy, .docs-page-content) > h2:first-child,
@@ -840,7 +860,7 @@ aside .title + * {
       @apply !mt-0 !border-t-0 !pt-0 print:!mt-0;
     }
     h3 {
-      @apply mt-6 mb-2 print:mt-6 print:border-t print:border-primary-8/60 print:pt-1 print:font-normal print:tracking-tight print:text-primary-9/70;
+      @apply mt-4 mb-2 print:mt-6 print:border-t print:border-primary-8/60 print:pt-1 print:font-normal print:tracking-tight print:text-primary-9/70;
     }
   }
 }
@@ -945,8 +965,11 @@ DOCS
     --secondary-12: 5 46 22;
   }
   &[data-docs-aside='caution'],
+  &[data-docs-aside='warning'],
   &[type='caution'],
+  &[type='warning'],
   &[data-type='caution'],
+  &[data-type='warning'],
   &.amber {
     --aside-icon: '⚠️';
     --primary-1: 255 251 235;
@@ -975,8 +998,11 @@ DOCS
     --secondary-12: 69 26 3;
   }
   &[data-docs-aside='danger'],
+  &[data-docs-aside='error'],
   &[type='danger'],
+  &[type='error'],
   &[data-type='danger'],
+  &[data-type='error'],
   &.red {
     --aside-icon: '❌';
     --primary-1: 255 241 242;
@@ -1102,8 +1128,11 @@ DOCS
     --secondary-12: 240 253 244;
   }
   &[data-docs-aside='caution'],
+  &[data-docs-aside='warning'],
   &[type='caution'],
+  &[type='warning'],
   &[data-type='caution'],
+  &[data-type='warning'],
   &.amber {
     --primary-1: 69 26 3;
     --primary-2: 120 53 15;
@@ -1131,8 +1160,11 @@ DOCS
     --secondary-12: 255 251 235;
   }
   &[data-docs-aside='danger'],
+  &[data-docs-aside='error'],
   &[type='danger'],
+  &[type='error'],
   &[data-type='danger'],
+  &[data-type='error'],
   &.red {
     --primary-1: 76 5 25;
     --primary-2: 136 19 55;
@@ -1256,8 +1288,11 @@ DOCS
       --secondary-12: 240 253 244;
     }
     &[data-docs-aside='caution'],
+    &[data-docs-aside='warning'],
     &[type='caution'],
+    &[type='warning'],
     &[data-type='caution'],
+    &[data-type='warning'],
     &.amber {
       --primary-1: 69 26 3;
       --primary-2: 120 53 15;
@@ -1285,8 +1320,11 @@ DOCS
       --secondary-12: 255 251 235;
     }
     &[data-docs-aside='danger'],
+    &[data-docs-aside='error'],
     &[type='danger'],
+    &[type='error'],
     &[data-type='danger'],
+    &[data-type='error'],
     &.red {
       --primary-1: 76 5 25;
       --primary-2: 136 19 55;

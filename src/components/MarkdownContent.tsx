@@ -16,6 +16,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  Checkbox,
   Tabs,
   TabsContent,
   TabsList,
@@ -56,6 +57,17 @@ HELPERS
  */
 export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Element {
   const blocks = markdownToDocsValue(markdown, options) as RichBlock[];
+  return <DocsBlocks blocks={blocks} options={options} />;
+}
+
+/** Renders structured Docs blocks with the same list grouping used for Markdown. */
+export function DocsBlocks({
+  blocks,
+  options,
+}: {
+  blocks: RichBlock[];
+  options?: DocsBlockOptions | undefined;
+}): JSX.Element {
   const output: JSX.Element[] = [];
   for (let index = 0; index < blocks.length;) {
     const block = blocks[index]!;
@@ -115,8 +127,29 @@ function renderListNodes(nodes: MarkdownListNode[]): JSX.Element[] {
       const content = { ...b };
       delete content.listItem;
       delete content.level;
+      const spans = Array.isArray(content.children)
+        ? (content.children as Record<string, unknown>[])
+        : [];
+      const first = spans[0];
+      const task =
+        marker === 'bullet' && typeof first?.text === 'string'
+          ? first.text.match(/^\[( |x)\] /)
+          : null;
+      if (task && first)
+        content.children = [
+          { ...first, text: (first.text as string).slice(task[0].length) },
+          ...spans.slice(1),
+        ];
       return (
-        <li key={b._key ?? i}>
+        <li key={b._key ?? i} className={task ? 'relative list-none' : undefined}>
+          {task && (
+            <Checkbox
+              checked={task[1] === 'x'}
+              disabled
+              aria-label={task[1] === 'x' ? 'Completed item' : 'Incomplete item'}
+              className="absolute -left-5 top-1"
+            />
+          )}
           <DocsRichBlock block={content} />
           {renderListNodes(c)}
         </li>
@@ -176,24 +209,37 @@ function MarkdownGroup({
   if (block._type === 'tabs')
     return (
       <Tabs defaultValue="tab-0">
-        <TabsList>
+        <TabsList
+          variant="line"
+          className="mb-0 w-full justify-start gap-0 border-b border-primary-6"
+        >
           {items.map((i, v) => (
-            <TabsTrigger key={v} value={`tab-${v}`}>
+            <TabsTrigger
+              key={v}
+              value={`tab-${v}`}
+              variant="primary-underline"
+              selection="line"
+              className="-mb-px rounded-none border-0 bg-transparent px-4 py-2 font-normal text-primary-11 shadow-none hover:bg-transparent hover:text-primary-12 enabled:hover:no-underline after:bg-primary-9 data-[state=active]:font-semibold data-[state=active]:text-primary-12"
+            >
               {typeof i.title === 'string' && i.title ? i.title : `Tab ${v + 1}`}
             </TabsTrigger>
           ))}
         </TabsList>
         {items.map((i, v) => (
-          <TabsContent key={v} value={`tab-${v}`}>
+          <TabsContent
+            key={v}
+            value={`tab-${v}`}
+            className="mt-0 rounded-b-sm border border-t-0 border-primary-6 p-4"
+          >
             <DocsMarkdown markdown={body(i)} options={options} />
           </TabsContent>
         ))}
       </Tabs>
     );
   return (
-    <Accordion type="multiple">
+    <Accordion type="multiple" variant="sm">
       {items.map((i, v) => (
-        <AccordionItem key={v} value={`accordion-${v}`}>
+        <AccordionItem key={v} value={`accordion-${v}`} className="py-2 [&>*]:!my-0">
           <AccordionTrigger>
             {typeof i.title === 'string' && i.title ? i.title : `Item ${v + 1}`}
           </AccordionTrigger>

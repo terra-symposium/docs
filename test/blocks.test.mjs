@@ -322,6 +322,32 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.match(tabHtml, /data-docs-editor-block="Nodes"/);
       assert.doesNotMatch(tabHtml, /&lt;Nodes/);
     });
+    test('callout lists use the same grouped and nested structure as page lists', () => {
+      const source = [
+        ':::note[Steps]',
+        '',
+        '- First',
+        '  - Nested',
+        '- Second',
+        '',
+        '1. Third',
+        '2. Fourth',
+        '',
+        ':::',
+      ].join('\n');
+      const callout = markdownToDocsValue(source)[0];
+      const html = renderToStaticMarkup(createElement(DocsRichBlock, { block: callout }));
+      assert.match(
+        html,
+        /<ul data-docs-list-level="1"><li>.*<ul data-docs-list-level="2">.*<\/ul><\/li><li>.*Second.*<\/li><\/ul>/,
+      );
+      assert.match(
+        html,
+        /<ol data-docs-list-level="1"><li>.*Third.*<\/li><li>.*Fourth.*<\/li><\/ol>/,
+      );
+      assert.equal((html.match(/<ul /g) ?? []).length, 2);
+      assert.equal((html.match(/<ol /g) ?? []).length, 1);
+    });
   });
 
   test.describe('readable table serialization', () => {
@@ -1710,6 +1736,29 @@ Identify suitable companies and provide:
       assert.equal(roundTrip.filter((block) => block.listItem).length, 5);
       assert.equal(roundTrip.find((block) => block._type === 'code').value, 'const answer = 42;');
       assert.equal(roundTrip.find((block) => block._type === 'math').code, 'x^2 + 1');
+    });
+    test('checklists round-trip and render as read-only checkboxes inside callouts', () => {
+      const source = '- [ ] Check the rendered route.\n- [x] Confirm the title.';
+      const items = markdownToDocsValue(source);
+      assert.deepEqual(
+        items.map((item) => item.children.map((child) => child.text).join('')),
+        ['[ ] Check the rendered route.', '[x] Confirm the title.'],
+      );
+      assert.equal(docsValueToMarkdown(items).trimEnd(), source);
+      const html = renderToStaticMarkup(
+        createElement(DocsMarkdown, {
+          markdown: `:::example[Tasks]\n\n${source}\n\n:::`,
+        }),
+      );
+      const visible = html.replace(/<[^>]+>/g, '');
+      assert.equal((html.match(/role="checkbox"/g) ?? []).length, 2);
+      assert.match(html, /aria-checked="false"/);
+      assert.match(html, /aria-checked="true"/);
+      assert.equal((html.match(/<button[^>]*\sdisabled=""/g) ?? []).length, 2);
+      assert.match(html, /aria-label="Incomplete item"/);
+      assert.match(html, /aria-label="Completed item"/);
+      assert.match(visible, /Check the rendered route\.Confirm the title\./);
+      assert.doesNotMatch(visible, /\[ \]|\[x\]/);
     });
     test('ordinary Portable Text stays readable and mixed nested list kinds keep their depth', () => {
       const markdown = docsValueToMarkdown([

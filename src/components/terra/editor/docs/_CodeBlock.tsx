@@ -225,6 +225,11 @@ export function CodeBlock(
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const theme = useRef(new Compartment());
+  /** Uses the rendered Docs theme, which may be scoped below the document root. */
+  const darkCodeTheme = (): boolean => {
+    const colorScheme = host.current ? getComputedStyle(host.current).colorScheme : '';
+    return colorScheme === 'dark' || (colorScheme !== 'light' && isDarkMode());
+  };
   /** Returns the source code snapshot used to synchronize the editor view.
    * @returns Current code value supplied to the editor.
    */
@@ -348,7 +353,7 @@ export function CodeBlock(
         state: EditorState.create({
           doc: codeRef.current,
           extensions: [
-            theme.current.of(isDarkMode() ? dark : light),
+            theme.current.of(darkCodeTheme() ? dark : light),
             drawSelection(),
             history(),
             lineNumbers(),
@@ -585,7 +590,7 @@ export function CodeBlock(
     const sync = (): void => {
       if (!view.current) return;
       view.current.dispatch({
-        effects: theme.current.reconfigure(isDarkMode() ? dark : light),
+        effects: theme.current.reconfigure(darkCodeTheme() ? dark : light),
       });
     };
     sync();

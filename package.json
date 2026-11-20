@@ -1,6 +1,6 @@
 {
   "name": "@terra-symposium/docs",
-  "version": "0.4.29",
+  "version": "0.4.31",
   "description": "Docs workspace and Markdown site generator.",
   "repository": {
     "type": "git",
@@ -12,9 +12,16 @@
     "node": ">=24.12.0"
   },
   "files": [
-    "docs/authoring",
+    "docs/consumer/0-configuration",
+    "docs/consumer/1-usage",
     "dist/lib",
     "bin",
+    "template/.gitignore",
+    "template/.github/workflows/docs.yml",
+    "template/README.md",
+    "template/package.json",
+    "template/pnpm-workspace.yaml",
+    "template/docs/index.md",
     "site",
     "src/components/navigation.tsx",
     "src/components/quiz-demo-fixture.ts",
@@ -24,8 +31,17 @@
     "src/lib/terra/regex.mjs"
   ],
   "exports": {
-    "./authoring/blocks.md": "./docs/authoring/blocks/index.md",
-    "./authoring/composing.md": "./docs/authoring/composing/index.md",
+    "./authoring/authoring.md": "./docs/consumer/1-usage/1-authoring.md",
+    "./authoring/ideology.md": "./docs/consumer/1-usage/1-authoring.md",
+    "./authoring/structure.md": "./docs/consumer/1-usage/1-authoring.md",
+    "./authoring/posterity.md": "./docs/consumer/1-usage/4-validation.md",
+    "./authoring/validation.md": "./docs/consumer/1-usage/4-validation.md",
+    "./authoring/syntax.md": "./docs/consumer/1-usage/0-syntax/index.md",
+    "./authoring/blocks.md": "./docs/consumer/1-usage/0-syntax/index.md",
+    "./authoring/composing.md": "./docs/consumer/1-usage/1-authoring.md",
+    "./authoring/schema-source.md": "./docs/consumer/1-usage/1-authoring.md",
+    "./authoring/examples.md": "./docs/consumer/1-usage/0-syntax/index.md",
+    "./configuration/component.md": "./docs/consumer/0-configuration/0-install.md",
     ".": {
       "types": "./dist/lib/lib/index.d.ts",
       "import": "./dist/lib/lib/index.js"

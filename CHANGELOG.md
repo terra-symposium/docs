@@ -1,5 +1,17 @@
 # @terra-symposium/docs
 
+## 0.4.31
+
+### Patch Changes
+
+- Load the shared 404 component from the compiled package so every consumer can build its Docs site.
+
+## 0.4.30
+
+### Patch Changes
+
+- Own the not-found route in the Docs site configuration, reject host 404 overrides, and return visitors to a documentation page.
+
 ## 0.4.29
 
 ### Patch Changes

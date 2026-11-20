@@ -12,6 +12,7 @@ import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { parseDocsArguments } from './arguments.mjs';
+import { initDocsProject } from './init.mjs';
 import { spawn } from 'node:child_process';
 import { watch } from 'node:fs';
 
@@ -24,6 +25,15 @@ CONFIG
 
 const MD_MDX_I_REGEX = TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2();
 const requestedMode = process.argv[2];
+if (requestedMode === 'init') {
+  try {
+    await initDocsProject(process.argv.slice(3));
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  process.exit(0);
+}
 const mode = requestedMode === 'docs' ? 'dev' : requestedMode;
 const root = resolve(process.cwd());
 const docsConfig =
@@ -116,7 +126,8 @@ async function buildSearchIndex() {
         `Duplicate Docs route "${route || '/'}": docs/${previous} and docs/${file.relativePath}`,
       );
     routeFiles.set(route, file.relativePath);
-    if (route.toLowerCase() === '404') continue;
+    if (route.toLowerCase() === '404')
+      throw new Error(`Docs owns the 404 route; remove docs/${file.relativePath}.`);
     const source = await readFile(file.path, 'utf8');
     const match = /^---\s*\n([\s\S]*?)\n---\s*\n?/.exec(source);
     let body = source;
@@ -200,7 +211,7 @@ else if (agentsOption !== undefined) throw new Error('--skills must be true or f
 if (!requestedBase.startsWith('/')) throw new Error('--base must begin with /');
 if (!['dev', 'build', 'preview'].includes(mode)) {
   console.error(
-    'Usage: docs <docs|dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory] [--agents true|false]',
+    'Usage: docs <init|docs|dev|build|preview> [--title title] [--description text] [--site url] [--base /path/] [--out directory] [--agents true|false]',
   );
   process.exit(2);
 }

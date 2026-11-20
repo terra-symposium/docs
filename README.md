@@ -18,7 +18,7 @@ Build the library with `pnpm run build` and run package checks with `pnpm run ch
 
 ### Commands
 
-Run `pnpm test`, `pnpm test:browser`, and `pnpm test:consumer` as applicable. The repository checks its library, Astro integration, and documentation site.
+Run `pnpm run test:unit`, `pnpm run test:browser`, or `pnpm test` for both. The [quality and tests guide](docs/developer/repo/quality-and-tests.md) explains the checks and CI coverage.
 
 ## Security and Limitations
 
@@ -30,20 +30,21 @@ The package never accepts or stores API keys. Hosts that enable quiz generation 
 
 ### Create a repository Docs site
 
-Copy the [Docs starter files](https://github.com/Terra-Symposium/docs/tree/development/template) into a repository, or install the package in an existing repository:
+The [getting started guide](docs/consumer/0-configuration/0-install.md) begins with an empty project and lets you choose local Markdown or hosted browser editing. If you have already chosen a local Markdown site, the initializer copies a starter with `docs/index.md` and installs its dependencies:
 
 ```sh
-pnpm add -D @terra-symposium/docs
+pnpm dlx @terra-symposium/docs init my-docs
+cd my-docs
+pnpm run docs
 ```
 
-Add Markdown files under `docs/`, then run:
+Add Markdown files under `docs/`, then build the site:
 
 ```sh
-pnpm run docs
 pnpm run build
 ```
 
-The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested folders group navigation. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label`, `order`, and `hidden`). Build output defaults to `dist/docs/`.
+The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested folders group navigation. Pages follow their source-path order; use numeric filename prefixes when a sequence matters. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label` and `hidden`). Build output defaults to `dist/docs/`.
 
 The Docs content root is also the default package root for resolving the consumer's dependencies. If a repository keeps its package manifest and `node_modules` in a nested directory, set `DOCS_PACKAGE_ROOT` to that directory relative to the Docs content root (for example, `DOCS_PACKAGE_ROOT=config pnpm --dir config run build`). `DOCS_ROOT` continues to select the directory containing `docs/` and the build output.
 
@@ -55,7 +56,7 @@ Set each site's `title` and `description` explicitly in its `docs` configuration
 
 ### Create an instance
 
-Start with the [instance installation guide](docs/development/getting-started/). The React component can be installed into any React 19 app:
+For a site, start with the [getting started guide](docs/consumer/0-configuration/0-install.md). Developers embedding the editor in an existing React 19 app can install the component separately:
 
 ```sh
 pnpm add @terra-symposium/docs
@@ -67,7 +68,7 @@ import type { DocsValue } from '@terra-symposium/docs';
 import '@terra-symposium/docs/style.css';
 ```
 
-Markdown hosts can use `renderMarkdown`, `markdownToDocsValue`, and `docsValueToMarkdown`; remote hosts implement the [storage provider](docs/development/storage/).
+Markdown hosts can use `renderMarkdown`, `markdownToDocsValue`, and `docsValueToMarkdown`; remote hosts implement the [host integration contract](docs/developer/component/host-integration.md).
 
 ### Embed a Docs workspace
 
@@ -114,9 +115,10 @@ Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, gener
 
 ## References
 
-- [Interface guide](docs/interface.md)
-- [Storage provider guide](docs/development/storage/)
-- [Test migration notes](TEST_MIGRATION.md)
+- [Component reference](docs/developer/component/blocks.md)
+- [Host integration](docs/developer/component/host-integration.md)
+- [Content migration](docs/developer/repo/content-migration.md)
+- [Release and upgrade](docs/developer/repo/release-and-upgrades.md)
 - [Package exports](package.json)
 - [Apache-2.0 license](LICENSE)
 

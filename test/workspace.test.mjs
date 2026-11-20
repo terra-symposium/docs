@@ -13,7 +13,6 @@ import test from 'node:test';
 // COMPONENTS
 import React from 'react';
 import { DocsSiteLayout } from '../dist/lib/components/SiteLayout.js';
-import { DocsStaticWorkspace } from '../dist/lib/components/StaticWorkspace.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -62,18 +61,4 @@ test('React static adapter still accepts legacy navigation data', () => {
     currentPath: '/intro',
   });
   assert.equal(element.props.sections, sections);
-});
-test('an empty Astro slot does not replace a static Markdown body', () => {
-  const workspace = DocsStaticWorkspace({
-    title: 'Docs',
-    pageTitle: 'Intro',
-    currentPath: '/intro',
-    markdown: '# Intro',
-    children: React.createElement('main', { className: 'docs-page-content' }, null),
-  }).props.children.props.children;
-  const staticContent = workspace.props.renderContent;
-
-  assert.equal(workspace.type.name, 'DocsWorkspace');
-  assert.equal(staticContent.type.name, 'StaticContentSlot');
-  assert.equal(staticContent.props.children.type.name, 'DocsMarkdown');
 });

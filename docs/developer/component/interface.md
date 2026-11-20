@@ -5,7 +5,7 @@ description: Choose the Docs API, host contract, and styling reference for an in
 
 ## Choose an integration
 
-Start with the smallest surface that meets the reader's task. A repository-backed Markdown site needs no application code; [Get started](/consumer/0-configuration/0-install/) covers that path. An application can embed one controlled `Docs` value, a read-only layout, or a hosted workspace with editing.
+Start with the smallest surface that meets the reader's task. A repository-backed Markdown site needs no application code; [Get started](/consumer/0-configuration/0-install/) covers that path. An application can embed one controlled `Docs` value, a static layout that downloads edited Markdown, or a hosted workspace with server-backed editing.
 
 | Need                                                  | Read next                                                  |
 | ----------------------------------------------------- | ---------------------------------------------------------- |

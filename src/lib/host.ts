@@ -62,6 +62,8 @@ export type DocsHostAttachment = {
 export type DocsHostCapabilities = {
   read?: boolean;
   write?: boolean;
+  /** Permit sidebar mutations separately from editing the current document. */
+  navigationWrite?: boolean;
   reorder?: boolean;
   attachments?: boolean;
   export?: boolean;

@@ -58,6 +58,8 @@ export function DocsSiteLayout({
   attachments = [],
   rootPath,
   markdown,
+  sourceMarkdown,
+  sourcePath,
   content,
   quiz,
 }: {
@@ -76,6 +78,8 @@ export function DocsSiteLayout({
   attachments?: DocsAttachment[];
   rootPath?: string;
   markdown?: string;
+  sourceMarkdown?: string;
+  sourcePath?: string;
   content?: unknown;
   quiz?: DocsQuizConfig;
 }): JSX.Element {
@@ -93,6 +97,8 @@ export function DocsSiteLayout({
       currentPath={currentPath}
       {...(rootPath ? { rootPath } : {})}
       {...(markdown !== undefined ? { markdown } : {})}
+      {...(sourceMarkdown !== undefined ? { sourceMarkdown } : {})}
+      {...(sourcePath !== undefined ? { sourcePath } : {})}
       {...(content !== undefined ? { content } : {})}
       {...(quiz ? { quiz } : {})}
       attachments={attachments}

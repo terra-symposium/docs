@@ -96,7 +96,7 @@ pnpm test:browser
 pnpm test:consumer
 ```
 
-Also run applicable consumer checks against the artifact/version each host actually resolves. Cover local read-only and remote authorized/unauthorized paths as applicable, including published-versus-draft selection, save/reload, history, and attachment mutations when in scope. Exercise direct routes, section and leaf navigation, keyboard controls, context menus, tree actions and reordering, export, and all registered block types in view and edit states. Inspect browser console and network failures. Keep test servers isolated from builds that rewrite their served files; stale-server errors can invalidate screenshot and browser results.
+Also run applicable consumer checks against the artifact/version each host actually resolves. Cover local Markdown download on Save and remote authorized/unauthorized paths as applicable, including published-versus-draft selection, save/reload, history, and attachment mutations when in scope. Exercise direct routes, tree and leaf navigation, keyboard controls, context menus, tree actions and reordering, export, and all registered block types in view and edit states. Inspect browser console and network failures. Keep test servers isolated from builds that rewrite their served files; stale-server errors can invalidate screenshot and browser results.
 
 The evidence should include both directions:
 

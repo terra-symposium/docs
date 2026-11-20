@@ -49,6 +49,8 @@ const base = import.meta.env.BASE_URL;
 				currentPath={pageHref('', base)}
 				rootPath={pageHref('', base)}
 				markdown={page.markdown}
+				sourceMarkdown={page.sourceMarkdown}
+				sourcePath={page.file}
 				searchBase={base}
 			/>
 		</body>

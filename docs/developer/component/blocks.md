@@ -50,7 +50,7 @@ Unknown Markdown tokens and disabled block syntax are kept as raw source. Store 
 
 Pass `breadcrumbParent={{ title, href }}` to a static host when a page has a parent reference. The breadcrumb appears above the document body and links back to that parent.
 
-Local hosts use `DocsLocalWorkspace` and remain read-only in the browser. Remote hosts mount `DocsWorkspace` with a `DocsHostAdapter`; the adapter supplies capabilities and routes all reads and mutations to the host. The shared UI does not decide identity or authorization.
+Local hosts use `DocsLocalWorkspace`. Its editor Save action downloads Markdown that can replace the source file; it does not publish the change. Remote hosts mount `DocsWorkspace` with a `DocsHostAdapter`; the adapter supplies capabilities and routes all reads and mutations to the host. The shared UI does not decide identity or authorization.
 
 ## Raw source
 

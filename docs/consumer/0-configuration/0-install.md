@@ -29,12 +29,12 @@ Select one path, complete its steps, then continue with site configuration below
 
 |||[Local]
 
-Use Markdown files to publish a read-only website. No application code is needed.
+Use Markdown files to publish a website. No application code is needed.
 
 1. Create a folder named `docs` at the project root. This is where the website will read its pages.
 2. Create `docs/index.md` for the home page. Step 4 shows a page example.
 3. Add the `docs` settings and preview/build scripts to `package.json` in step 3.
-4. Edit pages in a text editor and commit the source files for review. Visitors can read the built site but cannot save edits to those files from their browser.
+4. Edit pages in a text editor, or select **Edit** on the site and press **Save** to download an updated Markdown file. Replace the original file with the download, then commit and deploy it. The browser cannot write directly to the source repository.
 
 Use [Tree handling](/consumer/1-usage/2-tree-handling/) for page order and navigation, and [Syntax](/consumer/1-usage/0-syntax/) for rich blocks.
 

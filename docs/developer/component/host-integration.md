@@ -5,14 +5,14 @@ description: Connect Docs to routes, storage, permissions, and optional rich blo
 
 ## Choose a surface
 
-The [Get started guide](/consumer/0-configuration/0-install/) covers the no-code Markdown site. Use a React integration when an application already owns documents or needs browser editing.
+The [Get started guide](/consumer/0-configuration/0-install/) covers the no-code Markdown site. Use a React integration when an application already owns documents or needs server-backed editing.
 
-| Surface              | Use it when                        | Host supplies                                                            |
-| -------------------- | ---------------------------------- | ------------------------------------------------------------------------ |
-| `Docs`               | One controlled document            | `value`; `onChange` in edit mode; saving outside the component           |
-| `DocsSiteLayout`     | An embedded read-only leaf         | Ordered trees, current route, rendered content                           |
-| `DocsLocalWorkspace` | A repository-backed read-only tree | Leaf index, route tree, and asset URLs                                   |
-| `DocsWorkspace`      | A hosted workspace with editing    | Adapter, tree, current route, permission, draft and publication services |
+| Surface              | Use it when                                             | Host supplies                                                            |
+| -------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `Docs`               | One controlled document                                 | `value`; `onChange` in edit mode; saving outside the component           |
+| `DocsSiteLayout`     | An embedded leaf with Markdown download on Save         | Ordered trees, current route, rendered content and source Markdown       |
+| `DocsLocalWorkspace` | A repository-backed tree with Markdown download on Save | Leaf index, route tree, and asset URLs                                   |
+| `DocsWorkspace`      | A hosted workspace with editing                         | Adapter, tree, current route, permission, draft and publication services |
 
 Import the package stylesheet once in the host application:
 

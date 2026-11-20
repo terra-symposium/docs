@@ -10,7 +10,14 @@ IMPORTS
 import { $surfaceReady, useTransitionState } from '../lib/terra/docs/state.js';
 import { docsHueTheme } from '../lib/docs-theme.js';
 import { docsValueToMarkdown, markdownToDocsValue } from '../lib/markdown-model.js';
-import { Fragment, isValidElement, useEffect } from 'react';
+import {
+  downloadMarkdownFile,
+  editedMarkdownSource,
+  markdownDownloadName,
+  siteImageUrls,
+  splitMarkdownSource,
+} from '../lib/local-markdown.js';
+import { Fragment, isValidElement, useEffect, useState } from 'react';
 
 // COMPONENTS
 import { Button } from '@terra-symposium/styling/ui';
@@ -231,6 +238,8 @@ export function DocsStaticWorkspace({
   currentPath,
   rootPath = '/',
   markdown = '',
+  sourceMarkdown,
+  sourcePath,
   content,
   attachments = [],
   updatedAt,
@@ -253,6 +262,10 @@ export function DocsStaticWorkspace({
   currentPath: string;
   rootPath?: string;
   markdown?: string;
+  /** Original repository source, including frontmatter and relative asset paths. */
+  sourceMarkdown?: string;
+  /** Original repository filename used for the download. */
+  sourcePath?: string;
   content?: unknown;
   attachments?: DocsAttachment[];
   updatedAt?: string;
@@ -262,6 +275,14 @@ export function DocsStaticWorkspace({
   /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
   quiz?: DocsQuizConfig;
 }): JSX.Element {
+  const [edited, setEdited] = useState<{
+    markdown: string;
+    title: string;
+    description?: string;
+  } | null>(null);
+  useEffect(() => setEdited(null), [currentPath, sourceMarkdown, markdown]);
+  const originalSource = sourceMarkdown ?? markdown;
+  const sourceBody = splitMarkdownSource(edited?.markdown ?? originalSource).body;
   const workspaceSections: DocsSection[] = trees
     ? trees.map(({ branches, ...tree }) => ({ ...tree, groups: branches }))
     : (sections ?? sectionsFromNavigation(nodes));
@@ -288,14 +309,24 @@ export function DocsStaticWorkspace({
     allLeaves[0];
   const currentAttachments = a?.leaf.attachments ?? attachments;
   const docPath = a?.leaf.href ?? currentPath;
-  const effectivePageDescription = pageDescription ?? a?.leaf.description;
-  const docContent = Array.isArray(content) ? content : markdownToDocsValue(markdown);
-  const markdownSource = markdown.trim()
-    ? markdown
+  const initialTitle = pageTitle ?? a?.leaf.title ?? title;
+  const initialDescription = pageDescription ?? a?.leaf.description;
+  const effectivePageDescription = edited?.description ?? initialDescription;
+  const docContent = edited
+    ? markdownToDocsValue(sourceBody)
     : Array.isArray(content)
-      ? docsValueToMarkdown(content as Parameters<typeof docsValueToMarkdown>[0])
-      : '';
+      ? content
+      : markdownToDocsValue(sourceBody);
+  const markdownSource = edited?.markdown.trim()
+    ? sourceBody
+    : markdown.trim()
+      ? markdown
+      : Array.isArray(content)
+        ? docsValueToMarkdown(content as Parameters<typeof docsValueToMarkdown>[0])
+        : '';
+  const editedPreview = sourcePath ? siteImageUrls(sourceBody, sourcePath, rootPath) : sourceBody;
   const contentSlot =
+    (edited ? <DocsMarkdown markdown={editedPreview} /> : undefined) ??
     renderContent ??
     (hasRenderableChildren(children) ? children : undefined) ??
     (markdownSource ? <DocsMarkdown markdown={markdownSource} /> : undefined);
@@ -370,7 +401,8 @@ export function DocsStaticWorkspace({
     navigationMode: 'document',
     capabilities: {
       read: true,
-      write: false,
+      write: true,
+      navigationWrite: false,
       reorder: false,
       attachments: false,
       export: false,
@@ -434,7 +466,7 @@ export function DocsStaticWorkspace({
       return `${rootPath.replace(SHARED_REGEX, '')}/${path}`;
     },
     /**
-     * Handles the read-only operations exposed by the local Docs host adapter.
+     * Handles local reads and downloads the edited Markdown when a leaf is saved.
      *
      * @param op Read operation requested by a Docs workspace feature.
      * @param input Optional operation-specific path or list request.
@@ -472,10 +504,10 @@ export function DocsStaticWorkspace({
           ? {
               path: selected.path ?? selected.href,
               pathname: routeOwnsPath(selected.href, currentPath) ? currentPath : selected.href,
-              title: pageTitle ?? selected.title,
-              description: pageDescription ?? selected.description,
+              title: edited?.title ?? pageTitle ?? selected.title,
+              description: effectivePageDescription ?? selected.description,
               updatedAt: selected.updatedAt ?? updatedAt,
-              source: markdown,
+              source: sourceBody,
               content: docContent,
             }
           : null;
@@ -502,13 +534,52 @@ export function DocsStaticWorkspace({
         data = currentPath;
       } else if (op === 'read.util.node') {
         data = {
-          title: pageTitle ?? a?.leaf.title ?? title,
-          origName: slug(pageTitle ?? a?.leaf.title ?? title),
+          title: edited?.title ?? initialTitle,
+          origName: slug(edited?.title ?? initialTitle),
         };
       } else if (op === 'read.tsdocs') {
         data = { scopes: [] };
       } else if (op === 'read.asset.get') {
         data = new ArrayBuffer(0);
+      } else if (op === 'write.doc.save') {
+        const request = (input ?? {}) as Record<string, unknown>;
+        const body =
+          typeof request.source === 'string'
+            ? request.source
+            : docsValueToMarkdown(
+                (Array.isArray(request.content) ? request.content : []) as Parameters<
+                  typeof docsValueToMarkdown
+                >[0],
+              );
+        const savedTitle =
+          typeof request.title === 'string' ? request.title : (edited?.title ?? initialTitle);
+        const savedDescription =
+          typeof request.description === 'string' ? request.description : effectivePageDescription;
+        const savedMarkdown = editedMarkdownSource({
+          original: edited?.markdown ?? originalSource,
+          body,
+          title: savedTitle,
+          initialTitle: edited?.title ?? initialTitle,
+          ...(savedDescription !== undefined ? { description: savedDescription } : {}),
+          ...(effectivePageDescription !== undefined
+            ? { initialDescription: effectivePageDescription }
+            : {}),
+        });
+        downloadMarkdownFile(
+          markdownDownloadName(sourcePath ?? a?.leaf.path ?? docPath),
+          savedMarkdown,
+        );
+        setEdited({
+          markdown: savedMarkdown,
+          title: savedTitle,
+          ...(savedDescription !== undefined ? { description: savedDescription } : {}),
+        });
+        data = {
+          title: savedTitle,
+          description: savedDescription,
+          source: body,
+          content: markdownToDocsValue(body),
+        };
       } else {
         return { error: new Error(`The local Docs provider does not implement ${op}.`) };
       }
@@ -544,14 +615,14 @@ export function DocsStaticWorkspace({
           host={host}
           tree={tree}
           pathname={currentPath}
-          permission="read"
+          permission="write"
           path={a?.leaf.path ?? docPath}
-          title={pageTitle ?? a?.leaf.title ?? title}
+          title={edited?.title ?? initialTitle}
           {...(effectivePageDescription ? { description: effectivePageDescription } : {})}
           {...((a?.leaf.updatedAt ?? updatedAt)
             ? { updatedAt: a?.leaf.updatedAt ?? updatedAt }
             : {})}
-          source={markdown}
+          source={sourceBody}
           content={docContent}
           staticContent={staticContent}
           {...(quiz ? { quiz } : {})}
@@ -564,7 +635,7 @@ export function DocsStaticWorkspace({
                         <a href={breadcrumbParent.href}>{breadcrumbParent.title}</a>
                       </li>
                       <li aria-hidden="true">/</li>
-                      <li aria-current="page">{pageTitle ?? a?.leaf.title ?? title}</li>
+                      <li aria-current="page">{edited?.title ?? initialTitle}</li>
                     </ol>
                   </nav>
                 ),

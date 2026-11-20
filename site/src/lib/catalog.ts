@@ -13,6 +13,7 @@ import { getHue } from '@terra-symposium/styling';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
+import { siteImageUrls } from '../../../src/lib/local-markdown.js';
 
 // TYPES
 import type { DocsNavNode } from '../../../src/components/navigation.js';
@@ -48,38 +49,6 @@ const G_CLASS_2 = () => TerraQualityRegex.REGEX_G_REGEX_35();
 /** Matches a leading YAML frontmatter block in a Markdown or MDX page. */
 const S_N_S_S_N_S_N_REGEX = /^---\s*\n[\s\S]*?\n---\s*\n/;
 
-/** Resolve authored image paths to the assets copied beside the generated Docs site. */
-function siteImageUrls(markdown: string, relativeFile: string): string {
-  let fence: { character: string; length: number } | null = null;
-  const sourceUrl = new URL(relativeFile, 'https://docs.local/');
-  return markdown
-    .split('\n')
-    .map((line) => {
-      const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
-      if (marker) {
-        if (!fence) fence = { character: marker[0], length: marker.length };
-        else if (marker[0] === fence.character && marker.length >= fence.length) fence = null;
-        return line;
-      }
-      if (fence) return line;
-      const image = /(!\[[^\]]*\]\()([^\s)]+)([^)]*\))/g;
-      const rewrite = (match: string, opener: string, target: string, closer: string) => {
-        if (/^(?:[a-z][a-z\d+.-]*:|\/\/|\/|#)/i.test(target)) return match;
-        const assetPath = new URL(target, sourceUrl).pathname.slice(1);
-        return `${opener}${base}_docs/assets/${assetPath}${closer}`;
-      };
-      if (/<img\b/i.test(line))
-        return line.replace(/(<img\b[^>]*\bsrc=["'])([^"']+)(["'])/gi, rewrite);
-      if (/^\s*\|/.test(line)) {
-        const cells = line.split('|');
-        const uiCell = cells.length - 2;
-        cells[uiCell] = cells[uiCell].replace(image, rewrite);
-        return cells.join('|');
-      }
-      return line.replace(/^(\s*!\[[^\]]*\]\()([^\s)]+)([^)]*\))/, rewrite);
-    })
-    .join('\n');
-}
 /**
  * Renderable Docs page metadata derived from its Markdown source and frontmatter.
  */
@@ -93,6 +62,7 @@ export type SitePage = {
   hidden: boolean;
   content: unknown;
   markdown: string;
+  sourceMarkdown: string;
 };
 const pageInputs = {
   modules: import.meta.glob<{
@@ -161,7 +131,8 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
       hidden:
         frontmatter.sidebar?.hidden ?? frontmatter.hidden ?? frontmatter.visibility === 'hidden',
       content: m.Content ?? m.default,
-      markdown: siteImageUrls(markdown.replace(S_N_S_S_N_S_N_REGEX, ''), relativeFile),
+      markdown: siteImageUrls(markdown.replace(S_N_S_S_N_S_N_REGEX, ''), relativeFile, base),
+      sourceMarkdown: markdown,
     };
   })
   .sort((l, r) => l.file.localeCompare(r.file, undefined, { numeric: true }));

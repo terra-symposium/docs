@@ -3132,7 +3132,7 @@ export default function Scaffold({
       <Nav
         docs={tree}
         pathname={currDoc.pathname}
-        permission={permission}
+        permission={host?.capabilities.navigationWrite === false ? 'read' : permission}
         {...(userData
           ? {
               userData: {

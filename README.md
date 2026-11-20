@@ -12,7 +12,7 @@ pnpm run dev
 pnpm run docs
 ```
 
-`pnpm dev` (or `pnpm run docs:dev`) builds the package and starts its Astro Docs site from this repository's `docs/` folder. The site renders checked-out Markdown as a read-only workspace, refreshes its search index when Markdown changes, and rebuilds the package and reloads the page when Docs UI source changes. Live rebuilds keep the current `dist/lib` output in place while compiling, so an in-progress build cannot remove a stylesheet that Astro is serving. `pnpm run docs` builds the package and a static copy of its Docs site. The development command uses port `2020`; set `DOCS_DEV_PORT` to use another port.
+`pnpm dev` (or `pnpm run docs:dev`) builds the package and starts its Astro Docs site from this repository's `docs/` folder. The site renders checked-out Markdown and lets editors download an updated Markdown file with Save; replace the source file and commit it to publish the edit. It refreshes its search index when Markdown changes, and rebuilds the package and reloads the page when Docs UI source changes. Live rebuilds keep the current `dist/lib` output in place while compiling, so an in-progress build cannot remove a stylesheet that Astro is serving. `pnpm run docs` builds the package and a static copy of its Docs site. The development command uses port `2020`; set `DOCS_DEV_PORT` to use another port.
 
 Build the library with `pnpm run build` and run package checks with `pnpm run check`.
 
@@ -107,9 +107,9 @@ const trees: DocsTree[] = [
 </DocsSiteLayout>;
 ```
 
-`DocsSiteLayout` delegates to the canonical shared workspace and is intended for static React pages. Repository-backed hosts should use `DocsLocalWorkspace`, which loads each leaf and its adjacent attachments from the host-provided tree and remains read-only. Remote hosts should use `DocsWorkspace` with a `DocsHostAdapter`; the adapter supplies the original tree controls and performs create, rename, duplicate, reorder, attachment, export, and delete operations after applying the host's own permission checks.
+`DocsSiteLayout` delegates to the canonical shared workspace and is intended for static React pages. Repository-backed hosts should use `DocsLocalWorkspace`, which loads each leaf and its adjacent attachments from the host-provided tree. In either local surface, Save downloads an updated Markdown file; the host does not write to the repository. Remote hosts should use `DocsWorkspace` with a `DocsHostAdapter`; the adapter supplies the original tree controls and performs create, rename, duplicate, reorder, attachment, export, and delete operations after applying the host's own permission checks.
 
-The reusable block registry includes accordions, tabs, tables, callouts, code, images, embeds, math, diagrams, raw Markdown, and TypeScript documentation. All are available by default; hosts can disable individual members with the `blocks` prop. Local repository pages stay read-only in the browser.
+The reusable block registry includes accordions, tabs, tables, callouts, code, images, embeds, math, diagrams, raw Markdown, and TypeScript documentation. All are available by default; hosts can disable individual members with the `blocks` prop. Local repository pages can be edited in the browser and exported as Markdown, but publishing still requires replacing and deploying the source file.
 
 Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, generate }}` on `DocsLocalWorkspace`, `DocsStaticWorkspace`, or `DocsWorkspace`. The `generate` callback receives the current leaf title and Markdown plus the requested question count and types, and must return `{ title, questions }`. Multiple-choice questions use `{ type: 'multipleChoice', prompt, opts, answer, explanation?, section? }`; keyword questions use `{ type: 'keyword', prompt, answers, keywords?, explanation?, section? }`. Individual leaves can expose the same flow with the `<Quiz />` Markdown component.
 

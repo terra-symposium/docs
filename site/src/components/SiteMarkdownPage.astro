@@ -25,6 +25,8 @@ const layoutProps = {
 	currentPath: pageHref(slug, base),
 	rootPath: pageHref('', base),
 	markdown: currentPage?.markdown ?? '',
+	sourceMarkdown: currentPage?.sourceMarkdown ?? '',
+	sourcePath: currentPage?.file,
 	searchBase: base,
 };
 ---

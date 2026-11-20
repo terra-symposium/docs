@@ -8,6 +8,7 @@ IMPORTS
 
 // API
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 // TYPES
 import type { Page } from '@playwright/test';
@@ -75,6 +76,89 @@ test.describe('Docs workspace browser contracts', () => {
   test.afterEach(async ({ page: p }) => {
     expect(browserErrs.get(p) ?? [], 'Unhandled browser errors').toEqual([]);
   });
+  test(
+    'static Markdown page downloads its edited source on Save',
+    XL_VIEWPORT_TEST,
+    async ({ page: p }) => {
+      await p.goto('/consumer/0-configuration/0-install/');
+      await waitForWorkspaceReady(p);
+      await expect(p.getByRole('heading', { name: '1. Prepare' })).toBeVisible();
+      await p.getByRole('combobox', { name: 'Mode' }).click();
+      await p.getByRole('option', { name: 'Edit', exact: true }).click();
+      const title = p.getByRole('textbox', { name: 'Title', exact: true });
+      await title.fill('Getting started with Docs');
+      const editor = p.getByRole('textbox', { name: 'Document editor' });
+      await editor.click();
+      await p.keyboard.press('ControlOrMeta+End');
+      await p.keyboard.press('Enter');
+      await p.keyboard.insertText('The downloaded file includes this edit.');
+      const downloadReady = p.waitForEvent('download');
+      await p.getByRole('button', { name: 'Save', exact: true }).click();
+      const download = await downloadReady;
+      expect(download.suggestedFilename()).toBe('0-install.md');
+      const source = await readFile(await download.path(), 'utf8');
+      expect(source).toContain('title: Getting started with Docs');
+      expect(source).toContain('The downloaded file includes this edit.');
+      expect(source).toContain('## 1. Prepare');
+    },
+  );
+  test(
+    'local embedded workspace downloads edited Markdown on Save',
+    XL_VIEWPORT_TEST,
+    async ({ page: p }) => {
+      await p.addInitScript(
+        (fixture) => {
+          Object.assign(window, { __docsLocalWorkspaceFixture: fixture });
+        },
+        {
+          tree: [
+            {
+              type: 'branch',
+              origName: 'guides',
+              title: 'Guides',
+              path: 'guides',
+              children: [
+                {
+                  type: 'leaf',
+                  origName: 'start',
+                  title: 'Start',
+                  path: 'docs/start.md',
+                  url: '/docs/start/',
+                },
+              ],
+            },
+          ],
+          pages: [
+            {
+              id: 'start',
+              path: 'docs/start.md',
+              pathname: '/docs/start/',
+              title: 'Start',
+              markdown:
+                '---\ntitle: Start\nsidebar:\n  label: Start\n---\n\n## First step\n\nOriginal text.\n',
+            },
+          ],
+          pathname: '/docs/start/',
+          title: 'Fixture Docs',
+          rootPath: '/docs/',
+        },
+      );
+      await p.goto('/strict-local-workspace-harness/');
+      await waitForWorkspaceReady(p);
+      await p.getByRole('combobox', { name: 'Mode' }).click();
+      await p.getByRole('option', { name: 'Edit', exact: true }).click();
+      const title = p.getByRole('textbox', { name: 'Title', exact: true });
+      await title.fill('Updated start');
+      const downloadReady = p.waitForEvent('download');
+      await p.getByRole('button', { name: 'Save', exact: true }).click();
+      const download = await downloadReady;
+      expect(download.suggestedFilename()).toBe('start.md');
+      const source = await readFile(await download.path(), 'utf8');
+      expect(source).toContain('title: Updated start');
+      expect(source).toContain('label: Start');
+      expect(source).toContain('## First step');
+    },
+  );
   test.describe('read-only routes, Markdown, and responsive rendering', () => {
     test(
       'standalone Astro pages mount the extracted read-only workspace with their nested navigation',

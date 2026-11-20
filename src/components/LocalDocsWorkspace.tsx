@@ -7,7 +7,13 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
-import { markdownToDocsValue } from '../lib/markdown-model.js';
+import { docsValueToMarkdown, markdownToDocsValue } from '../lib/markdown-model.js';
+import {
+  downloadMarkdownFile,
+  editedMarkdownSource,
+  markdownDownloadName,
+  splitMarkdownSource,
+} from '../lib/local-markdown.js';
 import { useEffect, useMemo, useState } from 'react';
 
 // COMPONENTS
@@ -223,6 +229,11 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
     quiz,
   } = workspaceOptions;
   const [aPath, setActivePath] = useState(pathname);
+  const [editedPages, setEditedPages] = useState<Record<string, DocsLocalPage>>({});
+  const availablePages = useMemo(
+    () => pages.map((item) => editedPages[item.id] ?? item),
+    [editedPages, pages],
+  );
   useEffect(() => setActivePath(pathname), [pathname]);
   useEffect(() => {
     /**
@@ -247,10 +258,11 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
       window.removeEventListener('hashchange', updatePath);
     };
   }, []);
-  const page = findDocsLocalPage(pages, aPath) ?? pages[0];
+  const page = findDocsLocalPage(availablePages, aPath) ?? availablePages[0];
+  const sourceBody = page ? splitMarkdownSource(page.markdown).body : '';
   const content = useMemo(
-    () => (page ? markdownToDocsValue(page.markdown, blocks) : []),
-    [blocks, page],
+    () => (page ? markdownToDocsValue(sourceBody, blocks) : []),
+    [blocks, page, sourceBody],
   );
   return (
     <DocsWorkspace
@@ -263,7 +275,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
           typeof window === 'undefined'
             ? page
             : (findDocsLocalPage(
-                pages,
+                availablePages,
                 `${window.location.pathname}${window.location.search}${window.location.hash}`,
               ) ?? page);
         /**
@@ -275,10 +287,10 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
           if (!input || typeof input !== 'object') return undefined;
           const value = input as Record<string, unknown>;
           const direct =
-            findDocsLocalPage(pages, value.id) ??
-            findDocsLocalPage(pages, value.path) ??
-            findDocsLocalPage(pages, value.pathname) ??
-            findDocsLocalPage(pages, value.origName);
+            findDocsLocalPage(availablePages, value.id) ??
+            findDocsLocalPage(availablePages, value.path) ??
+            findDocsLocalPage(availablePages, value.pathname) ??
+            findDocsLocalPage(availablePages, value.origName);
           if (direct) return direct;
           const requested = [value.path, value.pathname, value.id].find(
             (candidate) => typeof candidate === 'string' && candidate.length > 0,
@@ -291,7 +303,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             .at(-1);
           const a = aPage();
           if (basename && a?.path.split('/').at(-1) === basename) return a;
-          const matches = pages.filter(
+          const matches = availablePages.filter(
             (candidate) =>
               candidate.path.split('/').at(-1) === basename || candidate.id === basename,
           );
@@ -300,7 +312,8 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
         return {
           capabilities: {
             read: true,
-            write: false,
+            write: true,
+            navigationWrite: false,
             reorder: false,
             attachments: false,
             export: true,
@@ -319,7 +332,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
            * @returns Route identifiers and canonical pathname for the best matching page.
            */
           resolveRoute(value) {
-            const resolved = findDocsLocalPage(pages, value) ?? pages[0];
+            const resolved = findDocsLocalPage(availablePages, value) ?? availablePages[0];
             // Leaf IDs may intentionally match their section IDs (for example a
             // Standards `skills` section containing the `skills` landing leaf).
             // Resolve the leaf explicitly so a branch collision cannot redirect
@@ -358,10 +371,10 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
            * @returns The indexed page pathname, or the workspace root when no page matches.
            */
           routePath(path) {
-            return findDocsLocalPage(pages, path)?.pathname ?? rootPath;
+            return findDocsLocalPage(availablePages, path)?.pathname ?? rootPath;
           },
           /**
-           * Serves supported local reads from the page index and rejects write operations.
+           * Serves local reads and downloads a Markdown file when a leaf is saved.
            * @param op Requested Docs host operation.
            * @param input Optional operation fields identifying a page or attachment.
            * @returns The local action result or a capability error for unsupported operations.
@@ -381,8 +394,8 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
                 data: (document
                   ? {
                       ...document,
-                      source: document.markdown,
-                      content: markdownToDocsValue(document.markdown),
+                      source: splitMarkdownSource(document.markdown).body,
+                      content: markdownToDocsValue(splitMarkdownSource(document.markdown).body),
                     }
                   : null) as T,
               };
@@ -444,22 +457,52 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
                 };
               return { data: (await response.arrayBuffer()) as T };
             }
+            if (op === 'write.doc.save') {
+              const document = resolvePage(args);
+              if (!document) return { error: new Error('The edited leaf could not be found.') };
+              const body =
+                typeof args.source === 'string'
+                  ? args.source
+                  : docsValueToMarkdown(
+                      (Array.isArray(args.content) ? args.content : []) as Parameters<
+                        typeof docsValueToMarkdown
+                      >[0],
+                    );
+              const next = {
+                ...document,
+                title: typeof args.title === 'string' ? args.title : document.title,
+                ...(typeof args.description === 'string' ? { description: args.description } : {}),
+              };
+              const markdown = editedMarkdownSource({
+                original: document.markdown,
+                body,
+                title: next.title,
+                initialTitle: document.title,
+                ...(next.description !== undefined ? { description: next.description } : {}),
+                ...(document.description !== undefined
+                  ? { initialDescription: document.description }
+                  : {}),
+              });
+              downloadMarkdownFile(markdownDownloadName(document.path), markdown);
+              setEditedPages((current) => ({ ...current, [document.id]: { ...next, markdown } }));
+              return { data: { ...next, source: body, content: markdownToDocsValue(body) } as T };
+            }
             return { data: null as T };
           },
         };
-      }, [aPath, description, homePath, hue, page, pages, rootPath, title, tree])}
+      }, [aPath, availablePages, description, homePath, hue, page, rootPath, title, tree])}
       tree={tree}
       pathname={aPath}
-      permission="read"
+      permission="write"
       staticContent
       title={page?.title ?? title}
       {...(page?.path ? { path: page.path } : {})}
       {...(page?.description ? { description: page.description } : {})}
       {...(page?.contributors ? { contributors: page.contributors } : {})}
       {...(page?.updatedAt ? { updatedAt: page.updatedAt } : {})}
-      {...(page ? { source: page.markdown, content } : { content })}
+      {...(page ? { source: sourceBody, content } : { content })}
       {...(page && !customBlocks
-        ? { renderContent: <DocsMarkdown markdown={page.markdown} options={blocks} /> }
+        ? { renderContent: <DocsMarkdown markdown={sourceBody} options={blocks} /> }
         : {})}
       {...(beforeContent !== undefined ? { beforeContent } : {})}
       {...(afterContent !== undefined ? { afterContent } : {})}

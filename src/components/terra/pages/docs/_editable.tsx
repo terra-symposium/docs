@@ -329,6 +329,7 @@ export default function Editable({
     version: null,
   });
   const saving = useRef(false);
+  const sourceEdited = useRef(false);
   const [err, setErr] = useState<string | null>(null);
   // prettier-ignore
   const [state, setState] = useState<{
@@ -350,6 +351,7 @@ export default function Editable({
 
   // INIT
   useEffect(() => {
+    sourceEdited.current = false;
     refs.current.route = { path, pathname };
     setState((p) => ({
       ...p,
@@ -396,6 +398,7 @@ export default function Editable({
     setState((p) => ({ ...p, dirty: true, draft: { ...p.draft, ...v } }));
   }, []);
   const setCode = useCallback((c: string): void => {
+    sourceEdited.current = true;
     setState((p) =>
       c === p.draft.source ? p : { ...p, dirty: true, draft: { ...p.draft, source: c } },
     );
@@ -409,10 +412,12 @@ export default function Editable({
       const { data, error: err } = await actions.write.doc.save({
         description: draft.description,
         content: isDocBody(draft.content) ? draft.content : [],
+        ...(sourceEdited.current ? { source: draft.source } : {}),
         path: draft.path,
         title: draft.title,
       });
       if (err || !data) throw err || new Error('Unable to save document.');
+      sourceEdited.current = false;
       const saved = data as { content?: DocBody; source?: string };
       setState((p) => ({
         ...p,
@@ -539,6 +544,7 @@ export default function Editable({
     };
   }, [controls]);
   const onBodyChange = useCallback((c: DocBody): void => {
+    sourceEdited.current = false;
     setState((p) => {
       if (JSON.stringify(p.draft.content) === JSON.stringify(c)) return p;
       return {

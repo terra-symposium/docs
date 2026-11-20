@@ -1,10 +1,23 @@
 ---
 title: Docs consumers
 description: Local repository audit of Docs package resolution and host boundaries.
-order: 9
 ---
 
-This audit covers Desktop repositories with an `@terra-symposium/docs` dependency, a `docs` command, or a Docs route on 2 November 2026. Versions below reflect the `0.4.3` rollout; each host keeps data loading and routing in its own repository.
+This historical audit covers Desktop repositories with an `@terra-symposium/docs` dependency, a `docs` command, or a Docs route on 2 November 2026. Versions below reflect that date and are not a current installation inventory. For the repeatable upgrade process, use [Release and upgrade](/developer/repo/release-and-upgrades/); for application responsibilities, use [Host integration](/developer/component/host-integration/).
+
+## Integration patterns
+
+The useful distinction across consumers is the boundary each host owns:
+
+| Pattern                  | Docs supplies                                                 | Consumer supplies                                                      |
+| ------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Markdown site            | CLI, generated routes, navigation, search, and rendered pages | Markdown source, site settings, assets, static deployment              |
+| Local embedded workspace | Shared read-only workspace and content controls               | Page tree, route mapping, content and asset URLs                       |
+| Hosted workspace         | Editor, navigation, rich blocks, and action UI                | Authenticated reads, drafts, writes, publication, history, attachments |
+
+Use [Site pipeline](/developer/repo/site-pipeline/) for the first pattern and [Host integration](/developer/component/host-integration/) for the latter two. Verify a consumer's current installed version and running site in that repository rather than using the historical table as an upgrade checklist.
+
+## Historical snapshot
 
 | Repository        | Declared / installed | Renderer and CSS                       | Host responsibility                                                    |
 | ----------------- | -------------------- | -------------------------------------- | ---------------------------------------------------------------------- |

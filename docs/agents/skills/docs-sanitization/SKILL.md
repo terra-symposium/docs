@@ -16,7 +16,7 @@ python3 /path/to/docs/scripts/docs-sanitize/cli.py fix /path/to/consumer/docs
 
 ## Preserve the authored meaning
 
-- A block opener such as `|||[TypeScript API]`, `===[Details]`, or `:::note[Note]` occupies its own line. Leave one blank line before its body and before the matching closer. See the [block contract](../../../developer/component/blocks.md).
+- A block opener such as `|||[TypeScript API]`, `===[Details]`, or `:::note[Note]` occupies its own line. Leave one blank line before its body and before the matching closer. See the [block contract](../../../developer/component/blocks/).
 - Fenced code uses a language info string, including `text` when no better language applies. Single backticks stay inline and never receive a code-block header or copy button. Use a fence longer than any backtick run inside the example.
 - `<CodeBlock>` and `<DocsBlock>` are obsolete in authored Markdown. Convert safe literal code tags with `fix`; migrate other rich blocks to their native Markdown or current component syntax after inspecting their data. Do not replace them with placeholders.
 - Docs supplies its built-in `Nodes` component. Remove the old `NodesBlock` import and `export const Nodes = props => <NodesBlock block={props} />` shim from authored pages. Preserve imports inside code examples and unrelated application imports.

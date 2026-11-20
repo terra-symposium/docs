@@ -72,4 +72,11 @@ export type {
   DocsWorkspaceProps,
   DocsWorkspaceProps as TerraDocsWorkspaceProps,
 } from './host.js';
-export type { DocsAttachment, DocsLeaf, DocsGroup, DocsSection } from './workspace-types.js';
+export type {
+  DocsAttachment,
+  DocsLeaf,
+  DocsBranch,
+  DocsTree,
+  DocsGroup,
+  DocsSection,
+} from './workspace-types.js';

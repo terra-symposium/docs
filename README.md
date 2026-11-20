@@ -44,13 +44,13 @@ Add Markdown files under `docs/`, then build the site:
 pnpm run build
 ```
 
-The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home page; nested folders group navigation. Pages follow their source-path order; use numeric filename prefixes when a sequence matters. MDX files can import interactive examples. Optional frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label` and `hidden`). Build output defaults to `dist/docs/`.
+The package creates routes, navigation, the Terra workspace, search index, and 404 page. `docs/index.md` is the home leaf; folders under `docs/` form trees and branches, and Markdown files form leaves. Numeric filename prefixes set their order. MDX files can import interactive examples. Optional leaf frontmatter supports `title`, `description`, `hue`, and `sidebar` fields (`label` and `hidden`). Build output defaults to `dist/docs/`.
 
 The Docs content root is also the default package root for resolving the consumer's dependencies. If a repository keeps its package manifest and `node_modules` in a nested directory, set `DOCS_PACKAGE_ROOT` to that directory relative to the Docs content root (for example, `DOCS_PACKAGE_ROOT=config pnpm --dir config run build`). `DOCS_ROOT` continues to select the directory containing `docs/` and the build output.
 
 Every Docs site must configure `docs.errorReporting` in its package manifest with `site` and `endpoint`. Use `delivery: "http"` (the default) for a receiver that durably stores structured reports, or `delivery: "email"` for a server endpoint that sends the report to its configured mail address and returns success only after acceptance. The browser never holds mail credentials. `DOCS_ERROR_REPORT_ENDPOINT` can override the endpoint locally. A failed receiver leaves the fallback usable and does not claim that the error was recorded.
 
-Move the full agent tree into `docs/agents/`. `SKILL.md` files there route as the index page for their folder, so the complete tree uses normal Docs navigation, search, and asset handling. The Agents section is included by default. Set `docs.includeAgents` to `false` in the repository's `package.json`, or pass `--agents false`, to hide it for one Docs instance.
+Move the full agent tree into `docs/agents/`. `SKILL.md` files there route as the index leaf for their folder, so the complete tree uses normal Docs navigation, search, and asset handling. The Agents tree is included by default. Set `docs.includeAgents` to `false` in the repository's `package.json`, or pass `--agents false`, to hide it for one Docs instance.
 
 Set each site's `title` and `description` explicitly in its `docs` configuration in `package.json` (or pass `--title` and `--description`). The launcher does not infer site metadata from the npm package name or description. Configure `docs.base`, `docs.site`, and `docs.out` alongside those values. Each repository builds its own site; the starter CI checks builds and leaves deployment to the repository owner.
 
@@ -72,16 +72,16 @@ Markdown hosts can use `renderMarkdown`, `markdownToDocsValue`, and `docsValueTo
 
 ### Embed a Docs workspace
 
-The shared workspace accepts sections containing groups and leaves. Each leaf owns its attachment links; files are never navigation entries. The host provides URLs, storage, access decisions, and mutations.
+The shared workspace accepts trees containing branches and leaves. Each leaf owns its attachment links; files are never navigation entries. The host provides URLs, storage, access decisions, and mutations.
 
 ```tsx
 import { DocsSiteLayout } from '@terra-symposium/docs';
-import type { DocsSection } from '@terra-symposium/docs';
+import type { DocsTree } from '@terra-symposium/docs';
 
-const sections: DocsSection[] = [
+const trees: DocsTree[] = [
   {
     title: 'Guides',
-    groups: [
+    branches: [
       {
         title: 'Getting started',
         leaves: [
@@ -99,9 +99,9 @@ const sections: DocsSection[] = [
 <DocsSiteLayout
   title="My Docs"
   nodes={[]}
-  sections={sections}
+  trees={trees}
   currentPath="/install/"
-  attachments={sections[0].groups[0].leaves[0].attachments}
+  attachments={trees[0].branches[0].leaves[0].attachments}
 >
   <article>Document content</article>
 </DocsSiteLayout>;

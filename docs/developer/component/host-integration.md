@@ -10,8 +10,8 @@ The [Get started guide](/consumer/0-configuration/0-install/) covers the no-code
 | Surface              | Use it when                        | Host supplies                                                            |
 | -------------------- | ---------------------------------- | ------------------------------------------------------------------------ |
 | `Docs`               | One controlled document            | `value`; `onChange` in edit mode; saving outside the component           |
-| `DocsSiteLayout`     | An embedded read-only page         | Ordered sections, current route, rendered content                        |
-| `DocsLocalWorkspace` | A repository-backed read-only tree | Page index, route tree, and asset URLs                                   |
+| `DocsSiteLayout`     | An embedded read-only leaf         | Ordered trees, current route, rendered content                           |
+| `DocsLocalWorkspace` | A repository-backed read-only tree | Leaf index, route tree, and asset URLs                                   |
 | `DocsWorkspace`      | A hosted workspace with editing    | Adapter, tree, current route, permission, draft and publication services |
 
 Import the package stylesheet once in the host application:

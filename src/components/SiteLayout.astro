@@ -14,7 +14,7 @@ import '../../dist/lib/style.css';
 import '../../site/src/styles/search.css';
 
 // TYPES
-import type { DocsAttachment, DocsSection, DocsNavNode } from '../../dist/lib/lib/index.js';
+import type { DocsAttachment, DocsSection, DocsTree, DocsNavNode } from '../../dist/lib/lib/index.js';
 
 type Props = {
 	title: string;
@@ -25,6 +25,8 @@ type Props = {
 	breadcrumbParent?: { title: string; href: string };
 	hue?: number | null;
 	nodes?: DocsNavNode[];
+	trees?: DocsTree[];
+	/** @deprecated Use trees. */
 	sections?: DocsSection[];
 	currentPath: string;
 	rootPath?: string;
@@ -35,7 +37,7 @@ type Props = {
 	searchBase?: string;
 };
 
-const { title, homeHref = '/', description, pageTitle, pageDescription, breadcrumbParent, hue = 145, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
+const { title, homeHref = '/', description, pageTitle, pageDescription, breadcrumbParent, hue = 145, nodes = [], trees, sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
 const hasStaticSlot = Astro.slots.has('default');
 const staticContent = hasStaticSlot || markdown.trim().length > 0;
 const siteIslandProps = {
@@ -47,6 +49,7 @@ const siteIslandProps = {
 	breadcrumbParent,
 	hue,
 	nodes,
+	trees,
 	sections,
 	currentPath,
 	rootPath,

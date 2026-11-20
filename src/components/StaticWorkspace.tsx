@@ -20,7 +20,7 @@ import { DocsMarkdown } from './MarkdownContent.js';
 import type { DocsQuizConfig } from './quiz.js';
 
 // TYPES
-import type { DocsAttachment, DocsLeaf, DocsSection } from '../lib/workspace-types.js';
+import type { DocsAttachment, DocsLeaf, DocsSection, DocsTree } from '../lib/workspace-types.js';
 import type { DocsHostAdapter, DocsHostAttachment, DocsHostTreeNode } from '../lib/host.js';
 import type { DocsNavNode } from './navigation.js';
 import type { JSX, ReactNode } from 'react';
@@ -100,11 +100,11 @@ const storageKey = (value: string): string => {
   }
 };
 /**
- * Converts the host's nested navigation nodes into Docs sections and leaf records.
+ * Converts the host's nested navigation nodes into Docs trees and leaf records.
  *
  * @param nodes Navigation roots supplied by the host site.
  *
- * @return Sections that preserve the source grouping and include only linked pages as leaves.
+ * @return Trees that preserve the source branches and include only linked leaves.
  */
 function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
   /**
@@ -201,8 +201,9 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
  * @param pageTitle Title of the page selected for the current route.
  * @param pageDescription Description of the selected page.
  * @param hue Theme hue used to color the workspace.
- * @param nodes Host navigation tree used when `sections` is not supplied.
- * @param sections Structured navigation sections supplied by the host.
+ * @param nodes Host navigation tree used when `trees` is not supplied.
+ * @param trees Structured navigation trees supplied by the host.
+ * @param sections Legacy navigation shape accepted for existing hosts.
  * @param currentPath Current browser path used to select the displayed leaf.
  * @param rootPath Base path for routes within the documentation site.
  * @param markdown Markdown source for the selected page.
@@ -225,6 +226,7 @@ export function DocsStaticWorkspace({
   breadcrumbParent,
   hue,
   nodes = [],
+  trees,
   sections,
   currentPath,
   rootPath = '/',
@@ -245,6 +247,8 @@ export function DocsStaticWorkspace({
   breadcrumbParent?: { title: string; href: string };
   hue?: number | null;
   nodes?: DocsNavNode[];
+  trees?: DocsTree[];
+  /** @deprecated Use trees. */
   sections?: DocsSection[];
   currentPath: string;
   rootPath?: string;
@@ -258,7 +262,9 @@ export function DocsStaticWorkspace({
   /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
   quiz?: DocsQuizConfig;
 }): JSX.Element {
-  const workspaceSections: DocsSection[] = sections ?? sectionsFromNavigation(nodes);
+  const workspaceSections: DocsSection[] = trees
+    ? trees.map(({ branches, ...tree }) => ({ ...tree, groups: branches }))
+    : (sections ?? sectionsFromNavigation(nodes));
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
   const currentKey = routeKey(currentPath);
   const allLeaves = workspaceSections.flatMap((s, v) =>
@@ -376,20 +382,20 @@ export function DocsStaticWorkspace({
     siteTitle: title,
     ...(description ? { siteDescription: description } : {}),
     /**
-     * Builds a page URL from the section, group, and leaf identifiers supplied by the workspace.
+     * Builds a leaf URL from the tree, branch, and leaf identifiers supplied by the workspace.
      *
-     * @param sectionId Section identifier from the route state.
-     * @param groupId Optional group identifier within the section.
+     * @param treeId Tree identifier from the route state.
+     * @param branchId Optional branch identifier within the tree.
      * @param leafId Optional leaf identifier within the group.
      *
      * @return The matching page URL, or `rootPath` when no page matches.
      */
-    buildRoute(sectionId, groupId, leafId) {
+    buildRoute(treeId, branchId, leafId) {
       return (
         allLeaves.find(
           (i) =>
-            (i.section.id ?? slug(i.section.title)) === sectionId &&
-            (groupId === undefined || (i.group.id ?? slug(i.group.title)) === groupId) &&
+            (i.section.id ?? slug(i.section.title)) === treeId &&
+            (branchId === undefined || (i.group.id ?? slug(i.group.title)) === branchId) &&
             (leafId === undefined || (i.leaf.id ?? slug(i.leaf.title)) === leafId),
         )?.leaf.href ?? rootPath
       );
@@ -399,7 +405,7 @@ export function DocsStaticWorkspace({
      *
      * @param value Page URL selected by the host or Docs navigation.
      *
-     * @return Matching section, group, and leaf identifiers with the canonical pathname.
+     * @return Matching tree, branch, and leaf identifiers with the canonical pathname.
      */
     resolveRoute(value) {
       const match =
@@ -409,8 +415,8 @@ export function DocsStaticWorkspace({
           .sort((l, r) => routeKey(r.leaf.href).length - routeKey(l.leaf.href).length)[0] ??
         a;
       return {
-        sectionId: match?.section.id ?? slug(match?.section.title ?? 'index'),
-        groupId: match?.group.id ?? slug(match?.group.title ?? 'index'),
+        treeId: match?.section.id ?? slug(match?.section.title ?? 'index'),
+        branchId: match?.group.id ?? slug(match?.group.title ?? 'index'),
         leafId: match?.leaf.id ?? slug(match?.leaf.title ?? 'index'),
         targetId: match?.leaf.id ?? slug(match?.leaf.title ?? 'index'),
         pathname: match?.leaf.href ?? rootPath,

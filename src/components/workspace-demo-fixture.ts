@@ -330,7 +330,7 @@ function writeWorkspaceDemoState(state: WorkspaceDemoState): void {
  *
  * @param sectionId Top-level navigation node; omitted to return the demo root.
  * @param groupId Nested navigation node to select within the section.
- * @param leafId Document id to select within the section and group.
+ * @param leafId Document id to select within the tree and branch.
  *
  * @return The demo base path or that path with the supplied selection encoded as a query.
  */
@@ -426,7 +426,7 @@ function uniqueId(state: WorkspaceDemoState, proposed: string): string {
 }
 /**
  * Copies a navigation subtree and assigns each node its read or write permission and route.
- * Branches carry section and group selections; leaves also select their document.
+ * Branches carry tree and branch selections; leaves also select their document.
  *
  * @param nodes Navigation nodes to copy.
  * @param readOnly Whether copied nodes should advertise read-only permission.
@@ -464,7 +464,7 @@ function withRoutes(
   });
 }
 /**
- * Finds the section and immediate group that contain a document leaf.
+ * Finds the tree and immediate branch that contain a document leaf.
  *
  * @param state Navigation tree used to locate the document.
  * @param leafId Document id or path identifying the leaf.
@@ -557,7 +557,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
      *
      * @param value Browser path, query, and fragment supplied by the Docs workspace.
      *
-     * @return The selected section, optional group and leaf, target id, and original pathname.
+     * @return The selected tree, optional branch and leaf, target id, and original pathname.
      */
     resolveRoute(value) {
       const url = new URL(value, 'http://localhost');
@@ -1046,7 +1046,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
   };
 }
 /**
- * Builds the demo URL for a document after finding its section and group.
+ * Builds the demo URL for a document after finding its tree and branch.
  *
  * @param state Current demo state containing navigation and document records.
  * @param value Document id, path, or document record to route to.

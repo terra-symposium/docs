@@ -287,7 +287,7 @@ SidebarComponents.DeleteDialog =
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Delete {tgt.kind === 'leaf' ? 'page' : tgt.kind === 'branch' ? 'group' : 'section'}?
+              Delete {tgt.kind === 'leaf' ? 'leaf' : tgt.kind === 'branch' ? 'branch' : 'tree'}?
             </DialogTitle>
             <DialogDescription>
               Delete <code>{tgt.title || tgt.path}</code>{' '}
@@ -486,7 +486,7 @@ function Nav({
     });
     s = Array.from(uniqueMap.values());
     // 2. Filter out top-level nodes that are actually children of another top-level node.
-    // (This happens if the API returns explicit warrants for both a Section and its inner Group).
+    // (This happens if the API returns explicit warrants for both a tree and its inner branch).
     const nestedBranchIds = new Set<string>();
     s.forEach((n) => {
       if (n.children)
@@ -816,9 +816,9 @@ function Nav({
       if (orderedPaths.length < 2) return;
       setInputDlg({
         open: true,
-        title: 'Merge Pages',
-        label: 'New page title',
-        value: 'Merged Page',
+        title: 'Merge Leaves',
+        label: 'New leaf title',
+        value: 'Merged Leaf',
         onCancel: () => {},
         onSave: (nTitle) => {
           // prettier-ignore
@@ -891,13 +891,13 @@ function Nav({
 								tgtUrl.searchParams.set('mode', 'edit');
 								window.history.pushState(null, '', tgtUrl.toString());
 								document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: tgtRoute, pathname: tgtRoute, path: nDoc.path || firstPath, title: nDoc.title || nTitle, description: mergedDesc, source: mergedContent, content: Array.isArray(nDoc.content) ? nDoc.content : undefined, compiledMDX: '' } }),);
-								toast.success('Pages merged successfully.');
+								toast.success('Leaves merged successfully.');
 							} catch (err) {
 								setTree((JSON.parse(JSON.stringify(tree)) as TreeType[]));
 								throw err;
 							}
 						},
-						'Failed to merge pages.',
+						'Failed to merge leaves.',
 						() => { setLoading(true); },
 						() => { setLoading(false); },
 					);
@@ -911,10 +911,10 @@ function Nav({
       if ($transition.get()) return;
       setInputDlg({
         open: true,
-        title: o?.title || 'Add Section',
+        title: o?.title || 'Add Tree',
         description: o?.description,
-        label: 'Section name',
-        value: 'Untitled Section',
+        label: 'Tree name',
+        value: 'Untitled Tree',
         onCancel: () => {},
         onSave: (name) => {
           setInputDlg(null);
@@ -949,13 +949,13 @@ function Nav({
 							window.history.pushState(null, '', tgtUrl.toString());
 							document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: url, pathname: url, path: dPath, title: 'Untitled', description: '', source: '', content: [], compiledMDX: '' } }),);
 							const { data, error } = await actions.write.doc.createSection({ title: name });
-							if (error || !data) throw new Error(errorMessage(error, 'Failed to create section.'));
+							if (error || !data) throw new Error(errorMessage(error, 'Failed to create tree.'));
 							setTimeout(() => {
 								void refreshTree();
 							}, 2500);
 						} catch (err) {
 							console.error('[addSection] Creation failed:', err);
-							toast.error(err instanceof Error ? err.message : 'Failed to create section.');
+							toast.error(err instanceof Error ? err.message : 'Failed to create tree.');
 							void refreshTree();
 						} finally {
 							setCreating(false);
@@ -975,7 +975,7 @@ function Nav({
           for (let i = 0; i < f.length; i++) {
             const file = f[i];
             if (!file || !TerraQualityRegex.REGEX_MD_MDX_I_REGEX().test(file.name)) {
-              toast.error(`File ${file?.name} must be a markdown document to be a page.`);
+              toast.error(`File ${file?.name} must be a Markdown document to be a leaf.`);
               continue;
             }
             const baseName =
@@ -988,9 +988,9 @@ function Nav({
             if (wErr) throw wErr;
           }
           await refreshTree();
-          toast.success('Pages uploaded successfully.');
+          toast.success('Leaves uploaded successfully.');
         },
-        'Failed to upload as page.',
+        'Failed to upload as leaf.',
         () => {
           setLoading(true);
         },
@@ -1007,8 +1007,8 @@ function Nav({
       const currTitle = cTitle(toNodeLabel(t.title || cName)) || cName;
       setInputDlg({
         open: true,
-        title: 'Rename Section',
-        label: 'Section name',
+        title: 'Rename Tree',
+        label: 'Tree name',
         value: currTitle,
         onCancel: () => {},
         onSave: (nTitle) => {
@@ -1175,9 +1175,9 @@ function Nav({
       if ($transition.get()) return;
       setInputDlg({
         open: true,
-        title: 'Add Page',
-        label: 'Page title',
-        value: 'Untitled Page',
+        title: 'Add Leaf',
+        label: 'Leaf title',
+        value: 'Untitled Leaf',
         onCancel: () => {},
         onSave: (name) => {
           setInputDlg(null);
@@ -1237,13 +1237,13 @@ function Nav({
 							window.history.pushState(null, '', tgtUrl.toString());
 							document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: url, pathname: url, path: dPath, title: name, description: '', source: '', content: [], compiledMDX: '' } }),);
 							const { data, error: err } = (await actions.write.doc.editor({ source: '', description: '', path: dPath, title: name, parentId: aParentId })) as ActionRes<Md>;
-							if (err || !data) throw err || new Error('Failed to create docs page.');
+							if (err || !data) throw err || new Error('Failed to create Docs leaf.');
 							setTimeout(() => {
 								void refreshTree();
 							}, 2500);
 						} catch (err) {
 							console.error('[openCreate] Creation failed:', err);
-							toast.error('Failed to create docs page.');
+							toast.error('Failed to create Docs leaf.');
 							void refreshTree();
 						} finally {
 							setCreating(false);
@@ -1259,9 +1259,9 @@ function Nav({
       if ($transition.get()) return;
       setInputDlg({
         open: true,
-        title: 'Add Group',
-        label: 'Group name',
-        value: 'Untitled Group',
+        title: 'Add Branch',
+        label: 'Branch name',
+        value: 'Untitled Branch',
         onCancel: () => {},
         onSave: (name) => {
           setInputDlg(null);
@@ -1313,15 +1313,15 @@ function Nav({
 							window.history.pushState(null, '', tgtUrl.toString());
 							document.dispatchEvent(new CustomEvent('docs:navigate', { detail: { url: url, pathname: url, path: dPath, title: 'Untitled', description: '', source: '', content: [], compiledMDX: '' } }));
 							const { data: gData, error: gErr } = await actions.write.doc.createGroup({ title: name, path: gUrl, sectionId: rootId });
-							if (gErr || !gData) throw gErr || new Error('Failed to create group.');
+							if (gErr || !gData) throw gErr || new Error('Failed to create branch.');
 						const { data, error: err } = (await actions.write.doc.editor({ source: '', description: '', path: dPath, title: 'Untitled', parentId: (typeof gData === 'object' && '_id' in gData && typeof gData._id === 'string' ? gData._id : undefined) })) as ActionRes<Md>;
-							if (err || !data) throw err || new Error('Failed to create group leaf.');
+							if (err || !data) throw err || new Error('Failed to create branch leaf.');
 							setTimeout(() => {
 								void refreshTree();
 							}, 2500);
 						} catch (err) {
 							console.error('[addGroup] Creation failed:', err);
-							toast.error('Failed to create group.');
+							toast.error('Failed to create branch.');
 							void refreshTree();
 						} finally {
 							setCreating(false);
@@ -1430,7 +1430,7 @@ function Nav({
               toast.error(errorMessage(error, 'Move failed'));
               notify({
                 error: new Error(errorMessage(error, 'Move failed')),
-                fallback: 'Failed to move docs page.',
+                fallback: 'Failed to move Docs leaf.',
               });
               return;
             }
@@ -1443,7 +1443,7 @@ function Nav({
             const { error } = await actions.write.doc.reorder({
               id: parentId,
               field:
-                /* Identify whether we are patching a Group or Section natively */ parentIds.length >
+                /* Identify whether we are patching a branch or tree natively */ parentIds.length >
                 1
                   ? 'leaves'
                   : 'groups',
@@ -1477,7 +1477,7 @@ function Nav({
         toast.error(err instanceof Error ? err.message : 'Move failed');
         notify({
           error: err instanceof Error ? err : new Error('Move failed'),
-          fallback: 'Failed to move docs page.',
+          fallback: 'Failed to move Docs leaf.',
         });
         void refreshTree();
       }
@@ -1535,7 +1535,7 @@ function Nav({
         toast.error(err instanceof Error ? err.message : 'Move failed');
         notify({
           error: err instanceof Error ? err : new Error('Move failed'),
-          fallback: 'Failed to reorder docs groups.',
+          fallback: 'Failed to reorder Docs branches.',
         });
         void refreshTree();
       }
@@ -1617,7 +1617,7 @@ function Nav({
         },
         {
           icon: <DownloadIcon />,
-          label: 'Download section',
+          label: 'Download tree',
           disabled: actionDisabled,
           onSelect: ((paths, nodeIds) => () => {
             setExportTgt({
@@ -1645,7 +1645,7 @@ function Nav({
               {
                 disabled: actionDisabled,
                 icon: <EditIcon />,
-                label: 'Rename section',
+                label: 'Rename tree',
                 onSelect: () => {
                   triggerRenameSection(t);
                 },
@@ -1666,7 +1666,7 @@ function Nav({
                 destructive: true,
                 disabled: actionDisabled,
                 icon: <TrashIcon />,
-                label: 'Delete section',
+                label: 'Delete tree',
                 onSelect: () => {
                   setDelTgt({
                     kind: 'section',
@@ -1797,7 +1797,7 @@ function Nav({
       const lTitle = cTitle(toNodeLabel(manageAttTgt.title)) || manageAttTgt.title;
       return [
         {
-          groupTitle: 'Page',
+          groupTitle: 'Leaf',
           nodes: [
             {
               title: lTitle,
@@ -1851,7 +1851,7 @@ function Nav({
       }[] = [];
       const sectTitle = cTitle(toNodeLabel(manageAttTgt.title));
       // prettier-ignore
-      groups.push({ groupTitle: 'Section Root', nodes: [{ title: `${sectTitle} (Index)`, fullTitle: sectTitle, id: (n as Branch).origName, path: 'url' in n && n.url ? n.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: n },] });
+      groups.push({ groupTitle: 'Tree Root', nodes: [{ title: `${sectTitle} (Index)`, fullTitle: sectTitle, id: (n as Branch).origName, path: 'url' in n && n.url ? n.url.replace(TerraQualityRegex.REGEX_DOCS_REGEX(), '') : '', type: 'Index' as const, node: n },] });
       (n as Branch).children?.forEach((c) => {
         if (c.type === 'branch') {
           const gTitle = cTitle(toNodeLabel(c.title || c.origName));
@@ -2072,7 +2072,7 @@ function Nav({
    * @param v - One or more newline-separated URLs or route references.
    * @param type - Attachment category chosen by the user.
    * @param tgtPath - Document path receiving the new attachments.
-   * @param titleOverride - Optional title for a newly created Docs page.
+   * @param titleOverride - Optional title for a newly created Docs leaf.
    */
   const addRemote = async (
     v: string,
@@ -2108,7 +2108,7 @@ function Nav({
               await actions.write.attachment.docRef({
 								path: tgtPath,
 								refId: u, // u is the pure Sanity path/id
-								title: titleOverride || u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Page',
+								title: titleOverride || u.split('/').filter(Boolean).pop()?.replace(TerraQualityRegex.REGEX_G_REGEX_7(), ' ').replace(TerraQualityRegex.REGEX_B_W_G_REGEX(), c => c.toUpperCase()) || 'Leaf',
 							});
             } else if (t === 'youtube') {
               await actions.write.attachment.youtube({ path: tgtPath, url: u });
@@ -2215,7 +2215,7 @@ function Nav({
           .editor({
             path: newId,
             title: query,
-            source: 'This page is empty.',
+            source: 'This leaf is empty.',
             parentId,
           })
           .catch((e) => ({ data: null, error: e }));
@@ -3141,7 +3141,7 @@ function Nav({
                           <>
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                               {[
-                                { Icon: DocumentIcon, text: 'Page', type: 'page' },
+                                { Icon: DocumentIcon, text: 'Leaf', type: 'page' },
                                 {
                                   Icon: DocumentIcon,
                                   text: 'Document',
@@ -3446,7 +3446,7 @@ function Nav({
 									<SelectContent>{assetChoices.map(c => <SelectItem key={c.name} value={c.name}>{c.label}</SelectItem>)}</SelectContent>
 								</Select>
 							</div>
-							<AlertError title='Warning' description='Converting this page to an asset erases every existing version except the selected component.' />
+							<AlertError title='Warning' description='Converting this leaf to an asset erases every existing version except the selected component.' />
 						</div>
 						<DialogFooter>
 							<Button variant='ghost' disabled={assetBusy} onClick={() => { setAssetTgt(null); }}>Cancel</Button>
@@ -3507,7 +3507,7 @@ function Nav({
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Section Color</DialogTitle>
+              <DialogTitle>Tree color</DialogTitle>
               <DialogDescription>
                 Adjust the hue for this section to customize its appearance.
               </DialogDescription>
@@ -3592,13 +3592,13 @@ function Nav({
                     <ContextMenuTrigger asChild>
                       <SelectTrigger
                         className="w-full"
-                        aria-label="Section"
+                        aria-label="Tree"
                         data-docs-navigation="true"
                         onPointerDown={(e) => {
                           if (e.button === 0) setSectionOpen(true);
                         }}
                       >
-                        <SelectValue placeholder="Section" />
+                        <SelectValue placeholder="Tree" />
                       </SelectTrigger>
                     </ContextMenuTrigger>
                     {aViewed && (
@@ -3619,13 +3619,13 @@ function Nav({
                                 aria-hidden="true"
                                 className="size-3.5 rounded-[3px]"
                                 style={{
-                                  backgroundColor: `hsl(${getHue(s.title || 'New Section')} 65% 55%)`,
+                                  backgroundColor: `hsl(${getHue(s.title || 'New Tree')} 65% 55%)`,
                                 }}
                               />
                             }
                             className="data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
                           >
-                            {s.title || 'New Section'}
+                            {s.title || 'New Tree'}
                           </SelectItem>
                         );
                       }
@@ -3656,7 +3656,7 @@ function Nav({
                           icon={<AddIcon className="size-4" />}
                           className="font-medium text-primary-11 data-[state=checked]:text-primary-10 dark:data-[state=checked]:text-primary-12"
                         >
-                          <span>Add section</span>
+                          <span>Add tree</span>
                         </SelectItem>
                       </>
                     )}
@@ -3690,12 +3690,12 @@ function Nav({
                   {
                     disabled: actionDisabled,
                     icon: <AddIcon />,
-                    label: 'Add group',
+                    label: 'Add branch',
                     onSelect: () => {
                       if (aViewed.simulated)
                         addSection({
-                          title: 'Create Section',
-                          description: 'A section must be created first to hold your new group.',
+                          title: 'Create Tree',
+                          description: 'Create a tree first to hold the new branch.',
                         });
                       else treeCtx.addGroup(aViewed.origName, aViewed.origName);
                     },

@@ -6,7 +6,7 @@
 /** A downloadable or linked resource shown with a Docs leaf. */
 export type DocsAttachment = { title: string; href: string; type?: string; size?: number };
 
-/** A leaf page and its metadata within a static Docs navigation group. */
+/** A document and its metadata within a static Docs branch. */
 export type DocsLeaf = {
   id?: string;
   path?: string;
@@ -18,8 +18,8 @@ export type DocsLeaf = {
   hue?: number | null;
 };
 
-/** A set of sibling pages that share one title and optional accent color. */
-export type DocsGroup = {
+/** A set of sibling leaves that share one title and optional accent color. */
+export type DocsBranch = {
   title: string;
   id?: string;
   path?: string;
@@ -27,11 +27,17 @@ export type DocsGroup = {
   leaves: DocsLeaf[];
 };
 
-/** Top-level navigation section containing titled groups of leaf pages. */
-export type DocsSection = {
+/** Top-level navigation tree containing titled branches of leaves. */
+export type DocsTree = {
   title: string;
   id?: string;
   path?: string;
   hue?: number | null;
-  groups: DocsGroup[];
+  branches: DocsBranch[];
 };
+
+/** @deprecated Use DocsBranch. Accepted for existing host data. */
+export type DocsGroup = DocsBranch;
+
+/** @deprecated Use DocsTree with `branches`. Accepted for existing host data. */
+export type DocsSection = Omit<DocsTree, 'branches'> & { groups: DocsGroup[] };

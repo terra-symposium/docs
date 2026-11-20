@@ -231,9 +231,9 @@ export function pageForSlug(slug: string): SitePage | undefined {
 }
 
 /**
- * Finds the first visible page leaf in the first available navigation section.
+ * Finds the first visible leaf in the first available navigation tree.
  *
- * @return The public URL for that page, or the site root when no section has a leaf.
+ * @return The public URL for that leaf, or the site root when no tree has a leaf.
  */
 export function firstAvailableLeafHref(): string | undefined {
   const pending = [...siteNavigation].reverse();

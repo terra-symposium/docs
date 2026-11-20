@@ -1,11 +1,25 @@
 ---
 title: Tree handling
-description: Add, name, order, move, and remove pages in a local Markdown site or hosted workspace.
+description: Add, name, order, move, and remove leaves in a local Markdown site or hosted workspace.
 ---
 
 ## Structure
 
-The sidebar follows **sections → groups → pages**. A local site reads that tree from `docs/`; a hosted workspace reads it from the application's [host adapter](/developer/component/host-integration/). Choose the tab for your [editing workflow](/consumer/0-configuration/0-install/#2-configure-storage). Hosted controls require write permission.
+The sidebar follows **tree → branch → leaf**. A local site reads that hierarchy from `docs/`; a hosted workspace reads it from the application's [host adapter](/developer/component/host-integration/). Choose the tab for your [editing workflow](/consumer/0-configuration/0-install/#2-configure-storage). Hosted controls require write permission.
+
+A **tree** is the top navigation level, a **branch** groups related leaves, and a **leaf** is one document. In local Markdown, tree and branch names come from folders; each leaf comes from a Markdown file. In a hosted workspace, the host supplies the same hierarchy.
+
+<Nodes
+nodes={[
+{"id":"tree","type":"origin","data":{"title":"Tree","description":"Top navigation level"}},
+{"id":"branch","type":"process","data":{"title":"Branch","description":"Related documents"}},
+{"id":"leaf","type":"terminator","data":{"title":"Leaf","description":"One document"}}
+]}
+edges={[
+{"id":"tree-branch","source":"tree","target":"branch"},
+{"id":"branch-leaf","source":"branch","target":"leaf"}
+]}
+/>
 
 ## Operations
 
@@ -13,8 +27,8 @@ The sidebar follows **sections → groups → pages**. A local site reads that t
 
 |||[Local]
 
-1. Create section and group folders under `docs/`. Keep `docs/index.md` as the only page at the root.
-2. Add one `.md` or `.mdx` file per page. Put frontmatter before its first H2 heading.
+1. Create tree and branch folders under `docs/`. Keep `docs/index.md` as the only leaf at the root.
+2. Add one `.md` or `.mdx` file per leaf. Put frontmatter before its first H2 heading.
 3. Preview the site to check the sidebar. For example:
 
 ```text
@@ -30,9 +44,9 @@ docs/
 
 |||[Hosted]
 
-1. Choose **Add section** from the section selector. It starts with a **General** group and an untitled page.
-2. Open the sidebar context menu and choose **Add group** if needed.
-3. Open a group's context menu, choose **Add page**, then title, edit, and save it.
+1. Choose **Add tree** from the tree selector. It starts with a **General** branch and an untitled leaf.
+2. Open the sidebar context menu and choose **Add branch** if needed.
+3. Open a branch's context menu, choose **Add leaf**, then title, edit, and save it.
 
 |||
 
@@ -42,7 +56,7 @@ docs/
 
 |||[Local]
 
-1. Set the page's `title` and `description` in frontmatter. Add `sidebar.label` only when its navigation label should be shorter:
+1. Set the leaf's `title` and `description` in frontmatter. Add `sidebar.label` only when its navigation label should be shorter:
 
 ```md
 ---
@@ -52,19 +66,17 @@ sidebar:
   label: Install
 ---
 
-===
-
-===[Prepare]
+## Prepare
 ```
 
-2. Rename a section or group folder to change its label. Check links if its path changes.
+2. Rename a tree or branch folder to change its label. Check links if its path changes.
 
 |||
 
 |||[Hosted]
 
-1. Use **Rename page**, **Rename group**, or **Rename section** from the relevant context menu. The standard hosted sidebar uses the page title as its label.
-2. Edit a page's **Description** field if needed.
+1. Use **Rename leaf**, **Rename branch**, or **Rename tree** from the relevant context menu. The standard hosted sidebar uses the leaf title as its label.
+2. Edit a leaf's **Description** field if needed.
 3. Check links after a rename; the route may change.
 
 |||
@@ -75,15 +87,15 @@ sidebar:
 
 |||[Local]
 
-1. Prefix section folders, group folders, and page filenames with numbers: `0-install.md`, `1-configure.md`, `2-publish.md`. Docs sorts numerically, so `2-publish.md` precedes `10-reference.md`.
+1. Prefix tree folders, branch folders, and leaf filenames with numbers: `0-install.md`, `1-configure.md`, `2-publish.md`. Docs sorts numerically, so `2-publish.md` precedes `10-reference.md`.
 2. Rebuild and check the order. Prefixes are hidden from labels but remain in URLs; update links after renumbering. Do not use `order` or `sidebar.order` in frontmatter.
 
 |||
 
 |||[Hosted]
 
-1. Hover over a page or group and drag its **Reorder item** handle before or after a sibling.
-2. Check the new order after refresh. To reorder sections, the application must return them in the desired order; the section selector has no drag handle.
+1. Hover over a leaf or branch and drag its **Reorder item** handle before or after a sibling.
+2. Check the new order after refresh. To reorder trees, the application must return them in the desired order; the tree selector has no drag handle.
 
 |||
 
@@ -93,15 +105,15 @@ sidebar:
 
 |||[Local]
 
-1. Move the Markdown file to the destination group folder. Move a whole folder to relocate a group.
-2. Update links to changed routes and relative image paths inside moved pages.
+1. Move the Markdown file to the destination branch folder. Move a whole folder to relocate a branch.
+2. Update links to changed routes and relative image paths inside moved leaves.
 
 |||
 
 |||[Hosted]
 
-1. Drag a page's **Reorder item** handle onto another group or beside a page in that group.
-2. Check the destination after refresh. Groups can be reordered within their section; the sidebar does not move groups across sections.
+1. Drag a leaf's **Reorder item** handle onto another branch or beside a leaf in that branch.
+2. Check the destination after refresh. Branches can be reordered within their tree; the sidebar does not move branches across trees.
 
 |||
 
@@ -118,8 +130,8 @@ sidebar:
 
 |||[Hosted]
 
-1. Open **Duplicate page** in the page menu. Choose **By content** for an independent copy or **By reference** to point to the same leaf when the host supports it.
-2. Give the new page a distinct title and check its route.
+1. Open **Duplicate leaf** in the leaf menu. Choose **By content** for an independent copy or **By reference** to point to the same leaf when the host supports it.
+2. Give the new leaf a distinct title and check its route.
 
 |||
 
@@ -136,8 +148,8 @@ sidebar:
 
 |||[Hosted]
 
-1. Select two or more pages with Command or Shift and choose **Merge pages** from the selection menu.
-2. Name the result. The first page in sidebar order becomes the destination; the others are removed.
+1. Select two or more leaves with Command or Shift and choose **Merge leaves** from the selection menu.
+2. Name the result. The first leaf in sidebar order becomes the destination; the others are removed.
 3. Review headings, links, and attachments before publishing.
 
 |||
@@ -148,14 +160,14 @@ sidebar:
 
 |||[Local]
 
-1. Add `sidebar: { hidden: true }` in YAML frontmatter to omit the page from navigation and search.
-2. Restrict private content at the web host; the hidden page's URL still works.
+1. Add `sidebar: { hidden: true }` in YAML frontmatter to omit the leaf from navigation and search.
+2. Restrict private content at the web host; the hidden leaf's URL still works.
 
 |||
 
 |||[Hosted]
 
-1. Have the application omit the page from the tree supplied to Docs; the standard sidebar has no **Hide page** action.
+1. Have the application omit the leaf from the tree supplied to Docs; the standard sidebar has no **Hide leaf** action.
 2. Apply search and access rules in the host. Omitting a tree entry does not block its route.
 
 |||
@@ -166,14 +178,14 @@ sidebar:
 
 |||[Local]
 
-1. Delete the page file or empty folder. Keep `docs/index.md` as the home page.
+1. Delete the leaf file or empty folder. Keep `docs/index.md` as the home leaf.
 2. Update inbound links and rebuild.
 
 |||
 
 |||[Hosted]
 
-1. Choose **Delete page**, **Delete group**, or **Delete section** from its context menu.
+1. Choose **Delete leaf**, **Delete branch**, or **Delete tree** from its context menu.
 2. Review the confirmation, then check affected links and published routes.
 
 |||
@@ -184,14 +196,14 @@ sidebar:
 
 |||[Local]
 
-1. Keep assets beside their owning page.
-2. Reference images by relative path, such as `![Editor toolbar](./0-install/editor-toolbar.png)`. Move assets with the page.
+1. Keep assets beside their owning leaf.
+2. Reference images by relative path, such as `![Editor toolbar](./0-install/editor-toolbar.png)`. Move assets with the leaf.
 
 |||
 
 |||[Hosted]
 
-1. Open the page menu and choose **Files → New** to upload a file.
+1. Open the leaf menu and choose **Files → New** to upload a file.
 2. Use **Files** to open, rename, download, or remove it. The host supplies storage and authorized URLs.
 
 |||
@@ -202,14 +214,14 @@ sidebar:
 
 |||[Local]
 
-1. Copy the page file or folder from `docs/` with its nearby assets.
+1. Copy the leaf file or folder from `docs/` with its nearby assets.
 2. Keep their relative paths together.
 
 |||
 
 |||[Hosted]
 
-1. Choose **Download page**, **Download group**, or **Download section** from the relevant menu.
+1. Choose **Download leaf**, **Download branch**, or **Download tree** from the relevant menu.
 2. Review the downloaded source and attachments before reusing them.
 
 |||

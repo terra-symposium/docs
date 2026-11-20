@@ -55,22 +55,22 @@ For each defect, keep a short record of the expected source value, the normalize
 - Resolve internal references to local pages when their targets exist; preserve genuine external links. Resolve inline image URLs relative to their owning page and verify them from the consumer’s configured base path.
 - Keep site identity separate from leaf metadata. A site name/tagline belongs to site chrome; each TOC leaf uses its own title and route, and the active leaf’s optional description must not be fabricated from the site tagline or reused for sibling leaves.
 
-## Keep the TOC, pages, and attachments consistent
+## Keep the tree, leaves, and attachments consistent
 
-The TOC contains sections, groups, and leaves. Attachments belong to leaves; they are shown in that leaf’s Attachments view and must not become TOC entries or a duplicate appended list in the Markdown body.
+The TOC contains trees, branches, and leaves. Attachments belong to leaves; they are shown in that leaf’s Attachments view and must not become TOC entries or a duplicate appended list in the Markdown body.
 
 For repository-backed content, keep each leaf’s `index.md` and its files together, for example:
 
 ```text
-content/<section>/<group>/<leaf>/
+content/<tree>/<branch>/<leaf>/
  index.md
  attachment.pdf
  diagram.png
 ```
 
-Store title, route, order, stable source ID, and attachment metadata in the TOC or host config. Put group-owned files on an explicit group Overview leaf. Use relative links for sibling assets. Keep raw exports, checksums, and audit manifests in an archive location only when they are needed for provenance or recovery; do not maintain redundant generated copies in active content, `public`, and build output.
+Store title, route, order, stable source ID, and attachment metadata in the TOC or host config. Put branch-owned files on an explicit branch Overview leaf. Use relative links for sibling assets. Keep raw exports, checksums, and audit manifests in an archive location only when they are needed for provenance or recovery; do not maintain redundant generated copies in active content, `public`, and build output.
 
-Check that changing the selected leaf changes only the active page, not sibling TOC labels. Check section switching, direct routes, order, orphans, empty attachments, multiple attachments, images, downloadable documents, and any host-specific attachment types. Open representative files in the browser and confirm the attachment count and URLs against the source manifest.
+Check that changing the selected leaf changes only the active document, not sibling tree labels. Check tree switching, direct routes, order, orphans, empty attachments, multiple attachments, images, downloadable documents, and any host-specific attachment types. Open representative files in the browser and confirm the attachment count and URLs against the source manifest.
 
 ## Preserve the established UI while fixing content
 

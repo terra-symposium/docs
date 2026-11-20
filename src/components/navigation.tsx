@@ -19,7 +19,7 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 /**
- * One entry in the Docs sidebar tree. Sections and groups may nest children; leaves may supply a destination.
+ * One entry in the Docs sidebar tree. Trees and branches may nest children; leaves may supply a destination.
  */
 export type DocsNavNode = {
   id?: string;

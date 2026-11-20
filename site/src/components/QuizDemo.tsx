@@ -33,11 +33,11 @@ export function QuizDemo() {
       title="Docs quiz demo"
       description="The published Docs workspace with sample leaf quiz generation."
       hue={145}
-      sections={[
+      trees={[
         {
           id: 'course',
           title: 'Course',
-          groups: [
+          branches: [
             {
               id: 'lessons',
               title: 'Lessons',

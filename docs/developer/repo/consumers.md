@@ -12,7 +12,7 @@ The useful distinction across consumers is the boundary each host owns:
 | Pattern                  | Docs supplies                                                 | Consumer supplies                                                      |
 | ------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Markdown site            | CLI, generated routes, navigation, search, and rendered pages | Markdown source, site settings, assets, static deployment              |
-| Local embedded workspace | Shared read-only workspace and content controls               | Page tree, route mapping, content and asset URLs                       |
+| Local embedded workspace | Shared read-only workspace and content controls               | Tree, branch, and leaf routes, content and asset URLs                  |
 | Hosted workspace         | Editor, navigation, rich blocks, and action UI                | Authenticated reads, drafts, writes, publication, history, attachments |
 
 Use [Site pipeline](/developer/repo/site-pipeline/) for the first pattern and [Host integration](/developer/component/host-integration/) for the latter two. Verify a consumer's current installed version and running site in that repository rather than using the historical table as an upgrade checklist.

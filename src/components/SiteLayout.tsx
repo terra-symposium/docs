@@ -10,7 +10,7 @@ IMPORTS
 import { DocsStaticWorkspace } from './StaticWorkspace.js';
 
 // TYPES
-import type { DocsAttachment, DocsSection } from '../lib/workspace-types.js';
+import type { DocsAttachment, DocsSection, DocsTree } from '../lib/workspace-types.js';
 import type { DocsNavNode } from './navigation.js';
 import type { DocsQuizConfig } from './quiz.js';
 import type { JSX, ReactNode } from 'react';
@@ -33,7 +33,8 @@ HELPERS
  * @param currentPath - Current route used to select the active navigation entry.
  * @param hue - Palette hue applied to the workspace.
  * @param children - Optional already-rendered page body.
- * @param sections - Legacy section data passed to the static workspace adapter.
+ * @param trees - Ordered tree, branch, and leaf navigation.
+ * @param sections - Legacy navigation shape accepted for existing hosts.
  * @param attachments - Attachments available to the rendered page.
  * @param rootPath - Base route used to build local document links.
  * @param markdown - Markdown source rendered when supplied.
@@ -52,6 +53,7 @@ export function DocsSiteLayout({
   currentPath,
   hue = 145,
   children,
+  trees,
   sections,
   attachments = [],
   rootPath,
@@ -68,6 +70,8 @@ export function DocsSiteLayout({
   currentPath: string;
   hue?: number | null;
   children?: ReactNode;
+  trees?: DocsTree[];
+  /** @deprecated Use trees. */
   sections?: DocsSection[];
   attachments?: DocsAttachment[];
   rootPath?: string;
@@ -84,6 +88,7 @@ export function DocsSiteLayout({
       {...(breadcrumbParent ? { breadcrumbParent } : {})}
       hue={hue}
       nodes={nodes}
+      {...(trees ? { trees } : {})}
       {...(sections ? { sections } : {})}
       currentPath={currentPath}
       {...(rootPath ? { rootPath } : {})}

@@ -46,7 +46,7 @@ Unknown Markdown tokens and disabled block syntax are kept as raw source. Store 
 
 ## Workspace shell
 
-`DocsSiteLayout` (React) and `@terra-symposium/docs/site-layout.astro` are static-host adapters around the same Docs workspace used by the local and remote providers. They render the original section selector, nested group and leaf tree, document header, and View/Attachments toolbar. They do not add a second site shell or a persistent page-search field. Pass `sections` as an ordered array of `{ title, groups: [{ title, leaves: [{ title, href, description?, updatedAt?, attachments? }] }] }`. Each attachment belongs to its leaf and appears in Attachments mode, not in the navigation tree.
+`DocsSiteLayout` (React) and `@terra-symposium/docs/site-layout.astro` are static-host adapters around the same Docs workspace used by the local and remote providers. They render the tree selector, nested branches and leaves, document header, and View/Attachments toolbar. Pass `trees` as an ordered array of `{ title, branches: [{ title, leaves: [{ title, href, description?, updatedAt?, attachments? }] }] }`. Each attachment belongs to its leaf and appears in Attachments mode. Existing hosts can continue passing the legacy `sections` and `groups` shape while migrating.
 
 Pass `breadcrumbParent={{ title, href }}` to a static host when a page has a parent reference. The breadcrumb appears above the document body and links back to that parent.
 

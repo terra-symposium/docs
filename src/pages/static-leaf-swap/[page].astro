@@ -31,14 +31,14 @@ export function getStaticPaths() {
 }
 
 const { page, title: pageTitle, markdown } = Astro.props;
-const sections = [
+const trees = [
   {
-    id: 'section',
-    title: 'Section',
-    groups: [
+    id: 'tree',
+    title: 'Tree',
+    branches: [
       {
-        id: 'group',
-        title: 'Pages',
+        id: 'branch',
+        title: 'Leaves',
         leaves: [
           { id: 'one', title: 'Leaf one', href: '/static-leaf-swap/one/' },
           { id: 'two', title: 'Leaf two', href: '/static-leaf-swap/two/' },
@@ -59,7 +59,7 @@ const sections = [
     <DocsStaticWorkspace
       client:load
       title="Static Docs fixture"
-      sections={sections}
+      trees={trees}
       currentPath={`/static-leaf-swap/${page}/`}
       pageTitle={pageTitle}
       markdown={markdown}

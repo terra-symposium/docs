@@ -128,18 +128,18 @@ Install the tools your project needs before continuing.
 
 :::
 
-Folders create navigation groups. Number prefixes set their order and remain in the URL; [Tree handling](/consumer/1-usage/2-tree-handling/) explains labels, ordering, and hidden pages. Keep images beside their page and use relative paths. In a hosted workspace, the application supplies equivalent page metadata and navigation through its adapter.
+Folders create navigation trees and branches. Number prefixes set their order and remain in the URL; [Tree handling](/consumer/1-usage/2-tree-handling/) explains labels, ordering, and hidden leaves. Keep images beside their leaf and use relative paths. In a hosted workspace, the application supplies equivalent leaf metadata and navigation through its adapter.
 
 Use the [Authoring guide](/consumer/1-usage/1-authoring/) to plan each page and the [Syntax index](/consumer/1-usage/0-syntax/) to see the available blocks.
 
 ===[Optional blocks and navigation]
 
-| Feature                                                   | How to use it                                                                                                                                                                            |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Built-in tables, images, asides, tabs, math, and diagrams | Write the form shown in the [Syntax index](/consumer/1-usage/0-syntax/). They need no separate installation.                                                                             |
-| Custom blocks                                             | A developer registers a renderer through the hosted workspace's `customBlocks` prop. A `package.json` setting cannot register a React component.                                         |
-| Quiz and TypeScript reference                             | The application must supply the quiz generator or reference data. Adding `<Quiz />` or `<TsDocs />` alone does not provide them.                                                         |
-| Manual sidebar in an embedded site                        | A developer passes an ordered `sections` tree to `DocsSiteLayout`. A Local site instead uses the folders and filenames described in [Tree handling](/consumer/1-usage/2-tree-handling/). |
+| Feature                                                   | How to use it                                                                                                                                                         |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Built-in tables, images, asides, tabs, math, and diagrams | Write the form shown in the [Syntax index](/consumer/1-usage/0-syntax/). They need no separate installation.                                                          |
+| Custom blocks                                             | A developer registers a renderer through the hosted workspace's `customBlocks` prop. A `package.json` setting cannot register a React component.                      |
+| Quiz and TypeScript reference                             | The application must supply the quiz generator or reference data. Adding `<Quiz />` or `<TsDocs />` alone does not provide them.                                      |
+| Manual sidebar in an embedded site                        | A developer passes ordered `trees` to `DocsSiteLayout`. A local site uses the folders and filenames described in [Tree handling](/consumer/1-usage/2-tree-handling/). |
 
 In a hosted workspace, a developer can also disable a built-in renderer when mounting `DocsWorkspace`:
 

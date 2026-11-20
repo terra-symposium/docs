@@ -76,13 +76,23 @@ export type DocsActionOperation =
 /** Result envelope returned by a legacy host operation. */
 export type DocsActionResult<T = unknown> = { data?: T; error?: unknown };
 /** Route match produced by resolving a browser pathname against the host tree. */
-export type DocsResolvedRoute = {
-  sectionId: string;
-  groupId?: string;
-  leafId?: string;
-  targetId: string;
-  pathname: string;
-};
+export type DocsResolvedRoute =
+  | {
+      treeId: string;
+      branchId?: string;
+      leafId?: string;
+      targetId: string;
+      pathname: string;
+    }
+  | {
+      /** @deprecated Use treeId. */
+      sectionId: string;
+      /** @deprecated Use branchId. */
+      groupId?: string;
+      leafId?: string;
+      targetId: string;
+      pathname: string;
+    };
 /** Type contract for the stable host operations used by the shared UI. */
 export type DocsHostOperationContracts = {
   'read.doc.list': {
@@ -137,7 +147,7 @@ export type DocsHostAdapter = {
   publishDraft?: (path: string) => Promise<void>;
   assetUrl?: (assetId: string, width?: number) => string | undefined;
   resolveRoute?: (pathname: string) => DocsResolvedRoute;
-  buildRoute?: (sectionId: string, groupId?: string, leafId?: string) => string;
+  buildRoute?: (treeId: string, branchId?: string, leafId?: string) => string;
   /** Base path for a host's Docs application (`/docs` for Terra, `/` for local instances). */
   rootPath?: string;
   /** Resolve a repository or content path into a browser route. */

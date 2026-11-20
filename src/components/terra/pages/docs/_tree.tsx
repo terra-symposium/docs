@@ -100,7 +100,7 @@ CONFIG
 // DATA
 /** Validated interactive literal mappings explicitly capturing action intents. */
 const UI = {
-  add: { doc: 'Add page', group: 'Add group' },
+  add: { doc: 'Add leaf', group: 'Add branch' },
   open: 'bg-primary-3 text-primary-12',
 } as const;
 
@@ -531,8 +531,8 @@ LEAF COMPONENTS
         setRenaming(true);
         ctx.setInputDlg({
           open: true,
-          title: 'Rename Page',
-          label: 'Page title',
+          title: 'Rename Leaf',
+          label: 'Leaf title',
           value: currTitle,
           onCancel: () => {
             setRenaming(false);
@@ -588,7 +588,7 @@ LEAF COMPONENTS
                 if (writeErr) throw writeErr;
               }
             } catch (err) {
-              toast.error('Failed to rename docs page.');
+              toast.error('Failed to rename leaf.');
               // revert on failure
               const originalRoute = 'url' in node ? node.url : docsRootPath();
               // prettier-ignore
@@ -613,7 +613,7 @@ LEAF COMPONENTS
         ctx.setInputDlg({
 			open: true,
 			title: m === 'reference' ? 'Duplicate by Reference' : 'Duplicate by Content',
-			label: 'New page name',
+			label: 'New leaf name',
 			value: `${path.split('/').at(-1)?.replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX(), '') ?? ''}-copy`,
 			onCancel: () => {},
 			onSave: t =>
@@ -1061,7 +1061,7 @@ LEAF COMPONENTS
                     {
                       disabled: disabled,
                       icon: <DocumentIcon />,
-                      label: `Merge ${ctx.selectedLeaves.length} pages`,
+                      label: `Merge ${ctx.selectedLeaves.length} leaves`,
                       onSelect: () => {
                         ctx.mergeLeaves(ctx.selectedLeaves);
                       },
@@ -1080,7 +1080,7 @@ LEAF COMPONENTS
                   // prettier-ignore
                   actions={[
 									{ disabled: disabled, icon: <LinkIcon />, label: 'Copy link', 	onSelect: () => { void navigator.clipboard.writeText(`${window.location.origin}${node.url || ''}`); toast.success('Link copied'); } },
-									{ disabled: disabled, icon: <EditIcon />, label: 'Rename page', 	onSelect: pageActions.renamePage },
+									{ disabled: disabled, icon: <EditIcon />, label: 'Rename leaf', 	onSelect: pageActions.renamePage },
 									{
 										disabled: disabled,
 										icon: <BoxIcon />,
@@ -1150,15 +1150,15 @@ LEAF COMPONENTS
 									{
 										disabled: disabled,
 										icon: <CopyIcon />,
-										label: 'Duplicate page',
+										label: 'Duplicate leaf',
 										subActions: [
 											{ icon: <LinkIcon />, label: 'By reference (Point to same leaf)', 			onSelect: () => { pageActions.duplicate('reference'); } },
 											{ icon: <CopyIcon />, label: 'By content (Duplicate leaf)', 			onSelect: () => { pageActions.duplicate('content'); } }
 										]
 									},
 							{ icon: <PopOutIcon />, label: 'Make asset', disabled: disabled || !(permission === 'write' && !node.asset && !isSimulated && !!path), 	onSelect: () => { ctx.setAssetTarget({ path, title: cTitle(toNodeLabel(node.title || node.origName)) || bName(path) }); } },
-							{ icon: <DownloadIcon />, label: 'Download page', disabled: disabled, 	onSelect: () => { ctx.setExportTarget({ paths: [path], rootDir: path, filename: sanitizeName(node.title || bName(path)), title: cTitle(toNodeLabel(node.title || node.origName)) || 'Document' }); } },
-									{ destructive: true, disabled: disabled, icon: <TrashIcon />, label: 'Delete page', 	onSelect: () => { ctx.setDelTarget({ kind: 'leaf', path: node.path!, bPath, active: a, title: node.title || node.path! }); } },
+							{ icon: <DownloadIcon />, label: 'Download leaf', disabled: disabled, 	onSelect: () => { ctx.setExportTarget({ paths: [path], rootDir: path, filename: sanitizeName(node.title || bName(path)), title: cTitle(toNodeLabel(node.title || node.origName)) || 'Document' }); } },
+									{ destructive: true, disabled: disabled, icon: <TrashIcon />, label: 'Delete leaf', 	onSelect: () => { ctx.setDelTarget({ kind: 'leaf', path: node.path!, bPath, active: a, title: node.title || node.path! }); } },
 								]}
                 />
               )}
@@ -1300,8 +1300,8 @@ TREE COMPONENTS
         setRenaming(true);
         ctx.setInputDlg({
           open: true,
-          title: 'Rename Group',
-          label: 'Group name',
+          title: 'Rename Branch',
+          label: 'Branch name',
           value: currTitle,
           onCancel: () => {
             setRenaming(false);
@@ -1349,10 +1349,10 @@ TREE COMPONENTS
                 title: nName,
               });
               if (err) throw err;
-              toast.success('Group renamed successfully.');
+              toast.success('Branch renamed successfully.');
             } catch (err) {
-              console.error('[renameNode] Error renaming group:', err);
-              toast.error('Failed to rename group. The document has not been changed.');
+              console.error('[renameNode] Error renaming branch:', err);
+              toast.error('Failed to rename branch. The document has not been changed.');
               void ctx.refreshTree();
             } finally {
               setRenaming(false);
@@ -1519,7 +1519,7 @@ TREE COMPONENTS
                     {
                       disabled,
                       icon: <AddIcon />,
-                      label: 'Add page',
+                      label: 'Add leaf',
                       onSelect: () => {
                         ctx.openCreate(fPath, node.origName);
                       },
@@ -1540,7 +1540,7 @@ TREE COMPONENTS
                     {
                       disabled,
                       icon: <DownloadIcon />,
-                      label: 'Download group',
+                      label: 'Download branch',
                       onSelect: () => {
                         ctx.setExportTarget({
                           paths: toPaths(node.children),
@@ -1556,7 +1556,7 @@ TREE COMPONENTS
                     {
                       disabled,
                       icon: <EditIcon />,
-                      label: 'Rename group',
+                      label: 'Rename branch',
                       onSelect: treeActions.renameNode,
                     },
                     {
@@ -1564,7 +1564,7 @@ TREE COMPONENTS
                       destructive: true,
                       disabled,
                       icon: <TrashIcon />,
-                      label: 'Delete group',
+                      label: 'Delete branch',
                       onSelect: () => {
                         ctx.setDelTarget({
                           kind: 'branch',

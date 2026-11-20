@@ -7,13 +7,13 @@ description: Trace a Markdown file through the Docs CLI, catalog, renderer, and 
 
 The generated site is a static publication of authored files. The browser can display it without a storage service; editing and publishing in a browser require the separate [host integration](/developer/component/host-integration/).
 
-| Stage   | Input                                             | Output and owner                                                               |
-| ------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Author  | `docs/index.md` and grouped `.md` or `.mdx` pages | Frontmatter, H2 body, relative assets; repository owner                        |
-| Prepare | `bin/docs.mjs build` or `dev`                     | Search index and copied assets under `_docs/`; Docs CLI                        |
-| Catalog | `site/src/lib/catalog.ts`                         | Ordered routes, navigation tree, labels, visibility, and image URLs; Docs site |
-| Render  | Astro routes and `SiteMarkdownPage.astro`         | Shared Docs layout with Markdown or MDX body; Docs site                        |
-| Publish | `docs build`                                      | Static files in `docs.out`; repository's web host deploys them                 |
+| Stage   | Input                                                                 | Output and owner                                                               |
+| ------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Author  | `docs/index.md` and `.md` or `.mdx` leaves in tree and branch folders | Frontmatter, H2 body, relative assets; repository owner                        |
+| Prepare | `bin/docs.mjs build` or `dev`                                         | Search index and copied assets under `_docs/`; Docs CLI                        |
+| Catalog | `site/src/lib/catalog.ts`                                             | Ordered routes, navigation tree, labels, visibility, and image URLs; Docs site |
+| Render  | Astro routes and `SiteMarkdownPage.astro`                             | Shared Docs layout with Markdown or MDX body; Docs site                        |
+| Publish | `docs build`                                                          | Static files in `docs.out`; repository's web host deploys them                 |
 
 ## Prepare content
 

@@ -89,7 +89,12 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     aRoute = undefined;
   }
   let hue = workspaceOptions.host.hue;
-  for (const target of [aRoute?.leafId, aRoute?.groupId, aRoute?.sectionId, aRoute?.targetId]) {
+  for (const target of [
+    aRoute?.leafId,
+    aRoute && ('treeId' in aRoute ? aRoute.branchId : aRoute.groupId),
+    aRoute && ('treeId' in aRoute ? aRoute.treeId : aRoute.sectionId),
+    aRoute?.targetId,
+  ]) {
     if (!target) continue;
     const pending = workspaceOptions.tree
       .slice()

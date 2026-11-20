@@ -92,7 +92,7 @@ export function isDocsPath(path: string): boolean {
   return root === '/' ? path.startsWith('/') : path === root || path.startsWith(`${root}/`);
 }
 /**
- * Collects leaf routes from a nested section and group tree.
+ * Collects leaf routes from a nested tree and branch hierarchy.
  *
  * @param nodes Navigation nodes to traverse.
  *
@@ -159,7 +159,7 @@ export function bName(path: string, ext?: string): string {
  */
 export const cTitle = (title?: string): string => (title || '').trim();
 /**
- * Builds a route through the host adapter or the default section/group/leaf scheme.
+ * Builds a route through the host adapter or the default tree/branch/leaf scheme.
  *
  * @param sectionId Section identifier, with `index` representing the root.
  * @param groupId Optional group identifier within the section.
@@ -179,7 +179,7 @@ export function buildRoute(sectionId: string, groupId?: string, leafId?: string)
  *
  * @param value Route or URL entered by the caller.
  *
- * @return Section, optional group and leaf, target id, and canonical pathname.
+ * @return Tree, optional branch and leaf, target id, and canonical pathname.
  */
 export function parseRoute(value: string): {
   sectionId: string;
@@ -189,7 +189,18 @@ export function parseRoute(value: string): {
   pathname: string;
 } {
   const hostResolver = getDocsHostAdapter()?.resolveRoute;
-  if (hostResolver) return hostResolver(value);
+  if (hostResolver) {
+    const resolved = hostResolver(value);
+    return 'treeId' in resolved
+      ? {
+          sectionId: resolved.treeId,
+          ...(resolved.branchId ? { groupId: resolved.branchId } : {}),
+          ...(resolved.leafId ? { leafId: resolved.leafId } : {}),
+          targetId: resolved.targetId,
+          pathname: resolved.pathname,
+        }
+      : resolved;
+  }
   try {
     const root = trimTrailingSlashes(docsRootPath()) || '/';
     const pathname = new URL(value, 'http://localhost').pathname;

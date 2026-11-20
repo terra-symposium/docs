@@ -154,7 +154,7 @@ function findTreeNode(
 }
 
 /**
- * Finds a leaf by ID and retains its parent chain for section/group routing.
+ * Finds a leaf by ID and retains its parent chain for tree/branch routing.
  * @param nodes Sibling nodes to search in navigation order.
  * @param id Page ID stored in a leaf's `origName` field.
  * @param ancestors Parents already visited on the current path.
@@ -314,7 +314,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
           ...(description ? { siteDescription: description } : {}),
           assetUrl: () => undefined,
           /**
-           * Resolves the active local page and its section/group IDs for workspace navigation.
+           * Resolves the active local leaf and its tree/branch IDs for workspace navigation.
            * @param value URL, route, or page ID reported by the local host.
            * @returns Route identifiers and canonical pathname for the best matching page.
            */
@@ -329,8 +329,8 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
                 (node) => node.type === 'branch',
               ) ?? [];
             return {
-              sectionId: branches[0]?.origName ?? tree[0]?.origName ?? 'index',
-              ...(branches[1] ? { groupId: branches[1].origName } : {}),
+              treeId: branches[0]?.origName ?? tree[0]?.origName ?? 'index',
+              ...(branches[1] ? { branchId: branches[1].origName } : {}),
               ...(resolved ? { leafId: resolved.id } : {}),
               targetId: resolved?.id ?? tree[0]?.origName ?? 'index',
               pathname: resolved?.pathname ?? norm(value),
@@ -338,18 +338,18 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
           },
           /**
            * Builds a local URL for a selected leaf, falling back to the first page in its branch.
-           * @param sectionId Selected section ID.
-           * @param groupId Optional selected group ID.
+           * @param treeId Selected tree ID.
+           * @param branchId Optional selected branch ID.
            * @param leafId Optional selected page ID.
            * @returns The selected page URL or the configured workspace root.
            */
-          buildRoute(sectionId, groupId, leafId) {
+          buildRoute(treeId, branchId, leafId) {
             const leaf = leafId ? findTreeNode(tree, leafId)?.node : undefined;
             if (leaf?.url) return leaf.url;
             return ((groupChildren, sectionChildren) =>
               firstLeaf(groupChildren ?? sectionChildren ?? tree)?.url ?? rootPath)(
-              groupId ? findTreeNode(tree, groupId)?.node.children : undefined,
-              findTreeNode(tree, sectionId)?.node.children,
+              branchId ? findTreeNode(tree, branchId)?.node.children : undefined,
+              findTreeNode(tree, treeId)?.node.children,
             );
           },
           /**

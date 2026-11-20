@@ -19,10 +19,10 @@ import { DocsStaticWorkspace } from '../dist/lib/components/StaticWorkspace.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const sections = [
+const trees = [
   {
     title: 'Development',
-    groups: [
+    branches: [
       {
         title: 'Guides',
         leaves: [
@@ -39,7 +39,7 @@ test('React static adapter forwards host and leaf data to the shared workspace',
     pageTitle: 'Intro',
     description: 'Site tagline stays in the sidebar.',
     nodes: [],
-    sections,
+    trees,
     currentPath: '/intro',
     children: body,
   });
@@ -48,10 +48,20 @@ test('React static adapter forwards host and leaf data to the shared workspace',
   assert.equal(element.props.title, 'Docs');
   assert.equal(element.props.pageTitle, 'Intro');
   assert.equal(element.props.description, 'Site tagline stays in the sidebar.');
-  assert.equal(element.props.sections, sections);
+  assert.equal(element.props.trees, trees);
   assert.equal(element.props.currentPath, '/intro');
   assert.equal(element.props.renderContent, body);
   assert.deepEqual(element.props.attachments, []);
+});
+test('React static adapter still accepts legacy navigation data', () => {
+  const sections = trees.map(({ branches, ...tree }) => ({ ...tree, groups: branches }));
+  const element = DocsSiteLayout({
+    title: 'Docs',
+    nodes: [],
+    sections,
+    currentPath: '/intro',
+  });
+  assert.equal(element.props.sections, sections);
 });
 test('an empty Astro slot does not replace a static Markdown body', () => {
   const workspace = DocsStaticWorkspace({

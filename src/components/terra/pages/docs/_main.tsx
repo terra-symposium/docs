@@ -2370,7 +2370,7 @@ const EditorSurfaces = {
 								$leafTitle.set({ path: edit.draft.path, title });
 								setDocumentTitle(title);
 							}}
-							placeholder='Page title'
+							placeholder='Leaf title'
 							disabled={!editable}
 							className='mb-2 mt-0 h-fit border-none bg-transparent p-0 font-sans tracking-tight text-4xl text-primary-12 shadow-none focus-visible:ring-0 md:text-5xl disabled:cursor-default disabled:opacity-100 dark:bg-transparent'
 							suppressHydrationWarning
@@ -3319,29 +3319,29 @@ export default function Scaffold({
             </DialogHeader>
             {/* prettier-ignore */}
             <div className='space-y-4'>
-							<Label>Page title</Label>
+							<Label>Leaf title</Label>
 							<Input value={dest.title} onChange={e => { setDest(p => ({ ...p, title: e.currentTarget.value })); }} />
-							<Label>Section</Label>
+							<Label>Tree</Label>
 							<Select
 								value={dest.section}
 								onValueChange={v => { setDest(p => ({ ...p, section: v, group: sects.find(s => s.origName === v)?.children?.find(c => c.type === 'branch')?.origName || '' })); }}
 							>
-								<SelectTrigger aria-label='Select section'><SelectValue placeholder='Select section' /></SelectTrigger>
+								<SelectTrigger aria-label='Select tree'><SelectValue placeholder='Select tree' /></SelectTrigger>
 								<SelectContent>{sects.map(s => (<SelectItem key={s.origName} value={s.origName}>{s.title || s.origName}</SelectItem>))}</SelectContent>
 							</Select>
-							<Label>Group</Label>
+							<Label>Branch</Label>
 							<Select value={dest.group} onValueChange={g => { setDest(p => ({ ...p, group: g })); }}>
-								<SelectTrigger aria-label='Select group'><SelectValue placeholder='Select group' /></SelectTrigger>
+								<SelectTrigger aria-label='Select branch'><SelectValue placeholder='Select branch' /></SelectTrigger>
 								<SelectContent>{destActions.groups.map(s => (<SelectItem key={s.origName} value={s.origName}>{s.title || s.origName}</SelectItem>))}</SelectContent>
 							</Select>
 							<Button variant='outline' onClick={() => { setDest(p => ({ ...p, newSection: !p.newSection, section: '', group: '' })); }}>
-								{dest.newSection ? 'Use existing section' : 'Create new section'}
+								{dest.newSection ? 'Use existing tree' : 'Create new tree'}
 							</Button>
 							{dest.newSection && (
 								<>
-									<Label>New section name</Label>
+									<Label>New tree name</Label>
 									<Input value={dest.section} onChange={e => { setDest(p => ({ ...p, section: e.currentTarget.value })); }} />
-									<Label>New group name</Label>
+									<Label>New branch name</Label>
 									<Input value={dest.group} onChange={e => { setDest(p => ({ ...p, group: e.currentTarget.value })); }} />
 								</>
 							)}

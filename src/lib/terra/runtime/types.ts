@@ -176,6 +176,7 @@ export type EditorSurface = {
   };
   insert: (markdown: string, rootEnd?: boolean, selection?: EditorSel | null) => void;
   mode: Mode;
+  markBodyInteraction: () => void;
   onBodyChange: (body: DocBody) => void;
   onMdChange: (markdown: string) => void;
   onVisualError: (err: unknown) => void;

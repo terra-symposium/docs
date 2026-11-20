@@ -2165,6 +2165,13 @@ const EditorSurfaces = {
         data-docs-editor="inline"
         data-docs-editor-initialized={init}
         data-docs-path={editor.draft.path}
+        onBeforeInputCapture={surface.markBodyInteraction}
+        onPasteCapture={surface.markBodyInteraction}
+        onDropCapture={surface.markBodyInteraction}
+        onPointerDownCapture={(event) => {
+          if ((event.target as HTMLElement).closest('button,[role="button"]'))
+            surface.markBodyInteraction();
+        }}
       >
         {editor.busy === 'loading' && <div aria-hidden="true" data-docs-editor-loading />}
         {parseErr ? (

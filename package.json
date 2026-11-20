@@ -72,7 +72,7 @@
     "out": "dist/docs"
   },
   "scripts": {
-    "dev": "pnpm run build:dev && node bin/docs.mjs dev --host 127.0.0.1",
+    "dev": "mkdir -p dist/cache/vite && pnpm run build:dev && node bin/docs.mjs dev --host 127.0.0.1",
     "docs:dev": "pnpm run dev",
     "quality": "pnpm run quality:check",
     "quality:check": "node scripts/quality.mjs quality --all --warn",

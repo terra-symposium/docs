@@ -103,6 +103,26 @@ test.describe('Docs workspace browser contracts', () => {
     },
   );
   test(
+    'Tree handling editor opens and preserves rich blocks on Save',
+    XL_VIEWPORT_TEST,
+    async ({ page: p }) => {
+      await p.goto('/consumer/1-usage/2-tree-handling/?mode=edit');
+      await waitForWorkspaceReady(p);
+      await expect(p.locator('[data-docs-shell]')).toHaveAttribute('data-docs-mode', 'edit');
+      await expect(p.getByRole('textbox', { name: 'Document editor' })).toBeVisible();
+      await expect(p.getByRole('heading', { name: 'Editor Surface Crashed' })).toHaveCount(0);
+      await p.getByRole('textbox', { name: 'Title', exact: true }).fill('Tree operations');
+      const downloadReady = p.waitForEvent('download');
+      await p.getByRole('button', { name: 'Save', exact: true }).click();
+      const download = await downloadReady;
+      expect(download.suggestedFilename()).toBe('2-tree-handling.md');
+      const source = await readFile(await download.path(), 'utf8');
+      expect(source).toContain('title: Tree operations');
+      expect(source).toContain('<Nodes');
+      expect(source).toContain('|||[Local]');
+    },
+  );
+  test(
     'local embedded workspace downloads edited Markdown on Save',
     XL_VIEWPORT_TEST,
     async ({ page: p }) => {

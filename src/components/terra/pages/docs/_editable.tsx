@@ -195,7 +195,9 @@ export function TransitionShell({
     if (staticContent) return;
     const root = container.current;
     if (!root) return;
-    /** Reconciles the loading overlay with transition, hydration, and editor-mount readiness. */
+    /**
+     * Reconciles the loading overlay with transition, hydration, and editor-mount readiness.
+     */
     const check = () => {
       const tgt =
         typeof transition === 'string' && transition.startsWith('to-')
@@ -215,6 +217,7 @@ export function TransitionShell({
         p.ready === ready && p.loading === !ready ? p : { ...p, ready, loading: !ready },
       );
     };
+    // hygiene-ignore single-use -- Subscribe once during effect setup and retain those exact unsubscribers for cleanup.
     const stop = [
       $surfaceReady.listen(check),
       $editReadyPath.listen(check),
@@ -278,7 +281,7 @@ export function TransitionShell({
  *
  * @param children Editor and viewer surfaces that consume the document state contexts.
  * @param content Initial Portable Text body for the document draft.
- * @param description Optional description stored with the document draft.
+ * @param desc Optional description stored with the document draft.
  * @param path Optional canonical document path used for saving and attachment uploads.
  * @param permission Access level that controls which editing and save actions are available.
  * @param pathname Route path used to identify the current Docs document.
@@ -290,7 +293,7 @@ export function TransitionShell({
 export default function Editable({
   children,
   content = [],
-  description = '',
+  description: desc = '',
   path,
   permission,
   pathname,
@@ -329,9 +332,12 @@ export default function Editable({
     version: null,
   });
   const saving = useRef(false);
-  const sourceEdited = useRef(false);
+  const srcEdited = useRef(false);
   const bodyEdited = useRef(false);
   const bodyInteracted = useRef(false);
+  const markBodyInteraction = useCallback((): void => {
+    bodyInteracted.current = true;
+  }, []);
   const [err, setErr] = useState<string | null>(null);
   // prettier-ignore
   const [state, setState] = useState<{
@@ -344,16 +350,23 @@ export default function Editable({
   }>({
     busy: null,
     dirty: false,
-    draft: { content, description, path: path || pathname, source: src, title },
+    draft: { content, description: desc, path: path || pathname, source: src, title },
     loaded: Boolean(content.length || !src),
     optimistic: false,
     version: 0,
   });
   const draftContent = isDocBody(state.draft.content) ? state.draft.content : [];
+  const dirtyRef = useRef(state.dirty);
+  dirtyRef.current = state.dirty;
 
   // INIT
   useEffect(() => {
-    sourceEdited.current = false;
+    if (
+      !(refs.current.route?.path !== path || refs.current.route?.pathname !== pathname) &&
+      (dirtyRef.current || bodyInteracted.current || srcEdited.current)
+    )
+      return;
+    srcEdited.current = false;
     bodyEdited.current = false;
     bodyInteracted.current = false;
     refs.current.route = { path, pathname };
@@ -362,7 +375,7 @@ export default function Editable({
       draft: {
         ...p.draft,
         content,
-        description,
+        description: desc,
         path: path || pathname,
         source: src,
         title,
@@ -371,7 +384,7 @@ export default function Editable({
       loaded: Boolean(content.length || !src),
       version: p.version + 1,
     }));
-  }, [content, description, path, pathname, src, title]);
+  }, [content, desc, path, pathname, src, title]);
   useEffect(() => {
     if (content.length || !src) return;
     let a = true;
@@ -402,7 +415,7 @@ export default function Editable({
     setState((p) => ({ ...p, dirty: true, draft: { ...p.draft, ...v } }));
   }, []);
   const setCode = useCallback((c: string): void => {
-    sourceEdited.current = true;
+    srcEdited.current = true;
     setState((p) =>
       c === p.draft.source ? p : { ...p, dirty: true, draft: { ...p.draft, source: c } },
     );
@@ -416,14 +429,14 @@ export default function Editable({
       const { data, error: err } = await actions.write.doc.save({
         description: draft.description,
         content: isDocBody(draft.content) ? draft.content : [],
-        ...(sourceEdited.current || (!bodyEdited.current && draft.source)
+        ...(srcEdited.current || (!bodyEdited.current && draft.source)
           ? { source: draft.source }
           : {}),
         path: draft.path,
         title: draft.title,
       });
       if (err || !data) throw err || new Error('Unable to save document.');
-      sourceEdited.current = false;
+      srcEdited.current = false;
       bodyEdited.current = false;
       bodyInteracted.current = false;
       const saved = data as { content?: DocBody; source?: string };
@@ -555,7 +568,7 @@ export default function Editable({
     setState((p) => {
       if (JSON.stringify(p.draft.content) === JSON.stringify(c)) return p;
       if (bodyInteracted.current) {
-        sourceEdited.current = false;
+        srcEdited.current = false;
         bodyEdited.current = true;
       }
       return {
@@ -609,9 +622,7 @@ export default function Editable({
               editor: state,
               insert,
               mode,
-              markBodyInteraction: () => {
-                bodyInteracted.current = true;
-              },
+              markBodyInteraction,
               onBodyChange,
               onMdChange: setCode,
               onVisualError: (error) => {
@@ -632,6 +643,7 @@ export default function Editable({
               err,
               insert,
               mode,
+              markBodyInteraction,
               onBodyChange,
               path,
               pathname,

@@ -8,7 +8,8 @@ IMPORTS
 
 // API
 import * as selectors from '@portabletext/editor/selectors';
-import { createElement, useEffect, useRef, useState } from 'react';
+import { createElement, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { defaultDocsBlock, enabledDocsBlocks } from '../../blocks.js';
 import {
   defineBlockObject,
@@ -91,9 +92,13 @@ import type { JSX, MouseEvent, MouseEventHandler, ReactNode } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** A serialized Portable Text object with a string discriminator and preserved custom fields. */
+/**
+ * A serialized Portable Text object with a string discriminator and preserved custom fields.
+ */
 type ContentMember = Record<string, unknown> & { _key?: string; _type: string };
-/** Portable Text block array after Docs-specific blocks have been adapted for the editor. */
+/**
+ * Portable Text block array after Docs-specific blocks have been adapted for the editor.
+ */
 type EditorValue = PortableTextBlock[];
 const INLINE_CODE_MARK = 'terra-inline-code';
 const imgFile = /\.(?:png|jpe?g|gif|webp|svg|avif)$/iu;
@@ -113,7 +118,9 @@ const DOCS_INSERTIONS: readonly {
   { label: 'Table', type: 'table', value: 'docs:table' },
   { label: 'Callout', type: 'callout', value: 'docs:callout' },
 ];
-/** Type-erased renderer signature used to register heterogeneous custom block components. */
+/**
+ * Type-erased renderer signature used to register heterogeneous custom block components.
+ */
 type BlockRenderer = (props: never) => JSX.Element | null;
 
 /**
@@ -124,7 +131,9 @@ type BlockRenderer = (props: never) => JSX.Element | null;
 const eraseBlockRenderer = <Props,>(
   renderer: (props: Props) => JSX.Element | null,
 ): BlockRenderer => renderer as unknown as BlockRenderer;
-/** Props consumed by the editor change listener and its insertion dialogs. */
+/**
+ * Props consumed by the editor change listener and its insertion dialogs.
+ */
 type ContentChangeListenerProps = {
   onChange: (content: unknown[]) => void;
   toolbar: boolean;
@@ -134,6 +143,7 @@ type ContentChangeListenerProps = {
   nested: boolean;
 };
 
+// hygiene-ignore single-use -- Portable Text registers this component as an editor listener; keep its hook and subscription boundary.
 /**
  * Keeps host content synchronized with Portable Text and renders the optional insertion controls.
  * @param o Callback that receives normalized Portable Text after editor changes.
@@ -154,13 +164,17 @@ function ContentChangeListener({
 }: ContentChangeListenerProps): JSX.Element | null {
   const editor = useEditor();
   const value = useEditorSelector(editor, (s) => s.context.value);
-  const previous = useRef(value);
+  const prev = useRef(value);
   const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false);
   const [receivedValueOpen, setReceivedValueOpen] = useState(false);
   const [endpoint, setEndpoint] = useState('');
   const [insertMenuOpen, setInsertMenuOpen] = useState(false);
   const [attachmentMode, setAttachmentMode] = useState<'embed' | 'link'>('embed');
   const [attachmentPath, setAttachmentPath] = useState('');
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (!n) setToolbarSlot(document.querySelector<HTMLElement>('[data-docs-edit-toolbar-slot]'));
+  }, [n]);
   const enabled = new Set(enabledDocsBlocks(b));
   const attachment = v.find((i) => i.path === attachmentPath);
   const visualEmbedAvailable = attachment
@@ -173,8 +187,8 @@ function ContentChangeListener({
       ? 'embed'
       : 'link';
   useEffect(() => {
-    if (previous.current === value) return;
-    previous.current = value;
+    if (prev.current === value) return;
+    prev.current = value;
     o(toContentValue(value as EditorValue));
   }, [o, value]);
   useEffect(() => {
@@ -260,11 +274,12 @@ function ContentChangeListener({
     action();
     setInsertMenuOpen(false);
   };
-  return t ? (
-    <div className="not-prose sticky top-3 z-20 mb-3">
+  const controls = t ? (
+    <div className={toolbarSlot ? 'not-prose' : 'not-prose sticky top-3 z-20 mb-3'}>
       <ErrorBoundary name="ContentToolbar">
         <div
-          className="flex flex-wrap items-center gap-1.5 rounded-xl border border-primary-7 bg-primary-3 px-3 py-2 shadow-lg shadow-primary-12/20 sm:px-4"
+          className="mdxeditor-toolbar not-prose relative z-10 box-border flex w-full min-w-0 flex-wrap items-center justify-between gap-0.5 rounded-lg border border-primary-6 bg-primary-3 px-2 py-1 text-primary-12 shadow-lg shadow-primary-12/20 print:hidden"
+          data-docs-main-toolbar
           role="toolbar"
           aria-label="Editor controls"
         >
@@ -585,10 +600,13 @@ function ContentChangeListener({
       </ErrorBoundary>
     </div>
   ) : null;
+  return toolbarSlot && controls ? createPortal(controls, toolbarSlot) : controls;
 }
-const editorNodeComponents: {
+const editorNodeComps: {
   renderers: Record<string, BlockRenderer>;
-  /** Synchronizes editor snapshots with the host and exposes insertion controls when this editor allows them. */
+  /**
+   * Synchronizes editor snapshots with the host and exposes insertion controls when this editor allows them.
+   */
   ContentChangeListener: (props: ContentChangeListenerProps) => JSX.Element | null;
 } = {
   renderers: {
@@ -948,6 +966,7 @@ function renderTextStyle(style: unknown, children: ReactNode, readOnly: boolean)
   return <p>{children}</p>;
 }
 
+// hygiene-ignore single-use -- The editor schema registers this renderer by component identity for text blocks.
 /**
  * Renders a Portable Text paragraph or list item with Docs heading, list, and blockquote semantics.
  * @param attrs Portable Text attributes that must remain on the editable root.
@@ -992,6 +1011,7 @@ function ContentTextBlock({
   );
 }
 
+// hygiene-ignore single-use -- The editor schema registers this fallback block renderer by component identity.
 /**
  * Keeps an unsupported block visible and retains its source for a later editor round trip.
  * @param attrs Portable Text DOM attributes to preserve on the wrapper.
@@ -1018,6 +1038,7 @@ function UnsupportedBlock({
   );
 }
 
+// hygiene-ignore single-use -- The editor schema registers this fallback inline renderer by component identity.
 /**
  * Keeps unsupported inline content readable while preserving its original source value.
  * @param attrs Portable Text DOM attributes to preserve on the wrapper.
@@ -1089,12 +1110,12 @@ function OrderedListItem({
   let start = 1;
   if (index >= 0) {
     for (let cursor = index - 1; cursor >= 0; cursor--) {
-      const previous = value[cursor];
-      if (!previous?.listItem) break;
-      const previousLevel = Number(previous.level ?? 1);
-      if (previousLevel < level) break;
-      if (previousLevel > level) continue;
-      if (previous.listItem !== 'number') break;
+      const prev = value[cursor];
+      if (!prev?.listItem) break;
+      const prevLevel = Number(prev.level ?? 1);
+      if (prevLevel < level) break;
+      if (prevLevel > level) continue;
+      if (prev.listItem !== 'number') break;
       start++;
     }
   }
@@ -1124,6 +1145,7 @@ function OrderedListItem({
  * @param docsAttachments Attachments available to the insertion and preview controls.
  * @param toolbarActions Additional host-provided controls displayed with the toolbar.
  * @param blocks Per-document switches controlling supported Docs block types.
+ * @param articleLayout Matches the surrounding Docs article typography and spacing.
  * @returns The configured Portable Text editor with block adapters and optional toolbar controls.
  */
 export function ContentEditor({
@@ -1136,6 +1158,7 @@ export function ContentEditor({
   docsAttachments = [],
   toolbarActions,
   blocks = {},
+  articleLayout = false,
 }: {
   content?: unknown[];
   onChange?: (content: unknown[]) => void;
@@ -1146,6 +1169,7 @@ export function ContentEditor({
   docsAttachments?: DocsHostAttachment[];
   toolbarActions?: ReactNode;
   blocks?: DocsBlockOptions;
+  articleLayout?: boolean;
 }): JSX.Element {
   const [nestingErr, setNestingErr] = useState<string | undefined>(undefined);
   const [rejectedChanges, setRejectedChanges] = useState(0);
@@ -1206,13 +1230,13 @@ export function ContentEditor({
               type: 'block',
               render: ContentTextBlock,
             }),
-            ...Object.keys(editorNodeComponents.renderers)
+            ...Object.keys(editorNodeComps.renderers)
               .filter((t) => blocks[t as DocsBlockType] !== false)
               .map((t) =>
                 defineBlockObject({
                   type: t,
                   render: (props) =>
-                    editorNodeComponents.renderers[t]!({
+                    editorNodeComps.renderers[t]!({
                       ...props,
                       readOnly,
                       blocks,
@@ -1238,7 +1262,7 @@ export function ContentEditor({
           ]}
         />
         {!readOnly && (
-          <editorNodeComponents.ContentChangeListener
+          <editorNodeComps.ContentChangeListener
             onChange={(v) => {
               const result = validNesting(v, nested ? 1 : 0);
               if (result !== true) {
@@ -1263,11 +1287,26 @@ export function ContentEditor({
             className="bg-transparent"
             data-content-editor
           >
-            <div className={nested ? (readOnly ? '' : 'my-4 min-h-24') : 'my-6 min-h-96'}>
+            <div
+              className={
+                nested
+                  ? readOnly
+                    ? ''
+                    : 'my-4 min-h-24'
+                  : articleLayout
+                    ? 'min-h-96'
+                    : 'my-6 min-h-96'
+              }
+            >
               <PortableTextEditable
                 aria-label={readOnly ? 'Document viewer' : 'Document editor'}
                 aria-readonly={readOnly || undefined}
-                className="docs-content mx-auto max-w-3xl text-base leading-8 text-primary-12 [&_a:not([data-docs-flow-node-link])]:text-secondary-10 [&_a:not([data-docs-flow-node-link])]:underline [&_h2]:mb-3 [&_h2]:mt-10 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mb-3 [&_h3]:mt-8 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mb-2 [&_h4]:mt-6 [&_h4]:text-xl [&_h5]:mb-2 [&_h5]:mt-6 [&_h5]:font-semibold [&_h6]:mb-2 [&_h6]:mt-5 [&_h6]:font-semibold [&_p:first-child]:mt-0 [&_p]:my-4 outline-none"
+                className={
+                  articleLayout
+                    ? 'docs-content w-full max-w-none text-primary-12 outline-none'
+                    : 'docs-content mx-auto max-w-3xl text-base leading-8 text-primary-12 [&_a:not([data-docs-flow-node-link])]:text-secondary-10 [&_a:not([data-docs-flow-node-link])]:underline [&_h2]:mb-3 [&_h2]:mt-10 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mb-3 [&_h3]:mt-8 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mb-2 [&_h4]:mt-6 [&_h4]:text-xl [&_h5]:mb-2 [&_h5]:mt-6 [&_h5]:font-semibold [&_h6]:mb-2 [&_h6]:mt-5 [&_h6]:font-semibold [&_p:first-child]:mt-0 [&_p]:my-4 outline-none'
+                }
+                data-docs-article-editor={articleLayout || undefined}
                 contentEditable={!readOnly}
                 renderListItem={({ block: b, children: c, level: l, value: v }) => {
                   return v === 'number' ? (

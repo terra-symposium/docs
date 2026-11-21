@@ -110,7 +110,7 @@ edges={[
 
 The skills inventory appears inside this page:
 
-<Embed src="/consumer/0-configuration/2-skills/" title="Skills inventory" />
+<Embed src="/consumer/1-usage/2-tree-handling/" title="Tree handling" />
 
 :::
 
@@ -118,7 +118,7 @@ The skills inventory appears inside this page:
 
 ## Asides
 
-::::example[Asides]
+:::example[Asides]
 
 :::note[Who saves]
 
@@ -126,7 +126,7 @@ Docs reports changes through `onChange`; the host persists them.
 
 :::
 
-::::
+:::
 
 [Read the Asides guide](./asides/).
 

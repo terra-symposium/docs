@@ -60,6 +60,7 @@ if (!reportEndpoint || !reportSite)
 HELPERS
 //////////////////////////////////////////////////*/
 
+// hygiene-ignore single-use -- Keep consumer export-map resolution separate from Astro runtime and package dependency aliases.
 /**
  * Creates Vite aliases for package entry points declared by the consuming project's exports map.
  *
@@ -69,6 +70,7 @@ function packageExportAliases() {
   return createProjectExportAliases(projectManifest, consumerRoot);
 }
 
+// hygiene-ignore single-use -- Styling may be absent from a consumer, so its optional alias has its own failure boundary.
 /**
  * Use the consumer's Styling installation when it provides one.
  * @return The Styling alias, or an empty list when the consumer has no installation.
@@ -86,6 +88,7 @@ function stylingAlias() {
   }
 }
 
+// hygiene-ignore single-use -- Astro internal runtime aliases follow a different package contract from consumer aliases.
 /**
  * Resolves Astro's internal MDX runtime and public non-wildcard exports from the Docs installation.
  *
@@ -116,6 +119,7 @@ function astroPackageExportAliases() {
   ];
 }
 
+// hygiene-ignore single-use -- Keep Astro optimizer dependency resolution apart from Docs and Styling dependency graphs.
 /**
  * Resolves Astro's optimizer dependencies from the consumer or the Astro installation used by Docs.
  *
@@ -190,6 +194,7 @@ function dependencyManifest(name, resolver = requireFromPackage) {
   return null;
 }
 
+// hygiene-ignore single-use -- Docs package subpath aliases require their own export-map and ESM validation pass.
 /**
  * Creates Vite aliases for Docs runtime dependencies and their concrete exported subpaths.
  *
@@ -225,6 +230,7 @@ function packageDependencyAliases() {
     });
 }
 
+// hygiene-ignore single-use -- Align Styling peers with the consumer as a distinct deduplication pass.
 /**
  * Aligns styling dependencies with the consumer's installation to avoid duplicate runtime packages.
  *
@@ -268,14 +274,19 @@ function stylingDependencyAliases() {
     });
 }
 
-/** Registers the one Docs-owned 404 route for every generated Docs site. */
+// hygiene-ignore single-use -- The 404 route registration must stay an independent Astro integration with its override check.
+/**
+ * Register the one Docs-owned 404 route for every generated Docs site.
+ *
+ * @returns {import('astro').AstroIntegration} Integration that reserves and injects the 404 route.
+ */
 function docsNotFoundRoute() {
   return {
     name: 'terra-docs-not-found',
     hooks: {
       'astro:config:setup': ({ config, injectRoute }) => {
-        for (const extension of ['astro', 'md', 'mdx']) {
-          const override = fileURLToPath(new URL(`pages/404.${extension}`, config.srcDir));
+        for (const ext of ['astro', 'md', 'mdx']) {
+          const override = fileURLToPath(new URL(`pages/404.${ext}`, config.srcDir));
           if (existsSync(override))
             throw new Error(`Docs owns the 404 route; remove the host override: ${override}`);
         }

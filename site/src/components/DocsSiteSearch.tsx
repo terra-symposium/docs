@@ -25,8 +25,10 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 const S_REGEX = TerraQualityRegex.REGEX_S_REGEX_2();
-/** Search-index fields consumed by the Docs search ranking and result link renderer. */
-type SearchDocument = {
+/**
+ * Search-index fields consumed by the Docs search ranking and result link renderer.
+ */
+type SearchDoc = {
   title: string;
   description: string;
   href: string;
@@ -37,6 +39,7 @@ type SearchDocument = {
 COMPONENTS
 //////////////////////////////////////////////////*/
 
+// hygiene-ignore single-use -- The Astro search island imports this named client component; keep its module API stable.
 /**
  * Provides a keyboard-accessible dialog for searching the generated Docs index.
  *
@@ -46,7 +49,7 @@ COMPONENTS
  */
 export function DocsSiteSearch({ base = '/' }: { base?: string }) {
   const [query, setQuery] = useState('');
-  const [documents, setDocuments] = useState<SearchDocument[]>([]);
+  const [docs, setDocs] = useState<SearchDoc[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [opened, setOpened] = useState(false);
@@ -97,10 +100,10 @@ export function DocsSiteSearch({ base = '/' }: { base?: string }) {
     fetch(`${normBase}_docs/search-index.json`)
       .then((response) => {
         if (!response.ok) throw new Error(`Search index returned ${response.status}`);
-        return response.json() as Promise<SearchDocument[]>;
+        return response.json() as Promise<SearchDoc[]>;
       })
       .then((data) => {
-        setDocuments(data);
+        setDocs(data);
         setLoaded(true);
       })
       .catch(() => setFailed(true));
@@ -108,7 +111,7 @@ export function DocsSiteSearch({ base = '/' }: { base?: string }) {
   const results = useMemo(() => {
     const terms = query.toLowerCase().trim().split(S_REGEX).filter(Boolean);
     if (!terms.length) return [];
-    return documents
+    return docs
       .map((document) => {
         const title = document.title.toLowerCase();
         return {
@@ -143,7 +146,7 @@ export function DocsSiteSearch({ base = '/' }: { base?: string }) {
           excerpt: `${start > 0 ? '…' : ''}${normText.slice(start, end)}${end < normText.length ? '…' : ''}`,
         };
       });
-  }, [documents, query]);
+  }, [docs, query]);
   return (
     <CommandDialog
       open={opened}

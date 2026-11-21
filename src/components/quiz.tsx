@@ -23,16 +23,22 @@ const FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS = 'flex flex-col gap-1 text-sm';
 const ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS =
   'rounded-md bg-primary-9 px-4 py-2 text-primary-1';
 
-/** Question formats supported by the shared quiz runner. */
+/**
+ * Question formats supported by the shared quiz runner.
+ */
 export type DocsQuizQuestionType = 'multipleChoice' | 'keyword';
-/** Source and constraints sent to a host when it generates a page quiz. */
+/**
+ * Source and constraints sent to a host when it generates a page quiz.
+ */
 export type DocsQuizGenerationInput = {
   title: string;
   markdown: string;
   count: number;
   types: DocsQuizQuestionType[];
 };
-/** Validated question data consumed by the Docs quiz review and answer screens. */
+/**
+ * Validated question data consumed by the Docs quiz review and answer screens.
+ */
 export type DocsQuizQuestion =
   | {
       type: 'multipleChoice';
@@ -50,14 +56,20 @@ export type DocsQuizQuestion =
       explanation?: string;
       section?: string;
     };
-/** A generated quiz title and its validated questions. */
+/**
+ * A generated quiz title and its validated questions.
+ */
 export type DocsQuizDocument = { title: string; questions: DocsQuizQuestion[] };
-/** Host options for showing quiz controls and requesting generated question data. */
+/**
+ * Host options for showing quiz controls and requesting generated question data.
+ */
 export type DocsQuizConfig = {
   toolbar?: boolean;
   generate?: (input: DocsQuizGenerationInput) => Promise<unknown>;
 };
-/** Current document and generation settings shared with Markdown quiz blocks. */
+/**
+ * Current document and generation settings shared with Markdown quiz blocks.
+ */
 type DocsQuizContextValue = {
   config: DocsQuizConfig;
   title: string;
@@ -69,7 +81,8 @@ const DocsQuizContext = createContext<DocsQuizContextValue | null>(null);
 HELPERS
 //////////////////////////////////////////////////*/
 
-/** Provides the current page and its host-supplied quiz generator to nested blocks.
+/**
+ * Provides the current page and its host-supplied quiz generator to nested blocks.
  *
  * @param children - Descendant content that can request the page's quiz context.
  * @param config - Host controls for toolbar visibility and server-backed generation.
@@ -90,7 +103,8 @@ export function DocsQuizProvider({
   );
 }
 
-/** Returns the active page quiz context, or `null` outside a quiz provider.
+/**
+ * Returns the active page quiz context, or `null` outside a quiz provider.
  *
  * @returns The current page title, Markdown, and generation settings.
  */

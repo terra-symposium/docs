@@ -49,17 +49,23 @@ export const sanitizeName = (name: string): string =>
 export const isIndexFile = (path: string): boolean =>
   TerraQualityRegex.REGEX_INDEX_MD_MDX_I_REGEX().test(path || '');
 
-/** Subscribes React to a Docs store and returns its latest snapshot. */
+/**
+ * Subscribes React to a Docs store and returns its latest snapshot.
+ */
 export { useAtom } from './state.js';
 
-/** Runs a remote mutation behind the shared circuit breaker and transition lock. */
+/**
+ * Runs a remote mutation behind the shared circuit breaker and transition lock.
+ */
 export { runMutation } from './mutations.js';
 
 /*//////////////////////////////////////////////////
 TREE UTILS
 //////////////////////////////////////////////////*/
 
-/** Re-exports the Styling hue resolver used by Docs navigation groups. */
+/**
+ * Re-exports the Styling hue resolver used by Docs navigation groups.
+ */
 export { getHue };
 
 /**
@@ -456,52 +462,96 @@ export function htmlToMd(html: string): string {
 STORES
 //////////////////////////////////////////////////*/
 
-/** Shared attachment types accepted by the docs editor. */
+/**
+ * Shared attachment types accepted by the docs editor.
+ */
 export { ATTCH_TYPES } from './attachments.js';
-/** Persistent attachment filter state used by Docs surfaces. */
+/**
+ * Persistent attachment filter state used by Docs surfaces.
+ */
 export { $attachmentFilter } from './attachments.js';
 
-/** Current docs editor mode, persisted across sessions. */
+/**
+ * Current docs editor mode, persisted across sessions.
+ */
 export { $mode } from './state.js';
-/** Shares the active leaf title across Docs surfaces. */
+/**
+ * Shares the active leaf title across Docs surfaces.
+ */
 export { $leafTitle } from './state.js';
-/** Global transition flag for docs navigation and mutations. */
+/**
+ * Global transition flag for docs navigation and mutations.
+ */
 export { $transition } from './state.js';
-/** Current toolbar state shared across overlays. */
+/**
+ * Current toolbar state shared across overlays.
+ */
 export { $toolbar } from './state.js';
-/** Hydration counter for docs editor widgets. */
+/**
+ * Hydration counter for docs editor widgets.
+ */
 export { $hydrating } from './state.js';
-/** Surface readiness state for docs editing. */
+/**
+ * Surface readiness state for docs editing.
+ */
 export { $surfaceReady } from './state.js';
 export { $editReadyPath } from './state.js';
-/** Shared cursor state used by toolbar focus. */
+/**
+ * Shared cursor state used by toolbar focus.
+ */
 export { $cursor } from './state.js';
-/** Persisted caret snapshot used for the simulated cursor overlay. */
+/**
+ * Persisted caret snapshot used for the simulated cursor overlay.
+ */
 export { $cursorGhost } from './state.js';
-/** Linear caret bookmark used by the simulated cursor. */
+/**
+ * Linear caret bookmark used by the simulated cursor.
+ */
 export { $cursorTrack } from './state.js';
-/** Cursor position snapshot for the docs editor. */
+/**
+ * Cursor position snapshot for the docs editor.
+ */
 export { $cursorPosition } from './state.js';
-/** Unsaved docs draft flags, keyed by document id. */
+/**
+ * Unsaved docs draft flags, keyed by document id.
+ */
 export { $unsavedDrafts } from './state.js';
-/** In-memory docs draft cache. */
+/**
+ * In-memory docs draft cache.
+ */
 export { memoryDrafts } from './state.js';
-/** Sidebar visibility state for the docs editor. */
+/**
+ * Sidebar visibility state for the docs editor.
+ */
 export { $sidebar } from './state.js';
 
-/** Shared transition store for Docs UI coordination. */
+/**
+ * Shared transition store for Docs UI coordination.
+ */
 export { transitionStore } from './state.js';
-/** Sets the active Docs transition state. */
+/**
+ * Sets the active Docs transition state.
+ */
 export { setTransition } from './state.js';
-/** Clears the active Docs transition state. */
+/**
+ * Clears the active Docs transition state.
+ */
 export { clearTransition } from './state.js';
-/** Subscribes to the current Docs transition state. */
+/**
+ * Subscribes to the current Docs transition state.
+ */
 export { useTransitionState } from './state.js';
-/** Shared editor transition context. */
+/**
+ * Shared editor transition context.
+ */
 export { TransitionCtx } from './state.js';
-/** Context for Docs edit state. */
+/**
+ * Context for Docs edit state.
+ */
 export { EditStateCtx } from './state.js';
-/** Context for the Docs editor surface. */
+/**
+ * Context for the Docs editor surface.
+ */
 export { EditorSurfaceCtx } from './state.js';
 
 /*//////////////////////////////////////////////////
@@ -537,11 +587,17 @@ export function extractAllNodeIds(nodes: TreeType[]): string[] {
 READINESS
 //////////////////////////////////////////////////*/
 
-/** Tracks expected and mounted editor blocks for the active document. */
+/**
+ * Tracks expected and mounted editor blocks for the active document.
+ */
 export { $editorMounts } from './state.js';
-/** Resets editor mount tracking for a document. */
+/**
+ * Resets editor mount tracking for a document.
+ */
 export { resetEditorMounts } from './state.js';
-/** Records an editor block mount for the active document. */
+/**
+ * Records an editor block mount for the active document.
+ */
 export { setEditorMount } from './state.js';
 
 /*//////////////////////////////////////////////////

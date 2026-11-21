@@ -38,7 +38,9 @@ import type { JSX, ReactNode } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** A local page supplied by a repository or static site build. */
+/**
+ * A local page supplied by a repository or static site build.
+ */
 export type DocsLocalPage = {
   id: string;
   path: string;
@@ -50,14 +52,18 @@ export type DocsLocalPage = {
   updatedAt?: string;
   attachments?: DocsHostAttachment[];
 };
-/** Inputs required to render repository-owned Markdown through the shared Docs workspace. */
+/**
+ * Inputs required to render repository-owned Markdown through the shared Docs workspace.
+ */
 export type DocsLocalWorkspaceProps = {
   tree: DocsHostTreeNode[];
   pages: DocsLocalPage[];
   pathname: string;
   title: string;
   description?: string;
-  /** Optional host-owned content rendered before the page body in View mode. */
+  /**
+   * Optional host-owned content rendered before the page body in View mode.
+   */
   beforeContent?: ReactNode;
   hue?: number | null;
   rootPath?: string;
@@ -65,7 +71,9 @@ export type DocsLocalWorkspaceProps = {
   afterContent?: ReactNode;
   customBlocks?: DocsCustomBlock[];
   blocks?: DocsBlockOptions;
-  /** Optional quiz UI and server-backed generation callback. */
+  /**
+   * Optional quiz UI and server-backed generation callback.
+   */
   quiz?: DocsQuizConfig;
 };
 
@@ -91,6 +99,7 @@ function norm(value: string, base = 'http://docs.local'): string {
   }
 }
 
+// hygiene-ignore single-use -- Route fragment decoding is a named URL boundary shared by navigation and fallback handling.
 /**
  * Decodes a fragment identifier from a page route or browser URL.
  * @param value URL, pathname, or fragment string whose hash should be decoded.
@@ -218,7 +227,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
     pages,
     pathname,
     title,
-    description,
+    description: desc,
     beforeContent,
     hue = 145,
     rootPath = '/',
@@ -259,10 +268,10 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
     };
   }, []);
   const page = findDocsLocalPage(availablePages, aPath) ?? availablePages[0];
-  const sourceBody = page ? splitMarkdownSource(page.markdown).body : '';
+  const srcBody = page ? splitMarkdownSource(page.markdown).body : '';
   const content = useMemo(
-    () => (page ? markdownToDocsValue(sourceBody, blocks) : []),
-    [blocks, page, sourceBody],
+    () => (page ? markdownToDocsValue(srcBody, blocks) : []),
+    [blocks, page, srcBody],
   );
   return (
     <DocsWorkspace
@@ -324,7 +333,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
           ...(homePath ? { homePath } : {}),
           hue,
           siteTitle: title,
-          ...(description ? { siteDescription: description } : {}),
+          ...(desc ? { siteDescription: desc } : {}),
           assetUrl: () => undefined,
           /**
            * Resolves the active local leaf and its tree/branch IDs for workspace navigation.
@@ -490,7 +499,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             return { data: null as T };
           },
         };
-      }, [aPath, availablePages, description, homePath, hue, page, rootPath, title, tree])}
+      }, [aPath, availablePages, desc, homePath, hue, page, rootPath, title, tree])}
       tree={tree}
       pathname={aPath}
       permission="write"
@@ -500,9 +509,9 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
       {...(page?.description ? { description: page.description } : {})}
       {...(page?.contributors ? { contributors: page.contributors } : {})}
       {...(page?.updatedAt ? { updatedAt: page.updatedAt } : {})}
-      {...(page ? { source: sourceBody, content } : { content })}
+      {...(page ? { source: srcBody, content } : { content })}
       {...(page && !customBlocks
-        ? { renderContent: <DocsMarkdown markdown={sourceBody} options={blocks} /> }
+        ? { renderContent: <DocsMarkdown markdown={srcBody} options={blocks} /> }
         : {})}
       {...(beforeContent !== undefined ? { beforeContent } : {})}
       {...(afterContent !== undefined ? { afterContent } : {})}

@@ -28,15 +28,23 @@ import type { DocsBlockOptions } from '../lib/block-types.js';
 import type { JSX } from 'react';
 import type { RichBlock } from './blocks.js';
 
-/** Props used by the shared React renderer for Docs Markdown. */
+/**
+ * Props used by the shared React renderer for Docs Markdown.
+ */
 export type DocsMarkdownProps = {
-  /** Markdown source parsed into Docs content blocks. */
+  /**
+   * Markdown source parsed into Docs content blocks.
+   */
   markdown: string;
-  /** Optional block capabilities forwarded to parsing and rendering. */
+  /**
+   * Optional block capabilities forwarded to parsing and rendering.
+   */
   options?: DocsBlockOptions | undefined;
 };
 
-/** One parsed list item plus its normalized descendants and nesting depth. */
+/**
+ * One parsed list item plus its normalized descendants and nesting depth.
+ */
 type MarkdownListNode = {
   block: RichBlock;
   children: MarkdownListNode[];
@@ -56,11 +64,18 @@ HELPERS
  * @returns React elements for converted rich blocks, including shared tabs and accordions.
  */
 export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Element {
-  const blocks = markdownToDocsValue(markdown, options) as RichBlock[];
-  return <DocsBlocks blocks={blocks} options={options} />;
+  return (
+    <DocsBlocks blocks={markdownToDocsValue(markdown, options) as RichBlock[]} options={options} />
+  );
 }
 
-/** Renders structured Docs blocks with the same list grouping used for Markdown. */
+/**
+ * Render structured Docs blocks with the same list grouping used for Markdown.
+ *
+ * @param blocks - Rich blocks in document order.
+ * @param options - Optional renderer and block configuration.
+ * @returns React elements for the grouped document blocks.
+ */
 export function DocsBlocks({
   blocks,
   options,
@@ -252,5 +267,7 @@ function MarkdownGroup({
   );
 }
 
-/** Internal compatibility name for existing Docs components using this renderer. */
+/**
+ * Internal compatibility name for existing Docs components using this renderer.
+ */
 export { DocsMarkdown as MarkdownContent };

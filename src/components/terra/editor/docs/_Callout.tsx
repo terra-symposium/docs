@@ -28,7 +28,9 @@ import type { JSX } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Sanity Portable Text callout data consumed by the docs editor and renderer. */
+/**
+ * Sanity Portable Text callout data consumed by the docs editor and renderer.
+ */
 type CalloutBlock = DocsBlock<'callout'>;
 
 /*//////////////////////////////////////////////////
@@ -44,14 +46,15 @@ HELPERS
  */
 function Callout({ block }: { block: CalloutBlock }): JSX.Element {
   const kind = typeof block.kind === 'string' ? block.kind : 'note';
-  const title = typeof block.title === 'string' ? block.title : kind === 'note' ? 'Note' : kind;
   return (
     <ErrorBoundary name="CalloutBlock">
       <aside
         className="docs-block [&>:first-child]:!mt-0 [&>:last-child]:!mb-0"
         data-docs-aside={kind}
       >
-        <h4 className="title">{title}</h4>
+        <h4 className="title">
+          {typeof block.title === 'string' ? block.title : kind === 'note' ? 'Note' : kind}
+        </h4>
         <TerraContentEditor
           content={(block.content ?? []) as unknown as ContentData}
           docsAttachments={[]}
@@ -82,7 +85,6 @@ function CalloutEditor({
   const editor = useEditor();
   const block = node;
   const kind = typeof block.kind === 'string' ? block.kind : 'note';
-  const title = typeof block.title === 'string' ? block.title : kind === 'note' ? 'Note' : kind;
   return (
     <ErrorBoundary name="CalloutEditor">
       <aside
@@ -95,7 +97,7 @@ function CalloutEditor({
         <Input
           aria-label="Callout title"
           className="mb-3 border-0 bg-transparent px-0 text-lg font-bold shadow-none"
-          value={title}
+          value={typeof block.title === 'string' ? block.title : kind === 'note' ? 'Note' : kind}
           onChange={(e) =>
             editor.send({
               type: 'block.set',

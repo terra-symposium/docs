@@ -1,4 +1,11 @@
 ---
+/**
+ * site/src/components/DocsCodeBlock.astro
+ */
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
 import { Code } from 'astro:components';
 
 interface Props {
@@ -6,7 +13,7 @@ interface Props {
   language?: string;
 }
 
-const { code = '', language = 'text' } = Astro.props;
+const { code = '', language: lang = 'text' } = Astro.props;
 ---
 
-<Code code={code} lang={language} />
+<Code code={code} lang={lang} />

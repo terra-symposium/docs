@@ -88,7 +88,9 @@ export const $mode = atom<Mode>(
     ['view', 'edit', 'attachments'].includes(i as string),
   ),
 );
-/** Shares the active leaf title across Docs surfaces. */
+/**
+ * Shares the active leaf title across Docs surfaces.
+ */
 export const $leafTitle = atom<{ path: string; title: string } | null>(null);
 /**
  * Global transition flag for docs navigation and mutations.
@@ -123,11 +125,17 @@ export const $hydrating = atom<number>(0);
  */
 export const $surfaceReady = atom<Mode | null>(null);
 export const $editReadyPath = atom<string | null>(null);
-/** Shared cursor state so toolbar focus can preserve the last insertion point visibly. */
+/**
+ * Shared cursor state so toolbar focus can preserve the last insertion point visibly.
+ */
 export const $cursor = atom<EditorSel | null>(null);
-/** Persisted caret snapshot used for the simulated cursor overlay when focus leaves the editor. */
+/**
+ * Persisted caret snapshot used for the simulated cursor overlay when focus leaves the editor.
+ */
 export const $cursorGhost = atom<EditorSel | null>(null);
-/** Linear caret bookmark used to simulate the visible cursor without relying on DOM focus. */
+/**
+ * Linear caret bookmark used to simulate the visible cursor without relying on DOM focus.
+ */
 export const $cursorTrack = atom<
   | /* Describes a cursor track type. */ (Pick<EditorSel, 'box' | 'collapsed' | 'visible'> & {
       anchor: number;
@@ -240,7 +248,9 @@ export function clearTransition(): void {
 export function useTransitionState(): Transition {
   const [transition, setTransitionState] = useState(transitionStore.transition);
   useEffect(() => {
-    /** Refreshes the hook snapshot after the transition store notifies subscribers. */
+    /**
+     * Refreshes the hook snapshot after the transition store notifies subscribers.
+     */
     const update = (): void => {
       setTransitionState(transitionStore.transition);
     };

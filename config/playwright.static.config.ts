@@ -15,7 +15,7 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 export default defineConfig({
-  testDir: resolve(process.cwd(), 'test/browser'),
+  testDir: resolve(process.cwd(), 'tests/browser'),
   outputDir: resolve(process.cwd(), 'tests/results/playwright-output'),
   use: {
     baseURL: `http://127.0.0.1:${Number(process.env.DOCS_PLAYWRIGHT_PORT ?? 4335)}`,

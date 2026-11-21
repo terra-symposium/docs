@@ -1,4 +1,7 @@
-/** Shared Docs controls and nested error boundaries. */
+/**
+ * src/components/terra/ui.tsx
+ * Shared Docs controls and nested error boundaries.
+ */
 
 export { Empty } from '@terra-symposium/styling/ui';
 export { ErrorBoundary } from '@terra-symposium/boundaries/react';

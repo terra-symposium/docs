@@ -1,4 +1,9 @@
-/** Shared utility fragments for recurring Docs layout patterns. */
+/**
+ * src/lib/terra/layout-classes.ts
+ */
+/**
+ * Shared utility fragments for recurring Docs layout patterns.
+ */
 export const DOCS_LAYOUT_CLASSES = {
   compactRow: 'flex items-center gap-1',
   controlRow: 'flex gap-2',

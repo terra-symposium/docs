@@ -45,7 +45,9 @@ const trace = createTrace('DOCS:content', false);
 trace('module.loaded');
 
 // prettier-ignore
-/** Portable Text object types accepted by problem authoring. */
+/**
+ * Portable Text object types accepted by problem authoring.
+ */
 export const PROBLEM_BLOCK_TYPES = [
 	'hint', 'headline', 'nodes', 'entity', 'definition', 'countryReference', 'notes', 'photo', 'audio',
 	'video', 'choicesReference', 'question', 'prompts', 'timer', 'table', 'map', 'tabs', 'accordion',
@@ -176,6 +178,7 @@ const LEGACY_GROUPS = [
   { syntax: '|||', root: 'TabsGroup', item: 'TabsItem' },
 ] as const;
 
+// hygiene-ignore single-use -- Normalize tab delimiters before block parsing; retain this documented syntax transformation boundary.
 /**
  * Separates compact tabs markers before they reach the line-based block parser.
  *
@@ -576,7 +579,9 @@ const fmtRawTable = (val: string): string => {
     .join('\n');
 };
 
-/** Identifies complete canonical HTML table markup. */
+/**
+ * Identifies complete canonical HTML table markup.
+ */
 export const TABLE_TAG = TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_B_I_REGEX();
 
 /**
@@ -805,15 +810,13 @@ const nestedMd = (body: DocBody | null | undefined, md = ''): string => {
  * Serializes a block defensively so malformed history entries do not break export.
  *
  * @param block - Block record to normalize.
- * @param number - Ordered list number for nested list items.
+ * @param num - Ordered list number for nested list items.
  *
  * @return Serialized block Markdown, or an empty string when the block cannot be rendered safely.
  */
-const sBlockMd = (block: unknown, number = 1): string => {
+const sBlockMd = (block: unknown, num = 1): string => {
   try {
-    return isRec(block) && typeof block._type === 'string'
-      ? blockMd(block as DocBlock, number)
-      : '';
+    return isRec(block) && typeof block._type === 'string' ? blockMd(block as DocBlock, num) : '';
   } catch (err) {
     if (isRec(block) && typeof block.markdown === 'string') return fromBlockJsx(block.markdown);
     console.error('[DOCS:content] Failed to serialize block.', {
@@ -828,11 +831,11 @@ const sBlockMd = (block: unknown, number = 1): string => {
  * Serializes a Portable Text block into docs Markdown, preserving nested tables, lists, and custom blocks.
  *
  * @param b - Portable Text block to serialize.
- * @param number - Ordered list number for nested list items.
+ * @param num - Ordered list number for nested list items.
  *
  * @return Markdown string for the supplied block, including nested custom syntax when present.
  */
-const blockMd = (b: DocBlock, number = 1): string => {
+const blockMd = (b: DocBlock, num = 1): string => {
   if (b._type === 'block') {
     const text = (
       Array.isArray(b.c) && b.c.length > 0
@@ -848,7 +851,7 @@ const blockMd = (b: DocBlock, number = 1): string => {
             Array.isArray(c.marks) ? c.marks : [],
             ptMarkDefs(b.markDefs),
           );
-        return isRec(c) && typeof c._type === 'string' ? sBlockMd(c, number) : '';
+        return isRec(c) && typeof c._type === 'string' ? sBlockMd(c, num) : '';
       })
       .join('');
     if (TABLE_TAG.test(text)) {
@@ -857,7 +860,7 @@ const blockMd = (b: DocBlock, number = 1): string => {
     }
     if (b.style && TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(b.style))
       return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
-    if (b.listItem) return `\n${b.listItem === 'number' ? `${number}.` : '*'} ${text}\n`;
+    if (b.listItem) return `\n${b.listItem === 'number' ? `${num}.` : '*'} ${text}\n`;
     return text ? `\n${text}\n` : '';
   }
   switch (b._type) {
@@ -965,13 +968,13 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
                 .map((b) => (isRec(b) && typeof b._type === 'string' ? b._type : typeof b)),
             };
             let md = '';
-            let number = 1;
+            let num = 1;
             for (let i = 0; i < body.length; i++) {
               const block = body[i];
               if (!block) continue;
-              const listNumber =
-                listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
-              const text = editorBlockMd(block, listNumber).trim();
+              const listNum =
+                listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? num + 1 : 1;
+              const text = editorBlockMd(block, listNum).trim();
               void {
                 index: i,
                 type: isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
@@ -979,7 +982,7 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
                 textHead: text.slice(0, 120),
               };
               if (!text) continue;
-              number = listNumber;
+              num = listNum;
               if (md) {
                 const prevList = listKind(body[i - 1]);
                 const currList = listKind(block);
@@ -1025,12 +1028,12 @@ const problemBlockMd = (b: Record<string, unknown>): string => {
  * Serializes Portable Text blocks for the editor variant of the docs Markdown pipeline.
  *
  * @param b - Portable Text block to serialize.
- * @param number - Ordered list number for nested list items.
+ * @param num - Ordered list number for nested list items.
  * @param mode - Output mode to switch between docs and problem formatting.
  *
  * @return Editor Markdown block, with tables and problem blocks kept in editor-safe JSX.
  */
-const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs'): string => {
+const editorBlockMd = (b: DocBlock, num = 1, mode: 'docs' | 'problem' = 'docs'): string => {
   if (b._type === 'block') {
     const text = (
       Array.isArray(b.c) && b.c.length > 0
@@ -1047,7 +1050,7 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
             ptMarkDefs(b.markDefs),
           );
         return isRec(s) && typeof s._type === 'string'
-          ? editorBlockMd(s as DocBlock, number, mode)
+          ? editorBlockMd(s as DocBlock, num, mode)
           : '';
       })
       .join('');
@@ -1057,7 +1060,7 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
     }
     if (b.style && TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(b.style))
       return `\n${'#'.repeat(Number(b.style.slice(1)))} ${text}\n`;
-    if (b.listItem) return `\n${b.listItem === 'number' ? `${number}.` : '*'} ${text}\n`;
+    if (b.listItem) return `\n${b.listItem === 'number' ? `${num}.` : '*'} ${text}\n`;
     return text ? `\n${text}\n` : '';
   }
   switch (b._type) {
@@ -1089,7 +1092,7 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
     case 'raw': {
       const raw = atomicTableHtml(fromBlockJsx(b.markdown || '').trim());
       if (!raw && TABLE_TAG.test(fromBlockJsx(b.markdown || '').trim())) return '';
-      return TABLE_TAG.test(raw) ? `\n${editorNestedMd(null, raw)}\n` : blockMd(b, number);
+      return TABLE_TAG.test(raw) ? `\n${editorNestedMd(null, raw)}\n` : blockMd(b, num);
     }
     case 'paragraph': {
       const md = fromBlockJsx(b.markdown || '').trim();
@@ -1101,7 +1104,7 @@ const editorBlockMd = (b: DocBlock, number = 1, mode: 'docs' | 'problem' = 'docs
       return mode === 'problem' &&
         PROBLEM_BLOCK_TYPES.includes(b._type as (typeof PROBLEM_BLOCK_TYPES)[number])
         ? problemBlockMd({ ...b })
-        : blockMd(b, number);
+        : blockMd(b, num);
   }
 };
 
@@ -1129,12 +1132,12 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
       .map((b) => (isRec(b) && typeof b._type === 'string' ? b._type : typeof b)),
   };
   let md = '';
-  let number = 1;
+  let num = 1;
   for (let i = 0; i < body.length; i++) {
     const block = body[i];
-    const listNumber =
-      listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1;
-    const text = sBlockMd(block, listNumber).trim();
+    const listNum =
+      listKind(block) === 'number' && listKind(body[i - 1]) === 'number' ? num + 1 : 1;
+    const text = sBlockMd(block, listNum).trim();
     void {
       index: i,
       type: isRec(block) && typeof block._type === 'string' ? block._type : typeof block,
@@ -1142,7 +1145,7 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
       textHead: text.slice(0, 120),
     };
     if (!text) continue;
-    number = listNumber;
+    num = listNum;
     if (md) {
       const prevList = listKind(body[i - 1]);
       const currList = listKind(block);
@@ -1165,20 +1168,20 @@ export const stringifyDocBody = (body: DocBody | null | undefined): string => {
 export const stringifyProblemEditorContentBody = (body: DocBody | null | undefined): string => {
   if (!Array.isArray(body) || body.length === 0) return '';
   let md = '';
-  let number = 1;
+  let num = 1;
   for (let i = 0; i < body.length; i++) {
     const block = body[i];
     if (!block) continue;
     const list = listKind(block);
     const text = editorBlockMd(
       block,
-      list === 'number' && listKind(body[i - 1]) === 'number' ? number + 1 : 1,
+      list === 'number' && listKind(body[i - 1]) === 'number' ? num + 1 : 1,
       'problem',
     ).trim();
     if (!text) continue;
     if (md) md += list && listKind(body[i - 1]) === list ? '\n' : '\n\n';
     md += text;
-    number = list === 'number' ? number + 1 : 1;
+    num = list === 'number' ? num + 1 : 1;
   }
   return normDocsSpacing(md);
 };

@@ -13,5 +13,7 @@ import type { DocsCustomBlock } from '../host.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Mutated in place by a host before the workspace renders. */
+/**
+ * Mutated in place by a host before the workspace renders.
+ */
 export const components: DocsCustomBlock[] = [];

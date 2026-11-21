@@ -30,7 +30,7 @@ export function Embed({
   block: /** Sanity Portable Text embed URL and presentation data. */ DocsBlock<'embed'>;
 }): JSX.Element | null {
   if (!block.src) return null;
-  let embedSource = block.src;
+  let embedSrc = block.src;
   try {
     const url = new URL(block.src);
     const host = url.hostname.toLowerCase().replace(/^www\./, '');
@@ -46,9 +46,9 @@ export function Embed({
       const embed = new URL(
         `https://${host === 'youtube-nocookie.com' ? 'www.youtube-nocookie.com' : 'www.youtube.com'}/embed/${videoId}`,
       );
-      for (const parameter of ['list', 'index', 'playsinline', 'rel']) {
-        const value = url.searchParams.get(parameter);
-        if (value) embed.searchParams.set(parameter, value);
+      for (const param of ['list', 'index', 'playsinline', 'rel']) {
+        const value = url.searchParams.get(param);
+        if (value) embed.searchParams.set(param, value);
       }
       const time = url.searchParams.get('start') ?? url.searchParams.get('t');
       let seconds: number | undefined;
@@ -62,7 +62,7 @@ export function Embed({
         }
       }
       if (seconds !== undefined) embed.searchParams.set('start', String(seconds));
-      embedSource = embed.toString();
+      embedSrc = embed.toString();
     }
   } catch {
     // Keep the source URL when it cannot be parsed.
@@ -71,7 +71,7 @@ export function Embed({
     <ErrorBoundary name="Embed">
       <iframe
         className="my-6 w-full border-0"
-        src={embedSource}
+        src={embedSrc}
         title={block.title ?? block.src}
         style={{
           height: block.height ?? '500px',

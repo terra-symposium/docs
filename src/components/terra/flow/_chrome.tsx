@@ -165,10 +165,10 @@ export function SkeletonCard<T extends ElementType = 'div'>({
   ComponentPropsWithoutRef<T>,
   'as' | 'className' | 'children'
 >): JSX.Element {
-  const Element = as as ElementType;
+  const El = as as ElementType;
   return (
     <ErrorBoundary name="SkeletonCard">
-      <Element
+      <El
         {...htmlAttrs}
         className={cn(
           'relative flex h-16 items-center justify-center overflow-visible rounded-md border-2 px-3 py-2 shadow-sm',
@@ -189,7 +189,7 @@ export function SkeletonCard<T extends ElementType = 'div'>({
           <div className="h-4 w-[92%] rounded-md" style={{ backgroundColor: '#5db9c6' }} />
           <div className="mr-2 h-2.5 w-20 rounded-md" style={{ backgroundColor: '#91d3db' }} />
         </div>
-      </Element>
+      </El>
     </ErrorBoundary>
   );
 }

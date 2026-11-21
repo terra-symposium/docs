@@ -199,6 +199,7 @@ function createNode(
   className: string,
   inner?: string,
 ): (props: NodeProps<XyNode<NodeData>>) => React.JSX.Element {
+  // hygiene-ignore single-use -- React Flow registers this node renderer by component identity and supplies its NodeProps contract.
   /**
    * Renders a flow node as a link, action button, or inert container from its data.
    * @param nodeProps React Flow selection state and node data for this diagram item.
@@ -206,12 +207,12 @@ function createNode(
    */
   const NodeCard = (nodeProps: NodeProps<XyNode<NodeData>>): React.JSX.Element => {
     const { data, selected } = nodeProps;
-    const Element = data.onClick ? 'button' : data.href ? 'a' : 'div';
+    const El = data.onClick ? 'button' : data.href ? 'a' : 'div';
     return (
-      <Element
-        {...(Element === 'button' ? { type: 'button' } : {})}
-        {...(Element === 'a' ? { href: data.href } : {})}
-        {...(Element === 'a' ? { 'data-docs-flow-node-link': '' } : {})}
+      <El
+        {...(El === 'button' ? { type: 'button' } : {})}
+        {...(El === 'a' ? { href: data.href } : {})}
+        {...(El === 'a' ? { 'data-docs-flow-node-link': '' } : {})}
         onClick={data.onClick}
         className={cn(
           'relative block min-w-40 text-pretty p-2 text-center text-sm font-normal !no-underline shadow-md transition-shadow',
@@ -225,7 +226,7 @@ function createNode(
           tgts={data.requiredHandles?.tgts ?? []}
         />
         <span className={inner}>{data.title}</span>
-      </Element>
+      </El>
     );
   };
   return NodeCard;
@@ -241,12 +242,12 @@ export const NODE_TYPES = {
      */
     function ErdNode({ data: d, selected: s }: NodeProps<XyNode<NodeData>>): React.JSX.Element {
       const compact = d.compact === true;
-      const Element = d.onClick ? 'button' : d.href ? 'a' : 'div';
+      const El = d.onClick ? 'button' : d.href ? 'a' : 'div';
       return (
-        <Element
-          type={Element === 'button' ? 'button' : undefined}
-          href={Element === 'a' ? d.href : undefined}
-          data-docs-flow-node-link={Element === 'a' ? '' : undefined}
+        <El
+          type={El === 'button' ? 'button' : undefined}
+          href={El === 'a' ? d.href : undefined}
+          data-docs-flow-node-link={El === 'a' ? '' : undefined}
           onClick={d.onClick}
           className={cn(
             'block max-h-96 w-full overflow-y-scroll rounded-md border-2 border-primary-6 bg-primary-2 text-primary-12 !no-underline shadow-lg transition-shadow',
@@ -304,7 +305,7 @@ export const NODE_TYPES = {
             sources={d.requiredHandles?.sources ?? []}
             tgts={d.requiredHandles?.tgts ?? []}
           />
-        </Element>
+        </El>
       );
     },
   process: createNode(NODE_STYLES.process),
@@ -550,7 +551,7 @@ function syncGraph(
     edges: syncedGraph.edges,
   };
 }
-const FLOW_COMPONENTS = {
+const FLOW_COMPS = {
   nodeTypes: NODE_TYPES,
   /**
    * Renders the React Flow canvas and forwards graph events to the supplied handlers.
@@ -728,7 +729,8 @@ const FLOW_COMPONENTS = {
       [nodesMap, menuCtx.type, menuCtx.id],
     );
 
-    /** Returns `true` for a missing node or a node type that cannot be edited.
+    /**
+     * Returns `true` for a missing node or a node type that cannot be edited.
      * @param n Node resolved from the current flow menu, if it still exists.
      * @returns Whether editing actions should be blocked for this node.
      */
@@ -1267,13 +1269,16 @@ const FLOW_COMPONENTS = {
     );
   },
 };
-/** Supported node keys shared by the node renderer registry and flow controls. */
+/**
+ * Supported node keys shared by the node renderer registry and flow controls.
+ */
 type FlowNodeType = keyof typeof NODE_TYPES;
 
 /*//////////////////////////////////////////////////
 COMPONENT
 //////////////////////////////////////////////////*/
 
+// hygiene-ignore single-use -- This default export is the flow canvas component imported by editor and view surfaces.
 /**
  * Renders a Docs flow diagram and coordinates its graph state, layout, selection, and editing controls.
  *
@@ -1792,11 +1797,11 @@ export default function Nodes({
         }}
       >
         <ReactFlowProvider>
-          <FLOW_COMPONENTS.Canvas
+          <FLOW_COMPS.Canvas
             flow={flow}
             nodeTypes={
               {
-                ...FLOW_COMPONENTS.nodeTypes,
+                ...FLOW_COMPS.nodeTypes,
                 ...customNodeTypes,
               } as unknown as Record<string, React.ComponentType<NodeProps<FlowNode>>>
             }
@@ -2081,7 +2086,8 @@ export default function Nodes({
                   const isHoriz = t.startsWith('horizontal');
                   const sizeKey = isHoriz ? 'w' : 'h';
 
-                  /** Returns the node's leading, center, or trailing edge on the selected axis.
+                  /**
+                   * Returns the node's leading, center, or trailing edge on the selected axis.
                    * @param p Node and absolute position being measured.
                    * @returns The requested edge coordinate for the active axis.
                    */

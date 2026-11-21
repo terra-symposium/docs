@@ -39,7 +39,9 @@ import type { JSX } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Sanity Portable Text math expression block fields. */
+/**
+ * Sanity Portable Text math expression block fields.
+ */
 type MathBlockData = DocsBlock<'math'>;
 
 /*//////////////////////////////////////////////////

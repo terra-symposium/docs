@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/**
+ * bin/docs.mjs
+ */
 
 /*//////////////////////////////////////////////////
 IMPORTS
@@ -52,14 +55,14 @@ const args = [
 const docsRoot = resolve(root, 'docs');
 const publicRoot = resolve(root, 'dist/public');
 const publicAssetsRoot = resolve(publicRoot, '_docs/assets');
-let parsedArguments;
+let parsedArgs;
 try {
-  parsedArguments = parseDocsArguments(process.argv.slice(3));
+  parsedArgs = parseDocsArguments(process.argv.slice(3));
 } catch (error) {
   console.error(error.message);
   process.exit(2);
 }
-const { options, passthrough } = parsedArguments;
+const { options, passthrough } = parsedArgs;
 const searchIndexPath = resolve(publicRoot, '_docs/search-index.json');
 const excludedDirs = new Set(['node_modules', '.astro', 'dist']);
 const configuredAgents = docsConfig.includeAgents ?? docsConfig.includeSkills ?? true;
@@ -120,10 +123,10 @@ async function buildSearchIndex() {
       .replace(TerraQualityRegex.REGEX_SKILL_I_REGEX(), '')
       .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX_2(), '')
       .replace(TerraQualityRegex.REGEX_G_REGEX_35(), '');
-    const previous = routeFiles.get(route);
-    if (previous)
+    const prev = routeFiles.get(route);
+    if (prev)
       throw new Error(
-        `Duplicate Docs route "${route || '/'}": docs/${previous} and docs/${file.relativePath}`,
+        `Duplicate Docs route "${route || '/'}": docs/${prev} and docs/${file.relativePath}`,
       );
     routeFiles.set(route, file.relativePath);
     if (route.toLowerCase() === '404')
@@ -180,9 +183,9 @@ async function buildSearchIndex() {
         continue;
       }
       if (['.md', '.mdx'].includes(extname(entry.name).toLowerCase())) continue;
-      const destination = resolve(publicAssetsRoot, relativePath);
-      await mkdir(dirname(destination), { recursive: true });
-      await copyFile(source, destination);
+      const dest = resolve(publicAssetsRoot, relativePath);
+      await mkdir(dirname(dest), { recursive: true });
+      await copyFile(source, dest);
     }
   }
   await mkdir(dirname(searchIndexPath), { recursive: true });

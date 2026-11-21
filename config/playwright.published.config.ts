@@ -20,7 +20,7 @@ const port = Number(process.env.DOCS_PUBLISHED_PLAYWRIGHT_PORT ?? 4336);
 const baseURL = `http://127.0.0.1:${port}`;
 export default withResponsivePlaywright(
   defineConfig({
-    testDir: resolve(process.cwd(), 'test/browser'),
+    testDir: resolve(process.cwd(), 'tests/browser'),
     workers: 1,
     outputDir: resolve(process.cwd(), 'tests/results/published-playwright-output'),
     projects: [{ name: 'chromium', grep: publishedDocsSmokeTests }],

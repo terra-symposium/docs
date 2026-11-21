@@ -98,7 +98,9 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 // DATA
-/** Validated interactive literal mappings explicitly capturing action intents. */
+/**
+ * Validated interactive literal mappings explicitly capturing action intents.
+ */
 const UI = {
   add: { doc: 'Add leaf', group: 'Add branch' },
   open: 'bg-primary-3 text-primary-12',
@@ -326,7 +328,7 @@ TOC COMPONENTS
 /**
  * Shared renderers for leaf and branch entries in the recursive sidebar tree.
  */
-const TREE_COMPONENTS = {
+const TREE_COMPS = {
   /*//////////////////////////////////////////////////
 LEAF COMPONENTS
 //////////////////////////////////////////////////*/
@@ -454,7 +456,9 @@ LEAF COMPONENTS
     // SCROLL ACTIVE TO VIEWPORT TOP
     useEffect(() => {
       if (!a || !leafRef.current) return;
-      /** Scrolls the active leaf into view after the sidebar finishes laying out. */
+      /**
+       * Scrolls the active leaf into view after the sidebar finishes laying out.
+       */
       const raise = () => {
         const el = leafRef.current;
         if (!el) return;
@@ -590,12 +594,12 @@ LEAF COMPONENTS
             } catch (err) {
               toast.error('Failed to rename leaf.');
               // revert on failure
-              const originalRoute = 'url' in node ? node.url : docsRootPath();
+              const origRoute = 'url' in node ? node.url : docsRootPath();
               // prettier-ignore
-              document.dispatchEvent(new CustomEvent('docs:rename', { detail: { nfilepath: node.path!, path: node.path!, pathname: originalRoute, title: currTitle, isActive: a } }));
+              document.dispatchEvent(new CustomEvent('docs:rename', { detail: { nfilepath: node.path!, path: node.path!, pathname: origRoute, title: currTitle, isActive: a } }));
               if (a) {
                 const url = new URL(window.location.href);
-                url.pathname = originalRoute;
+                url.pathname = origRoute;
                 window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
               }
               console.error('Rename failed', err);
@@ -688,7 +692,8 @@ LEAF COMPONENTS
       },
     };
 
-    /** Uploads selected files as attachments and updates each file's visible progress.
+    /**
+     * Uploads selected files as attachments and updates each file's visible progress.
      * @param files Files chosen for attachment to this leaf.
      */
     const add = async (files: FileList | File[] | null): Promise<void> => {
@@ -738,7 +743,9 @@ LEAF COMPONENTS
     };
 
     // SISTER ACTION HANDLERS
-    /** Opens a rename prompt and moves the document or asset while keeping the list optimistic. */
+    /**
+     * Opens a rename prompt and moves the document or asset while keeping the list optimistic.
+     */
     const sisterActions = {
       renameSister: (s: { path: string; name: string; isMd: boolean }) => {
         ctx.setInputDlg({
@@ -1400,7 +1407,7 @@ TREE COMPONENTS
     if (node.type === 'leaf')
       return (
         <ErrorBoundary name="Tree">
-          <TREE_COMPONENTS.Leaf
+          <TREE_COMPS.Leaf
             active={pathname !== '' && pathname === nodeUrl}
             bPath={bPath}
             node={node}
@@ -1587,7 +1594,7 @@ TREE COMPONENTS
             <SidebarMenu>
               {node.type === 'branch' &&
                 node.children?.map((c) => (
-                  <TREE_COMPONENTS.Tree
+                  <TREE_COMPS.Tree
                     key={getStableKey(c)}
                     bPath={fPath}
                     node={c}
@@ -1602,5 +1609,5 @@ TREE COMPONENTS
     );
   },
 };
-export const { Tree } = TREE_COMPONENTS;
-export default TREE_COMPONENTS.Tree;
+export const { Tree } = TREE_COMPS;
+export default TREE_COMPS.Tree;

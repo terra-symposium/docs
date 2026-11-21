@@ -225,12 +225,15 @@ export function CodeBlock(
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const theme = useRef(new Compartment());
-  /** Uses the rendered Docs theme, which may be scoped below the document root. */
+  /**
+   * Uses the rendered Docs theme, which may be scoped below the document root.
+   */
   const darkCodeTheme = (): boolean => {
     const colorScheme = host.current ? getComputedStyle(host.current).colorScheme : '';
     return colorScheme === 'dark' || (colorScheme !== 'light' && isDarkMode());
   };
-  /** Returns the source code snapshot used to synchronize the editor view.
+  /**
+   * Returns the source code snapshot used to synchronize the editor view.
    * @returns Current code value supplied to the editor.
    */
   const codeVal = (): string => viewCode;
@@ -586,7 +589,9 @@ export function CodeBlock(
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const m = window.matchMedia('(prefers-color-scheme: dark)');
-    /** Applies the active system theme to the mounted CodeMirror editor. */
+    /**
+     * Applies the active system theme to the mounted CodeMirror editor.
+     */
     const sync = (): void => {
       if (!view.current) return;
       view.current.dispatch({

@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/**
+ * scripts/quality.mjs
+ */
 
 /*//////////////////////////////////////////////////
 IMPORTS
@@ -7,7 +10,7 @@ IMPORTS
 // API
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { runQualityFromCfg } from '@terra-symposium/quality/cli';
+import { runQualityFromCfg } from '@terra-symposium/hygiene/cli';
 
 // DATA
 import { URL } from 'node:url';

@@ -35,6 +35,7 @@ import type { WorkspaceDemoState } from './workspace-demo-fixture.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
+// hygiene-ignore single-use -- This quiz generator is the demo host callback boundary and intentionally returns a Promise.
 /**
  * Builds a deterministic sample quiz from a document's title and Markdown excerpt.
  *
@@ -121,7 +122,7 @@ function withLocalRoute(
  * @param routeBase - Root path used for navigation in the local read-only workspace.
  * @param hue - Base hue used to derive the demonstration's primary and secondary palettes.
  * @param siteTitle - Site name shown by the host-backed workspace.
- * @param siteDescription - Supporting site text; `null` or an empty string hides it.
+ * @param siteDesc - Supporting site text; `null` or an empty string hides it.
  * @param syncParentOnNavigate - Syncs this fixture with navigation events from a parent Docs shell.
  *
  * @returns The Docs workspace configured for the selected fixture route and mode.
@@ -132,7 +133,7 @@ export default function WorkspaceDemo({
   routeBase = '/workspace-readonly/',
   hue = 145,
   siteTitle = 'Salesphere Docs',
-  siteDescription = 'Product and engineering documentation.',
+  siteDescription: siteDesc = 'Product and engineering documentation.',
   syncParentOnNavigate = true,
 }: {
   readOnly?: boolean;
@@ -179,7 +180,7 @@ export default function WorkspaceDemo({
       if (syncParentOnNavigate) document.removeEventListener('docs:navigate', syncLocation);
     };
   }, [syncParentOnNavigate]);
-  const selectedDocument =
+  const selectedDoc =
     state.documents[
       (() => {
         try {
@@ -193,29 +194,29 @@ export default function WorkspaceDemo({
     ] ?? state.documents.salesphere;
   const host = useMemo(() => {
     const demoHost = createWorkspaceDemoHost(readOnly);
-    if (!siteDescription) delete demoHost.siteDescription;
+    if (!siteDesc) delete demoHost.siteDescription;
     return {
       ...demoHost,
       siteTitle,
-      ...(siteDescription ? { siteDescription } : {}),
+      ...(siteDesc ? { siteDescription: siteDesc } : {}),
     };
-  }, [readOnly, siteDescription, siteTitle]);
+  }, [readOnly, siteDesc, siteTitle]);
   // Keep the parity fixture's palette construction identical to the pinned
   // pre-extraction website fixture. This makes screenshot diffs report UI
   // regressions instead of comparing a different secondary/gray palette.
   const [primary, baseGray] = colors(hue);
   const [secondary, gray] = colors(invert(hue));
-  if (!selectedDocument) return <div className="min-h-svh" />;
+  if (!selectedDoc) return <div className="min-h-svh" />;
   const localPage = {
     id: 'salesphere',
-    path: selectedDocument.path,
+    path: selectedDoc.path,
     pathname: routeBase,
-    title: selectedDocument.title,
+    title: selectedDoc.title,
     description: 'A page level description for the Salesphere overview.',
-    updatedAt: selectedDocument.updatedAt,
+    updatedAt: selectedDoc.updatedAt,
     markdown:
       '# Salesphere\n\nSalesphere helps sales professionals choose a useful next step in a customer relationship and understand why it matters.\n\n## Start with the product\n\nRead [Salesphere’s purpose](/product/purpose/) for the larger aim.',
-    attachments: selectedDocument.attachments,
+    attachments: selectedDoc.attachments,
   };
   return (
     <div
@@ -251,16 +252,16 @@ export default function WorkspaceDemo({
           pathname={
             location !== WORKSPACE_DEMO_PATH
               ? location
-              : routeForWorkspaceDocument(state, selectedDocument.id, host.buildRoute)
+              : routeForWorkspaceDocument(state, selectedDoc.id, host.buildRoute)
           }
           permission="write"
-          path={selectedDocument.path}
-          title={selectedDocument.title}
-          description={selectedDocument.description}
-          contributors={selectedDocument.contributors}
-          updatedAt={selectedDocument.updatedAt}
-          content={selectedDocument.content}
-          source={selectedDocument.source}
+          path={selectedDoc.path}
+          title={selectedDoc.title}
+          description={selectedDoc.description}
+          contributors={selectedDoc.contributors}
+          updatedAt={selectedDoc.updatedAt}
+          content={selectedDoc.content}
+          source={selectedDoc.source}
           {...(quizEnabled ? { quiz: demoQuiz } : {})}
         />
       )}

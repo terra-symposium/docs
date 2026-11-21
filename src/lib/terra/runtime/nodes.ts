@@ -33,7 +33,9 @@ trace('module.loaded');
  */
 export const EMPTY_NODES = `\n\n<Nodes\n  node_data={[\n    { id: 'start', type: 'origin', data: { title: 'Start' } }\n  ]}\n  edges_data={[]}\n  direction="TB"\n  height={400}\n/>\n\n`;
 
-/** Defines the editor defaults and field controls for the Docs Nodes block. */
+/**
+ * Defines the editor defaults and field controls for the Docs Nodes block.
+ */
 const NODES = {
   empty: EMPTY_NODES,
   jsx: EMPTY_NODES,
@@ -548,7 +550,3 @@ const loose = (body: string): string => {
   }
   return name;
 };
-
-/*//////////////////////////////////////////////////
-EXPORTS
-//////////////////////////////////////////////////*/

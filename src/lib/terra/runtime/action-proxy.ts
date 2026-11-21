@@ -20,7 +20,9 @@ import type { DocBody, DocVer, Md, Sister, Tree } from './types.js';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Placeholder action handler replaced when a host configures the Docs surface. */
+/**
+ * Placeholder action handler replaced when a host configures the Docs surface.
+ */
 export const actionProxy = {
   invoke: async <T = unknown>(
     o: DocsActionOperation,
@@ -32,15 +34,21 @@ export const actionProxy = {
   },
 };
 
-/** Calls one named host operation with its documented request and response shape. */
+/**
+ * Calls one named host operation with its documented request and response shape.
+ */
 type ActionCall<TInput, TOutput> = (input: TInput) => Promise<DocsActionResult<TOutput>>;
 
-/** List modes used by the navigation tree and by attachment inventory. */
+/**
+ * List modes used by the navigation tree and by attachment inventory.
+ */
 type DocListInput =
   | { type: 'nav'; pathname: string; full?: boolean; edit?: boolean }
   | { type: 'folderEntries'; path: string };
 
-/** Result of creating a reference from another document. */
+/**
+ * Result of creating a reference from another document.
+ */
 type AttachmentResult = Partial<DocsHostAttachment> & {
   id?: string;
   title?: string;
@@ -48,18 +56,26 @@ type AttachmentResult = Partial<DocsHostAttachment> & {
   type?: string;
 };
 
-/** Metadata written when Docs creates or updates a document. */
-type WrittenDocument = DocsHostDocument & { _id?: string; _type?: string };
+/**
+ * Metadata written when Docs creates or updates a document.
+ */
+type WrittenDoc = DocsHostDocument & { _id?: string; _type?: string };
 
-/** Symbol used by nested action proxies to retain their accumulated path. */
+/**
+ * Symbol used by nested action proxies to retain their accumulated path.
+ */
 const actionPath: unique symbol = Symbol('docsActionPath');
-/** Function-like proxy whose properties extend the host operation path. */
+/**
+ * Function-like proxy whose properties extend the host operation path.
+ */
 type ActionProxy = ((...args: unknown[]) => Promise<DocsActionResult<unknown>>) & {
   [key: string]: ActionProxy;
   [actionPath]: string;
 };
 
-/** Public nested action paths retained for compatibility with legacy Docs callers. */
+/**
+ * Public nested action paths retained for compatibility with legacy Docs callers.
+ */
 export const actions = new Proxy(
   Object.assign(
     /**
@@ -115,7 +131,7 @@ export const actions = new Proxy(
       >;
       get: ActionCall<
         { access?: unknown; id?: string; path?: string; pathname?: string },
-        WrittenDocument | Md | null
+        WrittenDoc | Md | null
       >;
       list: {
         (
@@ -194,7 +210,7 @@ export const actions = new Proxy(
     doc: {
       asset: ActionCall<
         { component: string; description?: string; path: string; title?: string },
-        WrittenDocument
+        WrittenDoc
       >;
       commit: ActionCall<
         {
@@ -205,7 +221,7 @@ export const actions = new Proxy(
           title?: string | undefined;
           description?: string | undefined;
         },
-        WrittenDocument | Md | null
+        WrittenDoc | Md | null
       >;
       createGroup: ActionCall<
         { title: string; path: string; sectionId: string },
@@ -213,7 +229,7 @@ export const actions = new Proxy(
       >;
       createSection: ActionCall<
         { title: string },
-        | { group: WrittenDocument; leaf: WrittenDocument; section: WrittenDocument }
+        | { group: WrittenDoc; leaf: WrittenDoc; section: WrittenDoc }
         | { _id?: string; id?: string; path?: string; title?: string }
       >;
       editor: ActionCall<
@@ -227,7 +243,7 @@ export const actions = new Proxy(
           sourceUrl?: string | undefined;
           parentId?: string | undefined;
         },
-        WrittenDocument
+        WrittenDoc
       >;
       hue: ActionCall<{ id: string; hue: number }, boolean>;
       reorder: ActionCall<
@@ -249,7 +265,7 @@ export const actions = new Proxy(
           sourceUrl?: string | undefined;
           parentId?: string | undefined;
         },
-        WrittenDocument
+        WrittenDoc
       >;
       versions: { get: ActionCall<{ path: string }, DocVer[]> };
     };

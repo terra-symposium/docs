@@ -1,7 +1,14 @@
 ---
+/**
+ * site/src/pages/consumer/0-configuration/1-configure/index.astro
+ */
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
 import { pageHref } from '../../../../lib/catalog.js';
 
-const destination = pageHref('consumer/0-configuration/0-install', import.meta.env.BASE_URL);
+const dest = pageHref('consumer/0-configuration/0-install', import.meta.env.BASE_URL);
 ---
 
 <html lang="en">
@@ -9,11 +16,11 @@ const destination = pageHref('consumer/0-configuration/0-install', import.meta.e
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <meta http-equiv="refresh" content={`0;url=${destination}`} />
-    <link rel="canonical" href={destination} />
+    <meta http-equiv="refresh" content={`0;url=${dest}`} />
+    <link rel="canonical" href={dest} />
     <title>Redirecting to Get started</title>
   </head>
   <body>
-    <p>Redirecting to <a href={destination}>Get started</a>.</p>
+    <p>Redirecting to <a href={dest}>Get started</a>.</p>
   </body>
 </html>

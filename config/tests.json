@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "suites": [
+    {
+      "name": "unit",
+      "command": "pnpm",
+      "args": ["run", "test:unit"],
+      "owns": ["tests/*.test.mjs", "tests/fixtures/**"]
+    },
+    {
+      "name": "browser",
+      "command": "pnpm",
+      "args": ["run", "test:browser"],
+      "owns": ["tests/browser/**"],
+      "diagnosticConfigs": ["config/playwright.static.config.ts"]
+    }
+  ]
+}

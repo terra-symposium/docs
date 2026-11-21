@@ -1,10 +1,17 @@
-/** Give authored Markdown fences the same controls as editable Docs code blocks. */
+/**
+ * site/src/scripts/static-code-blocks.ts
+ */
+/**
+ * Give authored Markdown fences the same controls as editable Docs code blocks.
+ *
+ * @param root - Document subtree whose code blocks need copy controls.
+ */
 export function enhanceStaticCodeBlocks(root: ParentNode = document): void {
   for (const pre of root.querySelectorAll<HTMLPreElement>(
     '.docs-page-content pre.astro-code:not([data-docs-code-enhanced])',
   )) {
     pre.dataset.docsCodeEnhanced = 'true';
-    const language =
+    const lang =
       pre.dataset.language ||
       pre.querySelector('code')?.className.match(/language-([\w-]+)/)?.[1] ||
       'text';
@@ -14,11 +21,11 @@ export function enhanceStaticCodeBlocks(root: ParentNode = document): void {
     header.className = 'docs-code-block-header';
     const label = document.createElement('span');
     label.className = 'docs-static-code-language';
-    label.textContent = language;
+    label.textContent = lang;
     const copy = document.createElement('button');
     copy.type = 'button';
     copy.textContent = 'Copy';
-    copy.setAttribute('aria-label', `Copy ${language} code`);
+    copy.setAttribute('aria-label', `Copy ${lang} code`);
     copy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(

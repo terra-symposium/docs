@@ -10,7 +10,9 @@ export const quizDemoLeaf = {
   markdown: 'Leaf source: routing sends packets between networks.\n\n<Quiz />',
 };
 
-/** Stable sample response for review, run, and score coverage. */
+/**
+ * Stable sample response for review, run, and score coverage.
+ */
 export const quizDemoResponse = {
   title: 'Routing quiz',
   questions: [

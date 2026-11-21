@@ -38,7 +38,9 @@ import type { JSX } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Sanity Portable Text code-block fields used by the docs editor. */
+/**
+ * Sanity Portable Text code-block fields used by the docs editor.
+ */
 type CodeBlockData = DocsBlock<'code'>;
 
 /*//////////////////////////////////////////////////
@@ -132,10 +134,10 @@ function CodeEditor({
       'pointerdown',
       'pointerup',
     ];
-    const element = boundary.current;
-    for (const e of es) element.addEventListener(e, stop);
+    const el = boundary.current;
+    for (const e of es) el.addEventListener(e, stop);
     return () => {
-      for (const e of es) element.removeEventListener(e, stop);
+      for (const e of es) el.removeEventListener(e, stop);
     };
   }, [code.source]);
   useEffect(() => {

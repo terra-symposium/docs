@@ -100,7 +100,9 @@ const G_CLASS_2_3_4 = () => /[\\\]]/g;
  */
 const key = () => crypto.randomUUID();
 
-/** Structural subset of marked tokens consumed by the Portable Text converter. */
+/**
+ * Structural subset of marked tokens consumed by the Portable Text converter.
+ */
 type Token = {
   type: string;
   raw: string;
@@ -275,7 +277,7 @@ function inline(
        * @param start Inclusive start offset in the concatenated token source.
        * @param end Exclusive end offset in the concatenated token source.
        */
-      const appendSourceRange = (start: number, end: number) => {
+      const appendSrcRange = (start: number, end: number) => {
         let offset = 0;
         for (const token of run) {
           const tokenStart = offset;
@@ -303,11 +305,11 @@ function inline(
       for (const match of matches) {
         const start = match.index ?? 0;
         const raw = match[0];
-        appendSourceRange(cursor, start);
+        appendSrcRange(cursor, start);
         mathTokens.push({ type: 'docsMath', raw, text: match[1] ?? '' });
         cursor = start + raw.length;
       }
-      appendSourceRange(cursor, source.length);
+      appendSrcRange(cursor, source.length);
     }
     normTokens = mathTokens;
   }
@@ -361,13 +363,13 @@ function inline(
       markDefs.push({ _type: 'link', _key: mark, href });
       const joined: typeof result = [];
       for (const item of addMark(inline(token.tokens, markDefs, inlineMath, aMarks), mark)) {
-        const previous = joined.at(-1);
+        const prev = joined.at(-1);
         if (
           item._type === 'span' &&
-          previous?._type === 'span' &&
-          JSON.stringify(item.marks) === JSON.stringify(previous.marks)
+          prev?._type === 'span' &&
+          JSON.stringify(item.marks) === JSON.stringify(prev.marks)
         )
-          previous.text += item.text;
+          prev.text += item.text;
         else joined.push(item);
       }
       result.push(...joined);
@@ -474,9 +476,13 @@ function rawPlaceholder(blocks: RichBlock[], markdown: string): string {
   return richPlaceholder(blocks, { _type: 'raw', markdown });
 }
 
-/** Half-open source offsets for a fenced Markdown region. */
-type SourceRange = { start: number; end: number };
-/** Parsed opening tag fields needed to scan legacy component source. */
+/**
+ * Half-open source offsets for a fenced Markdown region.
+ */
+type SrcRange = { start: number; end: number };
+/**
+ * Parsed opening tag fields needed to scan legacy component source.
+ */
 type JsxOpeningTag = {
   name: string;
   attributes: Record<string, unknown>;
@@ -491,8 +497,8 @@ type JsxOpeningTag = {
  *
  * @return Half-open source ranges, including the remainder for an unclosed fence.
  */
-function codeFenceRanges(source: string): SourceRange[] {
-  const ranges: SourceRange[] = [];
+function codeFenceRanges(source: string): SrcRange[] {
+  const ranges: SrcRange[] = [];
   let open: { start: number; char: string; length: number } | undefined;
   let index = 0;
   while (index < source.length) {
@@ -530,7 +536,7 @@ function codeFenceRanges(source: string): SourceRange[] {
     if (!open && source[index] === '<') {
       const opening = readJsxOpeningTag(source, index);
       if (opening?.name === 'Code') {
-        index = jsxComponentRange(source, opening)?.end ?? source.length;
+        index = jsxCompRange(source, opening)?.end ?? source.length;
         continue;
       }
     }
@@ -757,7 +763,7 @@ function codeBodyExpr(source: string, start: number): { value: string; end: numb
  *
  * @return Body and closing offsets, or undefined when a non-self-closing tag is incomplete.
  */
-function jsxComponentRange(
+function jsxCompRange(
   source: string,
   opening: JsxOpeningTag,
 ): { bodyEnd: number; end: number } | undefined {
@@ -859,9 +865,9 @@ export function replaceCanonicalComponents(
       )
     )
       continue;
-    const component = jsxComponentRange(source, opening);
-    if (!component) continue;
-    const { end, bodyEnd } = component;
+    const comp = jsxCompRange(source, opening);
+    if (!comp) continue;
+    const { end, bodyEnd } = comp;
     output +=
       source.slice(copiedUntil, index) +
       replace(
@@ -894,13 +900,13 @@ export function replaceCanonicalComponents(
           }
           if (opening.name === 'Quiz') return { _type: 'quiz', _key: key(), ...attrs };
           if (opening.name === 'Code' || opening.name === 'CodeBlock') {
-            const codeSource = typeof attrs.source === 'string' ? attrs.source : undefined;
+            const codeSrc = typeof attrs.source === 'string' ? attrs.source : undefined;
             const codeAttr = typeof attrs.code === 'string' ? attrs.code : undefined;
             return {
               _type: 'code',
               _key: key(),
               language: typeof attrs.language === 'string' ? attrs.language : '',
-              ...(codeSource ? { source: codeSource } : {}),
+              ...(codeSrc ? { source: codeSrc } : {}),
               value:
                 (typeof bodyValue === 'string'
                   ? bodyValue.replace(/^\r?\n/, '').replace(R_N_REGEX, '')
@@ -1051,11 +1057,9 @@ function markdownCodeSpan(value: string): string {
  *
  * @return A Markdown destination safe to place after a link's closing parenthesis.
  */
-function markdownDestination(value: string): string {
-  const destination = decodeHtmlRepeated(value).replace(/[>\s]/g, (c) =>
-    c === '>' ? '%3E' : '%20',
-  );
-  return /[()[\]<>]/.test(destination) ? '<' + destination + '>' : destination;
+function markdownDest(value: string): string {
+  const dest = decodeHtmlRepeated(value).replace(/[>\s]/g, (c) => (c === '>' ? '%3E' : '%20'));
+  return /[()[\]<>]/.test(dest) ? '<' + dest + '>' : dest;
 }
 
 /**
@@ -1120,7 +1124,9 @@ function tableBlock(
         cellBlock.content = contentTokens.flatMap((part) => {
           const result: RichBlock[] = [];
           let pending: Token[] = [];
-          /** Converts a pending text run to a paragraph before a non-text block is emitted. */
+          /**
+           * Converts a pending text run to a paragraph before a non-text block is emitted.
+           */
           const flush = () => {
             if (!pending.length) return;
             result.push(
@@ -1213,21 +1219,21 @@ function parseMarkdown(
           try {
             let tableData = parseYaml(p) as RichBlock;
             if (tableData?._type !== 'table') return rawPlaceholder(blocks, s);
-            const sourceData = tableData as Record<string, unknown>;
-            if (sourceData._docsCellFormat === 'markdown-v1' && Array.isArray(sourceData.rows)) {
-              const { rows: sourceRows, ...tableFields } = sourceData;
+            const srcData = tableData as Record<string, unknown>;
+            if (srcData._docsCellFormat === 'markdown-v1' && Array.isArray(srcData.rows)) {
+              const { rows: srcRows, ...tableFields } = srcData;
               delete tableFields._docsCellFormat;
               tableData = {
                 ...tableFields,
                 _type: 'table',
-                rows: sourceRows.map((row) => {
+                rows: srcRows.map((row) => {
                   if (!row || typeof row !== 'object') return row;
-                  const { cells: sourceCells, ...rowFields } = row as Record<string, unknown>;
+                  const { cells: srcCells, ...rowFields } = row as Record<string, unknown>;
                   return {
                     ...rowFields,
                     _type: typeof rowFields._type === 'string' ? rowFields._type : 'row',
-                    cells: Array.isArray(sourceCells)
-                      ? sourceCells.map((cell) => {
+                    cells: Array.isArray(srcCells)
+                      ? srcCells.map((cell) => {
                           if (!cell || typeof cell !== 'object') return cell;
                           const { markdown, ...cellFields } = cell as Record<string, unknown>;
                           return {
@@ -1241,7 +1247,7 @@ function parseMarkdown(
                                   : [],
                           };
                         })
-                      : sourceCells,
+                      : srcCells,
                   };
                 }),
               } as RichBlock;
@@ -1273,8 +1279,10 @@ function parseMarkdown(
         },
       ),
   );
-  let calloutSource = fencedAccordions.restore(fencedAccordions.source);
-  /** One complete top-level tab or accordion item found in the Markdown source. */
+  let calloutSrc = fencedAccordions.restore(fencedAccordions.source);
+  /**
+   * One complete top-level tab or accordion item found in the Markdown source.
+   */
   type MarkdownGroup = {
     delimiter: '===' | '|||';
     title: string;
@@ -1285,13 +1293,13 @@ function parseMarkdown(
   };
   const groupStack: Omit<MarkdownGroup, 'closeStart' | 'end'>[] = [];
   const groupRanges: MarkdownGroup[] = [];
-  const groupFences = codeFenceRanges(calloutSource);
+  const groupFences = codeFenceRanges(calloutSrc);
   let groupFenceIndex = 0;
   let groupOffset = 0;
-  while (groupOffset < calloutSource.length) {
-    const newline = calloutSource.indexOf('\n', groupOffset);
-    const lineEnd = newline === -1 ? calloutSource.length : newline + 1;
-    const line = calloutSource.slice(groupOffset, lineEnd).replace(R_N_REGEX, '');
+  while (groupOffset < calloutSrc.length) {
+    const newline = calloutSrc.indexOf('\n', groupOffset);
+    const lineEnd = newline === -1 ? calloutSrc.length : newline + 1;
+    const line = calloutSrc.slice(groupOffset, lineEnd).replace(R_N_REGEX, '');
     while (groupFenceIndex < groupFences.length && groupOffset >= groupFences[groupFenceIndex]!.end)
       groupFenceIndex += 1;
     const fence = groupFences[groupFenceIndex];
@@ -1316,27 +1324,28 @@ function parseMarkdown(
   }
   const adjacentGroups: MarkdownGroup[][] = [];
   for (const range of groupRanges) {
-    const previousGroup = adjacentGroups.at(-1);
-    const previousRange = previousGroup?.at(-1);
+    const prevGroup = adjacentGroups.at(-1);
+    const prevRange = prevGroup?.at(-1);
     if (
       (range.delimiter === '|||' &&
-        previousGroup?.[0]?.delimiter === '|||' &&
-        previousRange !== undefined &&
-        calloutSource.slice(previousRange.end, range.start).trim() === '') ||
+        prevGroup?.[0]?.delimiter === '|||' &&
+        prevRange !== undefined &&
+        calloutSrc.slice(prevRange.end, range.start).trim() === '') ||
       (range.delimiter === '===' &&
-        previousGroup?.[0]?.delimiter === '===' &&
-        previousRange !== undefined &&
-        calloutSource.slice(previousRange.end, range.start).trim() === '')
+        prevGroup?.[0]?.delimiter === '===' &&
+        prevRange !== undefined &&
+        calloutSrc.slice(prevRange.end, range.start).trim() === '')
     )
-      previousGroup!.push(range);
+      prevGroup!.push(range);
     else adjacentGroups.push([range]);
   }
   for (const group of adjacentGroups.reverse()) {
     const first = group[0]!;
     const last = group.at(-1)!;
     const type = first.delimiter === '===' ? 'accordion' : 'tabs';
+    // hygiene-ignore single-use -- Parse every item before choosing the enabled or raw output path; deferring this map would alter parser work and keys.
     const items = group.map((r) => {
-      const markdown = calloutSource.slice(r.bodyStart, r.closeStart).trimEnd();
+      const markdown = calloutSrc.slice(r.bodyStart, r.closeStart).trimEnd();
       return {
         _type: 'item' as const,
         title: r.title,
@@ -1344,14 +1353,16 @@ function parseMarkdown(
         content: parseMarkdown(markdown, options, blocks),
       };
     });
-    calloutSource =
-      calloutSource.slice(0, first.start) +
+    calloutSrc =
+      calloutSrc.slice(0, first.start) +
       (enabled(options, type)
         ? richPlaceholder(blocks, { _type: type, items })
-        : rawPlaceholder(blocks, calloutSource.slice(first.start, last.end))) +
-      calloutSource.slice(last.end);
+        : rawPlaceholder(blocks, calloutSrc.slice(first.start, last.end))) +
+      calloutSrc.slice(last.end);
   }
-  /** State retained while scanning for a balanced callout fence. */
+  /**
+   * State retained while scanning for a balanced callout fence.
+   */
   type OpenCallout = {
     start: number;
     bodyStart: number;
@@ -1362,13 +1373,13 @@ function parseMarkdown(
   };
   const stack: OpenCallout[] = [];
   const ranges: (OpenCallout & { end: number })[] = [];
-  const calloutFences = codeFenceRanges(calloutSource);
+  const calloutFences = codeFenceRanges(calloutSrc);
   let fenceIndex = 0;
   let offset = 0;
-  while (offset < calloutSource.length) {
-    const newline = calloutSource.indexOf('\n', offset);
-    const end = newline === -1 ? calloutSource.length : newline + 1;
-    const line = calloutSource.slice(offset, end).replace(R_N_REGEX, '');
+  while (offset < calloutSrc.length) {
+    const newline = calloutSrc.indexOf('\n', offset);
+    const end = newline === -1 ? calloutSrc.length : newline + 1;
+    const line = calloutSrc.slice(offset, end).replace(R_N_REGEX, '');
     while (fenceIndex < calloutFences.length && offset >= calloutFences[fenceIndex]!.end)
       fenceIndex += 1;
     const fence = calloutFences[fenceIndex];
@@ -1400,9 +1411,9 @@ function parseMarkdown(
     const body =
       range.closeStart === undefined
         ? ''
-        : calloutSource.slice(range.bodyStart, range.closeStart).trimEnd();
-    calloutSource =
-      calloutSource.slice(0, range.start) +
+        : calloutSrc.slice(range.bodyStart, range.closeStart).trimEnd();
+    calloutSrc =
+      calloutSrc.slice(0, range.start) +
       ((content) =>
         enabled(options, 'callout')
           ? richPlaceholder(blocks, {
@@ -1412,12 +1423,12 @@ function parseMarkdown(
               content,
               ...(DOCSBLOCK_D_PLACEHOLDER_REGEX.test(body) ? {} : { markdown: body }),
             })
-          : rawPlaceholder(blocks, calloutSource.slice(range.start, range.end)))(
+          : rawPlaceholder(blocks, calloutSrc.slice(range.start, range.end)))(
         parseMarkdown(body, options, blocks),
       ) +
-      calloutSource.slice(range.end);
+      calloutSrc.slice(range.end);
   }
-  const fencedMath = shieldCodeFences(calloutSource);
+  const fencedMath = shieldCodeFences(calloutSrc);
   let source = fencedMath.restore(
     fencedMath.source.replace(TerraQualityRegex.REGEX_S_N_S_S_S_GM_REGEX(), (r, c: string) =>
       enabled(options, 'math')
@@ -1627,23 +1638,22 @@ function parseMarkdown(
       continue;
     }
     if (token.type === 'html') {
-      const tableSource = enabled(options, 'table')
+      const tableSrc = enabled(options, 'table')
         ? token.raw.match(/<table\b[^>]*>[\s\S]*?<\/table\s*>/i)?.[0]
         : undefined;
-      if (tableSource) {
+      if (tableSrc) {
         result.push(
           ((rows: RichBlock[][]) => ({
             _type: 'table',
             _key: key(),
             header: 'Table',
-            markdown: restoreInlineMathPlaceholders(tableSource),
+            markdown: restoreInlineMathPlaceholders(tableSrc),
             rows: rows.map((c) => ({ _type: 'row', _key: key(), cells: c })),
           }))(
-            [...tableSource.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)].map((r) =>
+            [...tableSrc.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)].map((r) =>
               [...(r[1] ?? '').matchAll(/<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)\s*>/gi)].map(
                 (cell) => {
                   const html = cell[1] ?? '';
-                  const inlineMath = options.inlineMath !== false && options.math !== false;
                   const stack: { name: string; close: string }[] = [];
                   const tagPattern = /<!--[\s\S]*?-->|<\/?([A-Za-z][A-Za-z0-9:-]*)\b([^>]*?)>/g;
                   let markdown = '';
@@ -1652,7 +1662,10 @@ function parseMarkdown(
                   const cellText = (text: string) =>
                     stack.some((tag) => tag.name === 'pre')
                       ? decodeHtmlRepeated(text)
-                      : escapeHtmlTableText(text, inlineMath);
+                      : escapeHtmlTableText(
+                          text,
+                          options.inlineMath !== false && options.math !== false,
+                        );
                   while ((match = tagPattern.exec(html))) {
                     const index = match.index ?? 0;
                     const raw = match[0];
@@ -1685,7 +1698,7 @@ function parseMarkdown(
                         ?.replace(G_REGEX(), '\\\\')
                         .replace(G_CLASS_2_3(), '\\"');
                       markdown += src
-                        ? `![${escapeMarkdownText(alt)}](${markdownDestination(src)}${escapedTitle ? ` "${escapedTitle}"` : ''})`
+                        ? `![${escapeMarkdownText(alt)}](${markdownDest(src)}${escapedTitle ? ` "${escapedTitle}"` : ''})`
                         : escapeMarkdownText(alt);
                       continue;
                     }
@@ -1707,7 +1720,7 @@ function parseMarkdown(
                     let close = '';
                     if (name === 'a') {
                       const href = htmlAttr(attrs, 'href');
-                      if (href) [open, close] = ['[', `](${markdownDestination(href)})`];
+                      if (href) [open, close] = ['[', `](${markdownDest(href)})`];
                     } else if (name === 'strong' || name === 'b') [open, close] = ['**', '**'];
                     else if (name === 'em' || name === 'i') [open, close] = ['*', '*'];
                     else if (name === 's' || name === 'del' || name === 'strike')
@@ -1715,11 +1728,10 @@ function parseMarkdown(
                     else if (name === 'p' || name === 'div') [open, close] = ['\n\n', '\n\n'];
                     else if (name === 'li') [open, close] = ['\n- ', '\n'];
                     else if (name === 'pre') {
-                      const language = (htmlAttr(attrs, 'data-language') ?? '').replace(
-                        /[^a-z\d-]/gi,
-                        '',
-                      );
-                      [open, close] = [`\n\n\`\`\`${language}\n`, '\n```\n\n'];
+                      [open, close] = [
+                        `\n\n\`\`\`${(htmlAttr(attrs, 'data-language') ?? '').replace(/[^a-z\d-]/gi, '')}\n`,
+                        '\n```\n\n',
+                      ];
                     }
                     markdown += open;
                     if (open && !selfClosing) stack.push({ name, close });
@@ -1736,8 +1748,8 @@ function parseMarkdown(
                   let cellMarkdown = markdown.replace(
                     /DOCSBLOCK(\d+)PLACEHOLDER/g,
                     (placeholder, indexText: string) => {
-                      const original = blocks[Number(indexText)];
-                      return original ? richPlaceholder(cellBlocks, original) : placeholder;
+                      const orig = blocks[Number(indexText)];
+                      return orig ? richPlaceholder(cellBlocks, orig) : placeholder;
                     },
                   );
                   if (enabled(options, 'docImage')) {
@@ -1806,16 +1818,16 @@ function parseMarkdown(
   }
   const grouped: RichBlock[] = [];
   for (const block of result) {
-    const previous = grouped.at(-1);
+    const prev = grouped.at(-1);
     if (
       (block._type === 'accordion' || block._type === 'tabs') &&
-      previous?._type === block._type &&
-      Array.isArray(previous.items) &&
+      prev?._type === block._type &&
+      Array.isArray(prev.items) &&
       Array.isArray(block.items)
     ) {
-      previous.items = [...previous.items, ...block.items];
+      prev.items = [...prev.items, ...block.items];
       if (typeof block.markdown === 'string')
-        previous.markdown = [previous.markdown, block.markdown].filter(Boolean).join('\n\n');
+        prev.markdown = [prev.markdown, block.markdown].filter(Boolean).join('\n\n');
     } else grouped.push(block);
   }
   return grouped as DocsValue;
@@ -1930,7 +1942,7 @@ function blockContentToMarkdown(block: RichBlock): string {
         else if (mark === 'strike-through') text = '~~' + text + '~~';
         else if (mark === 'underline') text = '<u>' + text + '</u>';
         else if (mark !== 'code' && markDefs.has(mark))
-          text = '[' + text + '](' + markdownDestination(markDefs.get(mark) ?? '') + ')';
+          text = '[' + text + '](' + markdownDest(markDefs.get(mark) ?? '') + ')';
       }
       return text;
     })
@@ -1985,7 +1997,7 @@ function blockContentToMarkdown(block: RichBlock): string {
         else if (mark === 'strike-through') text = '<s>' + text + '</s>';
         else if (mark === 'underline') text = '<u>' + text + '</u>';
         else if (mark !== 'code' && markDefs.has(mark))
-          text = '[' + text + '](' + markdownDestination(markDefs.get(mark) ?? '') + ')';
+          text = '[' + text + '](' + markdownDest(markDefs.get(mark) ?? '') + ')';
       }
       return text;
     })
@@ -2002,14 +2014,14 @@ function blockContentToMarkdown(block: RichBlock): string {
  *
  * @param children Original Portable Text children.
  * @param markdown Candidate Markdown body.
- * @param sourceMarkDefs Link targets resolved from the original mark definitions.
+ * @param srcMarkDefs Link targets resolved from the original mark definitions.
  *
  * @return Whether parsed children and link targets retain the original structure.
  */
 function inlineMarkdownRoundTrips(
   children: { _type?: string; text?: string; marks?: string[]; code?: string }[],
   markdown: string,
-  sourceMarkDefs: Map<string, string>,
+  srcMarkDefs: Map<string, string>,
 ): boolean {
   if (
     markdown.length === 0 &&
@@ -2064,20 +2076,16 @@ function inlineMarkdownRoundTrips(
           result.push({ math: piece.slice(1, -1), inline: true });
           continue;
         }
-        const previous = result.at(-1);
-        if (
-          previous &&
-          'text' in previous &&
-          JSON.stringify(previous.marks) === JSON.stringify(marks)
-        )
-          previous.text += piece;
+        const prev = result.at(-1);
+        if (prev && 'text' in prev && JSON.stringify(prev.marks) === JSON.stringify(marks))
+          prev.text += piece;
         else result.push({ text: piece, marks });
       }
     }
     return JSON.stringify(result);
   };
   return (
-    signature(children, sourceMarkDefs) ===
+    signature(children, srcMarkDefs) ===
     signature(
       parsed,
       new Map(
@@ -2221,10 +2229,10 @@ function semanticMarkdownValue(v: unknown): unknown {
           children.push({ _type: 'math', code: piece.slice(1, -1), inline: true });
           continue;
         }
-        const previous = children.at(-1) as
+        const prev = children.at(-1) as
           { _type?: string; text?: string; marks?: string[] } | undefined;
-        if (previous?._type === 'span' && JSON.stringify(previous.marks) === JSON.stringify(marks))
-          previous.text = String(previous.text ?? '') + piece;
+        if (prev?._type === 'span' && JSON.stringify(prev.marks) === JSON.stringify(marks))
+          prev.text = String(prev.text ?? '') + piece;
         else children.push({ _type: 'span', text: piece, marks });
       }
     }
@@ -2360,19 +2368,20 @@ export function docsValueToMarkdown(value: DocsValue): string {
         for (const nestedLevel of ordinals.keys())
           if (nestedLevel > level) ordinals.delete(nestedLevel);
         const kind = String(block.listItem);
-        const previous = ordinals.get(level);
-        const ordinal = previous?.kind === kind ? previous.count + 1 : 1;
+        const prev = ordinals.get(level);
+        const ordinal = prev?.kind === kind ? prev.count + 1 : 1;
         ordinals.set(level, { kind, count: ordinal });
         const marker = kind === 'number' ? ordinal + '.' : '-';
         // A nested list must be indented far enough to clear the parent marker. Two spaces
         // are not enough after an ordered marker (`1. `) in CommonMark and flatten the item.
         const indentation = '   '.repeat(level - 1);
-        const content = blockContentToMarkdown(block).replace(/^\\\[( |x)\\\](?= )/, '[$1]');
         lines.push(
           indentation +
             marker +
             ' ' +
-            content.replace(N_G_CLASS_2_3(), '\n' + indentation + ' '.repeat(marker.length + 1)),
+            blockContentToMarkdown(block)
+              .replace(/^\\\[( |x)\\\](?= )/, '[$1]')
+              .replace(N_G_CLASS_2_3(), '\n' + indentation + ' '.repeat(marker.length + 1)),
         );
         index += 1;
       }
@@ -2448,7 +2457,7 @@ export function docsValueToMarkdown(value: DocsValue): string {
           const markdown = '![' + alt + '](' + url + title + ')';
           return markdownPreservesValue(item, markdown) ? markdown : richBlockDirective(item);
         })(
-          markdownDestination(String(item.url ?? '')),
+          markdownDest(String(item.url ?? '')),
           item.title
             ? ' "' +
                 String(item.title).replace(G_REGEX(), '\\\\').replace(G_CLASS_2_3(), '\\"') +

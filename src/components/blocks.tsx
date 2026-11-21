@@ -156,12 +156,6 @@ function sUrl(value: unknown): string | undefined {
  * @returns A semantic heading, paragraph, list, blockquote, or inline-content element.
  */
 function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
-  const children =
-    typeof block.children === 'string'
-      ? [{ _type: 'span', text: block.children, marks: [] }]
-      : Array.isArray(block.children)
-        ? block.children
-        : [];
   const style = typeof block.style === 'string' ? block.style : 'normal';
   const Tag = TerraQualityRegex.REGEX_H_2_6_REGEX().test(style)
     ? (style as 'h2' | 'h3' | 'h4' | 'h5' | 'h6')
@@ -205,7 +199,13 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
     }
     return <span key={key}>{node}</span>;
   };
-  const rendered = children.map((c, i) => renderPortableTextChild(c, `portable-${i}`));
+  const rendered = (
+    typeof block.children === 'string'
+      ? [{ _type: 'span', text: block.children, marks: [] }]
+      : Array.isArray(block.children)
+        ? block.children
+        : []
+  ).map((c, i) => renderPortableTextChild(c, `portable-${i}`));
   if (block.listItem === 'bullet')
     return (
       <ul>
@@ -298,18 +298,20 @@ export function DocsRichBlock({
           ? ((row as Record<string, unknown>).cells as unknown[])
           : [],
       );
-      const count = rows.reduce((width, row) => Math.max(width, row.length), 0);
       return (
         <section className="docs-table" data-docs-editor-block="DocsTable">
           {text(block.header) && text(block.header) !== 'Table' && (
             <h3 className="sr-only">{text(block.header)}</h3>
           )}
           <DataTableContent
-            columns={Array.from({ length: count }, (_, i) => ({
-              key: String(i),
-              label: <NestedContent value={rows[0]?.[i]} options={options} />,
-              render: (row: unknown[]) => <NestedContent value={row[i]} options={options} />,
-            }))}
+            columns={Array.from(
+              { length: rows.reduce((width, row) => Math.max(width, row.length), 0) },
+              (_, i) => ({
+                key: String(i),
+                label: <NestedContent value={rows[0]?.[i]} options={options} />,
+                render: (row: unknown[]) => <NestedContent value={row[i]} options={options} />,
+              }),
+            )}
             rows={rows.slice(1)}
             variant="default"
           />
@@ -399,7 +401,9 @@ export function DocsRichBlock({
   }
 }
 
-/** The portable Docs members. A host can disable any member without changing stored data. */
+/**
+ * The portable Docs members. A host can disable any member without changing stored data.
+ */
 export { DOCS_BLOCK_TYPES, enabledDocsBlocks } from '../lib/block-types.js';
 export type {
   DocsBlockOptions,

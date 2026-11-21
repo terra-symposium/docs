@@ -1,4 +1,11 @@
 ---
+/**
+ * site/src/components/SiteMarkdownPage.astro
+ */
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
 import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
 import DocsCodeBlock from './DocsCodeBlock.astro';
 import DocsNodes from './DocsNodes.astro';
@@ -7,7 +14,7 @@ import { pageForSlug, pageHref, siteNavigation } from '../lib/catalog.js';
 type Props = { slug: string };
 const { slug } = Astro.props;
 const title = import.meta.env.PUBLIC_DOCS_TITLE ?? 'Documentation';
-const description = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
+const desc = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
 const base = import.meta.env.BASE_URL;
 const currentPage = pageForSlug(slug);
 const parentSlug = slug.split('/').slice(0, -1).join('/');
@@ -16,7 +23,7 @@ const Content = currentPage?.file.endsWith('.mdx') ? (currentPage.content as any
 const layoutProps = {
 	title,
 	homeHref: pageHref('', base),
-	description,
+	description: desc,
 	pageTitle: currentPage?.title,
 	pageDescription: currentPage?.description,
 	...(parentPage ? { breadcrumbParent: { title: parentPage.title, href: pageHref(parentSlug, base) } } : {}),
@@ -36,7 +43,7 @@ const layoutProps = {
 		<head>
 			<meta charset="utf-8" />
 			<meta name="viewport" content="width=device-width, initial-scale=1" />
-			{currentPage.description ? <meta name="description" content={currentPage.description} /> : description ? <meta name="description" content={description} /> : null}
+			{currentPage.description ? <meta name="description" content={currentPage.description} /> : desc ? <meta name="description" content={desc} /> : null}
 			<title>{currentPage.title} · {title}</title>
 		</head>
 		<body>

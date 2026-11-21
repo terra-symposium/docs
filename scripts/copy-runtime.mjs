@@ -17,11 +17,12 @@ CONFIG
 //////////////////////////////////////////////////*/
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = join(root, 'src', 'lib', 'terra');
+const src = join(root, 'src', 'lib', 'terra');
 const output = join(root, 'dist', 'lib', 'lib', 'terra');
 // Keep authored Docs prose after generated utilities, matching the original
 // website's cascade where its prose stylesheet loaded after global.css. Styling's
 // effect layer also contains authored @layer rules, so append it last.
+// hygiene-ignore single-use -- Read the built stylesheet before this script deletes its source file later in the copy transaction.
 const workspaceStyles = await readFile(join(root, 'dist', 'lib', 'workspace.css'), 'utf8');
 // Tailwind has already run. Leave the authored rules intact, but remove their
 // build-time layers so a consumer's Tailwind plugin can process this stylesheet.
@@ -49,12 +50,12 @@ async function copyRuntime(dir) {
       continue;
     }
     if (!entry.isFile() || !entry.name.endsWith('.mjs')) continue;
-    const destination = join(output, relative(source, path));
-    await mkdir(dirname(destination), { recursive: true });
-    await cp(path, destination);
+    const dest = join(output, relative(src, path));
+    await mkdir(dirname(dest), { recursive: true });
+    await cp(path, dest);
   }
 }
-await copyRuntime(source);
+await copyRuntime(src);
 await mkdir(join(root, 'dist', 'lib'), { recursive: true });
 for (const name of ['EditorHarness', 'WorkspaceDemo']) {
   for (const ext of ['js', 'js.map', 'd.ts', 'd.ts.map']) {

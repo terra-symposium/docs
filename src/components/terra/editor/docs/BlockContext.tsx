@@ -29,17 +29,23 @@ import type { JSX, ReactNode } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** One selectable command in a Docs block context menu. */
+/**
+ * One selectable command in a Docs block context menu.
+ */
 type BlockActionItem = {
   text: string;
   icon?: ReactNode;
   intent?: string;
   onSelect?: () => void;
 };
-/** Command, separator, or submenu entry collected from the clicked block and its ancestors. */
+/**
+ * Command, separator, or submenu entry collected from the clicked block and its ancestors.
+ */
 type BlockAction =
   BlockActionItem | { sep: true } | { text: string; icon?: ReactNode; sub: BlockActionItem[] };
-/** DOM element carrying optional commands used by the shared block context menu. */
+/**
+ * DOM element carrying optional commands used by the shared block context menu.
+ */
 type BlockActionTarget = HTMLElement & { __blockActions?: BlockAction[] };
 
 /*//////////////////////////////////////////////////

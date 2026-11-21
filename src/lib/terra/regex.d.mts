@@ -164,6 +164,7 @@ export declare const REGEX_DOCSTABLE_S_HTML_S_G_REGEX: () => RegExp;
  * @returns An expression matching `/docs` at the beginning of a path.
  */
 export declare const REGEX_DOCS_REGEX: () => RegExp;
+export declare const REGEX_DOCS_REGEX_2: () => RegExp;
 /**
  * Parses a `:::docs table[caption]` block and captures its body through the closing fence.
  * @returns A fresh multiline expression with the caption and table source in separate captures.

@@ -27,8 +27,9 @@ HELPERS
  *
  * @param title - Product name used by the shared Docs chrome.
  * @param homeHref - Host home route used by the navigation and not-found page.
- * @param description - Optional product description for the shared page chrome.
+ * @param desc - Optional product description for the shared page chrome.
  * @param pageTitle - Optional title for the selected document page.
+ * @param breadcrumbParent - Optional parent link shown above the selected page.
  * @param nodes - Host-provided navigation tree.
  * @param currentPath - Current route used to select the active navigation entry.
  * @param hue - Palette hue applied to the workspace.
@@ -38,6 +39,8 @@ HELPERS
  * @param attachments - Attachments available to the rendered page.
  * @param rootPath - Base route used to build local document links.
  * @param markdown - Markdown source rendered when supplied.
+ * @param srcMarkdown - Original Markdown source retained for downloads.
+ * @param srcPath - Original filename used for downloaded Markdown.
  * @param content - Structured document value used when no Markdown body is supplied.
  * @param quiz - Optional quiz configuration for the current page.
  *
@@ -46,7 +49,7 @@ HELPERS
 export function DocsSiteLayout({
   title,
   homeHref = '/',
-  description,
+  description: desc,
   pageTitle,
   breadcrumbParent,
   nodes,
@@ -58,8 +61,8 @@ export function DocsSiteLayout({
   attachments = [],
   rootPath,
   markdown,
-  sourceMarkdown,
-  sourcePath,
+  sourceMarkdown: srcMarkdown,
+  sourcePath: srcPath,
   content,
   quiz,
 }: {
@@ -73,7 +76,9 @@ export function DocsSiteLayout({
   hue?: number | null;
   children?: ReactNode;
   trees?: DocsTree[];
-  /** @deprecated Use trees. */
+  /**
+   * Legacy navigation sections retained for hosts that have not migrated to trees. @deprecated Use trees.
+   */
   sections?: DocsSection[];
   attachments?: DocsAttachment[];
   rootPath?: string;
@@ -87,7 +92,7 @@ export function DocsSiteLayout({
     <DocsStaticWorkspace
       title={title}
       homeHref={homeHref}
-      {...(description ? { description } : {})}
+      {...(desc ? { description: desc } : {})}
       {...(pageTitle ? { pageTitle } : {})}
       {...(breadcrumbParent ? { breadcrumbParent } : {})}
       hue={hue}
@@ -97,8 +102,8 @@ export function DocsSiteLayout({
       currentPath={currentPath}
       {...(rootPath ? { rootPath } : {})}
       {...(markdown !== undefined ? { markdown } : {})}
-      {...(sourceMarkdown !== undefined ? { sourceMarkdown } : {})}
-      {...(sourcePath !== undefined ? { sourcePath } : {})}
+      {...(srcMarkdown !== undefined ? { sourceMarkdown: srcMarkdown } : {})}
+      {...(srcPath !== undefined ? { sourcePath: srcPath } : {})}
       {...(content !== undefined ? { content } : {})}
       {...(quiz ? { quiz } : {})}
       attachments={attachments}

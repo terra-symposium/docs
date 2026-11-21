@@ -3,6 +3,7 @@
  * Separates Docs-owned flags from switches forwarded to Astro.
  */
 
+// hygiene-ignore single-use -- The CLI and its argument-parser contract tests import this named function across module boundaries.
 /**
  * Routes flags consumed by Docs away from Astro-only switches so each process
  * receives the options it owns.
@@ -16,7 +17,7 @@ export function parseDocsArguments(args) {
   const options = new Map();
   const passthrough = [];
   for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
+    const arg = args[index];
     if (
       [
         '--title',
@@ -28,14 +29,14 @@ export function parseDocsArguments(args) {
         '--host',
         '--skills',
         '--agents',
-      ].includes(argument)
+      ].includes(arg)
     ) {
       const value = args[index + 1];
-      if (!value || value.startsWith('--')) throw new Error(`Missing value for ${argument}`);
-      options.set(argument, value);
+      if (!value || value.startsWith('--')) throw new Error(`Missing value for ${arg}`);
+      options.set(arg, value);
       index += 1;
     } else {
-      passthrough.push(argument);
+      passthrough.push(arg);
     }
   }
   return { options, passthrough };

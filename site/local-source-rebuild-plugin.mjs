@@ -1,15 +1,24 @@
-/** Rebuild this checkout's package when its Docs site is used as a development host. */
+/**
+ * site/local-source-rebuild-plugin.mjs
+ */
+/* Rebuild this checkout's package when its Docs site is used as a development host. */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
 import { spawn } from 'node:child_process';
 import { sep, resolve } from 'node:path';
 
+// hygiene-ignore single-use -- This exported Vite watcher is loaded by the Astro site config during local development.
 /**
  * Keep the package output used by the site in step with edits to its source.
  * Consumer Docs sites use their installed package and do not run this watcher.
- * @param {{ root: string }} options The Docs package checkout.
+ * @param {string} root - Root directory of the Docs package checkout.
  * @returns {import('vite').Plugin} Vite development plugin.
  */
 export function localSourceRebuildPlugin({ root }) {
-  const sourceRoot = resolve(root, 'src');
+  const srcRoot = resolve(root, 'src');
   let timer;
   let building = false;
   let pending = false;
@@ -18,8 +27,7 @@ export function localSourceRebuildPlugin({ root }) {
     name: 'terra-docs-local-source-rebuild',
     apply: 'serve',
     configureServer(server) {
-      server.watcher.add(sourceRoot);
-
+      server.watcher.add(srcRoot);
       const rebuild = async () => {
         if (building) {
           pending = true;
@@ -27,10 +35,11 @@ export function localSourceRebuildPlugin({ root }) {
         }
         building = true;
         try {
+          // hygiene-ignore single-use -- Wait for the child build result before choosing module invalidation or failure reporting.
           const code = await new Promise((done) => {
             const child = spawn('pnpm', ['run', 'build:dev'], { cwd: root, stdio: 'inherit' });
-            child.once('error', (error) => {
-              console.error(`Docs source rebuild could not start: ${error.message}`);
+            child.once('error', (err) => {
+              console.error(`Docs source rebuild could not start: ${err.message}`);
               done(1);
             });
             child.once('exit', (exitCode) => done(exitCode ?? 1));
@@ -52,15 +61,15 @@ export function localSourceRebuildPlugin({ root }) {
         }
       };
 
-      const onSourceChange = (path) => {
-        if (!path.startsWith(`${sourceRoot}${sep}`)) return;
+      const onSrcChange = (path) => {
+        if (!path.startsWith(`${srcRoot}${sep}`)) return;
         clearTimeout(timer);
         timer = setTimeout(() => void rebuild(), 150);
       };
-      for (const event of ['add', 'change', 'unlink']) server.watcher.on(event, onSourceChange);
+      for (const e of ['add', 'change', 'unlink']) server.watcher.on(e, onSrcChange);
       server.httpServer?.once('close', () => {
         clearTimeout(timer);
-        for (const event of ['add', 'change', 'unlink']) server.watcher.off(event, onSourceChange);
+        for (const e of ['add', 'change', 'unlink']) server.watcher.off(e, onSrcChange);
       });
     },
   };

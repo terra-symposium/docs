@@ -17,7 +17,7 @@ import { pathToFileURL } from 'node:url';
 import { normalizeCodeForAudit } from './render-audit-utils.mjs';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../../src/lib/terra/regex.mjs';
+import * as TerraQualityRegex from '../src/lib/terra/regex.mjs';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -49,7 +49,7 @@ const pageErrs = [];
 const consoleErrs = [];
 const pages = [];
 const screenshots = [];
-const sourceAnomalies = [];
+const srcAnomalies = [];
 const familyTotals = {};
 const sanityLeaves = JSON.parse(
   await readFile(join(uniRoot, 'content/_archive/sanity-production-tree.json'), 'utf8'),
@@ -65,7 +65,7 @@ const tocById = new Map(
 );
 const imgManifest = [...(manifest.inlineImages ?? []), ...(manifest.recoveredInlineImages ?? [])];
 const supportedDecorators = new Set(['strong', 'em', 'underline', 'strike-through', 'code']);
-const sourceAudit = {
+const srcAudit = {
   sanityLeaves: sanityLeaves.length,
   tocPages: tocLeaves.length,
   uniqueTocPages: new Set(tocLeaves.map(({ leaf: l }) => l.id)).size,
@@ -204,21 +204,21 @@ const report = {
     manifestLeaves: leaves.length,
   },
   sourceAudit: {
-    sanityLeaves: sourceAudit.sanityLeaves,
-    markdownLeaves: sourceAudit.markdownLeaves,
-    reconciledSanityLeaves: sourceAudit.reconciledSanityLeaves,
-    reconciliation: sourceAudit.reconciliation,
-    imageLocalizedLeaves: sourceAudit.imageLocalizedLeaves,
-    markdownHashesVerified: sourceAudit.markdownHashesVerified,
-    inlineAssets: sourceAudit.inlineAssets,
-    differences: sourceAudit.differences,
-    markdownHashFailures: sourceAudit.markdownHashFailures,
+    sanityLeaves: srcAudit.sanityLeaves,
+    markdownLeaves: srcAudit.markdownLeaves,
+    reconciledSanityLeaves: srcAudit.reconciledSanityLeaves,
+    reconciliation: srcAudit.reconciliation,
+    imageLocalizedLeaves: srcAudit.imageLocalizedLeaves,
+    markdownHashesVerified: srcAudit.markdownHashesVerified,
+    inlineAssets: srcAudit.inlineAssets,
+    differences: srcAudit.differences,
+    markdownHashFailures: srcAudit.markdownHashFailures,
   },
   navigationAudit,
   attachmentRouteAudit,
   attachmentModeAudit,
-  sourceAnomalies,
-  sourceAnomalyCount: sourceAnomalies.length,
+  sourceAnomalies: srcAnomalies,
+  sourceAnomalyCount: srcAnomalies.length,
   renderedAudit: {
     renderedPages: pages.length,
     sourceTextBlockCount: pages.reduce((s, p) => s + p.textBlocks.source, 0),
@@ -238,6 +238,7 @@ const report = {
   pages,
   screenshots,
 };
+// hygiene-ignore single-use -- Complete the report snapshot before writing JSON and HTML outputs, so both outputs use the same counts.
 const summary = {
   reportPath,
   app: report.app,
@@ -273,13 +274,13 @@ const summary = {
   consoleErrorCount: consoleErrs.length,
   fatalConsoleErrors: fatalConsoleErrs,
   failureCount: failures.length,
-  sourceAnomalyCount: sourceAnomalies.length,
+  sourceAnomalyCount: srcAnomalies.length,
   failureCategories: failures.reduce((c, f) => {
     c[f.category] = (c[f.category] ?? 0) + 1;
     return c;
   }, {}),
   failures: failures.slice(0, 80),
-  sourceAnomalies,
+  sourceAnomalies: srcAnomalies,
   screenshots,
 };
 
@@ -287,6 +288,7 @@ const summary = {
 HELPERS
 //////////////////////////////////////////////////*/
 
+// hygiene-ignore single-use -- Distinguish missing optional audit input from malformed JSON at this named filesystem boundary.
 /**
  * Reads an optional JSON file, treating a missing path as absent while preserving parse and I/O errors.
  * @param path Filesystem path to the JSON document.
@@ -330,16 +332,18 @@ function dirTitle(name) {
 
 /**
  * Selects a page title from its frontmatter, falling back when the source has no title field.
- * @param source Markdown source that may begin with YAML frontmatter.
+ * @param src Markdown source that may begin with YAML frontmatter.
  * @param fallback Title to use when neither `title` nor `label` is present.
  * @returns The trimmed frontmatter title or the trimmed fallback.
  */
-function markdownTitle(source, fallback) {
-  const frontmatter = /^---\s*\n([\s\S]*?)\n---(?:\n|$)/.exec(source)?.[1] ?? '';
-  const match = /^(?:title|label):\s*(?:"([^"]*)"|'([^']*)'|(.+))\s*$/m.exec(frontmatter);
+function markdownTitle(src, fallback) {
+  const match = /^(?:title|label):\s*(?:"([^"]*)"|'([^']*)'|(.+))\s*$/m.exec(
+    /^---\s*\n([\s\S]*?)\n---(?:\n|$)/.exec(src)?.[1] ?? '',
+  );
   return (match?.[1] ?? match?.[2] ?? match?.[3]?.trim() ?? fallback).trim();
 }
 
+// hygiene-ignore single-use -- Keep filesystem discovery as an async phase before evaluating any rendered leaf.
 /**
  * Builds the rendered table of contents by reading section, group, and leaf directories under content.
  * @param root Root folder containing the content tree.
@@ -391,7 +395,8 @@ async function discoverToc(root, knownLeaves) {
       for (const leafDir of await dirs(join(contentRoot, sectionDir, groupDir))) {
         const leafPath = `content/${sectionDir}/${groupDir}/${leafDir}/index.md`;
         try {
-          const source = await readFile(join(root, leafPath), 'utf8');
+          // hygiene-ignore single-use -- Read the leaf before enumerating its attachments; moving this await changes audit sequencing.
+          const src = await readFile(join(root, leafPath), 'utf8');
           const attachments = [];
           for (const entry of await readdir(join(root, dirname(leafPath)), {
             withFileTypes: true,
@@ -411,7 +416,7 @@ async function discoverToc(root, knownLeaves) {
             id: idFromDir(leafDir, group.id),
             title:
               [...knownLeaves.values()].find((l) => l.path === leafPath)?.title ??
-              markdownTitle(source, dirTitle(leafDir)),
+              markdownTitle(src, dirTitle(leafDir)),
             path: leafPath,
             attachments,
           });
@@ -512,10 +517,11 @@ function normText(value) {
  * @returns `true` when the trimmed value is a valid horizontal rule.
  */
 function isMarkdownThematicBreak(value) {
-  const source = String(value ?? '')
-    .replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n')
-    .trim();
-  return TerraQualityRegex.REGEX_T_2_T_2_T_2_T_REGEX().test(source);
+  return TerraQualityRegex.REGEX_T_2_T_2_T_2_T_REGEX().test(
+    String(value ?? '')
+      .replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n')
+      .trim(),
+  );
 }
 
 /**
@@ -540,12 +546,12 @@ function normPageAssetUrls(value, pagePath) {
 
 /**
  * Converts supported YouTube watch, short, and share URLs to their canonical embed URL.
- * @param source Candidate embed or watch URL.
+ * @param src Candidate embed or watch URL.
  * @returns The canonical player URL with supported playlist and start-time settings, or the original source.
  */
-function expectedEmbedUrl(source) {
+function expectedEmbedUrl(src) {
   try {
-    const url = new URL(source);
+    const url = new URL(src);
     const host = url.hostname.toLowerCase().replace(TerraQualityRegex.REGEX_WWW_REGEX(), '');
     let videoId;
     if (['youtube.com', 'm.youtube.com', 'youtube-nocookie.com'].includes(host))
@@ -555,7 +561,7 @@ function expectedEmbedUrl(source) {
     else if (host === 'youtu.be') {
       videoId = url.pathname.split('/').filter(Boolean)[0];
     }
-    if (!videoId || !TerraQualityRegex.REGEX_W_REGEX().test(videoId)) return source;
+    if (!videoId || !TerraQualityRegex.REGEX_W_REGEX().test(videoId)) return src;
     const player = new URL(
       `https://${host === 'youtube-nocookie.com' ? 'www.youtube-nocookie.com' : 'www.youtube.com'}/embed/${videoId}`,
     );
@@ -577,7 +583,7 @@ function expectedEmbedUrl(source) {
     }
     return player.toString();
   } catch {
-    return source;
+    return src;
   }
 }
 
@@ -605,17 +611,17 @@ function canonicalHref(value, pagePath) {
  * @param pagePath Page path used to resolve linked marks.
  * @returns Adjacent spans with identical decorators, links, and unsupported marks coalesced.
  */
-function sourceInlineRuns(block, pagePath) {
+function srcInlineRuns(block, pagePath) {
   const linkByKey = new Map(
     (block.markDefs ?? [])
       .filter((d) => d?._type === 'link' && d?._key)
       .map((d) => [d._key, d.href]),
   );
   const runs = [];
-  let previousSignature = null;
+  let prevSignature = null;
   for (const child of block.children ?? []) {
     if (child?._type !== 'span') {
-      previousSignature = null;
+      prevSignature = null;
       continue;
     }
     const text = String(child.text ?? '');
@@ -632,9 +638,9 @@ function sourceInlineRuns(block, pagePath) {
     unknownMarks.sort();
     const signature = JSON.stringify({ decorators, href, unknownMarks });
     const last = runs.at(-1);
-    if (previousSignature === signature && last?.signature === signature) last.text += text;
+    if (prevSignature === signature && last?.signature === signature) last.text += text;
     else runs.push({ signature, decorators, href, unknownMarks, text });
-    previousSignature = signature;
+    prevSignature = signature;
   }
   return runs;
 }
@@ -742,6 +748,7 @@ async function openLeaf(leaf, parsed) {
   return true;
 }
 
+// hygiene-ignore single-use -- Keep screenshot name normalization in one documented boundary used by the capture phase.
 /**
  * Creates a stable screenshot filename from a leaf title and route ID.
  * @param leaf Page metadata containing the display title and route identifier.
@@ -804,41 +811,41 @@ if (
   tocLeaves.length !== leaves.length ||
   new Set(tocLeaves.map(({ leaf: l }) => l.id)).size !== leaves.length
 )
-  sourceAudit.differences.push({
+  srcAudit.differences.push({
     issue: 'toc-page-count-or-uniqueness',
     expected: leaves.length,
     actual: tocLeaves.length,
   });
-for (const sourceLeaf of sanityLeaves) {
-  const leaf = manifestById.get(sourceLeaf._id);
+for (const srcLeaf of sanityLeaves) {
+  const leaf = manifestById.get(srcLeaf._id);
   if (!leaf) {
-    sourceAudit.differences.push({ id: sourceLeaf._id, issue: 'missing-local-markdown' });
+    srcAudit.differences.push({ id: srcLeaf._id, issue: 'missing-local-markdown' });
     continue;
   }
-  sourceAudit.markdownLeaves++;
+  srcAudit.markdownLeaves++;
   const parsedImgs = ofType(
     docsPkg.markdownToDocsValue(await readFile(join(uniRoot, leaf.path), 'utf8')),
     'docImage',
   );
-  const reconciliationPage = reconciliationPageById.get(sourceLeaf._id);
+  const reconciliationPage = reconciliationPageById.get(srcLeaf._id);
   if (!reconciliationPage || !Array.isArray(reconciliationPage.canonicalRoundTrip?.comparisons))
-    sourceAudit.differences.push({
-      id: sourceLeaf._id,
+    srcAudit.differences.push({
+      id: srcLeaf._id,
       issue: 'missing-source-reconciliation-record',
     });
   else {
-    sourceAudit.reconciledSanityLeaves++;
+    srcAudit.reconciledSanityLeaves++;
   }
-  const sourceImages = ofType(sourceLeaf.content ?? [], 'docImage');
-  const expectedAssets = imgManifest.filter((i) => i.leafId === sourceLeaf._id);
+  const sourceImages = ofType(srcLeaf.content ?? [], 'docImage');
+  const expectedAssets = imgManifest.filter((i) => i.leafId === srcLeaf._id);
   let imgsMatch = expectedAssets.length === parsedImgs.length;
-  for (const original of sourceImages) {
-    if (!expectedAssets.some((i) => i.url === original.url)) {
+  for (const orig of sourceImages) {
+    if (!expectedAssets.some((i) => i.url === orig.url)) {
       imgsMatch = false;
-      sourceAudit.differences.push({
-        id: sourceLeaf._id,
+      srcAudit.differences.push({
+        id: srcLeaf._id,
         issue: 'sanity-inline-image-unrecorded',
-        expected: original.url,
+        expected: orig.url,
       });
     }
   }
@@ -860,27 +867,27 @@ for (const sourceLeaf of sanityLeaves) {
     }
   };
   for (const asset of expectedAssets) {
-    const renderedSource = parsedImgs.find(
+    const renderedSrc = parsedImgs.find(
       (i) => localImgPath(i) === asset.path && (i.alt ?? '') === (asset.alt ?? ''),
     );
-    if (!renderedSource || TerraQualityRegex.REGEX_HTTPS_I_REGEX().test(renderedSource.url)) {
+    if (!renderedSrc || TerraQualityRegex.REGEX_HTTPS_I_REGEX().test(renderedSrc.url)) {
       imgsMatch = false;
-      sourceAudit.differences.push({
-        id: sourceLeaf._id,
+      srcAudit.differences.push({
+        id: srcLeaf._id,
         issue: 'image-markdown-source-mismatch',
         originalUrl: asset.url,
         expectedPath: asset.path,
-        actualPath: renderedSource ? localImgPath(renderedSource) : null,
+        actualPath: renderedSrc ? localImgPath(renderedSrc) : null,
         expectedAlt: asset.alt,
-        actualAlt: renderedSource?.alt ?? null,
+        actualAlt: renderedSrc?.alt ?? null,
       });
     }
   }
   if (imgsMatch) {
-    if (expectedAssets.length) sourceAudit.imageLocalizedLeaves++;
-  } else if (!sourceAudit.differences.some((i) => i.id === sourceLeaf._id)) {
-    sourceAudit.differences.push({
-      id: sourceLeaf._id,
+    if (expectedAssets.length) srcAudit.imageLocalizedLeaves++;
+  } else if (!srcAudit.differences.some((i) => i.id === srcLeaf._id)) {
+    srcAudit.differences.push({
+      id: srcLeaf._id,
       issue: 'inline-image-count-or-localization-mismatch',
       expected: expectedAssets.length,
       actual: parsedImgs.length,
@@ -891,9 +898,9 @@ for (const leaf of leaves) {
   const actual = createHash('sha256')
     .update(await readFile(join(uniRoot, leaf.path), 'utf8'))
     .digest('hex');
-  if (actual === leaf.sha256) sourceAudit.markdownHashesVerified++;
+  if (actual === leaf.sha256) srcAudit.markdownHashesVerified++;
   else
-    sourceAudit.markdownHashFailures.push({
+    srcAudit.markdownHashFailures.push({
       id: leaf.id,
       path: leaf.path,
       expected: leaf.sha256,
@@ -905,16 +912,16 @@ for (const asset of imgManifest) {
     const bytes = await readFile(join(uniRoot, asset.path));
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     if (bytes.length !== asset.bytes || sha256 !== asset.sha256)
-      sourceAudit.inlineAssets.failures.push({
+      srcAudit.inlineAssets.failures.push({
         path: asset.path,
         expectedBytes: asset.bytes,
         actualBytes: bytes.length,
         expectedSha256: asset.sha256,
         actualSha256: sha256,
       });
-    else sourceAudit.inlineAssets.verified++;
+    else srcAudit.inlineAssets.verified++;
   } catch (error) {
-    sourceAudit.inlineAssets.failures.push({ path: asset.path, issue: String(error) });
+    srcAudit.inlineAssets.failures.push({ path: asset.path, issue: String(error) });
   }
 }
 page.on('pageerror', (e) => pageErrs.push({ url: page.url(), message: e.message }));
@@ -1124,13 +1131,13 @@ for (let index = 0; index < leaves.length; index++) {
   if (!(await openLeaf(leaf, parsed))) continue;
   const headerData = await page.evaluate((i) => {
     const title = document.querySelector('input[placeholder="Page title"]');
-    const description = document.querySelector('textarea[placeholder="Add a description..."]');
+    const desc = document.querySelector('textarea[placeholder="Add a description..."]');
     return {
       documentTitle: document.title,
       title: title instanceof HTMLInputElement ? title.value : null,
       titleDisabled: title instanceof HTMLInputElement ? title.disabled : null,
-      description: description instanceof HTMLTextAreaElement ? description.value : null,
-      descriptionDisabled: description instanceof HTMLTextAreaElement ? description.disabled : null,
+      description: desc instanceof HTMLTextAreaElement ? desc.value : null,
+      descriptionDisabled: desc instanceof HTMLTextAreaElement ? desc.disabled : null,
       section:
         document.querySelector('[role="combobox"][aria-label="Section"]')?.textContent?.trim() ??
         null,
@@ -1199,25 +1206,25 @@ for (let index = 0; index < leaves.length; index++) {
      * @param element Top-level rendered block or one of its descendants.
      * @returns The recognized editor block name, or `unknown` when no supported marker matches.
      */
-    const classify = (element) => {
-      const kind = element.getAttribute('data-docs-editor-block');
+    const classify = (el) => {
+      const kind = el.getAttribute('data-docs-editor-block');
       if (kind === 'DocsTable') return 'table';
       if (kind === 'Diagram') return 'nodes';
       if (kind === 'Raw Markdown') return 'raw';
       if (kind === 'TypeScript docs') return 'tsDocs';
       if (kind === 'math') return 'math';
-      if (element.matches('[data-docs-code-block="view"]')) return 'code';
-      if (element.matches('[data-pt-block="text"]')) return 'text';
-      if (element.matches('aside[data-docs-aside]')) return 'callout';
-      if (element.matches('img') || element.querySelector(':scope > img')) return 'docImage';
-      if (element.matches('iframe') || element.querySelector(':scope > iframe')) return 'embed';
+      if (el.matches('[data-docs-code-block="view"]')) return 'code';
+      if (el.matches('[data-pt-block="text"]')) return 'text';
+      if (el.matches('aside[data-docs-aside]')) return 'callout';
+      if (el.matches('img') || el.querySelector(':scope > img')) return 'docImage';
+      if (el.matches('iframe') || el.querySelector(':scope > iframe')) return 'embed';
       if (
-        element.matches('.docs-math, .docs-math-wrapper') ||
-        element.querySelector(':scope > .docs-math, :scope > .docs-math-wrapper')
+        el.matches('.docs-math, .docs-math-wrapper') ||
+        el.querySelector(':scope > .docs-math, :scope > .docs-math-wrapper')
       )
         return 'math';
-      if (element.querySelector('[role="tablist"][aria-label="Tab options"]')) return 'tabs';
-      if (element.querySelector('button[aria-label^="Toggle "]')) return 'accordion';
+      if (el.querySelector('[role="tablist"][aria-label="Tab options"]')) return 'tabs';
+      if (el.querySelector('button[aria-label^="Toggle "]')) return 'accordion';
       return 'unknown';
     };
     /**
@@ -1247,6 +1254,7 @@ for (let index = 0; index < leaves.length; index++) {
         .map((line) => line.textContent ?? '')
         .join('\n');
     };
+    // hygiene-ignore single-use -- Collect table rows before subsequent DOM probes so the audit snapshot represents one ordered pass.
     const tables = all('section[data-docs-editor-block="DocsTable"]').map((section) => {
       const table = section.querySelector(':scope > table');
       /**
@@ -1267,17 +1275,20 @@ for (let index = 0; index < leaves.length; index++) {
         rows: table ? [...table.rows].map((row) => [...row.children].map(cellText)) : [],
       };
     });
+    // hygiene-ignore single-use -- Collect visible code blocks before raw and graph probes; preserve snapshot extraction order.
     const codeBlocks = all('.docs-code-block[data-docs-code-block="view"]')
       .filter((block) => !block.closest('[data-docs-editor-block="Raw Markdown"]'))
       .map((block) => ({
         language: block.querySelector('.docs-code-block-header p')?.textContent?.trim() ?? '',
         code: readCode(block),
       }));
+    // hygiene-ignore single-use -- Collect raw blocks before graph probes; preserve snapshot extraction order.
     const rawBlocks = all('[data-docs-editor-block="Raw Markdown"]').map((block) => ({
       code: readCode(block),
       text: block.innerText ?? '',
       divider: Boolean(block.querySelector('hr[data-docs-raw-divider]')),
     }));
+    // hygiene-ignore single-use -- Collect graph blocks before text probes; preserve snapshot extraction order.
     const graphBlocks = all('[data-docs-editor-block="Diagram"]').map((wrapper) => {
       const graph = wrapper.querySelector('[data-docs-editor-block="Nodes"]');
       return {
@@ -1328,11 +1339,15 @@ for (let index = 0; index < leaves.length; index++) {
         box: graph?.getBoundingClientRect().toJSON() ?? null,
       };
     });
+    // hygiene-ignore single-use -- Collect text block records before inline span probes; preserve snapshot extraction order.
     const textBlocks = all('[data-pt-block="text"][data-pt-path]').map((element) => {
       const path = element.getAttribute('data-pt-path') ?? '';
+      // hygiene-ignore single-use -- Capture the first child before querying nested list items in this block snapshot.
       const firstContent = element.firstElementChild;
       const listItem = element.querySelector(':scope > ol > li, :scope > ul > li');
+      // hygiene-ignore single-use -- Snapshot inline spans before calculating each block text value.
       const inline = [...element.querySelectorAll('[data-pt-inline="span"][data-pt-path]')];
+      // hygiene-ignore single-use -- Compute normalized block text once before returning this audit record.
       const text = inline
         .map((span) => {
           const value = span.querySelector('[data-pt-text="true"]');
@@ -1352,10 +1367,12 @@ for (let index = 0; index < leaves.length; index++) {
     });
     const inlineSpans = all('[data-pt-inline="span"][data-pt-path]').map((element) => {
       const path = element.getAttribute('data-pt-path') ?? '';
+      // hygiene-ignore single-use -- Capture inline text before computing its decorators for this audit record.
       const text =
         element.querySelector('[data-pt-text="true"]')?.textContent ??
         (element.querySelector('[data-pt-line-break="true"]') ? '\n' : '');
       const marksRoot = element.querySelector('[data-pt-marks="true"]') ?? element;
+      // hygiene-ignore single-use -- Collect decorator names once from this span before returning the audit record.
       const decorators = [
         ['strong', 'strong'],
         ['em', 'em'],
@@ -1396,6 +1413,7 @@ for (let index = 0; index < leaves.length; index++) {
       })),
       accordionTriggers: all('button[aria-label^="Toggle "]').map((trigger) => {
         const triggerId = trigger.id;
+        // hygiene-ignore single-use -- Resolve the labelled accordion region once for this trigger snapshot.
         const region = all('[role="region"]').find((element) =>
           (element.getAttribute('aria-labelledby') ?? '')
             .split(TerraQualityRegex.REGEX_S_REGEX())
@@ -1440,11 +1458,11 @@ for (let index = 0; index < leaves.length; index++) {
         .filter(Boolean),
     };
   });
-  const sourceTextBlocks = [];
+  const srcTextBlocks = [];
   walk(parsed, (i) => {
-    if (i._type === 'block' || i._type === 'block') sourceTextBlocks.push(i);
+    if (i._type === 'block' || i._type === 'block') srcTextBlocks.push(i);
   });
-  const sourceContentTextBlocks = sourceTextBlocks.filter((b) =>
+  const srcContentTextBlocks = srcTextBlocks.filter((b) =>
     normText((b.children ?? []).map(plainText).join('')),
   );
   const renderedContentTextBlocks = (dom.textBlocks ?? []).filter((b) =>
@@ -1458,11 +1476,11 @@ for (let index = 0; index < leaves.length; index++) {
     renderedBlocks: dom.direct?.length ?? 0,
     topLevelMismatches: [],
     textBlocks: {
-      source: sourceTextBlocks.length,
+      source: srcTextBlocks.length,
       rendered: dom.textBlocks?.length ?? 0,
-      sourceContent: sourceContentTextBlocks.length,
+      sourceContent: srcContentTextBlocks.length,
       renderedContent: renderedContentTextBlocks.length,
-      sourceEmpty: sourceTextBlocks.length - sourceContentTextBlocks.length,
+      sourceEmpty: srcTextBlocks.length - srcContentTextBlocks.length,
       renderedEmpty: (dom.textBlocks?.length ?? 0) - renderedContentTextBlocks.length,
       missing: [],
       unexpected: [],
@@ -1519,19 +1537,19 @@ for (let index = 0; index < leaves.length; index++) {
       sourceEmpty: record.textBlocks.sourceEmpty,
       renderedEmpty: record.textBlocks.renderedEmpty,
     });
-  const renderedTextBlockForSource = [];
-  for (let blockIndex = 0; blockIndex < sourceContentTextBlocks.length; blockIndex++) {
-    const block = sourceContentTextBlocks[blockIndex];
-    const sourceIndex = sourceTextBlocks.indexOf(block);
+  const renderedTextBlockForSrc = [];
+  for (let blockIndex = 0; blockIndex < srcContentTextBlocks.length; blockIndex++) {
+    const block = srcContentTextBlocks[blockIndex];
+    const srcIndex = srcTextBlocks.indexOf(block);
     const actual = renderedContentTextBlocks[blockIndex];
     const expectedText = (block.children ?? []).map(plainText).join('');
-    if (!actual) record.textBlocks.missing.push(block._key ?? `index:${sourceIndex}`);
-    else renderedTextBlockForSource[sourceIndex] = actual;
+    if (!actual) record.textBlocks.missing.push(block._key ?? `index:${srcIndex}`);
+    else renderedTextBlockForSrc[srcIndex] = actual;
     const actualText = actual ? normPageAssetUrls(actual.text, leaf.path) : '';
     if (actual && normText(actualText) !== normText(expectedText))
       record.textBlocks.textMismatch.push({
         key: block._key,
-        index: sourceIndex,
+        index: srcIndex,
         expected: expectedText.slice(0, 180),
         actual: actualText.slice(0, 180),
       });
@@ -1549,7 +1567,7 @@ for (let index = 0; index < leaves.length; index++) {
       if (actual.style !== expectedStyle || actual.tag !== expectedTag)
         record.textBlocks.styleMismatch.push({
           key: block._key,
-          index: sourceIndex,
+          index: srcIndex,
           expectedStyle,
           actualStyle: actual.style,
           expectedTag,
@@ -1563,7 +1581,7 @@ for (let index = 0; index < leaves.length; index++) {
       )
         record.textBlocks.listMismatch.push({
           key: block._key,
-          index: sourceIndex,
+          index: srcIndex,
           expectedListItem,
           actualListItem: actual.listItem,
           expectedLevel,
@@ -1571,9 +1589,9 @@ for (let index = 0; index < leaves.length; index++) {
         });
     }
   }
-  if (renderedContentTextBlocks.length > sourceContentTextBlocks.length)
+  if (renderedContentTextBlocks.length > srcContentTextBlocks.length)
     record.textBlocks.unexpected.push(
-      ...renderedContentTextBlocks.slice(sourceContentTextBlocks.length).map((b) => ({
+      ...renderedContentTextBlocks.slice(srcContentTextBlocks.length).map((b) => ({
         text: normPageAssetUrls(b.text, leaf.path).slice(0, 180),
         style: b.style,
         listItem: b.listItem,
@@ -1627,26 +1645,25 @@ for (let index = 0; index < leaves.length; index++) {
     entries.push(span);
     renderedSpansByBlock.set(span.blockKey, entries);
   }
-  for (let blockIndex = 0; blockIndex < sourceTextBlocks.length; blockIndex++) {
-    const block = sourceTextBlocks[blockIndex];
+  for (let blockIndex = 0; blockIndex < srcTextBlocks.length; blockIndex++) {
+    const block = srcTextBlocks[blockIndex];
     if (!normText((block.children ?? []).map(plainText).join(''))) continue;
     const key = String(block._key ?? '');
-    const sourceRuns = sourceInlineRuns(block, leaf.path);
+    const srcRuns = srcInlineRuns(block, leaf.path);
     let actualRuns = renderedInlineRuns(
-      renderedSpansByBlock.get(renderedTextBlockForSource[blockIndex]?.key ?? key) ?? [],
+      renderedSpansByBlock.get(renderedTextBlockForSrc[blockIndex]?.key ?? key) ?? [],
       leaf.path,
     ).map((r) => ({ ...r, text: normPageAssetUrls(r.text, leaf.path) }));
     // The Markdown parser generates fresh keys for synthetic group overviews,
     // and renders empty Portable Text paragraphs as a line break. The text
     // blocks are paired in document order above, so use the paired DOM key and
     // treat a lone blank line as the visual representation of an empty block.
-    if (sourceRuns.length === 0 && actualRuns.every((r) => normText(r.text) === ''))
-      actualRuns = [];
-    record.inlineSpans.sourceRuns += sourceRuns.length;
+    if (srcRuns.length === 0 && actualRuns.every((r) => normText(r.text) === '')) actualRuns = [];
+    record.inlineSpans.sourceRuns += srcRuns.length;
     record.inlineSpans.renderedRuns += actualRuns.length;
-    const runCount = Math.max(sourceRuns.length, actualRuns.length);
+    const runCount = Math.max(srcRuns.length, actualRuns.length);
     for (let runIndex = 0; runIndex < runCount; runIndex++) {
-      const expected = sourceRuns[runIndex];
+      const expected = srcRuns[runIndex];
       const actual = actualRuns[runIndex];
       if (
         !expected ||
@@ -1702,16 +1719,16 @@ for (let index = 0; index < leaves.length; index++) {
         actual,
       });
   };
-  const sourceTables = ofType(parsed, 'table');
-  checkCount('table', sourceTables.length, dom.tables?.length ?? 0);
+  const srcTables = ofType(parsed, 'table');
+  checkCount('table', srcTables.length, dom.tables?.length ?? 0);
   for (
     let tableIndex = 0;
-    tableIndex < Math.min(sourceTables.length, dom.tables?.length ?? 0);
+    tableIndex < Math.min(srcTables.length, dom.tables?.length ?? 0);
     tableIndex++
   ) {
     const expectedHeading =
-      sourceTables[tableIndex].header && sourceTables[tableIndex].header !== 'Table'
-        ? String(sourceTables[tableIndex].header)
+      srcTables[tableIndex].header && srcTables[tableIndex].header !== 'Table'
+        ? String(srcTables[tableIndex].header)
         : '';
     const actualHeading = dom.tables[tableIndex].heading ?? '';
     if (normText(expectedHeading) !== normText(actualHeading))
@@ -1723,20 +1740,20 @@ for (let index = 0; index < leaves.length; index++) {
         expected: expectedHeading,
         actual: actualHeading,
       });
-    const sourceRows = sourceTables[tableIndex].rows ?? [];
+    const srcRows = srcTables[tableIndex].rows ?? [];
     const actualRows = dom.tables[tableIndex].rows ?? [];
-    const expectedColCount = sourceRows.reduce((c, r) => Math.max(c, r.cells?.length ?? 0), 0);
-    if (sourceRows.length !== actualRows.length)
+    const expectedColCount = srcRows.reduce((c, r) => Math.max(c, r.cells?.length ?? 0), 0);
+    if (srcRows.length !== actualRows.length)
       failures.push({
         page: leaf.id,
         title: leaf.title,
         category: 'table-row-count',
         table: tableIndex,
-        expected: sourceRows.length,
+        expected: srcRows.length,
         actual: actualRows.length,
       });
-    for (let rowIndex = 0; rowIndex < sourceRows.length; rowIndex++) {
-      const sourceCells = sourceRows[rowIndex]?.cells ?? [];
+    for (let rowIndex = 0; rowIndex < srcRows.length; rowIndex++) {
+      const srcCells = srcRows[rowIndex]?.cells ?? [];
       const actualCells = actualRows[rowIndex] ?? [];
       if (expectedColCount !== actualCells.length)
         failures.push({
@@ -1749,7 +1766,7 @@ for (let index = 0; index < leaves.length; index++) {
           actual: actualCells.length,
         });
       for (let cellIndex = 0; cellIndex < expectedColCount; cellIndex++) {
-        const expected = normText(tableCellPlainText(sourceCells[cellIndex]?.content));
+        const expected = normText(tableCellPlainText(srcCells[cellIndex]?.content));
         const actual = normText(normPageAssetUrls(actualCells[cellIndex], leaf.path));
         if (expected !== actual)
           failures.push({
@@ -1765,14 +1782,14 @@ for (let index = 0; index < leaves.length; index++) {
       }
     }
   }
-  const sourceCode = ofType(parsed, 'code');
-  checkCount('code', sourceCode.length, dom.codeBlocks?.length ?? 0);
+  const srcCode = ofType(parsed, 'code');
+  checkCount('code', srcCode.length, dom.codeBlocks?.length ?? 0);
   for (
     let codeIndex = 0;
-    codeIndex < Math.min(sourceCode.length, dom.codeBlocks?.length ?? 0);
+    codeIndex < Math.min(srcCode.length, dom.codeBlocks?.length ?? 0);
     codeIndex++
   ) {
-    const expected = normalizeCodeForAudit(sourceCode[codeIndex].value);
+    const expected = normalizeCodeForAudit(srcCode[codeIndex].value);
     const actual = normalizeCodeForAudit(dom.codeBlocks[codeIndex].code);
     if (expected !== actual)
       failures.push({
@@ -1783,7 +1800,7 @@ for (let index = 0; index < leaves.length; index++) {
         expected: expected.slice(0, 180),
         actual: actual.slice(0, 180),
       });
-    const lang = String(sourceCode[codeIndex].language ?? 'text').toLowerCase();
+    const lang = String(srcCode[codeIndex].language ?? 'text').toLowerCase();
     const renderedLang = String(dom.codeBlocks[codeIndex].language ?? '').toLowerCase();
     if (renderedLang && lang !== renderedLang)
       failures.push({
@@ -1795,14 +1812,14 @@ for (let index = 0; index < leaves.length; index++) {
         actual: renderedLang,
       });
   }
-  const sourceRaw = ofType(parsed, 'raw');
-  checkCount('raw', sourceRaw.length, dom.rawBlocks?.length ?? 0);
+  const srcRaw = ofType(parsed, 'raw');
+  checkCount('raw', srcRaw.length, dom.rawBlocks?.length ?? 0);
   for (
     let rawIndex = 0;
-    rawIndex < Math.min(sourceRaw.length, dom.rawBlocks?.length ?? 0);
+    rawIndex < Math.min(srcRaw.length, dom.rawBlocks?.length ?? 0);
     rawIndex++
   ) {
-    const expected = normalizeCodeForAudit(sourceRaw[rawIndex].markdown);
+    const expected = normalizeCodeForAudit(srcRaw[rawIndex].markdown);
     if (isMarkdownThematicBreak(expected)) {
       if (!dom.rawBlocks[rawIndex].divider)
         failures.push({
@@ -1832,60 +1849,56 @@ for (let index = 0; index < leaves.length; index++) {
         (record.customBlocks.rawBoundaryWhitespace ?? 0) + 1;
     }
   }
-  const sourceGraphs = ofType(parsed, 'nodes');
-  checkCount('nodes', sourceGraphs.length, dom.graphBlocks?.length ?? 0);
+  const srcGraphs = ofType(parsed, 'nodes');
+  checkCount('nodes', srcGraphs.length, dom.graphBlocks?.length ?? 0);
   for (
     let graphIndex = 0;
-    graphIndex < Math.min(sourceGraphs.length, dom.graphBlocks?.length ?? 0);
+    graphIndex < Math.min(srcGraphs.length, dom.graphBlocks?.length ?? 0);
     graphIndex++
   ) {
-    const sourceGraph = sourceGraphs[graphIndex];
+    const srcGraph = srcGraphs[graphIndex];
     const rendered = dom.graphBlocks[graphIndex];
-    const sourceNodeIds = (sourceGraph.nodes ?? []).map((n) => String(n.id ?? '')).sort();
+    const srcNodeIds = (srcGraph.nodes ?? []).map((n) => String(n.id ?? '')).sort();
     const renderedNodeIds = (rendered.nodes ?? []).map((n) => n.id).sort();
-    const sourceNodeIdSet = new Set(sourceNodeIds);
-    const invalidEdges = (sourceGraph.edges ?? []).filter(
-      (e) =>
-        !sourceNodeIdSet.has(String(e.source ?? '')) ||
-        !sourceNodeIdSet.has(String(e.target ?? '')),
+    const srcNodeIdSet = new Set(srcNodeIds);
+    const invalidEdges = (srcGraph.edges ?? []).filter(
+      (e) => !srcNodeIdSet.has(String(e.source ?? '')) || !srcNodeIdSet.has(String(e.target ?? '')),
     );
     if (invalidEdges.length)
-      sourceAnomalies.push({
+      srcAnomalies.push({
         page: leaf.id,
         title: leaf.title,
-        block: sourceGraph._key ?? `graph:${graphIndex}`,
+        block: srcGraph._key ?? `graph:${graphIndex}`,
         category: 'diagram-edge-with-missing-endpoint',
         edges: invalidEdges.map((e) => ({
           id: e.id,
           source: e.source,
           target: e.target,
           missingEndpoints: [e.source, e.target].filter(
-            (endpoint) => !sourceNodeIdSet.has(String(endpoint)),
+            (endpoint) => !srcNodeIdSet.has(String(endpoint)),
           ),
         })),
       });
-    const sourceEdgeIds = (sourceGraph.edges ?? [])
+    const srcEdgeIds = (srcGraph.edges ?? [])
       .filter(
-        (e) =>
-          sourceNodeIdSet.has(String(e.source ?? '')) &&
-          sourceNodeIdSet.has(String(e.target ?? '')),
+        (e) => srcNodeIdSet.has(String(e.source ?? '')) && srcNodeIdSet.has(String(e.target ?? '')),
       )
       .map((e) => String(e.id ?? ''))
       .sort();
     const renderedEdgeIds = (rendered.edges ?? []).map((e) => e.id).sort();
-    if (JSON.stringify(sourceNodeIds) !== JSON.stringify(renderedNodeIds))
+    if (JSON.stringify(srcNodeIds) !== JSON.stringify(renderedNodeIds))
       failures.push({
         page: leaf.id,
         title: leaf.title,
         category: 'diagram-nodes',
         graph: graphIndex,
-        expected: sourceNodeIds,
+        expected: srcNodeIds,
         actual: renderedNodeIds,
         errorBoundaryCount: rendered.errors,
       });
     const renderedGraphHeight = Number(rendered.box?.height ?? 0);
-    const expectedGraphHeight = Number.isFinite(Number(sourceGraph.height))
-      ? Number(sourceGraph.height)
+    const expectedGraphHeight = Number.isFinite(Number(srcGraph.height))
+      ? Number(srcGraph.height)
       : 384;
     if (Math.abs(renderedGraphHeight - expectedGraphHeight) > 1)
       failures.push({
@@ -1896,7 +1909,7 @@ for (let index = 0; index < leaves.length; index++) {
         expected: expectedGraphHeight,
         actual: renderedGraphHeight,
       });
-    for (const node of sourceGraph.nodes ?? []) {
+    for (const node of srcGraph.nodes ?? []) {
       const actual = rendered.nodes?.find((c) => c.id === String(node.id ?? ''));
       if (!actual) continue;
       if (String(node.type ?? '') !== actual.type)
@@ -1946,49 +1959,47 @@ for (let index = 0; index < leaves.length; index++) {
           actual: actualAttrs,
         });
     }
-    if (JSON.stringify(sourceEdgeIds) !== JSON.stringify(renderedEdgeIds))
+    if (JSON.stringify(srcEdgeIds) !== JSON.stringify(renderedEdgeIds))
       failures.push({
         page: leaf.id,
         title: leaf.title,
         category: 'diagram-edges',
         graph: graphIndex,
-        expected: sourceEdgeIds,
+        expected: srcEdgeIds,
         actual: renderedEdgeIds,
         errorBoundaryCount: rendered.errors,
       });
-    for (const sourceEdge of sourceGraph.edges ?? []) {
+    for (const srcEdge of srcGraph.edges ?? []) {
       if (
-        !sourceNodeIdSet.has(String(sourceEdge.source ?? '')) ||
-        !sourceNodeIdSet.has(String(sourceEdge.target ?? ''))
+        !srcNodeIdSet.has(String(srcEdge.source ?? '')) ||
+        !srcNodeIdSet.has(String(srcEdge.target ?? ''))
       )
         continue;
-      const actual = rendered.edges?.find((c) => c.id === String(sourceEdge.id ?? ''));
+      const actual = rendered.edges?.find((c) => c.id === String(srcEdge.id ?? ''));
       if (!actual) continue;
-      const expectedAria = `Edge from ${sourceEdge.source} to ${sourceEdge.target}`;
+      const expectedAria = `Edge from ${srcEdge.source} to ${srcEdge.target}`;
       if (actual.aria !== expectedAria)
         failures.push({
           page: leaf.id,
           title: leaf.title,
           category: 'diagram-edge-endpoints',
           graph: graphIndex,
-          edge: sourceEdge.id,
+          edge: srcEdge.id,
           expected: expectedAria,
           actual: actual.aria,
         });
-      const expectedArrowHead = Boolean(
-        sourceEdge.data?.arrowHead ?? sourceEdge.arrowHead ?? false,
-      );
+      const expectedArrowHead = Boolean(srcEdge.data?.arrowHead ?? srcEdge.arrowHead ?? false);
       if (actual.arrowHead !== expectedArrowHead)
         failures.push({
           page: leaf.id,
           title: leaf.title,
           category: 'diagram-edge-arrowhead',
           graph: graphIndex,
-          edge: sourceEdge.id,
+          edge: srcEdge.id,
           expected: expectedArrowHead,
           actual: actual.arrowHead,
         });
-      const strokeStyle = sourceEdge.data?.strokeStyle ?? 'solid';
+      const strokeStyle = srcEdge.data?.strokeStyle ?? 'solid';
       const expectedDasharray =
         strokeStyle === 'dashed' ? '5 5' : strokeStyle === 'dotted' ? '2 2' : '';
       if (
@@ -2000,12 +2011,12 @@ for (let index = 0; index < leaves.length; index++) {
           title: leaf.title,
           category: 'diagram-edge-style',
           graph: graphIndex,
-          edge: sourceEdge.id,
+          edge: srcEdge.id,
           expected: expectedDasharray,
           actual: actual.strokeDasharray,
         });
     }
-    for (const node of sourceGraph.nodes ?? []) {
+    for (const node of srcGraph.nodes ?? []) {
       const actual = rendered.nodes?.find((c) => c.id === String(node.id ?? ''));
       const expectedLabel = String(node.data?.title ?? node.id ?? '');
       if (actual && !normText(actual.text).includes(normText(expectedLabel)))
@@ -2019,7 +2030,7 @@ for (let index = 0; index < leaves.length; index++) {
           actual: actual.text,
         });
     }
-    const sourceGraphMath = (sourceGraph.nodes ?? [])
+    const srcGraphMath = (srcGraph.nodes ?? [])
       .flatMap((n) =>
         (n.data?.attributes ?? [])
           .map((attribute) => String(attribute.type ?? '').trim())
@@ -2032,13 +2043,13 @@ for (let index = 0; index < leaves.length; index++) {
         (n.math ?? []).map((formula) => ({ node: n.id, formula: String(formula).trim() })),
       )
       .sort((l, r) => `${l.node}:${l.formula}`.localeCompare(`${r.node}:${r.formula}`));
-    if (JSON.stringify(sourceGraphMath) !== JSON.stringify(renderedGraphMath))
+    if (JSON.stringify(srcGraphMath) !== JSON.stringify(renderedGraphMath))
       failures.push({
         page: leaf.id,
         title: leaf.title,
         category: 'diagram-math',
         graph: graphIndex,
-        expected: sourceGraphMath,
+        expected: srcGraphMath,
         actual: renderedGraphMath,
       });
     if (rendered.errors)
@@ -2050,14 +2061,14 @@ for (let index = 0; index < leaves.length; index++) {
         count: rendered.errors,
       });
   }
-  const sourceCallouts = ofType(parsed, 'callout');
-  checkCount('callout', sourceCallouts.length, dom.callouts?.length ?? 0);
+  const srcCallouts = ofType(parsed, 'callout');
+  checkCount('callout', srcCallouts.length, dom.callouts?.length ?? 0);
   for (
     let calloutIndex = 0;
-    calloutIndex < Math.min(sourceCallouts.length, dom.callouts?.length ?? 0);
+    calloutIndex < Math.min(srcCallouts.length, dom.callouts?.length ?? 0);
     calloutIndex++
   ) {
-    const source = sourceCallouts[calloutIndex];
+    const source = srcCallouts[calloutIndex];
     const actual = dom.callouts[calloutIndex];
     if (String(source.kind ?? 'note') !== actual.kind)
       failures.push({
@@ -2093,27 +2104,27 @@ for (let index = 0; index < leaves.length; index++) {
       expected: accordionLabels,
       actual: (dom.accordionTriggers ?? []).map((i) => i.label),
     });
-  const sourceTabs = ofType(parsed, 'tabs').map((g) =>
+  const srcTabs = ofType(parsed, 'tabs').map((g) =>
     (g.items ?? []).map((item) => String(item.title ?? '')),
   );
   const actualTabs = (dom.tabs ?? []).map((g) => g.labels);
-  checkCount('tabs', sourceTabs.length, actualTabs.length);
-  if (JSON.stringify(sourceTabs) !== JSON.stringify(actualTabs))
+  checkCount('tabs', srcTabs.length, actualTabs.length);
+  if (JSON.stringify(srcTabs) !== JSON.stringify(actualTabs))
     failures.push({
       page: leaf.id,
       title: leaf.title,
       category: 'tab-labels',
-      expected: sourceTabs,
+      expected: srcTabs,
       actual: actualTabs,
     });
-  const sourceEmbeds = ofType(parsed, 'embed');
-  checkCount('embed', sourceEmbeds.length, dom.embeds?.length ?? 0);
+  const srcEmbeds = ofType(parsed, 'embed');
+  checkCount('embed', srcEmbeds.length, dom.embeds?.length ?? 0);
   for (
     let embedIndex = 0;
-    embedIndex < Math.min(sourceEmbeds.length, dom.embeds?.length ?? 0);
+    embedIndex < Math.min(srcEmbeds.length, dom.embeds?.length ?? 0);
     embedIndex++
   ) {
-    const source = sourceEmbeds[embedIndex];
+    const source = srcEmbeds[embedIndex];
     const actual = dom.embeds[embedIndex];
     if (expectedEmbedUrl(source.src) !== actual.src)
       failures.push({
@@ -2189,15 +2200,15 @@ for (let index = 0; index < leaves.length; index++) {
         width: actual.naturalWidth,
       });
   }
-  const sourceMath = ofType(parsed, 'math').map((i) => String(i.code ?? '').trim());
+  const srcMath = ofType(parsed, 'math').map((i) => String(i.code ?? '').trim());
   const renderedMath = (dom.math ?? []).map((c) => c.trim());
-  checkCount('math', sourceMath.length, renderedMath.length);
-  if (JSON.stringify(sourceMath) !== JSON.stringify(renderedMath))
+  checkCount('math', srcMath.length, renderedMath.length);
+  if (JSON.stringify(srcMath) !== JSON.stringify(renderedMath))
     failures.push({
       page: leaf.id,
       title: leaf.title,
       category: 'math-payload',
-      expected: sourceMath,
+      expected: srcMath,
       actual: renderedMath,
     });
   if (dom.katexErrors?.length)
@@ -2642,9 +2653,9 @@ await browser.close();
 console.log(JSON.stringify(summary, null, 2));
 if (
   failures.length ||
-  sourceAudit.differences.length ||
-  sourceAudit.markdownHashFailures.length ||
-  sourceAudit.inlineAssets.failures.length ||
+  srcAudit.differences.length ||
+  srcAudit.markdownHashFailures.length ||
+  srcAudit.inlineAssets.failures.length ||
   fatalConsoleErrs.length ||
   pageErrs.length
 )

@@ -30,7 +30,9 @@ import type {
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Sanity Portable Text image fields authored in documentation content. */
+/**
+ * Sanity Portable Text image fields authored in documentation content.
+ */
 type DocsImgBlock = DocsBlock<'docImage'>;
 const FIELD_LABEL = 'block text-sm font-medium text-primary-12';
 
@@ -47,7 +49,6 @@ HELPERS
  */
 function Img({ block }: { block: DocsImgBlock }): JSX.Element {
   const url = typeof block.url === 'string' ? block.url : '';
-  const alt = typeof block.alt === 'string' ? block.alt : '';
   const title = typeof block.title === 'string' ? block.title : undefined;
   const width =
     typeof block.width === 'string' || typeof block.width === 'number' ? block.width : undefined;
@@ -63,7 +64,7 @@ function Img({ block }: { block: DocsImgBlock }): JSX.Element {
     <ErrorBoundary name="Image">
       <img
         src={url}
-        alt={alt}
+        alt={typeof block.alt === 'string' ? block.alt : ''}
         className="max-w-full"
         {...(title === undefined ? {} : { title })}
         {...(width === undefined ? {} : { width })}

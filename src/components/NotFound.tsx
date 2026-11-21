@@ -31,13 +31,13 @@ HELPERS
  *
  * @param appName - Product name used in the return-link label.
  * @param homeHref - Destination for the return link.
- * @param description - Explanation shown below the not-found heading.
+ * @param desc - Explanation shown below the not-found heading.
  * @returns The styled 404 page with the host-specific return link.
  */
 export function DocsNotFound({
   appName = 'Docs',
   homeHref = '/',
-  description = 'The page may have moved, or the link may be out of date.',
+  description: desc = 'The page may have moved, or the link may be out of date.',
 }: {
   appName?: string;
   homeHref?: string;
@@ -56,7 +56,7 @@ export function DocsNotFound({
             </CardHeading>
           </CardHeader>
           <CardContent className="text-center">
-            <CardDescription className="text-base leading-relaxed">{description}</CardDescription>
+            <CardDescription className="text-base leading-relaxed">{desc}</CardDescription>
           </CardContent>
           <CardFooter className="justify-center">
             <ButtonLink href={homeHref} variant="primary-tonal" size="sm">

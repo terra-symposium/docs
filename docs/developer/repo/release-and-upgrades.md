@@ -5,7 +5,7 @@ description: Publish a Docs package version and verify consuming sites after an 
 
 ## Prepare a release
 
-The package version lives in `package.json`. Changesets are configured in `.changeset/config.json` with `development` as their base branch. The `.github/workflows/publish.yml` release workflow runs on `main`: it skips a version already on npm, otherwise installs dependencies, runs warning-mode Quality, builds, and publishes the current package version.
+The package version lives in `package.json`. Changesets are configured in `.changeset/config.json` with `development` as their base branch. The `.github/workflows/publish.yml` release workflow runs on `main`: it skips a version already on npm, otherwise installs dependencies, builds, and publishes the current package version. Pull request CI runs the full Quality gate before merge.
 
 1. Record the user-visible change in a changeset and update the affected consumer or developer guide.
 2. Run the relevant checks from [Quality and tests](/developer/repo/quality-and-tests/). Read any Quality findings even when the command exits successfully.

@@ -46,7 +46,9 @@ const B_P_L_GU_REGEX = () => TerraQualityRegex.REGEX_B_P_L_GU_REGEX();
  * @return A regular expression that matches leading or trailing slashes.
  */
 const G_CLASS_2 = () => TerraQualityRegex.REGEX_G_REGEX_35();
-/** Matches a leading YAML frontmatter block in a Markdown or MDX page. */
+/**
+ * Matches a leading YAML frontmatter block in a Markdown or MDX page.
+ */
 const S_N_S_S_N_S_N_REGEX = /^---\s*\n[\s\S]*?\n---\s*\n/;
 
 /**
@@ -86,7 +88,9 @@ const pageInputs = {
 };
 const base = import.meta.env.BASE_URL;
 const routes = new Map<string, string>();
-/** Docs pages sorted by their source paths, including numeric filename prefixes. */
+/**
+ * Docs pages sorted by their source paths, including numeric filename prefixes.
+ */
 export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
   .filter(
     ([f]) =>
@@ -100,7 +104,7 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
     )
       throw new Error(`Markdown pages must be grouped in folders directly under docs/: ${f}`);
     const slug = f
-      .replace(/^\/?docs\//, '')
+      .replace(TerraQualityRegex.REGEX_DOCS_REGEX_2(), '')
       .replace(TerraQualityRegex.REGEX_MD_MDX_I_REGEX_2(), '')
       .replace(TerraQualityRegex.REGEX_SKILL_I_REGEX(), '')
       .replace(TerraQualityRegex.REGEX_INDEX_I_REGEX_2(), '')
@@ -136,10 +140,14 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
     };
   })
   .sort((l, r) => l.file.localeCompare(r.file, undefined, { numeric: true }));
-/** In-progress navigation node whose children are indexed by route segment. */
+/**
+ * In-progress navigation node whose children are indexed by route segment.
+ */
 type MutableNode = Omit<DocsNavNode, 'children'> & { children: Map<string, MutableNode> };
 const rootNodes = new Map<string, MutableNode>();
-/** Navigation tree built from the visible pages after their routes are registered. */
+/**
+ * Navigation tree built from the visible pages after their routes are registered.
+ */
 export const siteNavigation: DocsNavNode[] = [];
 const pending: { source: Map<string, MutableNode>; target: DocsNavNode[] }[] = [
   { source: rootNodes, target: siteNavigation },

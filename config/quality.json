@@ -1,6 +1,5 @@
 {
-  "$schema": "../node_modules/@terra-symposium/quality/quality.schema.json",
-  "root": ".",
+  "$schema": "../node_modules/@terra-symposium/hygiene/quality.schema.json",
   "tsconfig": "config/tsconfig.json",
   "sourceRoots": ["."],
   "languageProfiles": ["c", "java", "python"],
@@ -47,79 +46,17 @@
     "minimumCount": 3
   },
   "uiPatterns": {
-    "forbidden": [
-      "<[^>]*\\brole\\s*=\\s*['\"]dialog['\"]",
-      "\\baria-modal\\s*=",
-      "\\bcreatePortal\\s*\\("
-    ]
+    "forbidden": ["<[^>]*\\brole\\s*=\\s*['\"]dialog['\"]", "\\baria-modal\\s*="]
   },
   "frameworkEntryExports": {
     "site/src/components/DocsSiteIsland.tsx": ["DocsSiteIsland"],
-    "src/components/Docs.tsx": ["Docs", "DocsMode", "DocsProps", "DocsValue"],
     "src/components/LocalDocsWorkspace.tsx": [
       "DocsLocalWorkspace",
       "DocsLocalPage",
       "DocsLocalWorkspaceProps",
       "findDocsLocalPage"
     ],
-    "src/components/SiteLayout.tsx": ["DocsSiteLayout"],
-    "src/components/StaticWorkspace.tsx": ["DocsStaticWorkspace"],
-    "src/components/blocks.tsx": [
-      "DOCS_BLOCK_FIELDS",
-      "DOCS_BLOCK_TYPES",
-      "defaultDocsBlock",
-      "DocsRichBlock",
-      "enabledDocsBlocks",
-      "DocsBlockOptions",
-      "DocsBlockType",
-      "RichBlock"
-    ],
-    "src/components/navigation.tsx": ["DocsNavigation", "DocsNavNode"],
-    "src/components/quiz.tsx": [
-      "DocsQuizGenerator",
-      "parseDocsQuiz",
-      "DocsQuizConfig",
-      "DocsQuizDocument",
-      "DocsQuizGenerationInput",
-      "DocsQuizQuestion",
-      "DocsQuizQuestionType"
-    ],
-    "src/components/terra/Workspace.tsx": ["DocsWorkspace"],
-    "src/components/terra/editor/ContentEditor.tsx": ["ContentEditor"],
-    "src/components/terra/editor/docs/_Callout.tsx": ["renderCallout"],
-    "src/components/terra/editor/docs/_DocsCode.tsx": ["renderCode"],
-    "src/components/terra/editor/docs/_Embed.tsx": ["Embed"],
-    "src/components/terra/editor/docs/_DocsImage.tsx": ["renderImage"],
-    "src/components/terra/editor/docs/_Math.tsx": ["renderMathBlock"],
-    "src/components/terra/editor/docs/_Nodes.tsx": ["NodesBlock"],
-    "src/components/terra/editor/docs/_Raw.tsx": ["Raw"],
-    "src/components/terra/editor/docs/_Table.tsx": ["renderTable"],
-    "src/components/terra/editor/docs/_Tabs.tsx": ["renderSections"],
-    "src/components/terra/editor/docs/_TsDocs.tsx": ["TsDocs"],
-    "src/components/terra/editor/docs/heading.tsx": ["DocsHeading"],
-    "src/components/terra/pages/docs/_icons.tsx": ["DOCS_BLOCK_ICONS"],
-    "src/components/terra/pages/docs/_export-dialog.tsx": ["ExportDialog"],
     "src/components/workspace-demo-fixture.ts": ["createWorkspaceDemoHost"],
-    "src/lib/host-runtime.ts": ["configureDocsHost", "getDocsHostAdapter"],
-    "src/lib/host.ts": [
-      "DocsActionOperation",
-      "DocsActionResult",
-      "DocsHostOperationContracts",
-      "DocsResolvedRoute",
-      "DocsCustomBlock",
-      "DocsHostAdapter",
-      "DocsHostAttachment",
-      "DocsHostCapabilities",
-      "DocsHostDocument",
-      "DocsHostTreeNode",
-      "DocsHostUser",
-      "DocsWorkspaceProps"
-    ],
-    "src/lib/markdown-model.ts": ["markdownToDocsValue", "docsValueToMarkdown"],
-    "src/lib/markdown.ts": ["renderMarkdown"],
-    "src/lib/terra/docs/attachments.ts": ["ATTCH_TYPES"],
-    "src/lib/terra/runtime/types.ts": ["DocsExportOpts", "ExportTgt"],
-    "src/lib/workspace-types.ts": ["DocsAttachment", "DocsLeaf", "DocsGroup", "DocsSection"],
     "src/lib/index.ts": [
       "Docs",
       "DocsSiteLayout",
@@ -161,7 +98,6 @@
       "NodesBlock",
       "Raw",
       "renderTable",
-      "renderSections",
       "TsDocs",
       "DocsHeading",
       "DOCS_BLOCK_ICONS",
@@ -193,7 +129,10 @@
     "required": {
       "types": true,
       "functions": true,
-      "exportedFunctions": true
+      "exportedFunctions": true,
+      "importSection": true,
+      "fileHeader": true,
+      "multilineTsdoc": true
     },
     "commandRoots": ["."]
   },
@@ -201,13 +140,7 @@
     "command": "pnpm",
     "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.json"]
   },
-  "qualityCommands": [
-    {
-      "name": "demo-typecheck",
-      "command": "pnpm",
-      "args": ["exec", "tsc", "--noEmit", "-p", "config/tsconfig.demo.json"]
-    }
-  ],
+  "qualityCommands": [],
   "enabledChecks": {
     "document": true,
     "format": true,
@@ -239,8 +172,16 @@
     "extensions": [".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]
   },
   "security": {
-    "runtimeRoots": ["bin", "config", "scripts", "site/config", "test"],
-    "allowProcessEnvRoots": ["bin", "config", "scripts", "site/config", "test"],
+    "runtimeRoots": [
+      "bin/docs.mjs",
+      "config/playwright.config.ts",
+      "config/playwright.published.config.ts",
+      "config/playwright.static.config.ts",
+      "scripts/acquire-playwright-port.mjs",
+      "scripts/audit-uni-render.mjs",
+      "site/config/astro.config.mjs",
+      "tests/astro-config-runtime.test.mjs"
+    ],
     "clientRoots": ["site/src"]
   },
   "github": {

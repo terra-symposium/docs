@@ -35,10 +35,14 @@ const MD_MDX_I_REGEX = /\.(?:md|mdx)$/i;
 const G_REGEX = () => /^\/+|\/+$/g;
 const WORKSPACE_DEMO_STORAGE_KEY = 'docs-workspace-demo-v1';
 export const WORKSPACE_DEMO_PATH = '/workspace-demo/';
-/** Browser-stored attachment data; `bytes` supports the fixture's asset-read action. */
+/**
+ * Browser-stored attachment data; `bytes` supports the fixture's asset-read action.
+ */
 type WorkspaceDemoAsset = DocsHostAttachment & { bytes: number[]; docId: string };
-/** Content and route metadata for one document in the workspace demo's local store. */
-type WorkspaceDemoDocument = {
+/**
+ * Content and route metadata for one document in the workspace demo's local store.
+ */
+type WorkspaceDemoDoc = {
   id: string;
   path: string;
   pathname: string;
@@ -51,11 +55,13 @@ type WorkspaceDemoDocument = {
   attachments: DocsHostAttachment[];
   versions: DocVer[];
 };
-/** Versioned browser-local state shared by the editable demo and its host adapter. */
+/**
+ * Versioned browser-local state shared by the editable demo and its host adapter.
+ */
 export type WorkspaceDemoState = {
   schema: 1;
   tree: DocsHostTreeNode[];
-  documents: Record<string, WorkspaceDemoDocument>;
+  documents: Record<string, WorkspaceDemoDoc>;
   assets: Record<string, WorkspaceDemoAsset>;
 };
 const initialWorkspaceDemoState: { content: unknown[]; tree: DocsHostTreeNode[] } = {
@@ -189,24 +195,24 @@ const initialWorkspaceDemoState: { content: unknown[]; tree: DocsHostTreeNode[] 
  * @param id Stable key used by the fixture document map and navigation tree.
  * @param path Repository-style path displayed by editor and file actions.
  * @param title Initial title shown for the document.
- * @param description Supporting text stored with the document.
+ * @param desc Supporting text stored with the document.
  * @param content Portable Text blocks used to initialize the editor model.
  *
  * @return A fixture document whose initial route selects its section, group, and id.
  */
-function makeDocument(
+function makeDoc(
   id: string,
   path: string,
   title: string,
-  description: string,
+  desc: string,
   content: unknown[],
-): WorkspaceDemoDocument {
+): WorkspaceDemoDoc {
   return {
     id,
     path,
     pathname: buildWorkspaceRoute('overview', 'start-here', id),
     title,
-    description,
+    description: desc,
     contributors: ['Kai'],
     updatedAt: 'Oct 24, 2026',
     content,
@@ -221,7 +227,7 @@ function makeDocument(
  * @return Seed state with the overview, runtime-map, and local-files documents.
  */
 export function createWorkspaceDemoSeed(): WorkspaceDemoState {
-  const salesphere = makeDocument(
+  const salesphere = makeDoc(
     'salesphere',
     'overview/start-here/salesphere.mdx',
     'Salesphere',
@@ -240,14 +246,14 @@ export function createWorkspaceDemoSeed(): WorkspaceDemoState {
     tree: initialWorkspaceDemoState.tree,
     documents: {
       salesphere,
-      'runtime-map': makeDocument(
+      'runtime-map': makeDoc(
         'runtime-map',
         'overview/start-here/runtime-map.mdx',
         'Runtime map',
         'Follow a request through the application.',
         markdownToDocsValue('# Runtime map\n\nThe request enters through the Astro application.'),
       ),
-      'local-files': makeDocument(
+      'local-files': makeDoc(
         'local-files',
         'configure/providers/local-files.mdx',
         'Local files',
@@ -373,10 +379,7 @@ function findNode(
  *
  * @return The first matching document, or `undefined` for a non-string or unknown value.
  */
-function findDocument(
-  state: WorkspaceDemoState,
-  value: unknown,
-): WorkspaceDemoDocument | undefined {
+function findDoc(state: WorkspaceDemoState, value: unknown): WorkspaceDemoDoc | undefined {
   if (typeof value !== 'string' || !value) return undefined;
   const c =
     value.split(TerraQualityRegex.REGEX_PATTERN_REGEX_4(), 1)[0]?.replace(G_REGEX(), '') ?? value;
@@ -565,7 +568,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       const requestedLeaf = url.searchParams.get('leaf');
       const requestedSection = url.searchParams.get('section');
       const requestedGroup = url.searchParams.get('group');
-      const requestedDocument = requestedLeaf ? findDocument(state, requestedLeaf) : undefined;
+      const requestedDoc = requestedLeaf ? findDoc(state, requestedLeaf) : undefined;
       const requestedSectionMatch = requestedSection
         ? findNode(state.tree, requestedSection)
         : undefined;
@@ -577,7 +580,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
        *
        * @return The first matching fixture document, or `undefined` when the subtree is empty.
        */
-      const firstLeaf = (node: DocsHostTreeNode | undefined): WorkspaceDemoDocument | undefined => {
+      const firstLeaf = (node: DocsHostTreeNode | undefined): WorkspaceDemoDoc | undefined => {
         if (!node) return undefined;
         if (node.type === 'leaf') return state.documents[node.origName];
         for (const child of node.children ?? []) {
@@ -587,7 +590,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         return undefined;
       };
       const document =
-        requestedDocument ??
+        requestedDoc ??
         firstLeaf(requestedGroupMatch?.node ?? requestedSectionMatch?.node) ??
         state.documents.salesphere ??
         Object.values(state.documents)[0];
@@ -595,12 +598,12 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       const requestedGroupAncestors = (requestedGroupMatch?.ancestors ?? []).filter(
         (n) => n.type === 'branch',
       );
-      const sectionId = requestedDocument
+      const sectionId = requestedDoc
         ? position.sectionId
         : requestedSectionMatch?.node.type === 'branch'
           ? requestedSectionMatch.node.origName
           : (requestedGroupAncestors[0]?.origName ?? position.sectionId);
-      const groupId = requestedDocument
+      const groupId = requestedDoc
         ? position.groupId
         : requestedGroupMatch?.node.type === 'branch' && requestedGroupAncestors.length > 0
           ? requestedGroupMatch.node.origName
@@ -625,8 +628,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
     routePath(value) {
       const state = readWorkspaceDemoState();
       const requested = value.replace(G_REGEX(), '');
-      const document =
-        findDocument(state, requested) ?? findDocument(state, requested.split('/').at(-1));
+      const document = findDoc(state, requested) ?? findDoc(state, requested.split('/').at(-1));
       if (document) return routeForWorkspaceDocument(state, document);
       const branch = findNode(state.tree, requested)?.node;
       if (branch?.type === 'branch') {
@@ -666,7 +668,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       if (op === 'read.doc.list')
         data = request.type === 'nav' ? withRoutes(state.tree, readOnly) : [];
       else if (op === 'read.doc.get') {
-        data = clone(findDocument(state, request.path ?? request.id) ?? null);
+        data = clone(findDoc(state, request.path ?? request.id) ?? null);
       } else if (op === 'read.doc.attachments') {
         if (Array.isArray(request.paths)) {
           data = Object.fromEntries(
@@ -674,10 +676,10 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
               .filter((candidatePath): candidatePath is string => typeof candidatePath === 'string')
               .map((candidatePath) => [
                 candidatePath,
-                clone(findDocument(state, candidatePath)?.attachments ?? []),
+                clone(findDoc(state, candidatePath)?.attachments ?? []),
               ]),
           );
-        } else data = clone(findDocument(state, request.path)?.attachments ?? []);
+        } else data = clone(findDoc(state, request.path)?.attachments ?? []);
       } else if (op === 'read.asset.get') {
         data = new Uint8Array(state.assets[String(request.path ?? '')]?.bytes ?? []).buffer;
       } else if (op === 'read.doc.resolvePath') {
@@ -686,13 +688,13 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         const base = parent ? `${parent}/` : '';
         let candidatePath = `${base}${slug(title)}.mdx`;
         let suffix = 2;
-        while (findDocument(state, candidatePath)) {
+        while (findDoc(state, candidatePath)) {
           candidatePath = `${base}${slug(title)}-${suffix}.mdx`;
           suffix += 1;
         }
         data = { path: candidatePath, dir: parent || '.' };
       } else if (op === 'read.util.pathname') {
-        data = findDocument(state, request.path)?.pathname ?? WORKSPACE_DEMO_PATH;
+        data = findDoc(state, request.path)?.pathname ?? WORKSPACE_DEMO_PATH;
       } else if (op === 'read.util.node') {
         if (request.op === 'name') data = slug(String(request.val ?? 'untitled'));
         else {
@@ -716,7 +718,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           path: `${sectionPath}/general`,
           children: [],
         };
-        const newDocument = makeDocument(
+        const newDocument = makeDoc(
           leafId,
           `${sectionPath}/general/untitled.mdx`,
           'Untitled',
@@ -772,9 +774,9 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           changed = true;
         }
       } else if (op === 'write.doc.editor' || op === 'write.doc.save') {
-        const documentPath = String(request.path ?? 'overview/start-here/untitled.mdx');
-        const existing = findDocument(state, documentPath);
-        const rawId = documentPath.split('/').at(-1)?.replace(MD_MDX_I_REGEX, '') ?? 'untitled';
+        const docPath = String(request.path ?? 'overview/start-here/untitled.mdx');
+        const existing = findDoc(state, docPath);
+        const rawId = docPath.split('/').at(-1)?.replace(MD_MDX_I_REGEX, '') ?? 'untitled';
         const id = existing?.id ?? uniqueId(state, rawId);
         const source = typeof request.source === 'string' ? request.source : undefined;
         const content = Array.isArray(request.content)
@@ -791,11 +793,10 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
             savedAt: new Date().toISOString(),
           });
         }
-        const newDocument: WorkspaceDemoDocument = {
-          ...(existing ??
-            makeDocument(id, documentPath, String(request.title ?? rawId), '', content)),
+        const newDocument: WorkspaceDemoDoc = {
+          ...(existing ?? makeDoc(id, docPath, String(request.title ?? rawId), '', content)),
           id,
-          path: documentPath,
+          path: docPath,
           title: typeof request.title === 'string' ? request.title : (existing?.title ?? rawId),
           description:
             typeof request.description === 'string'
@@ -833,7 +834,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         updateNodeById(state.tree, existing?.id ?? id, (n) => ({
           ...n,
           origName: id,
-          path: documentPath,
+          path: docPath,
           title: newDocument.title,
           description: newDocument.description,
         }));
@@ -842,7 +843,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       } else if (op === 'write.doc.retitle') {
         const id = String(request.id ?? '');
         const title = String(request.title ?? 'Untitled');
-        const document = findDocument(state, id);
+        const document = findDoc(state, id);
         if (document) {
           document.title = title;
           document.updatedAt = new Date().toISOString();
@@ -857,7 +858,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         changed = true;
       } else if (op === 'write.doc.reorder') {
         const field = request.field === 'leaves' ? 'leaf' : 'branch';
-        const references = (Array.isArray(request.items) ? request.items : [])
+        const refs = (Array.isArray(request.items) ? request.items : [])
           .map((i) =>
             i && typeof i === 'object' && '_ref' in i && typeof i._ref === 'string' ? i._ref : '',
           )
@@ -866,9 +867,9 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         if (parent?.type === 'branch') {
           const reorderable = parent.children?.filter((n) => n.type === field) ?? [];
           const ordered: DocsHostTreeNode[] = [];
-          for (let index = 0; index < references.length; index += 1) {
-            const reference = references[index];
-            const node = reorderable.find((c) => c.origName === reference || c.path === reference);
+          for (let index = 0; index < refs.length; index += 1) {
+            const ref = refs[index];
+            const node = reorderable.find((c) => c.origName === ref || c.path === ref);
             if (node) ordered.push(node);
           }
           parent.children = [
@@ -881,11 +882,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         }
         changed = true;
       } else if (op === 'write.doc.retargetSources') {
-        const target = findDocument(state, request.targetId);
-        const sourceIds = Array.isArray(request.sourceIds)
+        const target = findDoc(state, request.targetId);
+        const srcIds = Array.isArray(request.sourceIds)
           ? request.sourceIds.filter((v): v is string => typeof v === 'string')
           : [];
-        if (!target || sourceIds.length === 0) {
+        if (!target || srcIds.length === 0) {
           return { error: new Error('The merge target or source pages could not be found.') };
         }
         /**
@@ -898,8 +899,8 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         const attachmentKey = (attachment: DocsHostAttachment): string =>
           attachment.id || `${attachment.path}\u0000${attachment.name}`;
         const seenAttachments = new Set(target.attachments.map(attachmentKey));
-        for (const sourceId of sourceIds) {
-          const source = findDocument(state, sourceId);
+        for (const srcId of srcIds) {
+          const source = findDoc(state, srcId);
           if (!source || source.id === target.id) continue;
           for (const attachment of source.attachments) {
             const key = attachmentKey(attachment);
@@ -915,7 +916,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         changed = true;
       } else if (op === 'write.doc.rm') {
         const requestedPath = String(request.path ?? '');
-        const document = findDocument(state, requestedPath);
+        const document = findDoc(state, requestedPath);
         if (document) {
           delete state.documents[document.id];
           for (const [assetPath, asset] of Object.entries(state.assets)) {
@@ -938,14 +939,14 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
              *
              * @return Nothing; matching entries are removed from the current fixture state.
              */
-            const removeDocumentsForNode = (node: DocsHostTreeNode): void => {
+            const removeDocsForNode = (node: DocsHostTreeNode): void => {
               if (node.type === 'leaf') {
                 delete state.documents[node.origName];
                 return;
               }
-              for (const child of node.children ?? []) removeDocumentsForNode(child);
+              for (const child of node.children ?? []) removeDocsForNode(child);
             };
-            removeDocumentsForNode(found.node);
+            removeDocsForNode(found.node);
             removeNodeById(state.tree, found.node.origName);
           }
         }
@@ -954,7 +955,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
       } else if (op === 'write.doc.commit') {
         const currentPath = String(request.cur ?? '');
         const nPath = String(request.next ?? currentPath);
-        const document = findDocument(state, currentPath);
+        const document = findDoc(state, currentPath);
         if (document) {
           const priorId = document.id;
           const nId = nPath.split('/').at(-1)?.replace(MD_MDX_I_REGEX, '') ?? priorId;
@@ -979,7 +980,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           changed = true;
         }
       } else if (op === 'write.doc.versions.get') {
-        data = clone(findDocument(state, request.path)?.versions ?? []);
+        data = clone(findDoc(state, request.path)?.versions ?? []);
       } else if (op === 'write.asset.upload') {
         const form = input instanceof FormData ? input : null;
         const uploaded = form?.get('file');
@@ -988,7 +989,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           const fileName = uploaded instanceof File ? uploaded.name : 'attachment.bin';
           const id = `attachment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
           const assetPath = `/assets/${id}/${fileName.replace(/[^a-zA-Z0-9._-]+/g, '-')}`;
-          const doc = findDocument(state, String(form?.get('path') ?? ''));
+          const doc = findDoc(state, String(form?.get('path') ?? ''));
           const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
           const asset: WorkspaceDemoAsset = {
             id,
@@ -1014,7 +1015,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
           changed = true;
         }
       } else if (op === 'write.attachment.rm') {
-        const document = findDocument(state, request.docPath);
+        const document = findDoc(state, request.docPath);
         const attachmentId = String(request.attachmentKey ?? '');
         const attachment = document?.attachments.find((i) => i.id === attachmentId);
         if (document)
@@ -1023,7 +1024,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         changed = true;
       } else if (op === 'write.attachment.rename') {
         const title = String(request.name ?? request.title ?? 'attachment');
-        const attachment = findDocument(state, request.docPath)?.attachments.find(
+        const attachment = findDoc(state, request.docPath)?.attachments.find(
           (i) => i.id === String(request.attachmentKey ?? ''),
         );
         if (attachment) attachment.name = title;
@@ -1056,10 +1057,10 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
  */
 export function routeForWorkspaceDocument(
   state: WorkspaceDemoState,
-  value: string | WorkspaceDemoDocument,
+  value: string | WorkspaceDemoDoc,
   routeBuilder: DocsHostAdapter['buildRoute'] = buildWorkspaceRoute,
 ): string {
-  const document = typeof value === 'string' ? findDocument(state, value) : value;
+  const document = typeof value === 'string' ? findDoc(state, value) : value;
   if (!document) return WORKSPACE_DEMO_PATH;
   const position = sectionForLeaf(state, document.id);
   return (routeBuilder ?? buildWorkspaceRoute)(position.sectionId, position.groupId, document.id);

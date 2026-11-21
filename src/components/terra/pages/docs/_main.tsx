@@ -121,7 +121,9 @@ const ContentEditor = lazy(() =>
   import('../../editor/ContentEditor.js').then((module) => ({ default: module.ContentEditor })),
 );
 
-/** Matches trailing separators when comparing route roots. */
+/**
+ * Matches trailing separators when comparing route roots.
+ */
 const SHARED_REGEX = TerraQualityRegex.REGEX_PATTERN_REGEX_3();
 
 /**
@@ -142,7 +144,8 @@ const docsShellOf = (): HTMLElement | null =>
     );
   }) ?? null;
 
-/** Scrolls the active Docs content to a heading and adds its fragment to browser history.
+/**
+ * Scrolls the active Docs content to a heading and adds its fragment to browser history.
  *
  * @param id - Heading fragment identifier to select.
  * @param text - Heading text used if the rendered element has no matching identifier.
@@ -243,6 +246,19 @@ const EditorSurfaces = {
     const [init, setInit] = useState(false);
     const [docsAttachments, setDocsAttachments] = useState<DocsHostAttachment[]>([]);
     const transition = useContext(TransitionCtx);
+    useEffect(() => {
+      if (!surface) return;
+      const markNativeInput = (event: Event): void => {
+        if (
+          (event.target as Element).closest(
+            '[data-docs-body-editor] [data-docs-article-editor="true"]',
+          )
+        )
+          surface.markBodyInteraction();
+      };
+      document.addEventListener('beforeinput', markNativeInput, true);
+      return () => document.removeEventListener('beforeinput', markNativeInput, true);
+    }, [surface?.markBodyInteraction]);
     useLayoutEffect(() => {
       if (!init) transition?.setLoading(true);
     }, [init, transition]);
@@ -261,7 +277,9 @@ const EditorSurfaces = {
       if (!body) return;
       let frame = 0;
       const mountObserver = {
-        /** Checks whether the editor root has mounted and updates route readiness from the editor mount registry. */
+        /**
+         * Checks whether the editor root has mounted and updates route readiness from the editor mount registry.
+         */
         check(): void {
           const root = body.querySelector<HTMLElement>('[data-content-editor]');
           if (root) {
@@ -275,7 +293,9 @@ const EditorSurfaces = {
               mounts.expected.length === mounts.mounted.length,
           );
         },
-        /** Schedules a readiness check after the next DOM mutation frame. */
+        /**
+         * Schedules a readiness check after the next DOM mutation frame.
+         */
         queue(): void {
           window.cancelAnimationFrame(frame);
           frame = window.requestAnimationFrame(mountObserver.check);
@@ -372,11 +392,13 @@ const EditorSurfaces = {
         '[tabindex]:not([tabindex="-1"])',
         '[data-tool-cell]',
       ].join(', ');
-      /** Returns the document body managed by the mounted editor surface.
+      /**
+       * Returns the document body managed by the mounted editor surface.
        * @returns The editor root, or `null` before the surface is mounted.
        */
       const root = (): HTMLElement | null => editorRefsForRoot.current?.body ?? null;
-      /** Returns the active `contenteditable` element inside the document body.
+      /**
+       * Returns the active `contenteditable` element inside the document body.
        * @returns The mounted rich-text editor element, or `null` when unavailable.
        */
       const editable = (): HTMLElement | null =>
@@ -404,7 +426,8 @@ const EditorSurfaces = {
         return editable();
       };
 
-      /** Returns whether a DOM node belongs to the active editor outside a decorator block.
+      /**
+       * Returns whether a DOM node belongs to the active editor outside a decorator block.
        * @param node Selection node being checked against the current editor surface.
        * @returns Whether the node is local text rather than content inside a decorator block.
        */
@@ -427,7 +450,9 @@ const EditorSurfaces = {
         else delete editorRefsForRoot.current.body.dataset.docsBlockCursorActive;
       };
 
-      /** Restores the editor selection from the most recent saved cursor state. */
+      /**
+       * Restores the editor selection from the most recent saved cursor state.
+       */
       const restoreSavedSelection = (): void => {
         const saved =
           editorRefsForRoot.current.selection ??
@@ -475,7 +500,8 @@ const EditorSurfaces = {
         if (!body) return;
         const sel = window.getSelection();
         if (!sel) return;
-        /** Resolves a saved child-index path and character offset to a collapsed DOM range.
+        /**
+         * Resolves a saved child-index path and character offset to a collapsed DOM range.
          * @param path Child indexes from the editor body to the saved text node.
          * @param offset Character position within the resolved text node.
          * @returns A collapsed range at the saved location, or `null` when the path is stale.
@@ -496,7 +522,8 @@ const EditorSurfaces = {
           range.collapse(true);
           return range;
         };
-        /** Finds the first text node containing the saved selection text and restores its offset.
+        /**
+         * Finds the first text node containing the saved selection text and restores its offset.
          * @param text Text captured around the saved selection.
          * @param offset Character position within the matching text node.
          * @returns A collapsed range at the saved text position, or `null` when no text matches.
@@ -618,7 +645,8 @@ const EditorSurfaces = {
         setBlockCursorActive(Boolean(bCursor.current));
       };
 
-      /** Identifies controls whose pointer events must preserve the current editor selection.
+      /**
+       * Identifies controls whose pointer events must preserve the current editor selection.
        * @param tgt Pointer target considered for selection preservation.
        * @returns Whether the target is a toolbar, dialog, menu, or popover control.
        */
@@ -627,7 +655,9 @@ const EditorSurfaces = {
           '[data-docs-main-toolbar], [data-docs-toolbar-frame], [data-toolbar="true"], [role="toolbar"], [role="dialog"], [role="menu"], [role="menuitem"], [data-radix-popper-content-wrapper]',
         );
 
-      /** Saves the active CodeMirror or DOM selection so toolbar actions can restore it. */
+      /**
+       * Saves the active CodeMirror or DOM selection so toolbar actions can restore it.
+       */
       const snapshotSelection = (): void => {
         const sel = window.getSelection();
         const view = codeViewOf();
@@ -800,7 +830,9 @@ const EditorSurfaces = {
         }
       };
 
-      /** Cancels pending cursor work and removes the active block-cursor marker. */
+      /**
+       * Cancels pending cursor work and removes the active block-cursor marker.
+       */
       const clear = (): void => {
         window.cancelAnimationFrame(vCursor.current);
         vPending.current = null;
@@ -811,7 +843,8 @@ const EditorSurfaces = {
         }
       };
 
-      /** Restores the block-cursor overlay to its matching editor block when it still exists.
+      /**
+       * Restores the block-cursor overlay to its matching editor block when it still exists.
        * @returns Whether the previously selected block could be restored in the current editor.
        */
       const restore = (): boolean => {
@@ -850,7 +883,8 @@ const EditorSurfaces = {
         return true;
       };
 
-      /** Resolves a focus-group member to its root decorator for block-level keyboard navigation.
+      /**
+       * Resolves a focus-group member to its root decorator for block-level keyboard navigation.
        * @param dec Decorator or focus-group member under the current cursor.
        * @returns The group's root decorator, or the original element when no group is active.
        */
@@ -907,7 +941,8 @@ const EditorSurfaces = {
           });
       };
 
-      /** Focuses an element and places the caret at the requested text edge when it is editable.
+      /**
+       * Focuses an element and places the caret at the requested text edge when it is editable.
        * @param tgt Element receiving focus and, when editable, the caret.
        * @param side Text edge to select: `right` enters at the start and `left` at the end.
        * @returns Whether focus or caret placement succeeded.
@@ -940,7 +975,8 @@ const EditorSurfaces = {
         return true;
       };
 
-      /** Collects connected focus targets, optionally using explicit group-entry markers.
+      /**
+       * Collects connected focus targets, optionally using explicit group-entry markers.
        * @param wrapper Decorator whose visible descendants are candidates.
        * @param pref Whether to restrict candidates to explicit focus-entry markers.
        * @returns Visible, enabled focus targets in document order without duplicates.
@@ -1002,7 +1038,8 @@ const EditorSurfaces = {
         return null;
       };
 
-      /** Returns the visible caret's top and bottom edge nearest the requested direction.
+      /**
+       * Returns the visible caret's top and bottom edge nearest the requested direction.
        * @param dir Direction of movement used to choose the caret edge.
        * @returns Caret bounds, or `null` when the selection has no visible geometry.
        */
@@ -1078,7 +1115,8 @@ const EditorSurfaces = {
         return gDec(dec);
       };
 
-      /** Moves focus into the nearest editable table cell, or to the decorator when none exists.
+      /**
+       * Moves focus into the nearest editable table cell, or to the decorator when none exists.
        * @param dec Decorator containing the table cells or other interactive content.
        * @param dir Direction used to choose the first or last editable cell.
        */
@@ -1096,7 +1134,8 @@ const EditorSurfaces = {
         focus(dec, dir === 'right' ? 'left' : 'right');
       };
 
-      /** Places the editor caret immediately before or after a navigable decorator.
+      /**
+       * Places the editor caret immediately before or after a navigable decorator.
        * @param dec Decorator that the caret should move beside.
        * @param side Edge of the decorator where the caret should be placed.
        */
@@ -1623,7 +1662,8 @@ const EditorSurfaces = {
           }
         },
 
-        /** Preserves toolbar selection or establishes block-cursor state for the pointer target.
+        /**
+         * Preserves toolbar selection or establishes block-cursor state for the pointer target.
          * @param e Pointer event used to identify the target and its editor block.
          */
         onPointerDown(e: PointerEvent): void {
@@ -1733,7 +1773,8 @@ const EditorSurfaces = {
       if (!document) return;
 
       // DROP
-      /** Places the native insertion caret at the drag location when it falls inside the editor.
+      /**
+       * Places the native insertion caret at the drag location when it falls inside the editor.
        * @param e Drag event carrying the pointer coordinates and transferred payload.
        */
       const moveDropCaret = (e: DragEvent): void => {
@@ -1804,7 +1845,8 @@ const EditorSurfaces = {
       };
 
       // PASTE
-      /** Routes clipboard data to Docs paste and attachment handlers, cancelling browser defaults when handled.
+      /**
+       * Routes clipboard data to Docs paste and attachment handlers, cancelling browser defaults when handled.
        * @param data Clipboard payload containing text, files, or serialized HTML.
        * @param e Event methods used to cancel the browser's default paste behavior.
        */
@@ -2106,7 +2148,8 @@ const EditorSurfaces = {
           editorRefsForRoot.current.norm.replay = true;
         }
       };
-      /** Handles clipboard paste events through the editor's shared paste router.
+      /**
+       * Handles clipboard paste events through the editor's shared paste router.
        * @param e Clipboard event dispatched by the document.
        */
       const onPaste = (e: ClipboardEvent): void => {
@@ -2116,7 +2159,8 @@ const EditorSurfaces = {
           console.error('[docs:edit] Paste event failed', err);
         }
       };
-      /** Handles paste-like input events that provide clipboard data without a paste event.
+      /**
+       * Handles paste-like input events that provide clipboard data without a paste event.
        * @param e Input event whose type and transfer data determine whether to route a paste.
        */
       const onBeforeInput = (e: InputEvent): void => {
@@ -2190,6 +2234,7 @@ const EditorSurfaces = {
         ) : (
           <Suspense fallback={<div aria-hidden="true" data-docs-editor-loading />}>
             <ContentEditor
+              articleLayout
               content={
                 (isDocBody(editor.draft.content)
                   ? editor.draft.content
@@ -2226,8 +2271,7 @@ const EditorSurfaces = {
   /**
    * Displays or edits document title and description, with contributor and update metadata.
    *
-   * @param compact Uses the compact title and description spacing for the edit toolbar layout.
-   * @param description Initial document description used when no draft is active.
+   * @param desc Initial document description used when no draft is active.
    * @param editable - Editability flag controlling whether head accepts changes.
    * @param title Initial document title used when no draft is active.
    * @param full - Whether the page is rendered in full mode.
@@ -2238,15 +2282,13 @@ const EditorSurfaces = {
    */
 
   Head({
-    compact = false,
-    description = '',
+    description: desc = '',
     editable,
     title,
     full,
     contributors: initContributors = [],
     updatedAt,
   }: {
-    compact?: boolean;
     description?: string | undefined;
     editable: boolean;
     title: string;
@@ -2257,19 +2299,19 @@ const EditorSurfaces = {
     // STATES
     const edit = useContext(EditStateCtx);
     const draft: Pick<Draft, 'description' | 'title'> = edit?.draft ?? {
-      description,
+      description: desc,
       title,
     };
     const contributors = initContributors ?? [];
     const titleRef = useRef<HTMLInputElement>(null);
-    const descriptionRef = useRef<HTMLTextAreaElement>(null);
+    const descRef = useRef<HTMLTextAreaElement>(null);
     useLayoutEffect(() => {
       const input = titleRef.current;
       const context = window.document.createElement('canvas').getContext('2d');
       if (!input || !context) return;
       let a = true;
       /**
-       *
+       * Fit the title within its input after fonts and layout settle.
        */
       const fitTitle = (): void => {
         if (!a) return;
@@ -2297,14 +2339,14 @@ const EditorSurfaces = {
       void window.document.fonts.ready.then(fitTitle);
       window.document.fonts.addEventListener('loadingdone', fitTitle);
       const parent = input.parentElement;
-      let previousWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
+      let prevWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
       /**
-       *
+       * Refit the title when its container width changes.
        */
       const resize = (): void => {
         const nWidth = parent?.getBoundingClientRect().width ?? input.clientWidth;
-        if (nWidth === previousWidth) return;
-        previousWidth = nWidth;
+        if (nWidth === prevWidth) return;
+        prevWidth = nWidth;
         fitTitle();
       };
       const observer = new ResizeObserver(resize);
@@ -2318,11 +2360,11 @@ const EditorSurfaces = {
       };
     }, [draft.title]);
     useLayoutEffect(() => {
-      const textarea = descriptionRef.current;
+      const textarea = descRef.current;
       if (!textarea) return;
       let a = true;
       /**
-       *
+       * Grow the description field to fit its wrapped content.
        */
       const resize = (): void => {
         if (!a) return;
@@ -2339,11 +2381,11 @@ const EditorSurfaces = {
       const fonts = document.fonts;
       void fonts.ready.then(resize);
       fonts.addEventListener('loadingdone', resize);
-      let previousWidth = textarea.parentElement?.getBoundingClientRect().width;
+      let prevWidth = textarea.parentElement?.getBoundingClientRect().width;
       const observer = new ResizeObserver(() => {
         const nWidth = textarea.parentElement?.getBoundingClientRect().width;
-        if (nWidth !== previousWidth) {
-          previousWidth = nWidth;
+        if (nWidth !== prevWidth) {
+          prevWidth = nWidth;
           resize();
         }
       });
@@ -2361,7 +2403,7 @@ const EditorSurfaces = {
     // prettier-ignore
     return (
 			<header className='docs-document-header relative z-10 w-full print:!mb-8 print:border-none'>
-				<div className={cn('mx-auto w-full px-6 transition-opacity duration-200 md:px-10 print:!pb-3', compact ? 'pb-3 pt-5' : 'pb-10 pt-7', full ? 'max-w-none' : 'max-w-7xl')}>
+				<div className={cn('mx-auto w-full px-6 pb-10 pt-7 transition-opacity duration-200 md:px-10 print:!pb-3', full ? 'max-w-none' : 'max-w-7xl')}>
 					<div>
 						<Label htmlFor='docs-title' className='sr-only'>
 							Title
@@ -2388,7 +2430,7 @@ const EditorSurfaces = {
 							Description
 						</Label>
 						<Textarea
-							ref={descriptionRef}
+							ref={descRef}
 							id='docs-description'
 							rows={1}
 							value={draft.description}
@@ -2411,6 +2453,7 @@ const EditorSurfaces = {
   },
 };
 
+// hygiene-ignore single-use -- This default export is the application shell component mounted by workspace entry points.
 /**
  * Composes the Docs navigation, document surfaces, and controls from host-supplied route and permission state.
  *
@@ -2646,7 +2689,8 @@ export default function Scaffold({
     initMdx,
   ]);
   useEffect(() => {
-    /** Updates the visible document title from the active rename event.
+    /**
+     * Updates the visible document title from the active rename event.
      * @param e Custom rename event whose detail contains the active title.
      */
     const rename = (e: Event) => {
@@ -2670,7 +2714,9 @@ export default function Scaffold({
     setDocumentTitle(currDoc.title);
   }, [currDoc.path, currDoc.title]);
   useEffect(() => {
-    /** Recolors the inline favicon with the active Docs theme and refreshes it on hue changes. */
+    /**
+     * Recolors the inline favicon with the active Docs theme and refreshes it on hue changes.
+     */
     const updateFavicon = () => {
       const favicon = document.getElementById('favicon') as HTMLLinkElement | null;
       if (!favicon) return;
@@ -2896,7 +2942,7 @@ export default function Scaffold({
      * @returns Nothing; preserves the prior object when the TOC values are unchanged.
      */
     const setTocStateIfChanged = (
-      update: typeof tocState | ((previous: typeof tocState) => typeof tocState),
+      update: typeof tocState | ((prev: typeof tocState) => typeof tocState),
     ): void => {
       setTocState((previous) => {
         const n = typeof update === 'function' ? update(previous) : update;
@@ -3194,7 +3240,6 @@ export default function Scaffold({
                 <div className="w-full">
                   {/* HEAD */}
                   <EditorSurfaces.Head
-                    compact={a === 'edit'}
                     editable={writable && a !== 'view'}
                     title={currDoc.title}
                     full={full}
@@ -3211,8 +3256,20 @@ export default function Scaffold({
                     <div className={cn('mx-auto w-full', full ? 'max-w-none' : 'max-w-7xl')}>
                       {/* root; must be relative and fill height to constrain absolute overlay */}
                       <div data-docs-body className="relative h-full min-h-[50vh] text-primary-12">
-                        {/* View and attachment modes use the document toolbar; Edit owns its original in-editor toolbar. */}
-                        {a !== 'edit' && (
+                        {/* All modes keep their controls in the same full-width toolbar position. */}
+                        {a === 'edit' ? (
+                          <div
+                            className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto mb-5 w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
+                            data-docs-edit-toolbar-slot
+                            data-docs-toolbar-frame
+                            data-docs-toolbar-scroll
+                          >
+                            <div
+                              aria-hidden="true"
+                              className="docs-toolbar-backdrop pointer-events-none absolute inset-x-0 -bottom-12 -top-16 z-0"
+                            />
+                          </div>
+                        ) : (
                           <Toolbar toolbar={toolbar} activeMode={a} editable={writable} />
                         )}
                         <div

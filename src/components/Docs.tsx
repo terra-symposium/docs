@@ -21,14 +21,21 @@ import type { PortableTextBlock } from '@portabletext/editor';
 CONFIG
 //////////////////////////////////////////////////*/
 
+// hygiene-ignore single-use -- React.lazy must be created once at module scope so a rerender does not remount the editor.
 const ContentEditor = lazy(() =>
   import('./terra/editor/ContentEditor.js').then((module) => ({ default: module.ContentEditor })),
 );
-/** Portable Text blocks supplied and retained by the host application. */
+/**
+ * Portable Text blocks supplied and retained by the host application.
+ */
 export type DocsValue = PortableTextBlock[];
-/** Selects editing or read-only rendering. */
+/**
+ * Selects editing or read-only rendering.
+ */
 export type DocsMode = 'edit' | 'view';
-/** Controlled content with editing callbacks available only in edit mode. */
+/**
+ * Controlled content with editing callbacks available only in edit mode.
+ */
 export type DocsProps = {
   value: DocsValue;
   className?: string;

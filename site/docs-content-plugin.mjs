@@ -23,6 +23,7 @@ const markdownExts = new Set(['.md', '.mdx']);
 HELPERS
 //////////////////////////////////////////////////*/
 
+// hygiene-ignore single-use -- Route construction is shared by link rewriting and asset handling as a named URL boundary.
 /**
  * Converts an in-repository Markdown file path into its public Docs route.
  *
@@ -47,13 +48,13 @@ function publicRoute(file, docsRoot, base) {
  * Rewrites a Markdown or HTML link target to the corresponding public page or copied asset.
  *
  * @param rawTarget - Authored target, including optional angle brackets, query, fragment, and suffix.
- * @param sourceFile - Markdown file containing the target.
+ * @param srcFile - Markdown file containing the target.
  * @param docsRoot - Root directory used to reject links that escape the Docs content tree.
  * @param base - Public deployment base path.
  *
  * @return Rewritten target when it maps to local Docs content; otherwise the authored target.
  */
-function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
+function rewriteTarget(rawTarget, srcFile, docsRoot, base) {
   const target = rawTarget.trim();
   if (!target || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(target)) return rawTarget;
   const match = /^(<[^>]+>|[^\s]+)([\s\S]*)$/.exec(target);
@@ -79,7 +80,7 @@ function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
   }
   let resolvedPath;
   try {
-    resolvedPath = resolve(sourceFile, '..', decodeURIComponent(cPath));
+    resolvedPath = resolve(srcFile, '..', decodeURIComponent(cPath));
   } catch {
     return rawTarget;
   }
@@ -92,21 +93,23 @@ function rewriteTarget(rawTarget, sourceFile, docsRoot, base) {
   return `${bracketed ? `<${rewritten}${query}${fragment}>` : `${rewritten}${query}${fragment}`}${suffix}`;
 }
 
+// hygiene-ignore single-use -- Keep fenced-code preservation as an explicit transformation boundary.
 /**
  * Applies a transformation to Markdown sections outside fenced code blocks.
  *
- * @param source - Markdown source containing optional backtick or tilde fences.
+ * @param src - Markdown source containing optional backtick or tilde fences.
  * @param callback - Transformation applied to each non-code section.
  *
  * @return Source with transformed prose/HTML sections and original fenced code preserved.
  */
-function mapOutsideCode(source, callback) {
-  return source
+function mapOutsideCode(src, callback) {
+  return src
     .split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g)
     .map((s, i) => (i % 2 ? s : callback(s)))
     .join('');
 }
 
+// hygiene-ignore single-use -- This exported Vite plugin is the site build integration entry point.
 /**
  * Configures Vite to rewrite local Docs links and asset references during Markdown transforms.
  *
@@ -128,21 +131,21 @@ export function docsContentPlugin({ root, base }) {
      *
      * @return Transformed source for files under `docs/`, or `null` for unrelated modules.
      */
-    transform(source, id) {
+    transform(src, id) {
       if (id.includes('?') || !markdownExts.has(extname(id).toLowerCase())) return null;
-      const sourceFile = resolve(id);
-      const relativePath = relative(docsRoot, sourceFile);
+      const srcFile = resolve(id);
+      const relativePath = relative(docsRoot, srcFile);
       if (relativePath.startsWith(`..${sep}`) || relativePath === '..') return null;
       return mapOutsideCode(
-        source.replace(
+        src.replace(
           /(!?\[[^\]]*\]\()([^)]+)(\))/g,
-          (_full, b, t, a) => `${b}${rewriteTarget(t, sourceFile, docsRoot, base)}${a}`,
+          (_full, b, t, a) => `${b}${rewriteTarget(t, srcFile, docsRoot, base)}${a}`,
         ),
         (s) =>
           s.replace(
             /\b(src|href)=(['"])(.*?)\2/g,
             (full, attribute, quote, target) =>
-              `${attribute}=${quote}${rewriteTarget(target, sourceFile, docsRoot, base)}${quote}`,
+              `${attribute}=${quote}${rewriteTarget(target, srcFile, docsRoot, base)}${quote}`,
           ),
       );
     },

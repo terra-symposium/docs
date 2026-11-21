@@ -10,6 +10,7 @@ IMPORTS
 // COMPONENTS
 import * as TerraQualityRegex from '../../regex.mjs';
 
+// hygiene-ignore single-use -- This exported JSON quoting helper is a module API used when Markdown output embeds attributes.
 /**
  * JSON-quotes a string for use in an MDX or JSX attribute.
  *
@@ -261,7 +262,9 @@ export const fmtRawTable = (val: string): string => {
     .join('\n');
 };
 
-/** Identifies complete canonical HTML table markup. */
+/**
+ * Identifies complete canonical HTML table markup.
+ */
 export const TABLE_TAG = TerraQualityRegex.REGEX_TABLE_THEAD_TBODY_TFOOT_TR_TH_TD_B_I_REGEX();
 
 /**

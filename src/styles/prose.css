@@ -56,6 +56,26 @@ DOCS
     rgb(var(--primary-1) / 0) 100%
   );
 }
+/* Portable Text wraps each text block; its article text follows the same
+   spacing as direct Markdown children in View mode. */
+.docs-content[data-docs-article-editor] > [data-pt-block] > :is(h2, h3, h4, h5, h6, p, blockquote) {
+  margin-block: 0 !important;
+  border-block-start: 0 !important;
+  padding-block-start: 0 !important;
+}
+.docs-content[data-docs-article-editor] > [data-style='h2']:not(:first-child) {
+  margin-block-start: 4rem !important;
+}
+.docs-content[data-docs-article-editor]
+  > :is([data-style='h4'], [data-style='h5']):not(:first-child) {
+  margin-block-start: 1.5rem !important;
+}
+.docs-content[data-docs-article-editor] > [data-style='h6']:not(:first-child) {
+  margin-block-start: 1.25rem !important;
+}
+.docs-content[data-docs-article-editor] > [data-style='blockquote']:not(:first-child) {
+  margin-block-start: 1.5rem !important;
+}
 @container docs-toolbar scroll-state(stuck: top) {
   .docs-toolbar-backdrop {
     display: block;

@@ -1,4 +1,7 @@
 ---
+/**
+ * src/components/SiteLayout.astro
+ */
 /*//////////////////////////////////////////////////
 IMPORTS
 //////////////////////////////////////////////////*/
@@ -26,7 +29,9 @@ type Props = {
 	hue?: number | null;
 	nodes?: DocsNavNode[];
 	trees?: DocsTree[];
-	/** @deprecated Use trees. */
+	/**
+	 * @deprecated Use trees.
+	 */
 	sections?: DocsSection[];
 	currentPath: string;
 	rootPath?: string;
@@ -39,15 +44,15 @@ type Props = {
 	searchBase?: string;
 };
 
-const { title, homeHref = '/', description, pageTitle, pageDescription, breadcrumbParent, hue = 145, nodes = [], trees, sections, currentPath, rootPath = '/', markdown = '', sourceMarkdown, sourcePath, content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
+const { title, homeHref = '/', description: desc, pageTitle, pageDescription: pageDesc, breadcrumbParent, hue = 145, nodes = [], trees, sections, currentPath, rootPath = '/', markdown = '', sourceMarkdown: srcMarkdown, sourcePath: srcPath, content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
 const hasStaticSlot = Astro.slots.has('default');
 const staticContent = hasStaticSlot || markdown.trim().length > 0;
 const siteIslandProps = {
 	title,
 	homeHref,
-	description,
+	description: desc,
 	pageTitle,
-	pageDescription,
+	pageDescription: pageDesc,
 	breadcrumbParent,
 	hue,
 	nodes,
@@ -56,8 +61,8 @@ const siteIslandProps = {
 	currentPath,
 	rootPath,
 	markdown,
-	sourceMarkdown,
-	sourcePath,
+	sourceMarkdown: srcMarkdown,
+	sourcePath: srcPath,
 	content,
 	attachments,
 	updatedAt,

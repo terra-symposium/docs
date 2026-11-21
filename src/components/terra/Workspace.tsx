@@ -126,7 +126,7 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     if (hue === undefined || typeof document === 'undefined') return;
     const root = document.documentElement;
     const body = document.body;
-    const originalBackgrounds = {
+    const origBackgrounds = {
       root: {
         value: root.style.getPropertyValue('background-color'),
         priority: root.style.getPropertyPriority('background-color'),
@@ -137,7 +137,9 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
       },
     };
     const appliedBackground = 'rgb(var(--primary-1))';
-    /** Applies the selected hue to the shared Styling tokens and document canvas. */
+    /**
+     * Applies the selected hue to the shared Styling tokens and document canvas.
+     */
     const applyPageHue = () => {
       applyHue(hue);
       root.style.setProperty('background-color', appliedBackground);
@@ -153,14 +155,13 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
        * @param element Document element whose background was updated.
        * @param original Original inline value and priority to restore.
        */
-      const restore = (element: HTMLElement, original: { value: string; priority: string }) => {
-        if (element.style.getPropertyValue('background-color') !== appliedBackground) return;
-        if (original.value)
-          element.style.setProperty('background-color', original.value, original.priority);
-        else element.style.removeProperty('background-color');
+      const restore = (el: HTMLElement, orig: { value: string; priority: string }) => {
+        if (el.style.getPropertyValue('background-color') !== appliedBackground) return;
+        if (orig.value) el.style.setProperty('background-color', orig.value, orig.priority);
+        else el.style.removeProperty('background-color');
       };
-      restore(root, originalBackgrounds.root);
-      restore(body, originalBackgrounds.body);
+      restore(root, origBackgrounds.root);
+      restore(body, origBackgrounds.body);
     };
   }, [hue]);
   useEffect(() => {
@@ -172,14 +173,14 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     // the same hue as the inline workspace, as they did when the site applied
     // the hue palette to the document root before extraction.
     const target = document.body;
-    const originalValues = new Map<string, { value: string; priority: string }>();
+    const origValues = new Map<string, { value: string; priority: string }>();
     const appliedValues = new Map<string, string>();
-    const originalThemeClasses = {
+    const origThemeClasses = {
       dark: target.classList.contains('dark'),
       light: target.classList.contains('light'),
       docsScope: target.classList.contains('docs-theme-scope'),
     };
-    const originalBodyFont = {
+    const origBodyFont = {
       value: target.style.getPropertyValue('font-family'),
       priority: target.style.getPropertyPriority('font-family'),
     };
@@ -216,8 +217,8 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
       ]) {
         const value = computed.getPropertyValue(token).trim();
         if (!value) continue;
-        if (!originalValues.has(token)) {
-          originalValues.set(token, {
+        if (!origValues.has(token)) {
+          origValues.set(token, {
             value: target.style.getPropertyValue(token),
             priority: target.style.getPropertyPriority(token),
           });
@@ -238,12 +239,8 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     };
     syncPortalTheme();
     const observer = new MutationObserver(syncPortalTheme);
-    for (
-      let element: HTMLElement | null = workspace;
-      element && element !== target;
-      element = element.parentElement
-    ) {
-      observer.observe(element, {
+    for (let el: HTMLElement | null = workspace; el && el !== target; el = el.parentElement) {
+      observer.observe(el, {
         attributes: true,
         attributeFilter: ['class', 'style'],
       });
@@ -253,31 +250,27 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     return () => {
       observer.disconnect();
       darkPreference.removeEventListener('change', syncPortalTheme);
-      for (const [token, original] of originalValues) {
+      for (const [token, orig] of origValues) {
         if (target.style.getPropertyValue(token) !== appliedValues.get(token)) continue;
-        if (original.value) target.style.setProperty(token, original.value, original.priority);
+        if (orig.value) target.style.setProperty(token, orig.value, orig.priority);
         else target.style.removeProperty(token);
       }
       if (appliedBodyFont && target.style.fontFamily === appliedBodyFont) {
-        if (originalBodyFont.value) {
-          target.style.setProperty(
-            'font-family',
-            originalBodyFont.value,
-            originalBodyFont.priority,
-          );
+        if (origBodyFont.value) {
+          target.style.setProperty('font-family', origBodyFont.value, origBodyFont.priority);
         } else {
           target.style.removeProperty('font-family');
         }
       }
       if (appliedThemeClasses) {
         if (target.classList.contains('dark') === appliedThemeClasses.dark) {
-          target.classList.toggle('dark', originalThemeClasses.dark);
+          target.classList.toggle('dark', origThemeClasses.dark);
         }
         if (target.classList.contains('light') === appliedThemeClasses.light) {
-          target.classList.toggle('light', originalThemeClasses.light);
+          target.classList.toggle('light', origThemeClasses.light);
         }
       }
-      if (!originalThemeClasses.docsScope) target.classList.remove('docs-theme-scope');
+      if (!origThemeClasses.docsScope) target.classList.remove('docs-theme-scope');
     };
   }, []);
   return (

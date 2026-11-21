@@ -25,6 +25,7 @@ HELPERS
  * @returns Consumer root, its parsed manifest when present, and a resolver based there.
  */
 export function createConsumerProject(siteRoot, packageRoot = '.') {
+  // hygiene-ignore single-use -- Read the root manifest once before deciding whether the config package owns Docs.
   const rootManifest = (() => {
     try {
       return JSON.parse(readFileSync(resolve(siteRoot, 'package.json'), 'utf8'));
@@ -32,6 +33,7 @@ export function createConsumerProject(siteRoot, packageRoot = '.') {
       return {};
     }
   })();
+  // hygiene-ignore single-use -- Read the config manifest before selecting the consumer root; this preserves both fallback reads.
   const configManifest = (() => {
     try {
       return JSON.parse(readFileSync(resolve(siteRoot, 'config/package.json'), 'utf8'));
@@ -44,20 +46,24 @@ export function createConsumerProject(siteRoot, packageRoot = '.') {
       manifest.dependencies?.['@terra-symposium/docs'] ||
       manifest.devDependencies?.['@terra-symposium/docs'],
     );
-  const selectedRoot =
+  const consumerRoot = resolve(
+    siteRoot,
     packageRoot === '.' && !hasDocs(rootManifest) && hasDocs(configManifest)
       ? 'config'
-      : packageRoot;
-  const consumerRoot = resolve(siteRoot, selectedRoot);
+      : packageRoot,
+  );
   const manifestPath = resolve(consumerRoot, 'package.json');
-  const manifest = (() => {
-    try {
-      return JSON.parse(readFileSync(manifestPath, 'utf8'));
-    } catch {
-      return {};
-    }
-  })();
-  return { root: consumerRoot, manifest, require: createRequire(manifestPath) };
+  return {
+    root: consumerRoot,
+    manifest: (() => {
+      try {
+        return JSON.parse(readFileSync(manifestPath, 'utf8'));
+      } catch {
+        return {};
+      }
+    })(),
+    require: createRequire(manifestPath),
+  };
 }
 
 /**

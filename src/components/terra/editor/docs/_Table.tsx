@@ -30,12 +30,19 @@ import type {
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Sanity Portable Text table rows and headers. */
+/**
+ * Sanity Portable Text table rows and headers.
+ */
 type TableBlock = DocsBlock<'table'> & { header?: string; rows?: TableRow[] };
-/** Table row fields rendered by the table block. */
+/**
+ * Table row fields rendered by the table block.
+ */
 type TableRow = { _key?: string; _type?: 'row'; cells?: DocTableCell[] };
-/** Sanity Portable Text table cell content and formatting. */
+/**
+ * Sanity Portable Text table cell content and formatting.
+ */
 type TableCell = DocTableCell;
+// hygiene-ignore single-use -- Keep authored key resolution separate from row and cell rendering so persisted keys have one rule.
 /**
  * Reads a serialized block key or falls back to its stable row or column index.
  *
@@ -88,7 +95,6 @@ HELPERS
  */
 function Table({ block }: { block: TableBlock }): React.JSX.Element {
   const rows = (block.rows ?? []) as TableRow[];
-  const count = rows.reduce((m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0), 0);
   /**
    * Renders the Portable Text stored in one table cell.
    *
@@ -109,11 +115,19 @@ function Table({ block }: { block: TableBlock }): React.JSX.Element {
       <section className="my-6 overflow-x-auto" data-docs-editor-block="DocsTable">
         {block.header && block.header !== 'Table' && <h3 className="sr-only">{block.header}</h3>}
         <DataTableContent
-          columns={Array.from({ length: count }, (_, i) => ({
-            key: String(i),
-            label: renderCell(rows[0]?.cells?.[i]),
-            render: (row: TableRow) => renderCell(row.cells?.[i]),
-          }))}
+          columns={Array.from(
+            {
+              length: rows.reduce(
+                (m, r) => Math.max(m, Array.isArray(r.cells) ? r.cells.length : 0),
+                0,
+              ),
+            },
+            (_, i) => ({
+              key: String(i),
+              label: renderCell(rows[0]?.cells?.[i]),
+              render: (row: TableRow) => renderCell(row.cells?.[i]),
+            }),
+          )}
           rows={rows.slice(1)}
           rowKey={(row, i) => key(row, `${i}`)}
         />

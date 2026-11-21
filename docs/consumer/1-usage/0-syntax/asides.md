@@ -31,7 +31,7 @@ Keep required steps and the main explanation in the reading path. Do not move th
 
 The example shows the rendered block and a misuse.
 
-::::example[Aside]
+:::example[Aside]
 
 |||[Good]
 
@@ -53,7 +53,7 @@ Click Save. This required step appears nowhere else.
 
 |||
 
-::::
+:::
 
 ## Variants
 

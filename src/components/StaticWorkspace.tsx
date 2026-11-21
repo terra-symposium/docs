@@ -106,6 +106,7 @@ const storageKey = (value: string): string => {
     return value.replace(G_REGEX(), '') || 'index.mdx';
   }
 };
+// hygiene-ignore single-use -- This documented adapter separates host navigation shape conversion from workspace rendering.
 /**
  * Converts the host's nested navigation nodes into Docs trees and leaf records.
  *
@@ -136,28 +137,27 @@ function sectionsFromNavigation(nodes: DocsNavNode[]): DocsSection[] {
       : null;
   return nodes.map((s) => {
     const children = s.children ?? [];
-    const groups = children.length
-      ? children.map((group) => ({
-          ...(group.id ? { id: group.id } : {}),
-          ...(group.path ? { path: group.path } : {}),
-          ...(group.hue !== undefined ? { hue: group.hue } : {}),
-          title: group.title,
-          leaves: (group.children?.length ? group.children : [group])
-            .map(toLeaf)
-            .filter((leaf): leaf is DocsLeaf => leaf !== null),
-        }))
-      : [
-          {
-            title: s.title,
-            leaves: [s].map(toLeaf).filter((leaf): leaf is DocsLeaf => leaf !== null),
-          },
-        ];
     return {
       ...(s.id ? { id: s.id } : {}),
       ...(s.path ? { path: s.path } : {}),
       ...(s.hue !== undefined ? { hue: s.hue } : {}),
       title: s.title,
-      groups,
+      groups: children.length
+        ? children.map((group) => ({
+            ...(group.id ? { id: group.id } : {}),
+            ...(group.path ? { path: group.path } : {}),
+            ...(group.hue !== undefined ? { hue: group.hue } : {}),
+            title: group.title,
+            leaves: (group.children?.length ? group.children : [group])
+              .map(toLeaf)
+              .filter((leaf): leaf is DocsLeaf => leaf !== null),
+          }))
+        : [
+            {
+              title: s.title,
+              leaves: [s].map(toLeaf).filter((leaf): leaf is DocsLeaf => leaf !== null),
+            },
+          ],
     };
   });
 }
@@ -191,6 +191,7 @@ function hasRenderableChildren(c: ReactNode): boolean {
  * @return The content fragment after marking the view surface as ready.
  */
 function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
+  // hygiene-ignore single-use -- React Hook values must be captured before the effect dependency array; inlining the hook would violate Hook ordering.
   const transition = useTransitionState();
   useEffect(() => {
     $surfaceReady.set('view');
@@ -204,9 +205,10 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
  *
  * @param title Site title shown in the Docs workspace.
  * @param homeHref URL opened by the workspace's home navigation.
- * @param description Description shown with the site title.
+ * @param desc Description shown with the site title.
  * @param pageTitle Title of the page selected for the current route.
- * @param pageDescription Description of the selected page.
+ * @param pageDesc Description of the selected page.
+ * @param breadcrumbParent Optional parent link shown above the selected page.
  * @param hue Theme hue used to color the workspace.
  * @param nodes Host navigation tree used when `trees` is not supplied.
  * @param trees Structured navigation trees supplied by the host.
@@ -214,6 +216,8 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
  * @param currentPath Current browser path used to select the displayed leaf.
  * @param rootPath Base path for routes within the documentation site.
  * @param markdown Markdown source for the selected page.
+ * @param srcMarkdown Original Markdown source retained for downloads.
+ * @param srcPath Original filename used for downloaded Markdown.
  * @param content Portable Text content supplied for the selected page.
  * @param attachments Attachment metadata for the selected page.
  * @param updatedAt Fallback update timestamp when the selected leaf has none.
@@ -227,9 +231,9 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
 export function DocsStaticWorkspace({
   title,
   homeHref = '/',
-  description,
+  description: desc,
   pageTitle,
-  pageDescription,
+  pageDescription: pageDesc,
   breadcrumbParent,
   hue,
   nodes = [],
@@ -238,8 +242,8 @@ export function DocsStaticWorkspace({
   currentPath,
   rootPath = '/',
   markdown = '',
-  sourceMarkdown,
-  sourcePath,
+  sourceMarkdown: srcMarkdown,
+  sourcePath: srcPath,
   content,
   attachments = [],
   updatedAt,
@@ -257,14 +261,20 @@ export function DocsStaticWorkspace({
   hue?: number | null;
   nodes?: DocsNavNode[];
   trees?: DocsTree[];
-  /** @deprecated Use trees. */
+  /**
+   * Legacy navigation sections retained for hosts that have not migrated to trees. @deprecated Use trees.
+   */
   sections?: DocsSection[];
   currentPath: string;
   rootPath?: string;
   markdown?: string;
-  /** Original repository source, including frontmatter and relative asset paths. */
+  /**
+   * Original repository source, including frontmatter and relative asset paths.
+   */
   sourceMarkdown?: string;
-  /** Original repository filename used for the download. */
+  /**
+   * Original repository filename used for the download.
+   */
   sourcePath?: string;
   content?: unknown;
   attachments?: DocsAttachment[];
@@ -272,7 +282,9 @@ export function DocsStaticWorkspace({
   renderContent?: ReactNode;
   children?: ReactNode;
   staticContent?: boolean;
-  /** Optional ephemeral quiz flow backed by the static host's server endpoint. */
+  /**
+   * Optional ephemeral quiz flow backed by the static host's server endpoint.
+   */
   quiz?: DocsQuizConfig;
 }): JSX.Element {
   const [edited, setEdited] = useState<{
@@ -280,9 +292,9 @@ export function DocsStaticWorkspace({
     title: string;
     description?: string;
   } | null>(null);
-  useEffect(() => setEdited(null), [currentPath, sourceMarkdown, markdown]);
-  const originalSource = sourceMarkdown ?? markdown;
-  const sourceBody = splitMarkdownSource(edited?.markdown ?? originalSource).body;
+  useEffect(() => setEdited(null), [currentPath, srcMarkdown, markdown]);
+  const origSrc = srcMarkdown ?? markdown;
+  const srcBody = splitMarkdownSource(edited?.markdown ?? origSrc).body;
   const workspaceSections: DocsSection[] = trees
     ? trees.map(({ branches, ...tree }) => ({ ...tree, groups: branches }))
     : (sections ?? sectionsFromNavigation(nodes));
@@ -307,29 +319,28 @@ export function DocsStaticWorkspace({
       .sort((l, r) => routeKey(r.leaf.href).length - routeKey(l.leaf.href).length)[0] ??
     allLeaves.find((i) => routeKey(i.leaf.href) === routeKey(rootPath)) ??
     allLeaves[0];
-  const currentAttachments = a?.leaf.attachments ?? attachments;
   const docPath = a?.leaf.href ?? currentPath;
   const initialTitle = pageTitle ?? a?.leaf.title ?? title;
-  const initialDescription = pageDescription ?? a?.leaf.description;
-  const effectivePageDescription = edited?.description ?? initialDescription;
+  const effectivePageDesc = edited?.description ?? pageDesc ?? a?.leaf.description;
   const docContent = edited
-    ? markdownToDocsValue(sourceBody)
+    ? markdownToDocsValue(srcBody)
     : Array.isArray(content)
       ? content
-      : markdownToDocsValue(sourceBody);
-  const markdownSource = edited?.markdown.trim()
-    ? sourceBody
+      : markdownToDocsValue(srcBody);
+  const markdownSrc = edited?.markdown.trim()
+    ? srcBody
     : markdown.trim()
       ? markdown
       : Array.isArray(content)
         ? docsValueToMarkdown(content as Parameters<typeof docsValueToMarkdown>[0])
         : '';
-  const editedPreview = sourcePath ? siteImageUrls(sourceBody, sourcePath, rootPath) : sourceBody;
+  // hygiene-ignore single-use -- Resolve asset URLs before choosing the render fallback; moving this call into the edited branch would defer source validation.
+  const editedPreview = srcPath ? siteImageUrls(srcBody, srcPath, rootPath) : srcBody;
   const contentSlot =
     (edited ? <DocsMarkdown markdown={editedPreview} /> : undefined) ??
     renderContent ??
     (hasRenderableChildren(children) ? children : undefined) ??
-    (markdownSource ? <DocsMarkdown markdown={markdownSource} /> : undefined);
+    (markdownSrc ? <DocsMarkdown markdown={markdownSrc} /> : undefined);
   const readyContent =
     contentSlot !== undefined || staticContent ? (
       <StaticContentSlot key={currentPath}>{contentSlot ?? null}</StaticContentSlot>
@@ -390,13 +401,17 @@ export function DocsStaticWorkspace({
         .sort((l, r) => routeKey(r.leaf.href).length - routeKey(l.leaf.href).length)[0]?.leaf
     );
   };
-  const hostAttachments: DocsHostAttachment[] = currentAttachments.map((i, v) => ({
-    id: String(v),
-    name: i.title,
-    path: i.href,
-    ...(i.type ? { type: i.type } : {}),
-    ...(i.size !== undefined ? { size: i.size } : {}),
-  }));
+  // hygiene-ignore single-use -- Materialize attachment records before the host adapter and render branch consume them.
+  const hostAttachments: DocsHostAttachment[] = (a?.leaf.attachments ?? attachments).map(
+    (i, v) => ({
+      id: String(v),
+      name: i.title,
+      path: i.href,
+      ...(i.type ? { type: i.type } : {}),
+      ...(i.size !== undefined ? { size: i.size } : {}),
+    }),
+  );
+  // hygiene-ignore single-use -- Assemble the typed host adapter before handing it to the workspace render boundary.
   const host: DocsHostAdapter = {
     navigationMode: 'document',
     capabilities: {
@@ -412,7 +427,7 @@ export function DocsStaticWorkspace({
     rootPath,
     homePath: homeHref,
     siteTitle: title,
-    ...(description ? { siteDescription: description } : {}),
+    ...(desc ? { siteDescription: desc } : {}),
     /**
      * Builds a leaf URL from the tree, branch, and leaf identifiers supplied by the workspace.
      *
@@ -505,9 +520,9 @@ export function DocsStaticWorkspace({
               path: selected.path ?? selected.href,
               pathname: routeOwnsPath(selected.href, currentPath) ? currentPath : selected.href,
               title: edited?.title ?? pageTitle ?? selected.title,
-              description: effectivePageDescription ?? selected.description,
+              description: effectivePageDesc ?? selected.description,
               updatedAt: selected.updatedAt ?? updatedAt,
-              source: sourceBody,
+              source: srcBody,
               content: docContent,
             }
           : null;
@@ -553,30 +568,28 @@ export function DocsStaticWorkspace({
               );
         const savedTitle =
           typeof request.title === 'string' ? request.title : (edited?.title ?? initialTitle);
-        const savedDescription =
-          typeof request.description === 'string' ? request.description : effectivePageDescription;
+        const savedDesc =
+          typeof request.description === 'string' ? request.description : effectivePageDesc;
         const savedMarkdown = editedMarkdownSource({
-          original: edited?.markdown ?? originalSource,
+          original: edited?.markdown ?? origSrc,
           body,
           title: savedTitle,
           initialTitle: edited?.title ?? initialTitle,
-          ...(savedDescription !== undefined ? { description: savedDescription } : {}),
-          ...(effectivePageDescription !== undefined
-            ? { initialDescription: effectivePageDescription }
-            : {}),
+          ...(savedDesc !== undefined ? { description: savedDesc } : {}),
+          ...(effectivePageDesc !== undefined ? { initialDescription: effectivePageDesc } : {}),
         });
         downloadMarkdownFile(
-          markdownDownloadName(sourcePath ?? a?.leaf.path ?? docPath),
+          markdownDownloadName(srcPath ?? a?.leaf.path ?? docPath),
           savedMarkdown,
         );
         setEdited({
           markdown: savedMarkdown,
           title: savedTitle,
-          ...(savedDescription !== undefined ? { description: savedDescription } : {}),
+          ...(savedDesc !== undefined ? { description: savedDesc } : {}),
         });
         data = {
           title: savedTitle,
-          description: savedDescription,
+          description: savedDesc,
           source: body,
           content: markdownToDocsValue(body),
         };
@@ -618,11 +631,11 @@ export function DocsStaticWorkspace({
           permission="write"
           path={a?.leaf.path ?? docPath}
           title={edited?.title ?? initialTitle}
-          {...(effectivePageDescription ? { description: effectivePageDescription } : {})}
+          {...(effectivePageDesc ? { description: effectivePageDesc } : {})}
           {...((a?.leaf.updatedAt ?? updatedAt)
             ? { updatedAt: a?.leaf.updatedAt ?? updatedAt }
             : {})}
-          source={sourceBody}
+          source={srcBody}
           content={docContent}
           staticContent={staticContent}
           {...(quiz ? { quiz } : {})}

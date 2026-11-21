@@ -1140,3 +1140,6 @@ export const REGEX_G_REGEX_19 = () => /(?<!\\)\$\{/g;
  * @returns A fresh expression matching one or more trailing slashes.
  */
 export const REGEX_PATTERN_REGEX_7 = () => /\/+$/;
+
+// @terra-quality-regex-key "^\\/?docs\\/"
+export const REGEX_DOCS_REGEX_2 = () => /^\/?docs\//;

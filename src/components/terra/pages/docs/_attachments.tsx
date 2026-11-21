@@ -285,7 +285,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   }, [docId]);
 
   // ATTACHMENT ACTION HANDLERS
-  /** Opens the viewer and loads a persisted text attachment's content for preview.
+  /**
+   * Opens the viewer and loads a persisted text attachment's content for preview.
    * @param sis Attachment selected for preview.
    */
   const viewAsset = async (sis: Sister): Promise<void> => {
@@ -313,7 +314,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     }
   };
 
-  /** Uploads one file in chunks and replaces its temporary list entry with persisted metadata.
+  /**
+   * Uploads one file in chunks and replaces its temporary list entry with persisted metadata.
    * @param file File selected for upload.
    * @param tempId Temporary row ID replaced after the upload succeeds.
    * @param isMdFile Whether the uploaded file should be treated as a document.
@@ -524,7 +526,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     [docId],
   );
   useEffect(() => {
-    /** Adds supported pasted URLs or files when paste occurs outside a text input.
+    /**
+     * Adds supported pasted URLs or files when paste occurs outside a text input.
      * @param e Document paste event whose clipboard contents are classified.
      */
     const handlePaste = (e: ClipboardEvent) => {
@@ -572,7 +575,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     };
   }, [addRemote, add]);
 
-  /** Renames the selected attachment while preserving its extension and current directory.
+  /**
+   * Renames the selected attachment while preserving its extension and current directory.
    * @param nName New basename entered by the user.
    */
   const renameAttch = async (nName: string) => {
@@ -611,7 +615,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
     }
   };
 
-  /** Confirms deletion, removes selected entries optimistically, and dispatches each document or asset write.
+  /**
+   * Confirms deletion, removes selected entries optimistically, and dispatches each document or asset write.
    * @param items Selected document and attachment records to delete.
    */
   const remove = async (items: Sister[]) => {
@@ -656,7 +661,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 
   // GLOBAL KEYBOARD SHORTCUTS
   useEffect(() => {
-    /** Deletes selected attachments on Backspace or Delete when no input or dialog owns the key.
+    /**
+     * Deletes selected attachments on Backspace or Delete when no input or dialog owns the key.
      * @param e Keyboard event used to recognize and claim the deletion shortcut.
      */
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -689,15 +695,25 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   useLayoutEffect(() => {
     const menu = ctxMenuRef.current;
     if (!ctxAttachment || !menu) return;
-    const { width, height } = menu.getBoundingClientRect();
-    const inset = 8;
-    const x = Math.max(inset, Math.min(ctxAttachment.x, window.innerWidth - width - inset));
-    const y = Math.max(inset, Math.min(ctxAttachment.y, window.innerHeight - height - inset));
-    if (x !== ctxAttachment.x || y !== ctxAttachment.y) {
-      setCtxAttachment((current) =>
-        current?.item.path === ctxAttachment.item.path ? { ...current, x, y } : current,
-      );
-    }
+    const clamp = () => {
+      const { width, height } = menu.getBoundingClientRect();
+      const inset = 8;
+      menu.style.left = `${Math.max(inset, Math.min(ctxAttachment.x, window.innerWidth - width - inset))}px`;
+      menu.style.top = `${Math.max(inset, Math.min(ctxAttachment.y, window.innerHeight - height - inset))}px`;
+      const bounds = menu.getBoundingClientRect();
+      if (bounds.right > window.innerWidth - inset)
+        menu.style.left = `${parseFloat(menu.style.left) - (bounds.right - window.innerWidth + inset)}px`;
+      if (bounds.bottom > window.innerHeight - inset)
+        menu.style.top = `${parseFloat(menu.style.top) - (bounds.bottom - window.innerHeight + inset)}px`;
+    };
+    clamp();
+    const observer = new ResizeObserver(clamp);
+    observer.observe(menu);
+    window.addEventListener('resize', clamp);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', clamp);
+    };
   }, [ctxAttachment]);
   useEffect(() => {
     /**
@@ -882,7 +898,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
           role="menu"
           data-docs-attachment-menu
           className="fixed z-[120] max-h-[calc(100dvh-1rem)] min-w-32 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-md border border-primary-6 bg-white p-1 text-primary-12 shadow-lg dark:bg-black"
-          style={{ left: ctxAttachment.x, top: ctxAttachment.y }}
+          style={{ left: ctxAttachment.x, top: ctxAttachment.y, maxHeight: 'calc(100dvh - 16px)' }}
           onContextMenu={(e) => e.preventDefault()}
         >
           {(
@@ -944,8 +960,8 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                               ]);
                               setSel([]);
                               try {
-                                const { PDFDocument } = await import('pdf-lib');
-                                const mergedPdf = await PDFDocument.create();
+                                const { PDFDocument: PDFDoc } = await import('pdf-lib');
+                                const mergedPdf = await PDFDoc.create();
                                 for (let i = 0; i < selItems.length; i++) {
                                   const item = selItems[i];
                                   let buf: ArrayBuffer;
@@ -959,7 +975,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                                       throw err || new Error('Failed to read local asset');
                                     buf = data;
                                   }
-                                  const pdfDoc = await PDFDocument.load(buf);
+                                  const pdfDoc = await PDFDoc.load(buf);
                                   (
                                     await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())
                                   ).forEach((p) => mergedPdf.addPage(p));
@@ -1272,10 +1288,10 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                   setUploading(true);
                   setMergePdfState(null);
                   try {
-                    const { PDFDocument } = await import('pdf-lib');
-                    const mergedPdf = await PDFDocument.create();
+                    const { PDFDocument: PDFDoc } = await import('pdf-lib');
+                    const mergedPdf = await PDFDoc.create();
                     for (const pdf of mergePdfState.pdfs) {
-                      const pdfDoc = await PDFDocument.load(await pdf.arrayBuffer());
+                      const pdfDoc = await PDFDoc.load(await pdf.arrayBuffer());
                       (await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices())).forEach((p) =>
                         mergedPdf.addPage(p),
                       );

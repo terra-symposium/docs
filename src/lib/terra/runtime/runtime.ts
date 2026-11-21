@@ -46,21 +46,21 @@ export const validateType = (types: readonly string[], value: unknown): boolean 
 /**
  * Writes a tagged diagnostic to the browser console without changing control flow.
  * @param tag Subsystem label.
- * @param message Diagnostic text.
+ * @param msg Diagnostic text.
  * @param detail Optional structured context.
  * @returns No value; emits the diagnostic through `console.warn`.
  */
-export const warn = (tag: string, message: string, detail?: unknown): void =>
-  console.warn(`[${tag}] ${message}`, detail ?? '');
+export const warn = (tag: string, msg: string, detail?: unknown): void =>
+  console.warn(`[${tag}] ${msg}`, detail ?? '');
 /**
  * Writes a tagged error diagnostic to the browser console without swallowing the error.
  * @param tag Subsystem label.
- * @param message Error text.
+ * @param msg Error text.
  * @param detail Optional structured context.
  * @returns No value; emits the diagnostic through `console.error`.
  */
-export const logErr = (tag: string, message: string, detail?: unknown): void =>
-  console.error(`[${tag}] ${message}`, detail ?? '');
+export const logErr = (tag: string, msg: string, detail?: unknown): void =>
+  console.error(`[${tag}] ${msg}`, detail ?? '');
 /**
  * Extracts a useful message from common thrown values or falls back to caller text.
  * @param reason Thrown value or host error record.
@@ -114,10 +114,15 @@ export const canonicalId = (value: string): string =>
  * @returns The same graph reference and type.
  */
 export const normArcGraph = <T>(graph: T): T => graph;
-/** Minimal node fields inspected when filtering graph edges for visible nodes. */
+/**
+ * Minimal node fields inspected when filtering graph edges for visible nodes.
+ */
 type ArcNode = Record<string, unknown> & { _key?: string; hidden?: boolean; type?: string };
-/** Minimal edge fields used to validate graph connections. */
+/**
+ * Minimal edge fields used to validate graph connections.
+ */
 type ArcEdge = Record<string, unknown> & { _key?: string; source?: string; target?: string };
+// hygiene-ignore single-use -- This exported runtime probe is a module API and defers DOM access until invocation.
 /**
  * Reports whether the document root currently carries Styling's dark theme class.
  * @returns `true` when `document.documentElement` has the `dark` class.

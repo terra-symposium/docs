@@ -21,19 +21,31 @@ import type { Edge as XYFlowEdge, Node as XYFlowNode, ReactFlowProps } from '@xy
 CONFIG
 //////////////////////////////////////////////////*/
 
-/** Open object shape for serialized content whose fields are host-defined. */
+/**
+ * Open object shape for serialized content whose fields are host-defined.
+ */
 type UnknownRecord = Record<string, unknown>;
-/** Portable Text block with a typed discriminator and optional nested blocks. */
+/**
+ * Portable Text block with a typed discriminator and optional nested blocks.
+ */
 export type PortableBlock<T extends string = string> = T extends string
   ? { _type: T; _key?: string; children?: PortableBlock[]; [key: string]: unknown }
   : never;
-/** Permissions the shared workspace exposes for a document or navigation node. */
+/**
+ * Permissions the shared workspace exposes for a document or navigation node.
+ */
 export type DocsPermissionLevel = 'read' | 'write';
-/** Visible workspace modes selected by the document toolbar. */
+/**
+ * Visible workspace modes selected by the document toolbar.
+ */
 export type Mode = 'view' | 'edit' | 'attachments';
-/** Intermediate editor transition states used while changing modes or loading local content. */
+/**
+ * Intermediate editor transition states used while changing modes or loading local content.
+ */
 export type Transition = 'idle' | 'local' | 'p' | `to-${Mode}`;
-/** Portable table cell that can retain rich blocks or its original Markdown/HTML source. */
+/**
+ * Portable table cell that can retain rich blocks or its original Markdown/HTML source.
+ */
 export type DocTableCell = {
   _key?: string;
   _type?: 'cell';
@@ -41,7 +53,9 @@ export type DocTableCell = {
   html?: string;
   markdown?: string;
 };
-/** Common serialized fields accepted by the Docs block renderers. */
+/**
+ * Common serialized fields accepted by the Docs block renderers.
+ */
 export type DocBlock = {
   _type: string;
   _key?: string;
@@ -77,7 +91,9 @@ export type DocBlock = {
   width?: number | string;
   [key: string]: unknown;
 };
-/** Ordered block content stored for one Docs document or nested block. */
+/**
+ * Ordered block content stored for one Docs document or nested block.
+ */
 export type DocBody = DocBlock[];
 /**
  * Checks that a value is an array of block-shaped objects before rendering stored content.
@@ -88,7 +104,9 @@ export type DocBody = DocBlock[];
  */
 export const isDocBody = (value: unknown): value is DocBody =>
   Array.isArray(value) && value.every((b) => b && typeof b === 'object' && '_type' in b);
-/** Saved document revision with its content snapshot and display metadata. */
+/**
+ * Saved document revision with its content snapshot and display metadata.
+ */
 export type DocVer = {
   _key?: string;
   ver?: string;
@@ -100,7 +118,9 @@ export type DocVer = {
   title: string;
   savedAt: string;
 };
-/** Markdown-backed document metadata accepted by the local and hosted workspaces. */
+/**
+ * Markdown-backed document metadata accepted by the local and hosted workspaces.
+ */
 export type Md = {
   [key: string]: unknown;
   content?: string | DocVer[] | DocBody | null;
@@ -113,9 +133,13 @@ export type Md = {
   title?: string;
   sources?: string[];
 };
-/** Result envelope returned by a host action, including a transport or operation error. */
+/**
+ * Result envelope returned by a host action, including a transport or operation error.
+ */
 export type ActionRes<T = unknown> = { data?: T; error?: unknown };
-/** Unsaved editor draft paired with the original source and optional title metadata. */
+/**
+ * Unsaved editor draft paired with the original source and optional title metadata.
+ */
 export type Draft = {
   content?: string | DocBody | null;
   description?: string;
@@ -123,7 +147,9 @@ export type Draft = {
   title?: string;
   source: string;
 };
-/** Serializable editor selection, including text offsets and optional browser range data. */
+/**
+ * Serializable editor selection, including text offsets and optional browser range data.
+ */
 export type EditorSel = {
   anchorOffset?: number | null | undefined;
   anchorPath?: number[] | null | undefined;
@@ -140,7 +166,9 @@ export type EditorSel = {
   text?: string | undefined;
   visible?: boolean | undefined;
 };
-/** References to the active editor body, current selection, and toolbar controls. */
+/**
+ * References to the active editor body, current selection, and toolbar controls.
+ */
 export type EditorRefs = {
   blob?: Blob | null;
   body?: HTMLElement | null;
@@ -162,7 +190,9 @@ export type EditorRefs = {
   [key: string]: unknown;
 };
 
-/** State and callbacks exposed to Docs components while a document editor is mounted. */
+/**
+ * State and callbacks exposed to Docs components while a document editor is mounted.
+ */
 export type EditorSurface = {
   attachFiles?: (files: File[]) => Promise<void>;
   controls: ToolbarState;
@@ -188,7 +218,9 @@ export type EditorSurface = {
   setMode: (mode: Mode) => Promise<void>;
   uploadImage?: (file: File) => Promise<string>;
 };
-/** State and callbacks consumed by the shared edit toolbar. */
+/**
+ * State and callbacks consumed by the shared edit toolbar.
+ */
 export type ToolbarState = {
   applySearchText: (value: string) => void;
   busy: string | null;
@@ -204,7 +236,9 @@ export type ToolbarState = {
   setMode: (mode: Mode) => Promise<void>;
   toggleList?: ((kind: string) => void) | undefined;
 };
-/** Permissioned terminal node in the Docs navigation tree. */
+/**
+ * Permissioned terminal node in the Docs navigation tree.
+ */
 export type Leaf = {
   type: 'leaf';
   origName: string;
@@ -218,7 +252,9 @@ export type Leaf = {
   source?: string;
   [key: string]: unknown;
 };
-/** Permissioned navigation group containing descendant leaves or branches. */
+/**
+ * Permissioned navigation group containing descendant leaves or branches.
+ */
 export type Branch = {
   type: 'branch';
   origName: string;
@@ -230,12 +266,18 @@ export type Branch = {
   hue?: number;
   [key: string]: unknown;
 };
-/** Navigation tree node accepted by the original Docs workspace. */
+/**
+ * Navigation tree node accepted by the original Docs workspace.
+ */
 export type Tree = Leaf | Branch;
-/** Attachment categories understood by the document export controls. */
+/**
+ * Attachment categories understood by the document export controls.
+ */
 export type AttchType =
   'image' | 'pdf' | 'youtube' | 'tsdocs' | 'website' | 'file' | 'doc' | 'document' | 'other';
-/** Related document or asset entry shown alongside a leaf in the attachment view. */
+/**
+ * Related document or asset entry shown alongside a leaf in the attachment view.
+ */
 export type Sister = {
   content?: unknown;
   id?: string;
@@ -248,7 +290,9 @@ export type Sister = {
   source?: string;
   unavailable?: boolean;
 };
-/** One action or submenu entry in a Docs navigation context menu. */
+/**
+ * One action or submenu entry in a Docs navigation context menu.
+ */
 export type DocsTreeMenuAction = {
   destructive?: boolean;
   disabled?: boolean;
@@ -258,7 +302,9 @@ export type DocsTreeMenuAction = {
   separator?: boolean;
   subActions?: DocsTreeMenuAction[];
 };
-/** Export format, content filters, and merge policy selected by the user. */
+/**
+ * Export format, content filters, and merge policy selected by the user.
+ */
 export type DocsExportOpts = {
   flatten: boolean;
   format: 'raw' | 'pdf';
@@ -272,7 +318,9 @@ export type DocsExportOpts = {
   };
   merges: { pages: boolean; pdfs: boolean; images: boolean; youtube: boolean; tsdocs: boolean };
 };
-/** Active export selection; null means the export dialog has no target. */
+/**
+ * Active export selection; null means the export dialog has no target.
+ */
 export type ExportTgt = {
   paths: string[];
   rootDir: string;
@@ -280,7 +328,9 @@ export type ExportTgt = {
   title: string;
   nodeIds?: string[];
 } | null;
-/** Pending deletion target retained while the confirmation dialog is open. */
+/**
+ * Pending deletion target retained while the confirmation dialog is open.
+ */
 export type DelTgt = {
   kind: 'section' | 'branch' | 'leaf';
   path: string;
@@ -290,7 +340,9 @@ export type DelTgt = {
   title: string;
   origNode?: Tree;
 } | null;
-/** Controlled prompt dialog state and the callbacks that commit or cancel its value. */
+/**
+ * Controlled prompt dialog state and the callbacks that commit or cancel its value.
+ */
 export type PromptState = {
   open: boolean;
   title: string;
@@ -300,7 +352,9 @@ export type PromptState = {
   onSave: (val: string) => void;
   onCancel?: () => void;
 } | null;
-/** One command shown in a block type or insert menu. */
+/**
+ * One command shown in a block type or insert menu.
+ */
 export type BlockOpt = {
   group: 'type' | 'insert';
   icon: ComponentType<SVGProps<SVGSVGElement>> | ReactNode;
@@ -308,7 +362,9 @@ export type BlockOpt = {
   value: string;
   onSelect: () => void;
 };
-/** Custom block component entry with optional labels for the editor menu. */
+/**
+ * Custom block component entry with optional labels for the editor menu.
+ */
 export type RepoComponentWithLabel = {
   name: string;
   path?: string;
@@ -318,19 +374,31 @@ export type RepoComponentWithLabel = {
   displayLabel?: string;
   [key: string]: unknown;
 };
-/** Nested menu index for custom components grouped by repository folder. */
+/**
+ * Nested menu index for custom components grouped by repository folder.
+ */
 export type MenuTree = { components: RepoComponentWithLabel[]; folders: Record<string, MenuTree> };
-/** Current drag payload for either a leaf node or a branch node. */
+/**
+ * Current drag payload for either a leaf node or a branch node.
+ */
 export type DragState =
   | { active: boolean; path: string; kind: 'leaf' }
   | { fPath: string; kind: 'branch'; pPath: string };
-/** Destination item and insertion position selected during a tree reorder. */
+/**
+ * Destination item and insertion position selected during a tree reorder.
+ */
 export type ReorderDropState = { key: string; position: 'after' | 'before' | 'inside' };
-/** DOM element decorated with the action data for one rendered document block. */
+/**
+ * DOM element decorated with the action data for one rendered document block.
+ */
 export type BlockTgt = HTMLElement & { __blockActions?: UnknownRecord[] };
-/** Parsed TypeScript documentation page passed to the graph and page renderers. */
+/**
+ * Parsed TypeScript documentation page passed to the graph and page renderers.
+ */
 export type TsDocsItem = { slug: string; title: string; body: DocBody };
-/** Rendering and interaction metadata attached to a graph node. */
+/**
+ * Rendering and interaction metadata attached to a graph node.
+ */
 export type NodeData = Record<string, unknown> & {
   attributes?: Array<{ name: string; type?: string; value?: string }>;
   compact?: boolean;
@@ -345,20 +413,32 @@ export type NodeData = Record<string, unknown> & {
   requiredHandles?: { sources?: Pos[]; targets?: Pos[]; tgts?: Pos[] };
   title?: string;
 };
-/** Supported node variants used by the Docs graph controls. */
+/**
+ * Supported node variants used by the Docs graph controls.
+ */
 export type FlowNodeType =
   'data' | 'decision' | 'erd' | 'group' | 'note' | 'origin' | 'process' | 'terminal' | 'terminator';
-/** React Flow node shape used by the shared Docs diagram canvas. */
+/**
+ * React Flow node shape used by the shared Docs diagram canvas.
+ */
 export type FlowNode = Omit<XYFlowNode<NodeData, FlowNodeType | undefined>, 'type'> & {
   type?: FlowNodeType;
 };
-/** React Flow edge shape with a serializable, host-defined data record. */
+/**
+ * React Flow edge shape with a serializable, host-defined data record.
+ */
 export type Edge = XYFlowEdge<Record<string, unknown>, string | undefined>;
-/** Valid sides for graph node connection handles. */
+/**
+ * Valid sides for graph node connection handles.
+ */
 export type Pos = 'top' | 'right' | 'bottom' | 'left';
-/** Coordinates and dimensions calculated by the Dagre graph layout. */
+/**
+ * Coordinates and dimensions calculated by the Dagre graph layout.
+ */
 export type DagreNode = { x?: number; y?: number; width?: number; height?: number };
-/** Flow node shape accepted by layout helpers before React Flow normalization. */
+/**
+ * Flow node shape accepted by layout helpers before React Flow normalization.
+ */
 export type FlowNodeLike = {
   id: string;
   position?: { x: number; y: number };
@@ -371,11 +451,18 @@ export type FlowNodeLike = {
   parentId?: string;
   [key: string]: unknown;
 };
-/** Width and height produced by measuring a resizable graph group. */
+// hygiene-ignore single-use -- This exported size shape is part of the flow module type contract.
+/**
+ * Width and height produced by measuring a resizable graph group.
+ */
 export type FlowSize = { w: number; h: number };
-/** Dimensions reported by React Flow after resizing a group or note node. */
+/**
+ * Dimensions reported by React Flow after resizing a group or note node.
+ */
 export type FlowResizeParams = { x: number; y: number; width: number; height: number };
-/** Diagram input options accepted by the Docs graph block renderer. */
+/**
+ * Diagram input options accepted by the Docs graph block renderer.
+ */
 export type NodesProps = Omit<
   ReactFlowProps<FlowNode, Edge>,
   'nodes' | 'edges' | 'onNodeClick' | 'onFocus' | 'onBlur'
@@ -407,12 +494,16 @@ export type NodesProps = Omit<
   showBg?: boolean;
   showCtrls?: boolean;
 };
-/** Node metadata for a resizable or droppable diagram group. */
+/**
+ * Node metadata for a resizable or droppable diagram group.
+ */
 export type GroupNodeData = NodeData & {
   isDragTarget?: boolean;
   onResizeEnd?: (id: string, size: FlowResizeParams) => void;
 };
-/** Parsed power-source graph with source, terminal, and referenced-content nodes. */
+/**
+ * Parsed power-source graph with source, terminal, and referenced-content nodes.
+ */
 export type PowerSrcGraph = {
   nodes: Array<
     | { type: 'origin' | 'terminal'; position?: { row?: number }; [key: string]: unknown }
@@ -425,14 +516,18 @@ export type PowerSrcGraph = {
   >;
   [key: string]: unknown;
 };
-/** Portable Text mark definition retained in a Docs rich-text block. */
+/**
+ * Portable Text mark definition retained in a Docs rich-text block.
+ */
 export type DocsContentPtMarkDef = {
   _key?: string;
   _type?: string;
   href?: string;
   [key: string]: unknown;
 };
-/** Input descriptor used to build a Docs block configuration form. */
+/**
+ * Input descriptor used to build a Docs block configuration form.
+ */
 export type Field = {
   key: string;
   kind: string;
@@ -441,7 +536,9 @@ export type Field = {
   textarea?: boolean;
   tooltip: string;
 };
-/** Host-provided toolbar state kept as an open adapter for legacy integrations. */
+/**
+ * Host-provided toolbar state kept as an open adapter for legacy integrations.
+ */
 export type EditorToolbarAdapter = {
   format?: (kind: string) => void;
   insert?: ToolbarState['insert'];
@@ -453,26 +550,40 @@ export type EditorToolbarAdapter = {
   undo?: () => void;
   undoable?: boolean;
 };
-/** Host-specific block inserted from the Docs toolbar. */
+/**
+ * Host-specific block inserted from the Docs toolbar.
+ */
 export type ToolbarBlock = {
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   insert: () => string;
   label: string;
   type: string;
 };
-/** Portable Text block sequence accepted for a Docs document body. */
+/**
+ * Portable Text block sequence accepted for a Docs document body.
+ */
 export type Content = PortableBlock[];
-/** Problem document record used by the shared problem-content renderer. */
+/**
+ * Problem document record used by the shared problem-content renderer.
+ */
 export type Problem = { _id?: string; title?: string; [key: string]: unknown };
-/** Docs block content narrowed to the configured block schema names. */
+/**
+ * Docs block content narrowed to the configured block schema names.
+ */
 export type DocsContent = {
   [T in keyof typeof DOCS_BLOCK_SCHEMAS]: DocBlock & { _type: T };
 }[keyof typeof DOCS_BLOCK_SCHEMAS][];
-/** Portable blocks nested inside another Docs component. */
+/**
+ * Portable blocks nested inside another Docs component.
+ */
 export type DocsNestedContent = PortableBlock[];
-/** Blocks supported by the shared problem-content renderer. */
+/**
+ * Blocks supported by the shared problem-content renderer.
+ */
 export type ProblemContent = PortableBlock<(typeof PROBLEM_BLOCK_TYPES)[number]>[];
-/** Arc graph assembled from positioned nodes and source/target connections. */
+/**
+ * Arc graph assembled from positioned nodes and source/target connections.
+ */
 export type ArcGraph = {
   nodes: FlowNodeLike[];
   edges: { source: string; target: string; [key: string]: unknown }[];
@@ -497,6 +608,7 @@ export const DOCS_BLOCK_SCHEMAS = {
   raw: { fields: [{ name: 'markdown', type: 'string' }] },
   tsDocs: { fields: [{ name: 'scope', type: 'string' }] },
 } satisfies Record<string, { fields: Array<{ name: string; type: string }> }>;
+// hygiene-ignore single-use -- This exported block type list is a runtime contract used to classify problem blocks.
 export const PROBLEM_BLOCK_TYPES = [
   'hint',
   'headline',

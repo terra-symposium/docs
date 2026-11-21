@@ -121,7 +121,9 @@ export default function EditorHarness(): JSX.Element {
   );
 }
 declare global {
-  /** Values exposed by the editor browser harness to fixture pages and tests. */
+  /**
+   * Values exposed by the editor browser harness to fixture pages and tests.
+   */
   interface Window {
     __contentFixture?: unknown[];
     __contentOptions?: {

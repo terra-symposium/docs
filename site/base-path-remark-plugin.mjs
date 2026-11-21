@@ -33,18 +33,19 @@ function addBasePath(value, base) {
 /**
  * Rewrites root-relative `href` and `src` attributes embedded in raw HTML.
  *
- * @param source - Raw HTML string from a Markdown node.
+ * @param src - Raw HTML string from a Markdown node.
  * @param base - Astro base path used by the current deployment.
  *
  * @return HTML with eligible attribute URLs routed through the deployed base path.
  */
-function addBaseToHtml(source, base) {
-  return source.replace(
+function addBaseToHtml(src, base) {
+  return src.replace(
     /\b(href|src)=(['"])(\/[^'"#?]*)([^'"]*)\2/gi,
     (_match, a, q, p, s) => `${a}=${q}${addBasePath(`${p}${s}`, base)}${q}`,
   );
 }
 
+// hygiene-ignore single-use -- This exported remark transformer is installed by the Astro config as a plugin boundary.
 /**
  * Creates a remark transformer that applies Astro's deployment base to authored resource links.
  *

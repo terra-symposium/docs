@@ -18,7 +18,7 @@ import type { ComponentProps } from 'react';
 CONFIG
 //////////////////////////////////////////////////*/
 
-const DOCS_SITE_COMPONENTS = {
+const DOCS_SITE_COMPS = {
   Workspace: DocsStaticWorkspace,
   Search: DocsSiteSearch,
 };
@@ -38,7 +38,7 @@ COMPONENTS
 export function DocsSiteIsland({
   searchBase = '/',
   ...workspaceProps
-}: ComponentProps<typeof DOCS_SITE_COMPONENTS.Workspace> & {
+}: ComponentProps<typeof DOCS_SITE_COMPS.Workspace> & {
   searchBase?: string;
 }) {
   return (
@@ -62,8 +62,8 @@ export function DocsSiteIsland({
         </main>
       )}
     >
-      <DOCS_SITE_COMPONENTS.Workspace {...workspaceProps} />
-      <DOCS_SITE_COMPONENTS.Search base={searchBase} />
+      <DOCS_SITE_COMPS.Workspace {...workspaceProps} />
+      <DOCS_SITE_COMPS.Search base={searchBase} />
     </ErrorBoundary>
   );
 }

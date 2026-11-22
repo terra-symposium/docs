@@ -3,11 +3,11 @@ title: Blocks
 description: Choose Docs blocks to clarify a reader's task.
 ---
 
+## Choosing Blocks
+
 Start with the reader's task and the information hierarchy. Use a block when its shape makes a relationship easier to understand.
 
 Before drafting a leaf, read the guidance for every block in this reference so the choice of blocks is informed. Apply each relevant rule to every instance, including examples and nested blocks. Check both the Markdown source and rendered result; a successful build does not replace those checks.
-
-## Choose by reader need
 
 | 🧭 Need                                           | Use                                                                                                                                      |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -27,13 +27,13 @@ Each block shows its render/source example first, followed by accordion items fo
 
 :::
 
-## Page structure
-
-Set the page identity first, then organise its explanation and supporting material around the reader’s task.
+## Meta
 
 ### Frontmatter
 
 <DocsBlock data='{"_type":"blockGuidance","id":"frontmatter"}' />
+
+## Native Blocks
 
 ### Prose
 
@@ -47,13 +47,11 @@ Set the page identity first, then organise its explanation and supporting materi
 
 <DocsBlock data='{"_type":"blockGuidance","id":"code"}' />
 
-## Relationships
-
-Choose a structure only when it makes comparison, connection, alternatives, or optional detail easier to understand.
-
 ### Tables
 
 <DocsBlock data='{"_type":"blockGuidance","id":"tables"}' />
+
+## Custom Blocks
 
 ### Diagrams
 
@@ -70,10 +68,6 @@ Choose a structure only when it makes comparison, connection, alternatives, or o
 ### Asides
 
 <DocsBlock data='{"_type":"blockGuidance","id":"asides"}' />
-
-## Supporting content
-
-Add media, notation, or host-provided blocks when they help readers inspect, calculate, practise, or look up something.
 
 ### Images
 

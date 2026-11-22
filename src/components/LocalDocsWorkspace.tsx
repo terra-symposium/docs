@@ -102,7 +102,9 @@ function norm(value: string, base = 'http://docs.local'): string {
 // hygiene-ignore single-use -- Route fragment decoding is a named URL boundary shared by navigation and fallback handling.
 /**
  * Decodes a fragment identifier from a page route or browser URL.
+ *
  * @param value URL, pathname, or fragment string whose hash should be decoded.
+ *
  * @returns The decoded fragment, or an empty string when the input has no valid fragment.
  */
 function routeId(value: string): string {
@@ -150,9 +152,11 @@ export function findDocsLocalPage(
 
 /**
  * Finds a node in the local navigation tree and carries its parent chain with it.
+ *
  * @param nodes Sibling nodes to search in their existing order.
  * @param id `origName` identifier to match.
  * @param ancestors Parents accumulated by the recursive caller.
+ *
  * @return Matching node and its parents, or `undefined` if the ID is absent.
  */
 function findTreeNode(
@@ -170,9 +174,11 @@ function findTreeNode(
 
 /**
  * Finds a leaf by ID and retains its parent chain for tree/branch routing.
+ *
  * @param nodes Sibling nodes to search in navigation order.
  * @param id Page ID stored in a leaf's `origName` field.
  * @param ancestors Parents already visited on the current path.
+ *
  * @returns The matching leaf and its parent chain, or `undefined` when absent.
  */
 function findTreeLeaf(
@@ -190,7 +196,9 @@ function findTreeLeaf(
 
 /**
  * Selects the first leaf nested beneath the supplied navigation nodes.
+ *
  * @param nodes Navigation nodes in their displayed order.
+ *
  * @returns The first descendant leaf or `undefined` when the branch is empty.
  */
 function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
@@ -219,6 +227,7 @@ function firstLeaf(nodes: DocsHostTreeNode[]): DocsHostTreeNode | undefined {
  * @param workspaceOptions.customBlocks Optional host-specific rich block renderers.
  * @param workspaceOptions.blocks Optional switches controlling supported rich blocks.
  * @param workspaceOptions.quiz Optional quiz controls and host generation callback.
+ *
  * @return The shared workspace displaying the selected Markdown page and any configured host content or quiz controls.
  */
 export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): JSX.Element {
@@ -246,8 +255,9 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
   useEffect(() => setActivePath(pathname), [pathname]);
   useEffect(() => {
     /**
-     * Keeps the selected page aligned with Docs navigation and browser history changes.
-     * @param event Optional navigation event carrying an explicit pathname or URL.
+ * Keeps the selected page aligned with Docs navigation and browser history changes.
+ *
+ * @param event Optional navigation event carrying an explicit pathname or URL.
      */
     const updatePath = (event?: Event): void => {
       const detail = (event as CustomEvent<{ pathname?: unknown; url?: unknown }> | undefined)
@@ -277,8 +287,9 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
     <DocsWorkspace
       host={useMemo<DocsHostAdapter>(() => {
         /**
-         * Resolves the page represented by the current browser location.
-         * @returns The matching local page, or the parent-selected page during server rendering.
+ * Resolves the page represented by the current browser location.
+ *
+ * @returns The matching local page, or the parent-selected page during server rendering.
          */
         const aPage = (): DocsLocalPage | undefined =>
           typeof window === 'undefined'
@@ -288,9 +299,11 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
                 `${window.location.pathname}${window.location.search}${window.location.hash}`,
               ) ?? page);
         /**
-         * Resolves action arguments to a local Markdown page without guessing ambiguous basenames.
-         * @param input Read action fields that may contain a page ID, source path, or pathname.
-         * @returns The exact page or unique basename match, otherwise `undefined`.
+ * Resolves action arguments to a local Markdown page without guessing ambiguous basenames.
+ *
+ * @param input Read action fields that may contain a page ID, source path, or pathname.
+ *
+ * @returns The exact page or unique basename match, otherwise `undefined`.
          */
         const resolvePage = (input: unknown): DocsLocalPage | undefined => {
           if (!input || typeof input !== 'object') return undefined;
@@ -336,9 +349,11 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
           ...(desc ? { siteDescription: desc } : {}),
           assetUrl: () => undefined,
           /**
-           * Resolves the active local leaf and its tree/branch IDs for workspace navigation.
-           * @param value URL, route, or page ID reported by the local host.
-           * @returns Route identifiers and canonical pathname for the best matching page.
+ * Resolves the active local leaf and its tree/branch IDs for workspace navigation.
+ *
+ * @param value URL, route, or page ID reported by the local host.
+ *
+ * @returns Route identifiers and canonical pathname for the best matching page.
            */
           resolveRoute(value) {
             const resolved = findDocsLocalPage(availablePages, value) ?? availablePages[0];
@@ -359,11 +374,13 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             };
           },
           /**
-           * Builds a local URL for a selected leaf, falling back to the first page in its branch.
-           * @param treeId Selected tree ID.
-           * @param branchId Optional selected branch ID.
-           * @param leafId Optional selected page ID.
-           * @returns The selected page URL or the configured workspace root.
+ * Builds a local URL for a selected leaf, falling back to the first page in its branch.
+ *
+ * @param treeId Selected tree ID.
+ * @param branchId Optional selected branch ID.
+ * @param leafId Optional selected page ID.
+ *
+ * @returns The selected page URL or the configured workspace root.
            */
           buildRoute(treeId, branchId, leafId) {
             const leaf = leafId ? findTreeNode(tree, leafId)?.node : undefined;
@@ -375,18 +392,22 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             );
           },
           /**
-           * Resolves a source path to the canonical route used by the local page index.
-           * @param path Host path or route supplied for a local document.
-           * @returns The indexed page pathname, or the workspace root when no page matches.
+ * Resolves a source path to the canonical route used by the local page index.
+ *
+ * @param path Host path or route supplied for a local document.
+ *
+ * @returns The indexed page pathname, or the workspace root when no page matches.
            */
           routePath(path) {
             return findDocsLocalPage(availablePages, path)?.pathname ?? rootPath;
           },
           /**
-           * Serves local reads and downloads a Markdown file when a leaf is saved.
-           * @param op Requested Docs host operation.
-           * @param input Optional operation fields identifying a page or attachment.
-           * @returns The local action result or a capability error for unsupported operations.
+ * Serves local reads and downloads a Markdown file when a leaf is saved.
+ *
+ * @param op Requested Docs host operation.
+ * @param input Optional operation fields identifying a page or attachment.
+ *
+ * @returns The local action result or a capability error for unsupported operations.
            */
           async invoke<T = unknown>(
             op: DocsActionOperation,
@@ -411,9 +432,11 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
             }
             if (op === 'read.doc.attachments') {
               /**
-               * Resolves attachment metadata for a local page in the legacy Docs UI shape.
-               * @param contentPath Content path to resolve; omitted uses the current request.
-               * @return Attachments for the resolved page, with legacy display fields added.
+ * Resolves attachment metadata for a local page in the legacy Docs UI shape.
+ *
+ * @param contentPath Content path to resolve; omitted uses the current request.
+ *
+ * @return Attachments for the resolved page, with legacy display fields added.
                */
               const attachmentsForPath = (contentPath?: string): DocsHostAttachment[] => {
                 return (

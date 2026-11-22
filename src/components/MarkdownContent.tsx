@@ -74,6 +74,7 @@ export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Elem
  *
  * @param blocks - Rich blocks in document order.
  * @param options - Optional renderer and block configuration.
+ *
  * @returns React elements for the grouped document blocks.
  */
 export function DocsBlocks({
@@ -103,7 +104,9 @@ export function DocsBlocks({
 
 /**
  * Renders adjacent Markdown list blocks as one semantic list with nested items.
+ *
  * @param blocks Consecutive list blocks produced from the Markdown source.
+ *
  * @returns Nested ordered or unordered lists that retain the items' marker and depth.
  */
 function MarkdownList({ blocks }: { blocks: RichBlock[] }): JSX.Element {
@@ -123,7 +126,9 @@ function MarkdownList({ blocks }: { blocks: RichBlock[] }): JSX.Element {
 
 /**
  * Builds list elements for sibling items with matching marker type and depth.
+ *
  * @param nodes List items at one depth in their original order.
+ *
  * @returns One or more nested list elements grouped by bullet or ordered markers.
  */
 function renderListNodes(nodes: MarkdownListNode[]): JSX.Element[] {
@@ -187,7 +192,9 @@ function renderListNodes(nodes: MarkdownListNode[]): JSX.Element[] {
 
 /**
  * Checks whether a parsed Portable Text block represents a Markdown list item.
+ *
  * @param block Parsed Docs value to inspect.
+ *
  * @returns `true` when the block carries a bullet or ordered-list marker.
  */
 function isMarkdownListItem(block: RichBlock): boolean {
@@ -196,8 +203,10 @@ function isMarkdownListItem(block: RichBlock): boolean {
 
 /**
  * Renders a parsed Markdown tab or accordion group with the shared Styling controls.
+ *
  * @param block Group type and ordered items emitted by the Markdown parser.
  * @param options Rich-block capabilities passed to nested Markdown bodies.
+ *
  * @returns An interactive Styling tab group or accordion with Markdown-rendered item bodies.
  */
 function MarkdownGroup({
@@ -209,9 +218,11 @@ function MarkdownGroup({
 }): JSX.Element {
   const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
   /**
-   * Converts one group's stored content to Markdown before sending it through the shared renderer.
-   * @param item Tab or accordion item with either parsed child content or a Markdown fallback.
-   * @returns The item's Markdown source, preferring its structured `content` field when available.
+ * Converts one group's stored content to Markdown before sending it through the shared renderer.
+ *
+ * @param item Tab or accordion item with either parsed child content or a Markdown fallback.
+ *
+ * @returns The item's Markdown source, preferring its structured `content` field when available.
    */
   const body = (item: Record<string, unknown>): string => {
     const content = Array.isArray(item.content) ? item.content : [];

@@ -116,9 +116,11 @@ function CodeEditor({
   useEffect(() => {
     if (!boundary.current) return;
     /**
-     * Stops code-editor input and focus events from triggering the parent Portable Text editor.
-     * @param e DOM event originating within the code editor boundary.
-     * @returns No value; the event is stopped before reaching the parent editor.
+ * Stops code-editor input and focus events from triggering the parent Portable Text editor.
+ *
+ * @param e DOM event originating within the code editor boundary.
+ *
+ * @returns No value; the event is stopped before reaching the parent editor.
      */
     const stop = (e: Event): void => e.stopPropagation();
     const es = [
@@ -182,10 +184,12 @@ function CodeEditor({
   }, [code.language, code.source, editor, path]);
   useEffect(() => setEndpoint(code.source ?? ''), [code.source]);
   /**
-   * Writes the edited code and language while preserving the current API endpoint.
-   * @param val New code text produced by the block editor.
-   * @param lang Language label selected for syntax highlighting.
-   * @returns No value; sends the changed block fields to the Portable Text editor.
+ * Writes the edited code and language while preserving the current API endpoint.
+ *
+ * @param val New code text produced by the block editor.
+ * @param lang Language label selected for syntax highlighting.
+ *
+ * @returns No value; sends the changed block fields to the Portable Text editor.
    */
   const update = (val: string, lang = code.language ?? 'text'): void =>
     editor.send({

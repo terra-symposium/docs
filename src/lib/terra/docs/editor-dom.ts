@@ -94,6 +94,7 @@ export function captureLinearOffset(
 /**
  * Waits for the editor to settle across two animation frames before inserting Markdown in a browser.
  * Outside a browser, insertion runs immediately.
+ *
  * @param insert Editor operation that inserts the prepared Markdown.
  * @param md Markdown source to insert.
  * @param selection Saved editor selection to restore before insertion, when available.

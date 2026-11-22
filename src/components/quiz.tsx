@@ -88,6 +88,7 @@ HELPERS
  * @param config - Host controls for toolbar visibility and server-backed generation.
  * @param title - Page title used in quiz labels and as a generation fallback.
  * @param markdown - Page source from which a host may generate questions.
+ *
  * @returns The provider subtree with quiz context available to descendants.
  */
 export function DocsQuizProvider({
@@ -116,7 +117,9 @@ export function useDocsQuizContext(): DocsQuizContextValue | null {
  * Validates and normalizes the untrusted response returned by a quiz endpoint.
  *
  * @param v - Endpoint response expected to contain a title and one to twenty questions.
+ *
  * @returns A quiz document with supported question fields copied into the public shape.
+ *
  * @throws When the response, question prompts, answer options, or accepted answers are invalid.
  */
 export function parseDocsQuiz(v: unknown): DocsQuizDocument {
@@ -192,6 +195,7 @@ export function parseDocsQuiz(v: unknown): DocsQuizDocument {
  *
  * @param question - Validated question whose answer rules should be applied.
  * @param response - User-entered response to compare with those rules.
+ *
  * @returns Whether the response satisfies the question's accepted-answer rules.
  */
 function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean {
@@ -213,6 +217,7 @@ function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean 
  * @param title - Page title shown in the quiz heading and generation request.
  * @param markdown - Page source supplied to the host's quiz-generation callback.
  * @param gen - Optional host callback that returns questions for validation and review.
+ *
  * @returns The quiz UI for the current page and generation settings.
  */
 export function DocsQuizGenerator({

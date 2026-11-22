@@ -831,10 +831,11 @@ function Nav({
 								if (!firstPath) throw new Error('Not enough valid documents to merge');
 								setTree(v => {
                   /**
-                   * Removes merged pages and empty branches from the optimistic sidebar tree.
-                   *
-                   * @param items - Navigation nodes to retain or prune recursively.
-                   * @returns The tree with merged leaf paths removed.
+ * Removes merged pages and empty branches from the optimistic sidebar tree.
+ *
+ * @param items - Navigation nodes to retain or prune recursively.
+ *
+ * @returns The tree with merged leaf paths removed.
                    */
                   const prune = (items: TreeType[]): TreeType[] => {
 						const n: TreeType[] = [];
@@ -1208,11 +1209,12 @@ function Nav({
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
                 /**
-                 * Inserts a new temporary page under its target branch if it is not already present.
-                 *
-                 * @param nodes - Navigation nodes searched for the target branch.
-                 * @param tgtId - Branch identifier that should receive the new page.
-                 * @returns Whether the target branch was found and updated.
+ * Inserts a new temporary page under its target branch if it is not already present.
+ *
+ * @param nodes - Navigation nodes searched for the target branch.
+ * @param tgtId - Branch identifier that should receive the new page.
+ *
+ * @returns Whether the target branch was found and updated.
                  */
                 const insertLeaf = (nodes: TreeType[], tgtId: string): boolean => {
 									for (const n of nodes) {
@@ -1282,11 +1284,12 @@ function Nav({
 							setTree(v => {
 								const nTree = JSON.parse(JSON.stringify(v)) as TreeType[];
                 /**
-                 * Adds a temporary group and its index page beneath the target branch.
-                 *
-                 * @param nodes - Navigation nodes searched for the target branch.
-                 * @param tgtId - Branch identifier that should receive the group.
-                 * @returns Whether the target branch was found and updated.
+ * Adds a temporary group and its index page beneath the target branch.
+ *
+ * @param nodes - Navigation nodes searched for the target branch.
+ * @param tgtId - Branch identifier that should receive the group.
+ *
+ * @returns Whether the target branch was found and updated.
                  */
                 const insertGroup = (nodes: TreeType[], tgtId: string): boolean => {
 									for (const n of nodes) {
@@ -2388,10 +2391,12 @@ function Nav({
 
             // Helper to accurately identify file types, prioritizing Sanity's explicit filename when available
             /**
-             * Matches an extension against the path or Sanity's mapped asset filename.
-             * @param p Asset URL or path being classified.
-             * @param regex Extension pattern to test against the URL or mapped filename.
-             * @returns Whether either available name matches the requested extension.
+ * Matches an extension against the path or Sanity's mapped asset filename.
+ *
+ * @param p Asset URL or path being classified.
+ * @param regex Extension pattern to test against the URL or mapped filename.
+ *
+ * @returns Whether either available name matches the requested extension.
              */
             const isExtMatch = (p: string, regex: RegExp) => {
               if (regex.test(p.split('?')[0] || p)) return true;

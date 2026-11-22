@@ -32,6 +32,7 @@ HELPERS
  * @param appName - Product name used in the return-link label.
  * @param homeHref - Destination for the return link.
  * @param desc - Explanation shown below the not-found heading.
+ *
  * @returns The styled 404 page with the host-specific return link.
  */
 export function DocsNotFound({

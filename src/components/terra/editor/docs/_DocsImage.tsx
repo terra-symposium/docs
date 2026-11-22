@@ -123,11 +123,12 @@ function ImgEditor({
   const height =
     typeof node.height === 'string' || typeof node.height === 'number' ? node.height : '';
   /**
-   * Saves one image field to the Portable Text block at the current editor path.
-   *
-   * @param field - Image metadata field being edited.
-   * @param val - New string value for the selected field.
-   * @returns No value; the editor action updates the active image block.
+ * Saves one image field to the Portable Text block at the current editor path.
+ *
+ * @param field - Image metadata field being edited.
+ * @param val - New string value for the selected field.
+ *
+ * @returns No value; the editor action updates the active image block.
    */
   const update = (
     field:

@@ -144,6 +144,7 @@ const MENU_WIDTH_CLASS = 'w-56';
  * Renders a block icon supplied either as an existing React node or a component.
  *
  * @param icon - Host-provided icon node or component constructor.
+ *
  * @returns The icon node, or `null` when the value cannot render an icon.
  */
 const blockIcon = (icon: BlockOpt['icon']): ReactNode =>

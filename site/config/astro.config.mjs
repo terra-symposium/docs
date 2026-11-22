@@ -73,6 +73,7 @@ function packageExportAliases() {
 // hygiene-ignore single-use -- Styling may be absent from a consumer, so its optional alias has its own failure boundary.
 /**
  * Use the consumer's Styling installation when it provides one.
+ *
  * @return The Styling alias, or an empty list when the consumer has no installation.
  */
 function stylingAlias() {
@@ -150,6 +151,7 @@ function astroDependencyAliases() {
  * inside ESM. Leave CommonJS entries as package imports so Vite and Node retain their interop path.
  *
  * @param entry Resolved dependency entry selected by the consumer-first package resolver.
+ *
  * @returns Whether the entry is an ES module file.
  */
 function isEsmDependencyEntry(entry) {

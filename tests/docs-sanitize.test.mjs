@@ -18,6 +18,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
  * Read an authored sanitizer fixture by name.
  *
  * @param {string} name - Filename under the sanitizer fixture directory.
+ *
  * @returns {string} Fixture source text.
  */
 const fixture = (name) => readFileSync(join(root, 'scripts/docs-sanitize/fixtures', name), 'utf8');
@@ -26,6 +27,7 @@ const fixture = (name) => readFileSync(join(root, 'scripts/docs-sanitize/fixture
  *
  * @param {string} mode - Check or fix command to execute.
  * @param {string} path - Temporary Markdown file to inspect.
+ *
  * @returns {import('node:child_process').SpawnSyncReturns<string>} Command result.
  */
 const run = (mode, path) =>

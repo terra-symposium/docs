@@ -40,6 +40,7 @@ HELPERS
  * @param editorConfig.docsAttachments Attachments available to insertion and preview controls.
  * @param editorConfig.toolbarActions Optional host actions rendered beside the Docs toolbar.
  * @param editorConfig.blocks Feature switches that select the rich block types enabled in the editor.
+ *
  * @returns The loaded ContentEditor, or the null Suspense fallback while its module loads.
  */
 export function TerraContentEditor(editorConfig: ComponentProps<typeof LazyTerraContentEditor>) {

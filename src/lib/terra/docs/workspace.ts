@@ -150,6 +150,7 @@ export async function uploadAssetChunked(
 
 /**
  * Creates a browser download and adds an `.mdx` suffix when Markdown output has no extension.
+ *
  * @param filename Suggested download name before extension normalization.
  * @param content Text, bytes, or an existing Blob to download.
  * @param type MIME type used for the Blob and Markdown extension decision.
@@ -271,6 +272,7 @@ export function resolveLinearOffset(root: HTMLElement, i?: number): Range | null
 /**
  * Waits for the editor to settle across two animation frames before inserting Markdown in a browser.
  * Outside a browser, insertion runs immediately.
+ *
  * @param insert Editor operation that inserts the prepared Markdown.
  * @param md Markdown source to insert.
  * @param selection Saved editor selection to restore before insertion, when available.

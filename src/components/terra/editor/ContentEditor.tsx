@@ -125,7 +125,9 @@ type BlockRenderer = (props: never) => JSX.Element | null;
 
 /**
  * Adapts a typed custom-block renderer to the editor's shared renderer registry.
+ *
  * @param renderer Renderer whose props are inferred from its Portable Text block type.
+ *
  * @returns The same renderer under the registry's erased prop contract.
  */
 const eraseBlockRenderer = <Props,>(
@@ -146,12 +148,14 @@ type ContentChangeListenerProps = {
 // hygiene-ignore single-use -- Portable Text registers this component as an editor listener; keep its hook and subscription boundary.
 /**
  * Keeps host content synchronized with Portable Text and renders the optional insertion controls.
+ *
  * @param o Callback that receives normalized Portable Text after editor changes.
  * @param t Whether this editor surface exposes the Docs toolbar and insertion dialogs.
  * @param a Optional actions rendered beside the insertion controls.
  * @param v Attachments available for link or visual insertion.
  * @param b Rich blocks enabled for the current editor surface.
  * @param n Whether the editor is nested inside another rich block.
+ *
  * @returns Toolbar controls while enabled, or `null` when the surface hides the toolbar.
  */
 function ContentChangeListener({
@@ -201,15 +205,18 @@ function ContentChangeListener({
     setAttachmentPath('');
   }, [t]);
   /**
-   * Commits the editor's current snapshot through the host value callback.
-   * @returns No value; emits the converted content through the editor change callback.
+ * Commits the editor's current snapshot through the host value callback.
+ *
+ * @returns No value; emits the converted content through the editor change callback.
    */
   const sync = (): void => o(toContentValue(editor.getSnapshot().context.value as EditorValue));
   /**
-   * Runs a toolbar action and restores editor focus after its control closes.
-   * @param event Button event whose default form submission must be prevented.
-   * @param action Operation selected from the toolbar.
-   * @returns No value; applies the action and returns focus to the editor.
+ * Runs a toolbar action and restores editor focus after its control closes.
+ *
+ * @param event Button event whose default form submission must be prevented.
+ * @param action Operation selected from the toolbar.
+ *
+ * @returns No value; applies the action and returns focus to the editor.
    */
   const run = (event: MouseEvent<HTMLButtonElement>, action: () => void): void => {
     event.preventDefault();
@@ -217,10 +224,12 @@ function ContentChangeListener({
     editor.send({ type: 'focus' });
   };
   /**
-   * Inserts a new block of the requested type after the current editor selection.
-   * @param type Docs block type selected from the insertion menu.
-   * @param override Optional values that replace defaults for the inserted block.
-   * @returns No value; sends the new block to the editor and synchronizes the host value.
+ * Inserts a new block of the requested type after the current editor selection.
+ *
+ * @param type Docs block type selected from the insertion menu.
+ * @param override Optional values that replace defaults for the inserted block.
+ *
+ * @returns No value; sends the new block to the editor and synchronizes the host value.
    */
   const insertBlock = (type: DocsEditorBlockType, override?: Record<string, unknown>): void => {
     const blockValue: Record<string, unknown> = {
@@ -230,14 +239,17 @@ function ContentChangeListener({
     };
     if (type === 'table') {
       /**
-       * Creates a unique key for each new cell, row, and text member.
-       * @returns A UUID suitable for a Portable Text `_key` value.
+ * Creates a unique key for each new cell, row, and text member.
+ *
+ * @returns A UUID suitable for a Portable Text `_key` value.
        */
       const key = (): string => crypto.randomUUID();
       /**
-       * Builds a table cell containing one Portable Text paragraph.
-       * @param text Initial text displayed in the new cell.
-       * @returns A keyed cell object accepted by the table editor.
+ * Builds a table cell containing one Portable Text paragraph.
+ *
+ * @param text Initial text displayed in the new cell.
+ *
+ * @returns A keyed cell object accepted by the table editor.
        */
       const cell = (text: string): Record<string, unknown> => ({
         _key: key(),
@@ -267,8 +279,9 @@ function ContentChangeListener({
     editor.send({ type: 'focus' });
   };
   /**
-   * Applies an insertion-menu choice and dismisses the menu.
-   * @param action Callback for the selected menu item.
+ * Applies an insertion-menu choice and dismisses the menu.
+ *
+ * @param action Callback for the selected menu item.
    */
   const choose = (action: () => void): void => {
     action();
@@ -802,6 +815,7 @@ function normTextChildren(value: unknown, options: DocsBlockOptions, blockKey?: 
  * Restores source wrappers and the stored spelling of Docs marks for edited text children.
  *
  * @param value Editor child value after user edits.
+ *
  * @returns Original preserved children, with temporary aliases removed.
  */
 function restoreTextChildren(value: unknown): unknown {
@@ -900,6 +914,7 @@ function toEditorValue(value: unknown[], options: DocsBlockOptions = {}): Editor
  * Restores editor aliases and nested source wrappers to the Docs content model.
  *
  * @param value Editor block array after user edits.
+ *
  * @returns Docs content with temporary aliases removed and nested callout/table content restored.
  */
 function toContentValue(value: EditorValue): unknown[] {
@@ -969,10 +984,12 @@ function renderTextStyle(style: unknown, children: ReactNode, readOnly: boolean)
 // hygiene-ignore single-use -- The editor schema registers this renderer by component identity for text blocks.
 /**
  * Renders a Portable Text paragraph or list item with Docs heading, list, and blockquote semantics.
+ *
  * @param attrs Portable Text attributes that must remain on the editable root.
  * @param children Rendered inline content for the paragraph.
  * @param node Text block fields controlling style, list marker, and nesting level.
  * @param readOnly Whether viewer-mode heading anchors should be included.
+ *
  * @returns The styled paragraph or list wrapper while preserving editor attributes.
  */
 function ContentTextBlock({
@@ -1014,9 +1031,11 @@ function ContentTextBlock({
 // hygiene-ignore single-use -- The editor schema registers this fallback block renderer by component identity.
 /**
  * Keeps an unsupported block visible and retains its source for a later editor round trip.
+ *
  * @param attrs Portable Text DOM attributes to preserve on the wrapper.
  * @param children Nested editor children associated with the unsupported member.
  * @param node Unsupported block with its original payload in `source` when available.
+ *
  * @returns A non-editable notice and JSON source preview.
  */
 function UnsupportedBlock({
@@ -1041,9 +1060,11 @@ function UnsupportedBlock({
 // hygiene-ignore single-use -- The editor schema registers this fallback inline renderer by component identity.
 /**
  * Keeps unsupported inline content readable while preserving its original source value.
+ *
  * @param attrs Portable Text DOM attributes to preserve on the wrapper.
  * @param children Nested inline content associated with the unsupported member.
  * @param node Unsupported inline member with its original payload in `source` when available.
+ *
  * @returns A non-editable span using the stored text or a visible type label.
  */
 function UnsupportedInline({
@@ -1062,8 +1083,10 @@ function UnsupportedInline({
 
 /**
  * Rejects tabs, accordions, or callouts nested inside another group or callout.
+ *
  * @param v Editor value or nested object to inspect recursively.
  * @param d Number of enclosing group/callout blocks already encountered.
+ *
  * @returns `true` for valid content or the nesting error message.
  */
 function validNesting(v: unknown, d = 0): true | string {
@@ -1091,9 +1114,11 @@ function validNesting(v: unknown, d = 0): true | string {
 
 /**
  * Renders a numbered list item with a start value continued from adjacent items at the same level.
+ *
  * @param block Portable Text block whose position determines the ordered-list counter.
  * @param children Rendered content of this list item.
  * @param level Nesting level used for indentation and sibling selection.
+ *
  * @returns An ordered list containing the current list item and computed start value.
  */
 function OrderedListItem({
@@ -1146,6 +1171,7 @@ function OrderedListItem({
  * @param toolbarActions Additional host-provided controls displayed with the toolbar.
  * @param blocks Per-document switches controlling supported Docs block types.
  * @param articleLayout Matches the surrounding Docs article typography and spacing.
+ *
  * @returns The configured Portable Text editor with block adapters and optional toolbar controls.
  */
 export function ContentEditor({

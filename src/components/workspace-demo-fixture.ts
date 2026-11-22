@@ -511,6 +511,7 @@ function removeNodeById(nodes: DocsHostTreeNode[], id: string): boolean {
  * @param nodes Mutable navigation nodes to search and update.
  * @param id Node id or path to match.
  * @param update Transformation applied to the matching node.
+ *
  * @return Whether a matching node was found and replaced.
  */
 function updateNodeById(

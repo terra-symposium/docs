@@ -11,7 +11,9 @@
  *
  * @param specifier Dependency specifier passed to Vite, including an optional parent edge.
  * @param resolvedImport Import URL resolved from the Docs package's Node context.
+ *
  * @return The unchanged Vite specifier after confirming its package is installed.
+ *
  * @throws Error when the dependency does not resolve to a local package file.
  */
 const resolvablePrebundle = (specifier: string, resolvedImport: string): string => {

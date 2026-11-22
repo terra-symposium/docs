@@ -14,7 +14,9 @@ import { sep, resolve } from 'node:path';
 /**
  * Keep the package output used by the site in step with edits to its source.
  * Consumer Docs sites use their installed package and do not run this watcher.
+ *
  * @param {string} root - Root directory of the Docs package checkout.
+ *
  * @returns {import('vite').Plugin} Vite development plugin.
  */
 export function localSourceRebuildPlugin({ root }) {

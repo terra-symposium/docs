@@ -35,7 +35,9 @@ export type DocsBlockOptions = Partial<Record<DocsBlockType | 'inlineMath', bool
 export type RichBlock = { _type: string; _key?: string; markdown?: string; [key: string]: unknown };
 /**
  * Returns enabled editor block types while excluding Markdown-only tabs and accordions.
+ *
  * @param options Per-block switches supplied by the embedding host.
+ *
  * @returns Enabled structured block types in their canonical registration order.
  */
 export function enabledDocsBlocks(options: DocsBlockOptions = {}): DocsEditorBlockType[] {

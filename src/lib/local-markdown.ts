@@ -14,6 +14,7 @@ import * as TerraQualityRegex from './terra/regex.mjs';
  * Separate repository metadata from the body shown in the editor.
  *
  * @param src - Original Markdown source, optionally beginning with YAML frontmatter.
+ *
  * @returns The unchanged frontmatter and editable body.
  */
 export function splitMarkdownSource(src: string): { frontmatter: string; body: string } {
@@ -27,6 +28,7 @@ export function splitMarkdownSource(src: string): { frontmatter: string; body: s
  * Preserve authored metadata while applying title and description edits.
  *
  * @param input - Original source, edited fields, and their initial values.
+ *
  * @returns The complete Markdown source with updated metadata when necessary.
  */
 export function editedMarkdownSource(input: {
@@ -57,6 +59,7 @@ export function editedMarkdownSource(input: {
  * Use the source filename so the downloaded leaf can replace the repository file.
  *
  * @param srcPath - Repository path or URL of the original leaf.
+ *
  * @returns A Markdown filename suitable for the downloaded file.
  */
 export function markdownDownloadName(srcPath: string): string {
@@ -74,6 +77,7 @@ export function markdownDownloadName(srcPath: string): string {
  * @param markdown - Markdown body containing image references.
  * @param srcPath - Path of the leaf relative to the Docs root.
  * @param base - URL base path of the generated site.
+ *
  * @returns Markdown with local image references rewritten to published asset URLs.
  */
 export function siteImageUrls(markdown: string, srcPath: string, base = '/'): string {

@@ -99,7 +99,9 @@ HELPERS
 
 /**
  * Creates a fresh default payload for one supported Docs editor block type.
+ *
  * @param type Editor block type to initialize.
+ *
  * @returns A cloned rich block with its required fields and empty editable content.
  */
 export function defaultDocsBlock(type: DocsEditorBlockType): RichBlock {
@@ -121,7 +123,9 @@ export function defaultDocsBlock(type: DocsEditorBlockType): RichBlock {
 
 /**
  * Extracts display text recursively from strings, arrays, and common rich-content fields.
+ *
  * @param v Value, nested content, or rich block to read.
+ *
  * @returns Human-readable text, with array entries separated by spaces.
  */
 function text(v: unknown): string {
@@ -136,7 +140,9 @@ function text(v: unknown): string {
 
 /**
  * Accepts HTTP, HTTPS, and mailto destinations while rejecting other protocols.
+ *
  * @param value Candidate URL, including a permitted relative URL.
+ *
  * @returns The original non-empty URL string when its resolved protocol is allowed, otherwise `undefined`.
  */
 function sUrl(value: unknown): string | undefined {
@@ -152,7 +158,9 @@ function sUrl(value: unknown): string | undefined {
 
 /**
  * Renders a Portable Text block with its style, decorators, links, lists, and inline math.
+ *
  * @param block Text block and its optional children, marks, and link definitions.
+ *
  * @returns A semantic heading, paragraph, list, blockquote, or inline-content element.
  */
 function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
@@ -163,10 +171,12 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
       ? 'blockquote'
       : 'p';
   /**
-   * Renders one Portable Text span or inline math child with its marks and link definitions.
-   * @param child Portable Text child value supplied by the host document.
-   * @param key Stable React key derived from the parent block position.
-   * @returns The supported inline element, plain text, or `null` for unsupported child types.
+ * Renders one Portable Text span or inline math child with its marks and link definitions.
+ *
+ * @param child Portable Text child value supplied by the host document.
+ * @param key Stable React key derived from the parent block position.
+ *
+ * @returns The supported inline element, plain text, or `null` for unsupported child types.
    */
   const renderPortableTextChild = (child: unknown, key: string): JSX.Element | string | null => {
     if (!child || typeof child !== 'object') return null;
@@ -223,8 +233,10 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
 
 /**
  * Recursively renders nested rich content, falling back to Markdown or readable text for unknown shapes.
+ *
  * @param value Nested Docs value, block, Markdown string, or scalar content.
  * @param options Optional feature flags passed into nested Markdown and block rendering.
+ *
  * @returns Rendered child nodes for the nested value.
  */
 function NestedContent({
@@ -280,6 +292,7 @@ function NestedContent({
  *
  * @param block Rich block value to render, including its type-specific fields.
  * @param options Optional rich-block feature flags for nested content.
+ *
  * @returns The read-only React representation of one structured Docs block.
  */
 export function DocsRichBlock({

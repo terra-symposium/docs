@@ -19,18 +19,22 @@ import type { EditorSel, EditorSurface, Mode, ToolbarState, Transition } from '.
  * Subscribes a React component to a Nanostores-compatible value store.
  *
  * @param store Store exposing a current snapshot and a change subscription.
+ *
  * @returns The current store value, kept in sync with subsequent notifications.
  */
 export function useAtom<Value>(store: {
   /**
-   * Returns the store's current snapshot for React's render cycle.
-   * @returns The current typed store value.
+ * Returns the store's current snapshot for React's render cycle.
+ *
+ * @returns The current typed store value.
    */
   get(): Value;
   /**
-   * Registers a callback for future store snapshots.
-   * @param listener Notification callback invoked after the stored value changes.
-   * @returns Function that removes this listener from the store.
+ * Registers a callback for future store snapshots.
+ *
+ * @param listener Notification callback invoked after the stored value changes.
+ *
+ * @returns Function that removes this listener from the store.
    */
   subscribe(listener: (val: Value) => void): () => void;
 }): Value {
@@ -49,6 +53,7 @@ export function useAtom<Value>(store: {
  * @param key Browser storage key to read.
  * @param fallback Value returned when storage is unavailable or validation fails.
  * @param valid Type guard that accepts only values safe for the caller to use.
+ *
  * @returns The parsed value when it passes `valid`, otherwise `fallback`.
  */
 function readStorage<T>(key: string, fallback: T, valid: (input: unknown) => input is T): T {
@@ -304,6 +309,7 @@ const assignments = new Map<string, string>();
 
 /**
  * Clears reporter associations and resets the expected and mounted block IDs for a new route.
+ *
  * @param path Route path that owns the next editor surface, if known.
  * @param expected Block IDs expected to report their mounted state on that route.
  */
@@ -314,6 +320,7 @@ export function resetEditorMounts(path: string | undefined, expected: string[]):
 
 /**
  * Associates a mounted editor reporter with its expected block ID, then updates the route's mount state.
+ *
  * @param path Route currently rendering the editor block.
  * @param reporter Stable reporter ID emitted by the mounted editor block.
  * @param mounted Whether the reporter is entering or leaving the mounted set.

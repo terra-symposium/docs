@@ -96,10 +96,11 @@ HELPERS
 function Table({ block }: { block: TableBlock }): React.JSX.Element {
   const rows = (block.rows ?? []) as TableRow[];
   /**
-   * Renders the Portable Text stored in one table cell.
-   *
-   * @param c - Cell data, or `undefined` when the row is padded to the table width.
-   * @returns A nested read-only editor for populated cells, or `null` for an empty cell.
+ * Renders the Portable Text stored in one table cell.
+ *
+ * @param c - Cell data, or `undefined` when the row is padded to the table width.
+ *
+ * @returns A nested read-only editor for populated cells, or `null` for an empty cell.
    */
   const renderCell = (c: DocTableCell | undefined): React.JSX.Element | null =>
     c ? (
@@ -157,10 +158,11 @@ function TableEditor({
   const rows = block.rows ?? [];
   const colCount = Math.max(1, ...rows.map((r) => r.cells?.length ?? 0));
   /**
-   * Replaces the table rows at this block's Portable Text path.
-   *
-   * @param nRows - Complete row list after an insertion, deletion, or cell change.
-   * @returns No value; the editor action writes the new rows to the block.
+ * Replaces the table rows at this block's Portable Text path.
+ *
+ * @param nRows - Complete row list after an insertion, deletion, or cell change.
+ *
+ * @returns No value; the editor action writes the new rows to the block.
    */
   const update = (nRows: NonNullable<TableBlock['rows']>): void =>
     editor.send({ type: 'block.set', at: path, props: { rows: nRows } });

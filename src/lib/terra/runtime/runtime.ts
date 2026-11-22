@@ -17,54 +17,68 @@ CONFIG
 export const cn = stylingCn;
 /**
  * Narrows a non-array object to the record shape used for host payload inspection.
+ *
  * @param value Unknown input to inspect.
+ *
  * @returns Whether it is a non-null, non-array object.
  */
 export const isRec = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === 'object' && !Array.isArray(value));
 /**
  * Narrows unknown input to a string without coercing other values.
+ *
  * @param value Unknown input to inspect.
+ *
  * @returns Whether the input is a string.
  */
 export const isString = (value: unknown): value is string => typeof value === 'string';
 /**
  * Narrows unknown input to a finite number accepted by Docs metadata.
+ *
  * @param value Unknown input to inspect.
+ *
  * @returns Whether it is a finite number.
  */
 export const isNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 /**
  * Checks an input's JavaScript type against an allowed list.
+ *
  * @param types Allowed JavaScript type names.
  * @param value Value whose type is checked.
+ *
  * @returns Whether its type appears in `types`.
  */
 export const validateType = (types: readonly string[], value: unknown): boolean =>
   types.includes(typeof value);
 /**
  * Writes a tagged diagnostic to the browser console without changing control flow.
+ *
  * @param tag Subsystem label.
  * @param msg Diagnostic text.
  * @param detail Optional structured context.
+ *
  * @returns No value; emits the diagnostic through `console.warn`.
  */
 export const warn = (tag: string, msg: string, detail?: unknown): void =>
   console.warn(`[${tag}] ${msg}`, detail ?? '');
 /**
  * Writes a tagged error diagnostic to the browser console without swallowing the error.
+ *
  * @param tag Subsystem label.
  * @param msg Error text.
  * @param detail Optional structured context.
+ *
  * @returns No value; emits the diagnostic through `console.error`.
  */
 export const logErr = (tag: string, msg: string, detail?: unknown): void =>
   console.error(`[${tag}] ${msg}`, detail ?? '');
 /**
  * Extracts a useful message from common thrown values or falls back to caller text.
+ *
  * @param reason Thrown value or host error record.
  * @param fallback Message used when no readable error text exists.
+ *
  * @returns The extracted or fallback message.
  */
 export const errorMessage = (reason: unknown, fallback: string): string =>
@@ -75,8 +89,10 @@ export const errorMessage = (reason: unknown, fallback: string): string =>
       : fallback;
 /**
  * Creates a debug logger scoped to one subsystem and enabled by the caller's trace flag.
+ *
  * @param scope Prefix included in debug output.
  * @param enabled Whether calls emit logs.
+ *
  * @returns A logger that accepts an event and optional details.
  */
 export const createTrace =
@@ -86,8 +102,10 @@ export const createTrace =
   };
 /**
  * Dispatches the shared Docs error-notification event when a browser document is available.
+ *
  * @param reason Error passed by the failed operation.
  * @param fallback User-facing message when the reason is not an Error.
+ *
  * @returns Nothing; dispatches `docs:notify` only in a browser document.
  */
 export const notify = ({ error: reason, fallback }: { error: unknown; fallback: string }): void => {
@@ -100,7 +118,9 @@ export const notify = ({ error: reason, fallback }: { error: unknown; fallback: 
 };
 /**
  * Produces a lowercase route-safe ID while preserving letters, digits, underscores, and hyphens.
+ *
  * @param value Source label or identifier.
+ *
  * @returns Trimmed lowercase ID with unsupported characters replaced by hyphens.
  */
 export const canonicalId = (value: string): string =>
@@ -110,7 +130,9 @@ export const canonicalId = (value: string): string =>
     .toLowerCase();
 /**
  * Retains the graph type for call sites whose graph payload already has a validated shape.
+ *
  * @param graph Graph value already validated by the caller.
+ *
  * @returns The same graph reference and type.
  */
 export const normArcGraph = <T>(graph: T): T => graph;
@@ -125,6 +147,7 @@ type ArcEdge = Record<string, unknown> & { _key?: string; source?: string; targe
 // hygiene-ignore single-use -- This exported runtime probe is a module API and defers DOM access until invocation.
 /**
  * Reports whether the document root currently carries Styling's dark theme class.
+ *
  * @returns `true` when `document.documentElement` has the `dark` class.
  */
 export const isDarkMode = (): boolean =>

@@ -28,6 +28,7 @@ HELPERS
  * Browser fixtures use the copy to avoid mutating the window-owned test data.
  *
  * @param v - Fixture value to copy; arrays and record fields are traversed recursively.
+ *
  * @returns A detached value with its `_type` fields preserved.
  */
 function mapContent(v: unknown): unknown {
@@ -58,11 +59,12 @@ export default function EditorHarness(): JSX.Element {
       publish: true,
     },
     /**
-     * Resolves a mocked host action and clones its configured response for the editor.
-     *
-     * @param op - Host operation whose test fixture response should be returned.
-     * @param input - Optional operation input used to select a source-specific fixture value.
-     * @returns The cloned response data or the configured error as an `Error` instance.
+ * Resolves a mocked host action and clones its configured response for the editor.
+ *
+ * @param op - Host operation whose test fixture response should be returned.
+ * @param input - Optional operation input used to select a source-specific fixture value.
+ *
+ * @returns The cloned response data or the configured error as an `Error` instance.
      */
     async invoke<T = unknown>(
       op: DocsActionOperation,

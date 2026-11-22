@@ -83,6 +83,7 @@ HELPERS
  * Confirms that the published Markdown route mounts interactive shared tabs and accordions.
  *
  * @param page Playwright page configured for the published Docs test site.
+ *
  * @returns Completion after the Git tab and accordion panel respond to user input.
  */
 async function verifyPublishedMarkdownControls({

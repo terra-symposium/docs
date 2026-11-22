@@ -393,13 +393,15 @@ const EditorSurfaces = {
         '[data-tool-cell]',
       ].join(', ');
       /**
-       * Returns the document body managed by the mounted editor surface.
-       * @returns The editor root, or `null` before the surface is mounted.
+ * Returns the document body managed by the mounted editor surface.
+ *
+ * @returns The editor root, or `null` before the surface is mounted.
        */
       const root = (): HTMLElement | null => editorRefsForRoot.current?.body ?? null;
       /**
-       * Returns the active `contenteditable` element inside the document body.
-       * @returns The mounted rich-text editor element, or `null` when unavailable.
+ * Returns the active `contenteditable` element inside the document body.
+ *
+ * @returns The mounted rich-text editor element, or `null` when unavailable.
        */
       const editable = (): HTMLElement | null =>
         root()?.querySelector<HTMLElement>('[contenteditable="true"]') ?? null;
@@ -427,9 +429,11 @@ const EditorSurfaces = {
       };
 
       /**
-       * Returns whether a DOM node belongs to the active editor outside a decorator block.
-       * @param node Selection node being checked against the current editor surface.
-       * @returns Whether the node is local text rather than content inside a decorator block.
+ * Returns whether a DOM node belongs to the active editor outside a decorator block.
+ *
+ * @param node Selection node being checked against the current editor surface.
+ *
+ * @returns Whether the node is local text rather than content inside a decorator block.
        */
       const isLocalText = (node: Node | null): boolean => {
         const ce = getActiveEditable();
@@ -441,8 +445,9 @@ const EditorSurfaces = {
       };
 
       /**
-       * Adds or clears the marker used to show the editor's block-cursor state.
-       * @param a Whether the current editor should show its block-cursor marker.
+ * Adds or clears the marker used to show the editor's block-cursor state.
+ *
+ * @param a Whether the current editor should show its block-cursor marker.
        */
       const setBlockCursorActive = (a: boolean): void => {
         if (!editorRefsForRoot.current?.body) return;
@@ -501,10 +506,12 @@ const EditorSurfaces = {
         const sel = window.getSelection();
         if (!sel) return;
         /**
-         * Resolves a saved child-index path and character offset to a collapsed DOM range.
-         * @param path Child indexes from the editor body to the saved text node.
-         * @param offset Character position within the resolved text node.
-         * @returns A collapsed range at the saved location, or `null` when the path is stale.
+ * Resolves a saved child-index path and character offset to a collapsed DOM range.
+ *
+ * @param path Child indexes from the editor body to the saved text node.
+ * @param offset Character position within the resolved text node.
+ *
+ * @returns A collapsed range at the saved location, or `null` when the path is stale.
          */
         const pickPath = (path?: number[], offset?: number): Range | null => {
           if (!path?.length) return null;
@@ -523,10 +530,12 @@ const EditorSurfaces = {
           return range;
         };
         /**
-         * Finds the first text node containing the saved selection text and restores its offset.
-         * @param text Text captured around the saved selection.
-         * @param offset Character position within the matching text node.
-         * @returns A collapsed range at the saved text position, or `null` when no text matches.
+ * Finds the first text node containing the saved selection text and restores its offset.
+ *
+ * @param text Text captured around the saved selection.
+ * @param offset Character position within the matching text node.
+ *
+ * @returns A collapsed range at the saved text position, or `null` when no text matches.
          */
         const pickText = (text?: string, offset?: number): Range | null => {
           if (!text) return null;
@@ -646,9 +655,11 @@ const EditorSurfaces = {
       };
 
       /**
-       * Identifies controls whose pointer events must preserve the current editor selection.
-       * @param tgt Pointer target considered for selection preservation.
-       * @returns Whether the target is a toolbar, dialog, menu, or popover control.
+ * Identifies controls whose pointer events must preserve the current editor selection.
+ *
+ * @param tgt Pointer target considered for selection preservation.
+ *
+ * @returns Whether the target is a toolbar, dialog, menu, or popover control.
        */
       const isToolbarTgt = (tgt: HTMLElement | null): boolean =>
         !!tgt?.closest(
@@ -844,8 +855,9 @@ const EditorSurfaces = {
       };
 
       /**
-       * Restores the block-cursor overlay to its matching editor block when it still exists.
-       * @returns Whether the previously selected block could be restored in the current editor.
+ * Restores the block-cursor overlay to its matching editor block when it still exists.
+ *
+ * @returns Whether the previously selected block could be restored in the current editor.
        */
       const restore = (): boolean => {
         const { current: cur } = bCursor;
@@ -884,9 +896,11 @@ const EditorSurfaces = {
       };
 
       /**
-       * Resolves a focus-group member to its root decorator for block-level keyboard navigation.
-       * @param dec Decorator or focus-group member under the current cursor.
-       * @returns The group's root decorator, or the original element when no group is active.
+ * Resolves a focus-group member to its root decorator for block-level keyboard navigation.
+ *
+ * @param dec Decorator or focus-group member under the current cursor.
+ *
+ * @returns The group's root decorator, or the original element when no group is active.
        */
       const gDec = (dec: HTMLElement): HTMLElement => {
         const body = root();
@@ -942,10 +956,12 @@ const EditorSurfaces = {
       };
 
       /**
-       * Focuses an element and places the caret at the requested text edge when it is editable.
-       * @param tgt Element receiving focus and, when editable, the caret.
-       * @param side Text edge to select: `right` enters at the start and `left` at the end.
-       * @returns Whether focus or caret placement succeeded.
+ * Focuses an element and places the caret at the requested text edge when it is editable.
+ *
+ * @param tgt Element receiving focus and, when editable, the caret.
+ * @param side Text edge to select: `right` enters at the start and `left` at the end.
+ *
+ * @returns Whether focus or caret placement succeeded.
        */
       const focusTgt = (tgt: HTMLElement, side: 'left' | 'right'): boolean => {
         tgt.focus({ preventScroll: true });
@@ -976,10 +992,12 @@ const EditorSurfaces = {
       };
 
       /**
-       * Collects connected focus targets, optionally using explicit group-entry markers.
-       * @param wrapper Decorator whose visible descendants are candidates.
-       * @param pref Whether to restrict candidates to explicit focus-entry markers.
-       * @returns Visible, enabled focus targets in document order without duplicates.
+ * Collects connected focus targets, optionally using explicit group-entry markers.
+ *
+ * @param wrapper Decorator whose visible descendants are candidates.
+ * @param pref Whether to restrict candidates to explicit focus-entry markers.
+ *
+ * @returns Visible, enabled focus targets in document order without duplicates.
        */
       const focusables = (wrapper: HTMLElement, pref = false): HTMLElement[] => {
         const seen = new Set<HTMLElement>();
@@ -1039,9 +1057,11 @@ const EditorSurfaces = {
       };
 
       /**
-       * Returns the visible caret's top and bottom edge nearest the requested direction.
-       * @param dir Direction of movement used to choose the caret edge.
-       * @returns Caret bounds, or `null` when the selection has no visible geometry.
+ * Returns the visible caret's top and bottom edge nearest the requested direction.
+ *
+ * @param dir Direction of movement used to choose the caret edge.
+ *
+ * @returns Caret bounds, or `null` when the selection has no visible geometry.
        */
       const caretRect = (dir: 'left' | 'right'): { bottom: number; top: number } | null => {
         const range = getCollapsedRange();
@@ -1053,14 +1073,16 @@ const EditorSurfaces = {
       };
 
       /**
-       * Compares the selection before and after native movement with the decorator's edge.
-       * @param dec Decorator boundary the caret may have crossed.
-       * @param dir Arrow-key direction of the native movement.
-       * @param beforeAnchor Selection anchor node before native movement.
-       * @param beforeBlock Text block containing the previous selection anchor.
-       * @param before Collapsed range captured before native movement.
-       * @param aRect Caret top and bottom captured before movement.
-       * @returns Whether the native caret crossed the decorator boundary in `dir`.
+ * Compares the selection before and after native movement with the decorator's edge.
+ *
+ * @param dec Decorator boundary the caret may have crossed.
+ * @param dir Arrow-key direction of the native movement.
+ * @param beforeAnchor Selection anchor node before native movement.
+ * @param beforeBlock Text block containing the previous selection anchor.
+ * @param before Collapsed range captured before native movement.
+ * @param aRect Caret top and bottom captured before movement.
+ *
+ * @returns Whether the native caret crossed the decorator boundary in `dir`.
        */
       const passedDec = (
         dec: HTMLElement,
@@ -1116,9 +1138,10 @@ const EditorSurfaces = {
       };
 
       /**
-       * Moves focus into the nearest editable table cell, or to the decorator when none exists.
-       * @param dec Decorator containing the table cells or other interactive content.
-       * @param dir Direction used to choose the first or last editable cell.
+ * Moves focus into the nearest editable table cell, or to the decorator when none exists.
+ *
+ * @param dec Decorator containing the table cells or other interactive content.
+ * @param dir Direction used to choose the first or last editable cell.
        */
       const focusBlock = (dec: HTMLElement, dir: 'left' | 'right'): void => {
         const cells = Array.from(dec.querySelectorAll<HTMLElement>('th, td')).filter(
@@ -1135,9 +1158,10 @@ const EditorSurfaces = {
       };
 
       /**
-       * Places the editor caret immediately before or after a navigable decorator.
-       * @param dec Decorator that the caret should move beside.
-       * @param side Edge of the decorator where the caret should be placed.
+ * Places the editor caret immediately before or after a navigable decorator.
+ *
+ * @param dec Decorator that the caret should move beside.
+ * @param side Edge of the decorator where the caret should be placed.
        */
       const focus = (dec: HTMLElement, side: 'left' | 'right'): void => {
         const tgt = gDec(dec);
@@ -1663,8 +1687,9 @@ const EditorSurfaces = {
         },
 
         /**
-         * Preserves toolbar selection or establishes block-cursor state for the pointer target.
-         * @param e Pointer event used to identify the target and its editor block.
+ * Preserves toolbar selection or establishes block-cursor state for the pointer target.
+ *
+ * @param e Pointer event used to identify the target and its editor block.
          */
         onPointerDown(e: PointerEvent): void {
           try {
@@ -1774,8 +1799,9 @@ const EditorSurfaces = {
 
       // DROP
       /**
-       * Places the native insertion caret at the drag location when it falls inside the editor.
-       * @param e Drag event carrying the pointer coordinates and transferred payload.
+ * Places the native insertion caret at the drag location when it falls inside the editor.
+ *
+ * @param e Drag event carrying the pointer coordinates and transferred payload.
        */
       const moveDropCaret = (e: DragEvent): void => {
         try {
@@ -1846,9 +1872,10 @@ const EditorSurfaces = {
 
       // PASTE
       /**
-       * Routes clipboard data to Docs paste and attachment handlers, cancelling browser defaults when handled.
-       * @param data Clipboard payload containing text, files, or serialized HTML.
-       * @param e Event methods used to cancel the browser's default paste behavior.
+ * Routes clipboard data to Docs paste and attachment handlers, cancelling browser defaults when handled.
+ *
+ * @param data Clipboard payload containing text, files, or serialized HTML.
+ * @param e Event methods used to cancel the browser's default paste behavior.
        */
       const handleClipboard = (
         data: DataTransfer,
@@ -2149,8 +2176,9 @@ const EditorSurfaces = {
         }
       };
       /**
-       * Handles clipboard paste events through the editor's shared paste router.
-       * @param e Clipboard event dispatched by the document.
+ * Handles clipboard paste events through the editor's shared paste router.
+ *
+ * @param e Clipboard event dispatched by the document.
        */
       const onPaste = (e: ClipboardEvent): void => {
         try {
@@ -2160,8 +2188,9 @@ const EditorSurfaces = {
         }
       };
       /**
-       * Handles paste-like input events that provide clipboard data without a paste event.
-       * @param e Input event whose type and transfer data determine whether to route a paste.
+ * Handles paste-like input events that provide clipboard data without a paste event.
+ *
+ * @param e Input event whose type and transfer data determine whether to route a paste.
        */
       const onBeforeInput = (e: InputEvent): void => {
         try {
@@ -2690,8 +2719,9 @@ export default function Scaffold({
   ]);
   useEffect(() => {
     /**
-     * Updates the visible document title from the active rename event.
-     * @param e Custom rename event whose detail contains the active title.
+ * Updates the visible document title from the active rename event.
+ *
+ * @param e Custom rename event whose detail contains the active title.
      */
     const rename = (e: Event) => {
       if (

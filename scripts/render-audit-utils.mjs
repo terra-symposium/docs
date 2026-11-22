@@ -3,7 +3,9 @@
  */
 /**
  * Normalizes rendered code before comparing it with its Markdown or Portable Text source.
+ *
  * @param value Code text from the source model or rendered viewer.
+ *
  * @returns Text with CR/CRLF converted to LF, trailing horizontal space removed, and final line breaks dropped.
  */
 export function normalizeCodeForAudit(value) {

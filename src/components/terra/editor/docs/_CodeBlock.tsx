@@ -233,8 +233,9 @@ export function CodeBlock(
     return colorScheme === 'dark' || (colorScheme !== 'light' && isDarkMode());
   };
   /**
-   * Returns the source code snapshot used to synchronize the editor view.
-   * @returns Current code value supplied to the editor.
+ * Returns the source code snapshot used to synchronize the editor view.
+ *
+ * @returns Current code value supplied to the editor.
    */
   const codeVal = (): string => viewCode;
   const codeRef = useRef(resCode);
@@ -512,9 +513,11 @@ export function CodeBlock(
         }),
       });
       /**
-       * Inserts a newline directly into CodeMirror when Enter is pressed in editable code.
-       * @param event Keyboard event from the active code editor.
-       * @returns No value; ignored keys pass through to CodeMirror's normal handlers.
+ * Inserts a newline directly into CodeMirror when Enter is pressed in editable code.
+ *
+ * @param event Keyboard event from the active code editor.
+ *
+ * @returns No value; ignored keys pass through to CodeMirror's normal handlers.
        */
       const onCodeEnter = (event: KeyboardEvent): void => {
         if (event.key !== 'Enter' || blockOptions.tone !== 'edit' || blockOptions.readOnly || src)

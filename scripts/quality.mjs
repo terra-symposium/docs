@@ -8,18 +8,26 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
+import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
-import { runQualityFromCfg } from '@terra-symposium/hygiene/cli';
-
-// DATA
-import { URL } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 
 /*//////////////////////////////////////////////////
 CONFIG
 //////////////////////////////////////////////////*/
 
-await runQualityFromCfg(
-  fileURLToPath(new URL('../config/quality.json', import.meta.url)),
-  process.argv.slice(2),
+const result = spawnSync(
+  'uv',
+  [
+    'run',
+    '--with-requirements',
+    fileURLToPath(new URL('../config/python-quality-requirements.txt', import.meta.url)),
+    '--',
+    'node',
+    fileURLToPath(new URL('./quality-runner.mjs', import.meta.url)),
+    ...process.argv.slice(2),
+  ],
+  { stdio: 'inherit' },
 );
+if (result.error) throw result.error;
+process.exit(result.status ?? 1);

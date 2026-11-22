@@ -1,5 +1,5 @@
 ---
-title: Run a site
+title: Operate
 description: Preview, build, and publish a Markdown Docs site after setup.
 ---
 

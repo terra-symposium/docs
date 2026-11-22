@@ -3,7 +3,7 @@ title: Get started
 description: Create a Docs site, choose an editing workflow, and publish your pages.
 ---
 
-Docs can turn Markdown files into a documentation website without application code. If your team needs to edit and publish in a browser, a developer can instead connect the Docs workspace to an existing React application. Follow the steps below in order, using the instructions for your chosen setup where they differ.
+The `Docs` repo turns Markdown files into a visualised documentation website. If your team needs to edit and publish in a browser, a developer can instead connect the Docs workspace to an existing React application. Follow the steps below in order, using the instructions for your chosen setup where they differ.
 
 ## 1. Prepare
 

@@ -27,7 +27,9 @@ HELPERS
 export function Embed({
   block,
 }: {
-  block: /** Sanity Portable Text embed URL and presentation data. */ DocsBlock<'embed'>;
+  block: /**
+   * Sanity Portable Text embed URL and presentation data.
+   */ DocsBlock<'embed'>;
 }): JSX.Element | null {
   if (!block.src) return null;
   let embedSrc = block.src;

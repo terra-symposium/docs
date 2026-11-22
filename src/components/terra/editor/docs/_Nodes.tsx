@@ -101,7 +101,9 @@ function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX
 export function NodesBlock({
   block,
 }: {
-  block: /** Sanity Portable Text graph data and its visualization settings. */ DocsBlock<'nodes'>;
+  block: /**
+   * Sanity Portable Text graph data and its visualization settings.
+   */ DocsBlock<'nodes'>;
 }): JSX.Element {
   const height = Number(block.height);
   return (

@@ -42,7 +42,9 @@ export default function MathInline({
       {renderMath({
         code:
           (
-            node as /** Optional math source read from the inline Portable Text object's node value. */ {
+            node as /**
+             * Optional math source read from the inline Portable Text object's node value.
+             */ {
               code?: string;
             }
           ).code || '',

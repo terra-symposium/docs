@@ -286,9 +286,9 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
 
   // ATTACHMENT ACTION HANDLERS
   /**
- * Opens the viewer and loads a persisted text attachment's content for preview.
- *
- * @param sis Attachment selected for preview.
+   * Opens the viewer and loads a persisted text attachment's content for preview.
+   *
+   * @param sis Attachment selected for preview.
    */
   const viewAsset = async (sis: Sister): Promise<void> => {
     if (!textAsset(sis) || !sis.path || sis.path.startsWith('temp-')) {
@@ -316,11 +316,11 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   };
 
   /**
- * Uploads one file in chunks and replaces its temporary list entry with persisted metadata.
- *
- * @param file File selected for upload.
- * @param tempId Temporary row ID replaced after the upload succeeds.
- * @param isMdFile Whether the uploaded file should be treated as a document.
+   * Uploads one file in chunks and replaces its temporary list entry with persisted metadata.
+   *
+   * @param file File selected for upload.
+   * @param tempId Temporary row ID replaced after the upload succeeds.
+   * @param isMdFile Whether the uploaded file should be treated as a document.
    */
   const processUpload = async (file: File, tempId: string, isMdFile: boolean) => {
     try {
@@ -529,9 +529,9 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   );
   useEffect(() => {
     /**
- * Adds supported pasted URLs or files when paste occurs outside a text input.
- *
- * @param e Document paste event whose clipboard contents are classified.
+     * Adds supported pasted URLs or files when paste occurs outside a text input.
+     *
+     * @param e Document paste event whose clipboard contents are classified.
      */
     const handlePaste = (e: ClipboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -579,9 +579,9 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   }, [addRemote, add]);
 
   /**
- * Renames the selected attachment while preserving its extension and current directory.
- *
- * @param nName New basename entered by the user.
+   * Renames the selected attachment while preserving its extension and current directory.
+   *
+   * @param nName New basename entered by the user.
    */
   const renameAttch = async (nName: string) => {
     if (!renameDlg) return;
@@ -620,9 +620,9 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   };
 
   /**
- * Confirms deletion, removes selected entries optimistically, and dispatches each document or asset write.
- *
- * @param items Selected document and attachment records to delete.
+   * Confirms deletion, removes selected entries optimistically, and dispatches each document or asset write.
+   *
+   * @param items Selected document and attachment records to delete.
    */
   const remove = async (items: Sister[]) => {
     if (!window.confirm(`Are you sure you want to delete ${items.length} items?`)) return;
@@ -667,9 +667,9 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
   // GLOBAL KEYBOARD SHORTCUTS
   useEffect(() => {
     /**
- * Deletes selected attachments on Backspace or Delete when no input or dialog owns the key.
- *
- * @param e Keyboard event used to recognize and claim the deletion shortcut.
+     * Deletes selected attachments on Backspace or Delete when no input or dialog owns the key.
+     *
+     * @param e Keyboard event used to recognize and claim the deletion shortcut.
      */
     const handleKeyDown = (e: KeyboardEvent) => {
       if (loading || uploading || isDialogOpen || selItems.length === 0) return;
@@ -799,23 +799,23 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                 <h3 className="h3 capitalize">{c}</h3>
                 <div className="grid grid-cols-1 content-start gap-4 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-3">
                   {gSisters[c]!.map((v) => {
-                    const isTemp = v.path.startsWith('temp-');
+                    const isTmp = v.path.startsWith('temp-');
                     return (
                       <Card
                         key={v.id || v.path}
                         data-docs-attachment-id={v.id || v.path}
                         role="button"
-                        tabIndex={isTemp ? -1 : 0}
-                        aria-disabled={isTemp ? true : undefined}
+                        tabIndex={isTmp ? -1 : 0}
+                        aria-disabled={isTmp ? true : undefined}
                         aria-selected={sel.includes(v.path)}
                         aria-label={`Attachment ${v.title || v.name}`}
                         className={cn(
                           'cursor-pointer transition-colors hover:border-primary-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-8',
                           sel.includes(v.path) && 'bg-primary-4/50 ring-2 ring-primary-8',
-                          isTemp && 'pointer-events-none opacity-50',
+                          isTmp && 'pointer-events-none opacity-50',
                         )}
                         onKeyDown={(e) => {
-                          if (isTemp) return;
+                          if (isTmp) return;
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             if (v.type === 'youtube')
@@ -828,7 +828,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
                           }
                         }}
                         onClick={(e) => {
-                          if (isTemp) return;
+                          if (isTmp) return;
                           e.stopPropagation();
                           if (e.shiftKey && sel.length > 0) {
                             const i1 = sisters.findIndex((s) => s.path === sel[sel.length - 1]);

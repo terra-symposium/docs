@@ -335,15 +335,15 @@ LEAF COMPONENTS
 //////////////////////////////////////////////////*/
 
   /**
- * Renders a leaf row with its navigation, selection, rename, attachment, export, and reorder controls.
- *
- * @param a Whether this leaf is selected as the current route.
- * @param bPath Path of the containing branch used to build tree navigation targets.
- * @param node Leaf metadata and actions rendered by the row.
- * @param ctx Shared sidebar state and operations for creating, uploading, moving, and refreshing entries.
- * @param siblings Neighboring tree entries used to calculate this leaf's reorder position.
- *
- * @returns The interactive sidebar row and its leaf-specific controls.
+   * Renders a leaf row with its navigation, selection, rename, attachment, export, and reorder controls.
+   *
+   * @param a Whether this leaf is selected as the current route.
+   * @param bPath Path of the containing branch used to build tree navigation targets.
+   * @param node Leaf metadata and actions rendered by the row.
+   * @param ctx Shared sidebar state and operations for creating, uploading, moving, and refreshing entries.
+   * @param siblings Neighboring tree entries used to calculate this leaf's reorder position.
+   *
+   * @returns The interactive sidebar row and its leaf-specific controls.
    */
   Leaf({
     active: a,
@@ -696,9 +696,9 @@ LEAF COMPONENTS
     };
 
     /**
- * Uploads selected files as attachments and updates each file's visible progress.
- *
- * @param files Files chosen for attachment to this leaf.
+     * Uploads selected files as attachments and updates each file's visible progress.
+     *
+     * @param files Files chosen for attachment to this leaf.
      */
     const add = async (files: FileList | File[] | null): Promise<void> => {
       if (creating || !files || files.length === 0 || !node.path) return;

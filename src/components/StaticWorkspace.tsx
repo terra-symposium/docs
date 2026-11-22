@@ -529,11 +529,11 @@ export function DocsStaticWorkspace({
       } else if (op === 'read.doc.attachments') {
         const request = input as { path?: string; paths?: string[] } | undefined;
         /**
- * Returns attachments only when the requested path resolves to the current static page.
- *
- * @param requestedPath Page or content path; omitted selects the current page.
- *
- * @return Current-page attachments, or an empty list for another page.
+         * Returns attachments only when the requested path resolves to the current static page.
+         *
+         * @param requestedPath Page or content path; omitted selects the current page.
+         *
+         * @return Current-page attachments, or an empty list for another page.
          */
         const attachmentsForPath = (requestedPath?: string): DocsHostAttachment[] => {
           return (requestedPath

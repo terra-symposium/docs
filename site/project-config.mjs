@@ -78,11 +78,11 @@ export function createConsumerProject(siteRoot, packageRoot = '.') {
 export function createProjectExportAliases(manifest, packageRoot) {
   if (!manifest.name || !manifest.exports) return [];
   /**
- * Escapes a package specifier fragment for use as a regular-expression literal.
- *
- * @param value Export-map prefix to match exactly.
- *
- * @returns The prefix with every regular-expression metacharacter escaped.
+   * Escapes a package specifier fragment for use as a regular-expression literal.
+   *
+   * @param value Export-map prefix to match exactly.
+   *
+   * @returns The prefix with every regular-expression metacharacter escaped.
    */
   const escapeRegex = (value) => value.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&');
   return Object.entries(manifest.exports).flatMap(([k, e]) => {

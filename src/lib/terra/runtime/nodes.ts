@@ -93,7 +93,9 @@ const NODES = {
         label: 'proximity',
         tooltip: 'Enable auto-connect.',
       },
-    ] as const satisfies readonly /** Editor metadata describing a supported JSX attribute in a Docs `Nodes` block. */ {
+    ] as const satisfies readonly /**
+     * Editor metadata describing a supported JSX attribute in a Docs `Nodes` block.
+     */ {
       key: string;
       kind: 'boolean' | 'expression' | 'string';
       label: string;

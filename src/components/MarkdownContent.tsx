@@ -218,11 +218,11 @@ function MarkdownGroup({
 }): JSX.Element {
   const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
   /**
- * Converts one group's stored content to Markdown before sending it through the shared renderer.
- *
- * @param item Tab or accordion item with either parsed child content or a Markdown fallback.
- *
- * @returns The item's Markdown source, preferring its structured `content` field when available.
+   * Converts one group's stored content to Markdown before sending it through the shared renderer.
+   *
+   * @param item Tab or accordion item with either parsed child content or a Markdown fallback.
+   *
+   * @returns The item's Markdown source, preferring its structured `content` field when available.
    */
   const body = (item: Record<string, unknown>): string => {
     const content = Array.isArray(item.content) ? item.content : [];

@@ -360,15 +360,15 @@ test.describe('Docs block conversion and rendering contracts', () => {
   test.describe('readable table serialization', () => {
     test('tables with rich cell content use readable Markdown cells and preserve the table', () => {
       /**
- * Builds a keyed paragraph fixture with marks, links, and optional list metadata.
- *
- * @param key Stable block key used to link its child span.
- * @param text Text to place in the paragraph.
- * @param marks Portable Text mark names applied to the span.
- * @param listItem Optional bullet or ordered-list marker.
- * @param level Optional nesting level for the list item.
- *
- * @returns A Portable Text block fixture for rich table cells.
+       * Builds a keyed paragraph fixture with marks, links, and optional list metadata.
+       *
+       * @param key Stable block key used to link its child span.
+       * @param text Text to place in the paragraph.
+       * @param marks Portable Text mark names applied to the span.
+       * @param listItem Optional bullet or ordered-list marker.
+       * @param level Optional nesting level for the list item.
+       *
+       * @returns A Portable Text block fixture for rich table cells.
        */
       const paragraph = (key, text, marks = [], listItem, level) => ({
         _type: 'block',
@@ -465,13 +465,13 @@ test.describe('Docs block conversion and rendering contracts', () => {
     });
     test('tables with multiple plain-text paragraphs per cell use readable GFM and retain paragraph boundaries', () => {
       /**
- * Splits a keyed paragraph into spans so embedded newlines can be round-tripped.
- *
- * @param key Stable Portable Text block key.
- * @param text Paragraph source text, including any line breaks.
- * @param marks Marks copied onto each generated text span.
- *
- * @returns A block fixture with one span for each source segment.
+       * Splits a keyed paragraph into spans so embedded newlines can be round-tripped.
+       *
+       * @param key Stable Portable Text block key.
+       * @param text Paragraph source text, including any line breaks.
+       * @param marks Marks copied onto each generated text span.
+       *
+       * @returns A block fixture with one span for each source segment.
        */
       const paragraph = (key, text, marks = []) => ({
         _type: 'block',
@@ -759,12 +759,12 @@ test.describe('Docs block conversion and rendering contracts', () => {
     });
     test('grouped blocks keep nested rich content readable instead of serializing ordinary text as YAML', () => {
       /**
- * Converts text or marked runs into the child-span shape used by grouped block fixtures.
- *
- * @param key Block key used to derive span keys.
- * @param value Plain text or an array of marked text runs.
- *
- * @returns A Portable Text paragraph containing the normalized spans.
+       * Converts text or marked runs into the child-span shape used by grouped block fixtures.
+       *
+       * @param key Block key used to derive span keys.
+       * @param value Plain text or an array of marked text runs.
+       *
+       * @returns A Portable Text paragraph containing the normalized spans.
        */
       const paragraph = (key, value) => ({
         _type: 'block',
@@ -1029,11 +1029,11 @@ Identify suitable companies and provide:
     });
     test('nested callouts use deeper fences and keep Markdown tables and text readable', () => {
       /**
- * Creates an unmarked Portable Text paragraph for nested callout content.
- *
- * @param text Source text rendered inside the callout.
- *
- * @returns A single-span Portable Text block.
+       * Creates an unmarked Portable Text paragraph for nested callout content.
+       *
+       * @param text Source text rendered inside the callout.
+       *
+       * @returns A single-span Portable Text block.
        */
       const paragraph = (text) => ({
         _type: 'block',
@@ -1194,11 +1194,11 @@ Identify suitable companies and provide:
       assert.match(markdown, /\\\$/);
       const restored = markdownToDocsValue(markdown);
       /**
- * Joins span text to compare literal dollar delimiters after a Markdown round trip.
- *
- * @param block Parsed Portable Text block whose children should be read.
- *
- * @returns The concatenated visible text from its children.
+       * Joins span text to compare literal dollar delimiters after a Markdown round trip.
+       *
+       * @param block Parsed Portable Text block whose children should be read.
+       *
+       * @returns The concatenated visible text from its children.
        */
       const plainText = (block) => (block.children ?? []).map((child) => child.text ?? '').join('');
       assert.equal(first.length, 1);
@@ -1275,12 +1275,12 @@ Identify suitable companies and provide:
     });
     test('GFM tables keep multiline code-marked cells readable and lossless', () => {
       /**
- * Creates a paragraph whose marks exercise code and math cell serialization.
- *
- * @param text Source text for the cell paragraph.
- * @param marks Portable Text marks applied to its span.
- *
- * @returns A Portable Text block used in the table round-trip fixture.
+       * Creates a paragraph whose marks exercise code and math cell serialization.
+       *
+       * @param text Source text for the cell paragraph.
+       * @param marks Portable Text marks applied to its span.
+       *
+       * @returns A Portable Text block used in the table round-trip fixture.
        */
       const paragraph = (text, marks = []) => ({
         _type: 'block',
@@ -1326,12 +1326,12 @@ Identify suitable companies and provide:
     });
     test('tables with structured or list content keep the source readable and round-trip list metadata', () => {
       /**
- * Builds a table paragraph with an optional first-level list marker.
- *
- * @param text Cell text used by the list metadata round-trip case.
- * @param listItem Optional bullet or ordered-list marker.
- *
- * @returns A block fixture with list metadata when requested.
+       * Builds a table paragraph with an optional first-level list marker.
+       *
+       * @param text Cell text used by the list metadata round-trip case.
+       * @param listItem Optional bullet or ordered-list marker.
+       *
+       * @returns A block fixture with list metadata when requested.
        */
       const paragraph = (text, listItem) => ({
         _type: 'block',
@@ -1387,11 +1387,11 @@ Identify suitable companies and provide:
     });
     test('simple tables preserve deliberately empty cells as readable GFM', () => {
       /**
- * Creates a plain text paragraph for a nonempty cell in the GFM fixture.
- *
- * @param value Text to store in a single span.
- *
- * @returns A normal Portable Text paragraph.
+       * Creates a plain text paragraph for a nonempty cell in the GFM fixture.
+       *
+       * @param value Text to store in a single span.
+       *
+       * @returns A normal Portable Text paragraph.
        */
       const text = (value) => ({
         _type: 'block',
@@ -1442,12 +1442,12 @@ Identify suitable companies and provide:
     });
     test('empty Sanity paragraphs do not turn a rich table into a Portable Text source dump', () => {
       /**
- * Builds plain or first-level list paragraphs for the table serializer fixture.
- *
- * @param text Paragraph text to preserve in the table cell.
- * @param listItem Optional list marker used by the structured-cell case.
- *
- * @returns A block with the requested text and optional list metadata.
+       * Builds plain or first-level list paragraphs for the table serializer fixture.
+       *
+       * @param text Paragraph text to preserve in the table cell.
+       * @param listItem Optional list marker used by the structured-cell case.
+       *
+       * @returns A block with the requested text and optional list metadata.
        */
       const paragraph = (text, listItem) => ({
         _type: 'block',
@@ -1499,11 +1499,11 @@ Identify suitable companies and provide:
     });
     test('tables with uneven Sanity rows keep the original cells without padded columns', () => {
       /**
- * Wraps plain text in a Sanity cell so uneven rows exercise source preservation.
- *
- * @param text Cell text from the uneven-row fixture.
- *
- * @returns A table cell containing one unmarked Portable Text paragraph.
+       * Wraps plain text in a Sanity cell so uneven rows exercise source preservation.
+       *
+       * @param text Cell text from the uneven-row fixture.
+       *
+       * @returns A table cell containing one unmarked Portable Text paragraph.
        */
       const cell = (text) => ({
         _type: 'cell',
@@ -1584,11 +1584,11 @@ Identify suitable companies and provide:
     });
     test('Terra table serialization keeps inline code readable and escapes its content once', () => {
       /**
- * Creates an inline-code paragraph keyed from its source text for table round-trip checks.
- *
- * @param text Code text to preserve inside the table cell.
- *
- * @returns A Portable Text paragraph whose span carries the `code` mark.
+       * Creates an inline-code paragraph keyed from its source text for table round-trip checks.
+       *
+       * @param text Code text to preserve inside the table cell.
+       *
+       * @returns A Portable Text paragraph whose span carries the `code` mark.
        */
       const paragraph = (text) => ({
         _key: `block-${text}`,

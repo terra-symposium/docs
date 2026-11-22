@@ -5,7 +5,7 @@ description: Run the Docs package checks and understand what each result proves.
 
 ## Choose a check
 
-Run commands from this repository's root after `pnpm install --frozen-lockfile`. For the Python checks in Quality, use Python 3.12 and install `config/python-quality-requirements.txt`. [Develop Docs](/developer/repo/development/) covers the local preview.
+Run commands from this repository's root after `pnpm install --frozen-lockfile`. Install `uv` for Quality's Python checks; the Quality scripts load the pinned tools from `config/python-quality-requirements.txt` automatically. CI uses Python 3.12. [Develop Docs](/developer/repo/development/) covers the local preview.
 
 | Command                  | What it checks                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |

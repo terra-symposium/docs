@@ -22,8 +22,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
       - run: pnpm install --frozen-lockfile
-      - run: python -m pip install -r config/python-quality-requirements.txt
       - run: pnpm run docs:sanitize
       - run: pnpm run build
       - run: pnpm run quality:all

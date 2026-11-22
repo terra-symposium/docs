@@ -421,9 +421,9 @@ test.describe('read-only routes, Markdown, and responsive rendering', () => {
       await waitForWorkspaceReady(p);
       const content = p.locator('[data-docs-view-root]');
       /**
- * Reads the page hue and canvas colors used to detect route/theme leakage.
- *
- * @returns Theme values from the document root and body.
+       * Reads the page hue and canvas colors used to detect route/theme leakage.
+       *
+       * @returns Theme values from the document root and body.
        */
       const hueOfPage = () =>
         p.evaluate(() => ({

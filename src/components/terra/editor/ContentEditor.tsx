@@ -205,18 +205,18 @@ function ContentChangeListener({
     setAttachmentPath('');
   }, [t]);
   /**
- * Commits the editor's current snapshot through the host value callback.
- *
- * @returns No value; emits the converted content through the editor change callback.
+   * Commits the editor's current snapshot through the host value callback.
+   *
+   * @returns No value; emits the converted content through the editor change callback.
    */
   const sync = (): void => o(toContentValue(editor.getSnapshot().context.value as EditorValue));
   /**
- * Runs a toolbar action and restores editor focus after its control closes.
- *
- * @param event Button event whose default form submission must be prevented.
- * @param action Operation selected from the toolbar.
- *
- * @returns No value; applies the action and returns focus to the editor.
+   * Runs a toolbar action and restores editor focus after its control closes.
+   *
+   * @param event Button event whose default form submission must be prevented.
+   * @param action Operation selected from the toolbar.
+   *
+   * @returns No value; applies the action and returns focus to the editor.
    */
   const run = (event: MouseEvent<HTMLButtonElement>, action: () => void): void => {
     event.preventDefault();
@@ -224,12 +224,12 @@ function ContentChangeListener({
     editor.send({ type: 'focus' });
   };
   /**
- * Inserts a new block of the requested type after the current editor selection.
- *
- * @param type Docs block type selected from the insertion menu.
- * @param override Optional values that replace defaults for the inserted block.
- *
- * @returns No value; sends the new block to the editor and synchronizes the host value.
+   * Inserts a new block of the requested type after the current editor selection.
+   *
+   * @param type Docs block type selected from the insertion menu.
+   * @param override Optional values that replace defaults for the inserted block.
+   *
+   * @returns No value; sends the new block to the editor and synchronizes the host value.
    */
   const insertBlock = (type: DocsEditorBlockType, override?: Record<string, unknown>): void => {
     const blockValue: Record<string, unknown> = {
@@ -239,17 +239,17 @@ function ContentChangeListener({
     };
     if (type === 'table') {
       /**
- * Creates a unique key for each new cell, row, and text member.
- *
- * @returns A UUID suitable for a Portable Text `_key` value.
+       * Creates a unique key for each new cell, row, and text member.
+       *
+       * @returns A UUID suitable for a Portable Text `_key` value.
        */
       const key = (): string => crypto.randomUUID();
       /**
- * Builds a table cell containing one Portable Text paragraph.
- *
- * @param text Initial text displayed in the new cell.
- *
- * @returns A keyed cell object accepted by the table editor.
+       * Builds a table cell containing one Portable Text paragraph.
+       *
+       * @param text Initial text displayed in the new cell.
+       *
+       * @returns A keyed cell object accepted by the table editor.
        */
       const cell = (text: string): Record<string, unknown> => ({
         _key: key(),
@@ -279,9 +279,9 @@ function ContentChangeListener({
     editor.send({ type: 'focus' });
   };
   /**
- * Applies an insertion-menu choice and dismisses the menu.
- *
- * @param action Callback for the selected menu item.
+   * Applies an insertion-menu choice and dismisses the menu.
+   *
+   * @param action Callback for the selected menu item.
    */
   const choose = (action: () => void): void => {
     action();

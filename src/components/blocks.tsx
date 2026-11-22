@@ -171,12 +171,12 @@ function PortableTextBlockView({ block }: { block: RichBlock }): JSX.Element {
       ? 'blockquote'
       : 'p';
   /**
- * Renders one Portable Text span or inline math child with its marks and link definitions.
- *
- * @param child Portable Text child value supplied by the host document.
- * @param key Stable React key derived from the parent block position.
- *
- * @returns The supported inline element, plain text, or `null` for unsupported child types.
+   * Renders one Portable Text span or inline math child with its marks and link definitions.
+   *
+   * @param child Portable Text child value supplied by the host document.
+   * @param key Stable React key derived from the parent block position.
+   *
+   * @returns The supported inline element, plain text, or `null` for unsupported child types.
    */
   const renderPortableTextChild = (child: unknown, key: string): JSX.Element | string | null => {
     if (!child || typeof child !== 'object') return null;

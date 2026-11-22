@@ -154,12 +154,12 @@ test.describe('Docs editor table contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
         /**
- * Builds a production-shaped Sanity cell with span children.
- *
- * @param key Stable cell key used to derive nested member keys.
- * @param text Text rendered in the nested table cell.
- *
- * @returns A Sanity cell containing one Portable Text paragraph.
+         * Builds a production-shaped Sanity cell with span children.
+         *
+         * @param key Stable cell key used to derive nested member keys.
+         * @param text Text rendered in the nested table cell.
+         *
+         * @returns A Sanity cell containing one Portable Text paragraph.
          */
         const terraCell = (key: string, text: string) => ({
           _key: key,
@@ -217,12 +217,12 @@ test.describe('Docs editor table contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
         /**
- * Builds a cell using the compact `c` child alias consumed by Docs.
- *
- * @param key Stable cell key used to derive nested member keys.
- * @param text Text rendered in the compact cell fixture.
- *
- * @returns A Docs table cell with compact text children.
+         * Builds a cell using the compact `c` child alias consumed by Docs.
+         *
+         * @param key Stable cell key used to derive nested member keys.
+         * @param text Text rendered in the compact cell fixture.
+         *
+         * @returns A Docs table cell with compact text children.
          */
         const compactCell = (key: string, text: string) => ({
           _key: key,
@@ -278,12 +278,12 @@ test.describe('Docs editor table contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
         /**
- * Builds a legacy cell whose paragraph stores its children as a string.
- *
- * @param key Stable cell key used to derive the block key.
- * @param text Legacy string-valued Portable Text children.
- *
- * @returns A Sanity cell that exercises legacy text normalization.
+         * Builds a legacy cell whose paragraph stores its children as a string.
+         *
+         * @param key Stable cell key used to derive the block key.
+         * @param text Legacy string-valued Portable Text children.
+         *
+         * @returns A Sanity cell that exercises legacy text normalization.
          */
         const legacyTextCell = (key: string, text: string) => ({
           _key: key,

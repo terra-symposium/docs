@@ -24,17 +24,17 @@ import type { EditorSel, EditorSurface, Mode, ToolbarState, Transition } from '.
  */
 export function useAtom<Value>(store: {
   /**
- * Returns the store's current snapshot for React's render cycle.
- *
- * @returns The current typed store value.
+   * Returns the store's current snapshot for React's render cycle.
+   *
+   * @returns The current typed store value.
    */
   get(): Value;
   /**
- * Registers a callback for future store snapshots.
- *
- * @param listener Notification callback invoked after the stored value changes.
- *
- * @returns Function that removes this listener from the store.
+   * Registers a callback for future store snapshots.
+   *
+   * @param listener Notification callback invoked after the stored value changes.
+   *
+   * @returns Function that removes this listener from the store.
    */
   subscribe(listener: (val: Value) => void): () => void;
 }): Value {

@@ -52,9 +52,9 @@ class CircuitBreaker {
     }
   }
   /**
- * Opens the breaker until the cooldown expires and records the rejection boundary.
- *
- * @param now Current timestamp used to calculate the cooldown deadline.
+   * Opens the breaker until the cooldown expires and records the rejection boundary.
+   *
+   * @param now Current timestamp used to calculate the cooldown deadline.
    */
   private trip(now: number): void {
     this.state = 'OPEN';

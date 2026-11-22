@@ -28,7 +28,9 @@ HELPERS
 export function Raw({
   block,
 }: {
-  block: /** Sanity Portable Text raw markup block fields. */ DocsBlock<'raw'>;
+  block: /**
+   * Sanity Portable Text raw markup block fields.
+   */ DocsBlock<'raw'>;
 }): JSX.Element {
   const markdown = block.markdown ?? '';
   return (

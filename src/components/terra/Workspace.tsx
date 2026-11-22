@@ -60,9 +60,9 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
   useEffect(() => setActivePath(workspaceOptions.pathname), [workspaceOptions.pathname]);
   useEffect(() => {
     /**
- * Updates the active workspace route after Docs, Astro, or browser history navigation.
- *
- * @param event Optional event carrying an explicit Docs pathname or URL.
+     * Updates the active workspace route after Docs, Astro, or browser history navigation.
+     *
+     * @param event Optional event carrying an explicit Docs pathname or URL.
      */
     const updatePath = (event?: Event) => {
       const detail = (event as CustomEvent<{ pathname?: unknown; url?: unknown }> | undefined)
@@ -153,10 +153,10 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     return () => {
       colorScheme.removeEventListener('change', applyPageHue);
       /**
- * Restores the previous inline color only while this effect still owns the applied value.
- *
- * @param element Document element whose background was updated.
- * @param original Original inline value and priority to restore.
+       * Restores the previous inline color only while this effect still owns the applied value.
+       *
+       * @param element Document element whose background was updated.
+       * @param original Original inline value and priority to restore.
        */
       const restore = (el: HTMLElement, orig: { value: string; priority: string }) => {
         if (el.style.getPropertyValue('background-color') !== appliedBackground) return;
@@ -190,9 +190,9 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     let appliedBodyFont: string | undefined;
     let appliedThemeClasses: { dark: boolean; light: boolean } | undefined;
     /**
- * Mirrors the Docs palette and typeface onto body-mounted Radix portals.
- *
- * @returns No value; synchronizes body classes, fonts, and custom properties in place.
+     * Mirrors the Docs palette and typeface onto body-mounted Radix portals.
+     *
+     * @returns No value; synchronizes body classes, fonts, and custom properties in place.
      */
     const syncPortalTheme = () => {
       const computed = getComputedStyle(workspace);

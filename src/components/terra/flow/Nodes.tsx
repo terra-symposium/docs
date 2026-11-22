@@ -201,11 +201,11 @@ function createNode(
 ): (props: NodeProps<XyNode<NodeData>>) => React.JSX.Element {
   // hygiene-ignore single-use -- React Flow registers this node renderer by component identity and supplies its NodeProps contract.
   /**
- * Renders a flow node as a link, action button, or inert container from its data.
- *
- * @param nodeProps React Flow selection state and node data for this diagram item.
- *
- * @returns The styled node shell with its title and configured connection handles.
+   * Renders a flow node as a link, action button, or inert container from its data.
+   *
+   * @param nodeProps React Flow selection state and node data for this diagram item.
+   *
+   * @returns The styled node shell with its title and configured connection handles.
    */
   const NodeCard = (nodeProps: NodeProps<XyNode<NodeData>>): React.JSX.Element => {
     const { data, selected } = nodeProps;
@@ -236,12 +236,12 @@ function createNode(
 export const NODE_TYPES = {
   erd:
     /**
- * Renders an entity-relationship node with its typed attribute rows and positional handles.
- *
- * @param d Entity name, fields, compact-view preference, and optional navigation action.
- * @param s Whether React Flow currently marks this node as selected.
- *
- * @returns The entity card, including math-rendered attribute types when authored.
+     * Renders an entity-relationship node with its typed attribute rows and positional handles.
+     *
+     * @param d Entity name, fields, compact-view preference, and optional navigation action.
+     * @param s Whether React Flow currently marks this node as selected.
+     *
+     * @returns The entity card, including math-rendered attribute types when authored.
      */
     function ErdNode({ data: d, selected: s }: NodeProps<XyNode<NodeData>>): React.JSX.Element {
       const compact = d.compact === true;
@@ -319,13 +319,13 @@ export const NODE_TYPES = {
   data: createNode(NODE_STYLES.data, 'block skew-x-12'),
   note:
     /**
- * Renders a resizable sticky note and forwards its final size to the graph owner.
- *
- * @param i Unique React Flow node ID used to scope the note's clipped paper shape.
- * @param v Note text, editability, handles, and optional resize callback.
- * @param s Whether the node is selected and should expose its resize affordance.
- *
- * @returns The note surface, resize control, and connection handles.
+     * Renders a resizable sticky note and forwards its final size to the graph owner.
+     *
+     * @param i Unique React Flow node ID used to scope the note's clipped paper shape.
+     * @param v Note text, editability, handles, and optional resize callback.
+     * @param s Whether the node is selected and should expose its resize affordance.
+     *
+     * @returns The note surface, resize control, and connection handles.
      */
     function NoteNode({
       id: i,
@@ -373,12 +373,12 @@ export const NODE_TYPES = {
     },
   group:
     /**
- * Renders a group boundary that can receive child nodes and be resized while selected.
- *
- * @param d Group title, drag-target state, editability, and resize callback.
- * @param s Whether the group is selected and may show its resize affordance.
- *
- * @returns The group container and its connection handles.
+     * Renders a group boundary that can receive child nodes and be resized while selected.
+     *
+     * @param d Group title, drag-target state, editability, and resize callback.
+     * @param s Whether the group is selected and may show its resize affordance.
+     *
+     * @returns The group container and its connection handles.
      */
     function GroupNode({
       data: d,
@@ -735,11 +735,11 @@ const FLOW_COMPS = {
     );
 
     /**
- * Returns `true` for a missing node or a node type that cannot be edited.
- *
- * @param n Node resolved from the current flow menu, if it still exists.
- *
- * @returns Whether editing actions should be blocked for this node.
+     * Returns `true` for a missing node or a node type that cannot be edited.
+     *
+     * @param n Node resolved from the current flow menu, if it still exists.
+     *
+     * @returns Whether editing actions should be blocked for this node.
      */
     const locked = (n: FlowNode | undefined): boolean => {
       if (!n) {
@@ -1584,11 +1584,11 @@ export default function Nodes({
   useEffect((): (() => void) | void => {
     if (typeof window === 'undefined' || !permitted) return;
     /**
- * Routes copy, cut, paste, and duplicate shortcuts to the active flow editor.
- *
- * @param event Browser key event to inspect and handle.
- *
- * @returns No value; matching shortcuts are prevented and delegated to the editor.
+     * Routes copy, cut, paste, and duplicate shortcuts to the active flow editor.
+     *
+     * @param event Browser key event to inspect and handle.
+     *
+     * @returns No value; matching shortcuts are prevented and delegated to the editor.
      */
     const keydown = (event: KeyboardEvent): void => {
       if (
@@ -2096,11 +2096,11 @@ export default function Nodes({
                   const sizeKey = isHoriz ? 'w' : 'h';
 
                   /**
- * Returns the node's leading, center, or trailing edge on the selected axis.
- *
- * @param p Node and absolute position being measured.
- *
- * @returns The requested edge coordinate for the active axis.
+                   * Returns the node's leading, center, or trailing edge on the selected axis.
+                   *
+                   * @param p Node and absolute position being measured.
+                   *
+                   * @returns The requested edge coordinate for the active axis.
                    */
                   const getEdge = (p: { n: FlowNode; abs: { x: number; y: number } }) => {
                     const basePos = p.abs[isHoriz ? 'x' : 'y'];

@@ -33,7 +33,8 @@
     ".yml"
   ],
   "tools": {
-    "eslint": "node_modules/.bin/eslint"
+    "eslint": "node_modules/.bin/eslint",
+    "uv": "uv"
   },
   "regexDedup": {
     "minimumCount": 2,

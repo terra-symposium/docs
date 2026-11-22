@@ -108,12 +108,12 @@ test.describe('Docs editor tab contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
         /**
- * Builds a read-only Sanity table cell fixture for a tab body.
- *
- * @param key Stable cell key used by the editor fixture.
- * @param text Visible table-cell text.
- *
- * @returns A cell containing one Portable Text block and span.
+         * Builds a read-only Sanity table cell fixture for a tab body.
+         *
+         * @param key Stable cell key used by the editor fixture.
+         * @param text Visible table-cell text.
+         *
+         * @returns A cell containing one Portable Text block and span.
          */
         const cell = (key: string, text: string) => ({
           _key: key,
@@ -218,12 +218,12 @@ test.describe('Docs editor tab contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
         /**
- * Creates a keyed production Sanity cell for the nested table fixture.
- *
- * @param key Stable cell key used to derive nested member keys.
- * @param text Text rendered inside the nested table.
- *
- * @returns A production-shaped Sanity cell fixture.
+         * Creates a keyed production Sanity cell for the nested table fixture.
+         *
+         * @param key Stable cell key used to derive nested member keys.
+         * @param text Text rendered inside the nested table.
+         *
+         * @returns A production-shaped Sanity cell fixture.
          */
         const terraCell = (key: string, text: string) => ({
           _key: key,
@@ -315,12 +315,12 @@ test.describe('Docs editor tab contracts', () => {
       XL_VIEWPORT_TEST,
       async ({ page: p }) => {
         /**
- * Creates a legacy cell with string-valued Portable Text children.
- *
- * @param key Stable cell key used to derive the nested block key.
- * @param text Text stored in the legacy string child field.
- *
- * @returns A table cell exercising legacy string normalization inside tabs.
+         * Creates a legacy cell with string-valued Portable Text children.
+         *
+         * @param key Stable cell key used to derive the nested block key.
+         * @param text Text stored in the legacy string child field.
+         *
+         * @returns A table cell exercising legacy string normalization inside tabs.
          */
         const cell = (key: string, text: string) => ({
           _key: key,

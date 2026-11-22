@@ -2391,12 +2391,12 @@ function Nav({
 
             // Helper to accurately identify file types, prioritizing Sanity's explicit filename when available
             /**
- * Matches an extension against the path or Sanity's mapped asset filename.
- *
- * @param p Asset URL or path being classified.
- * @param regex Extension pattern to test against the URL or mapped filename.
- *
- * @returns Whether either available name matches the requested extension.
+             * Matches an extension against the path or Sanity's mapped asset filename.
+             *
+             * @param p Asset URL or path being classified.
+             * @param regex Extension pattern to test against the URL or mapped filename.
+             *
+             * @returns Whether either available name matches the requested extension.
              */
             const isExtMatch = (p: string, regex: RegExp) => {
               if (regex.test(p.split('?')[0] || p)) return true;

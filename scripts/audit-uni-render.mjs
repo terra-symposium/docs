@@ -363,11 +363,11 @@ function markdownTitle(src, fallback) {
 async function discoverToc(root, knownLeaves) {
   const contentRoot = join(root, 'content');
   /**
- * Lists navigable child directories in stable display order.
- *
- * @param path Directory whose immediate children form one navigation level.
- *
- * @returns Names of visible child directories, sorted using the user's locale.
+   * Lists navigable child directories in stable display order.
+   *
+   * @param path Directory whose immediate children form one navigation level.
+   *
+   * @returns Names of visible child directories, sorted using the user's locale.
    */
   const dirs = async (path) =>
     (await readdir(path, { withFileTypes: true }))
@@ -375,12 +375,12 @@ async function discoverToc(root, knownLeaves) {
       .map((e) => e.name)
       .sort((a, b) => a.localeCompare(b));
   /**
- * Reads a Markdown page title while tolerating a missing index page.
- *
- * @param path Candidate page index file.
- * @param fallback Label derived from the directory when the file is absent or untitled.
- *
- * @returns The resolved frontmatter title or the supplied fallback.
+   * Reads a Markdown page title while tolerating a missing index page.
+   *
+   * @param path Candidate page index file.
+   * @param fallback Label derived from the directory when the file is absent or untitled.
+   *
+   * @returns The resolved frontmatter title or the supplied fallback.
    */
   const readTitle = async (path, fallback) => {
     try {
@@ -893,11 +893,11 @@ for (const srcLeaf of sanityLeaves) {
     }
   }
   /**
- * Resolves an image URL against its page and returns the decoded path without its filename extension.
- *
- * @param img Parsed inline-image record with its original URL.
- *
- * @returns The normalized local pathname, or the input URL when it cannot be parsed.
+   * Resolves an image URL against its page and returns the decoded path without its filename extension.
+   *
+   * @param img Parsed inline-image record with its original URL.
+   *
+   * @returns The normalized local pathname, or the input URL when it cannot be parsed.
    */
   const localImgPath = (img) => {
     try {
@@ -1247,11 +1247,11 @@ for (let index = 0; index < leaves.length; index++) {
     const root = roots[0];
     if (!root) return { rootCount: roots.length };
     /**
- * Maps a rendered document element to the block category used by the audit report.
- *
- * @param element Top-level rendered block or one of its descendants.
- *
- * @returns The recognized editor block name, or `unknown` when no supported marker matches.
+     * Maps a rendered document element to the block category used by the audit report.
+     *
+     * @param element Top-level rendered block or one of its descendants.
+     *
+     * @returns The recognized editor block name, or `unknown` when no supported marker matches.
      */
     const classify = (el) => {
       const kind = el.getAttribute('data-docs-editor-block');
@@ -1275,28 +1275,28 @@ for (let index = 0; index < leaves.length; index++) {
       return 'unknown';
     };
     /**
- * Finds matching descendants under the selected document root.
- *
- * @param selector CSS selector for rendered block elements.
- *
- * @returns Matching elements in document order.
+     * Finds matching descendants under the selected document root.
+     *
+     * @param selector CSS selector for rendered block elements.
+     *
+     * @returns Matching elements in document order.
      */
     const all = (selector) => [...root.querySelectorAll(selector)];
     /**
- * Extracts the final Sanity key embedded in a Portable Text path.
- *
- * @param path Path string returned for a nested content field.
- *
- * @returns The last `_key` value, or an empty string when the path has none.
+     * Extracts the final Sanity key embedded in a Portable Text path.
+     *
+     * @param path Path string returned for a nested content field.
+     *
+     * @returns The last `_key` value, or an empty string when the path has none.
      */
     const lastKey = (path) =>
       [...String(path ?? '').matchAll(/_key=="([^"]+)"/g)].at(-1)?.[1] ?? '';
     /**
- * Reads code from an interactive CodeMirror block or its server-rendered fallback.
- *
- * @param block Rendered code block container.
- *
- * @returns Visible code lines joined with newline separators.
+     * Reads code from an interactive CodeMirror block or its server-rendered fallback.
+     *
+     * @param block Rendered code block container.
+     *
+     * @returns Visible code lines joined with newline separators.
      */
     const readCode = (block) => {
       const lines = [...block.querySelectorAll('.cm-content .cm-line')];
@@ -1311,11 +1311,11 @@ for (let index = 0; index < leaves.length; index++) {
     const tables = all('section[data-docs-editor-block="DocsTable"]').map((section) => {
       const table = section.querySelector(':scope > table');
       /**
- * Gets table-cell text without counting nested code or math presentation.
- *
- * @param cell Table header or data cell cloned for text extraction.
- *
- * @returns The cell's remaining textual content.
+       * Gets table-cell text without counting nested code or math presentation.
+       *
+       * @param cell Table header or data cell cloned for text extraction.
+       *
+       * @returns The cell's remaining textual content.
        */
       const cellText = (cell) => {
         const clone = cell.cloneNode(true);
@@ -1757,11 +1757,11 @@ for (let index = 0; index < leaves.length; index++) {
       sample: record.inlineSpans.runMismatch.slice(0, 8),
     });
   /**
- * Records a custom-block count and reports a source-to-viewer mismatch for the current page.
- *
- * @param type Block family name used as the report key.
- * @param expected Number of blocks parsed from the source document.
- * @param actual Number of corresponding blocks found in the rendered viewer.
+   * Records a custom-block count and reports a source-to-viewer mismatch for the current page.
+   *
+   * @param type Block family name used as the report key.
+   * @param expected Number of blocks parsed from the source document.
+   * @param actual Number of corresponding blocks found in the rendered viewer.
    */
   const checkCount = (type, expected, actual) => {
     record.customBlocks[type] = { expected, rendered: actual };
@@ -2377,11 +2377,11 @@ for (const { leaf } of tocLeaves) {
     .evaluateAll((c) => c.map((card) => card.getAttribute('aria-label') ?? ''));
   attachmentModeAudit.renderedItems += actualLabels.length;
   /**
- * Builds a frequency map so attachment labels can be compared with duplicate entries preserved.
- *
- * @param items Labels to count.
- *
- * @returns A map from each label to its occurrence count.
+   * Builds a frequency map so attachment labels can be compared with duplicate entries preserved.
+   *
+   * @param items Labels to count.
+   *
+   * @returns A map from each label to its occurrence count.
    */
   const counts = (items) => {
     const values = new Map();
@@ -2440,11 +2440,11 @@ if (textAttachmentEntry?.attachment) {
     await page.waitForFunction(
       ({ selector: s, expected: e }) => {
         /**
- * Normalizes whitespace before comparing rendered attachment previews with their source.
- *
- * @param value DOM text or source text to compare.
- *
- * @returns The text with runs of whitespace collapsed to one space.
+         * Normalizes whitespace before comparing rendered attachment previews with their source.
+         *
+         * @param value DOM text or source text to compare.
+         *
+         * @returns The text with runs of whitespace collapsed to one space.
          */
         const norm = (value) =>
           String(value ?? '')
@@ -2491,20 +2491,20 @@ for (const leaf of leaves) {
   const visitedAccordions = new Set();
   let interactions = 0;
   /**
- * Creates a locator for a panel ID while escaping characters significant inside a quoted CSS selector.
- *
- * @param id ID referenced by a tab or accordion trigger.
- *
- * @returns A Playwright locator for the element with that exact ID.
+   * Creates a locator for a panel ID while escaping characters significant inside a quoted CSS selector.
+   *
+   * @param id ID referenced by a tab or accordion trigger.
+   *
+   * @returns A Playwright locator for the element with that exact ID.
    */
   const panelLocator = (id) =>
     page.locator(`[id="${id.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"]`);
   /**
- * Exercises visible tabs and accordions in a container, then recursively visits their opened panels.
- *
- * @param container Viewer root or panel whose interactive controls should be checked.
- *
- * @returns A promise that settles after all visible controls and discovered nested panels are exercised.
+   * Exercises visible tabs and accordions in a container, then recursively visits their opened panels.
+   *
+   * @param container Viewer root or panel whose interactive controls should be checked.
+   *
+   * @returns A promise that settles after all visible controls and discovered nested panels are exercised.
    */
   const exercisePanel = async (container) => {
     const lists = container.locator('[role="tablist"][aria-label="Tab options"]');
@@ -2650,11 +2650,11 @@ for (const sample of screenshotSamples) {
   await root.waitFor({ timeout: 15000 });
   if (sample.family === 'math') {
     /**
- * Checks whether a Portable Text subtree contains a math block.
- *
- * @param value Node or array of nodes from a tab or accordion body.
- *
- * @returns `true` when at least one descendant has type `math`.
+     * Checks whether a Portable Text subtree contains a math block.
+     *
+     * @param value Node or array of nodes from a tab or accordion body.
+     *
+     * @returns `true` when at least one descendant has type `math`.
      */
     const containsMath = (value) => ofType(value, 'math').length > 0;
     for (const group of ofType(parsed, 'accordion')) {

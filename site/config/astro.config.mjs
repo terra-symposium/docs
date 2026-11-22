@@ -8,10 +8,8 @@ IMPORTS
 
 // API
 import mdx from '@astrojs/mdx';
-import remarkDirective from 'remark-directive';
 import react from '@astrojs/react';
 import { basePathRemarkPlugin } from '../base-path-remark-plugin.mjs';
-import { docsCalloutsRemarkPlugin } from '../docs-callouts-remark-plugin.mjs';
 import {
   createConsumerProject,
   createProjectExportAliases,
@@ -69,9 +67,6 @@ const blockSectionIds = [
   'quiz',
   'typescript-docs',
 ];
-const mdxProcessor = unified({
-  remarkPlugins: [remarkDirective, docsCalloutsRemarkPlugin, [basePathRemarkPlugin, { base }]],
-});
 if (!reportEndpoint || !reportSite)
   throw new Error(
     'Docs error reporting requires docs.errorReporting.endpoint and a site name in the consumer package.json.',
@@ -354,7 +349,7 @@ export default defineConfig({
     }),
     docsNotFoundRoute(),
     react(),
-    mdx({ processor: mdxProcessor }),
+    mdx(),
   ],
   markdown: { processor: unified({ remarkPlugins: [[basePathRemarkPlugin, { base }]] }) },
   vite: {

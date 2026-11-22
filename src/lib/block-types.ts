@@ -28,7 +28,10 @@ export type DocsEditorBlockType = Exclude<DocsBlockType, 'accordion' | 'tabs'>;
 /**
  * Per-block switches controlling which optional renderers an embedding host enables.
  */
-export type DocsBlockOptions = Partial<Record<DocsBlockType | 'inlineMath', boolean>>;
+export type DocsBlockOptions = Partial<Record<DocsBlockType | 'inlineMath', boolean>> & {
+  /** TSDoc-generated reference entries used by the Blocks authoring page. */
+  blockGuidanceEntries?: Record<string, unknown>;
+};
 /**
  * Open record shape used while converting host blocks to and from Portable Text.
  */

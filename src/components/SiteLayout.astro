@@ -39,12 +39,13 @@ type Props = {
 	sourceMarkdown?: string;
 	sourcePath?: string;
 	content?: unknown;
+	blockGuidanceEntries?: Record<string, unknown>;
 	attachments?: DocsAttachment[];
 	updatedAt?: string;
 	searchBase?: string;
 };
 
-const { title, homeHref = '/', description: desc, pageTitle, pageDescription: pageDesc, breadcrumbParent, hue = 145, nodes = [], trees, sections, currentPath, rootPath = '/', markdown = '', sourceMarkdown: srcMarkdown, sourcePath: srcPath, content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
+const { title, homeHref = '/', description: desc, pageTitle, pageDescription: pageDesc, breadcrumbParent, hue = 145, nodes = [], trees, sections, currentPath, rootPath = '/', markdown = '', sourceMarkdown: srcMarkdown, sourcePath: srcPath, content, blockGuidanceEntries, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
 const hasStaticSlot = Astro.slots.has('default');
 const staticContent = hasStaticSlot || markdown.trim().length > 0;
 const siteIslandProps = {
@@ -64,6 +65,7 @@ const siteIslandProps = {
 	sourceMarkdown: srcMarkdown,
 	sourcePath: srcPath,
 	content,
+	blockGuidanceEntries,
 	attachments,
 	updatedAt,
 	staticContent,

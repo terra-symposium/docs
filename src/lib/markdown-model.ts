@@ -446,6 +446,7 @@ function enabled(options: DocsBlockOptions, type: string): boolean {
   // not optional rich blocks. Canonical JSON directives let local hosts retain
   // their marks and inline objects without a lossy Markdown round trip.
   if (type === 'block' || type === 'terraBlock') return true;
+  if (type === 'blockGuidance') return Object.keys(options.blockGuidanceEntries ?? {}).length > 0;
   // Tabs and accordions are Markdown syntax, not structured editor blocks.
   if (type === 'accordion' || type === 'tabs') return options[type] !== false;
   return enabledDocsBlocks(options).includes(type as never);
@@ -1254,6 +1255,11 @@ function parseMarkdown(
   const fencedAccordions = shieldCodeFences(
     replaceCanonicalComponents(markdown, (b, r, i) => {
       if (!b || !enabled(options, b._type)) return rawPlaceholder(blocks, r);
+      if (
+        b._type === 'blockGuidance' &&
+        (typeof b.id !== 'string' || !options.blockGuidanceEntries?.[b.id])
+      )
+        return rawPlaceholder(blocks, r);
       if (i)
         return `<code>${String(b.value ?? b.source ?? '')
           .replace(G_CLASS_2(), '&amp;')

@@ -14,6 +14,7 @@ import { docsValueToMarkdown } from '../lib/markdown-model.js';
 // COMPONENTS
 import * as TerraQualityRegex from '../lib/terra/regex.mjs';
 import { DocsQuizBlock } from './quiz.js';
+import { BlockGuidance } from './BlockGuidance.js';
 import { DocsBlocks, DocsMarkdown } from './MarkdownContent.js';
 import { NodesBlock } from './terra/editor/docs/_Nodes.js';
 import { CodeBlock } from './terra/editor/docs/_CodeBlock.js';
@@ -332,6 +333,14 @@ export function DocsRichBlock({
   options?: DocsBlockOptions | undefined;
 }): JSX.Element {
   switch (block._type) {
+    case 'blockGuidance': {
+      const entry = options?.blockGuidanceEntries?.[text(block.id)];
+      return entry && typeof entry === 'object' ? (
+        <BlockGuidance entry={entry as Parameters<typeof BlockGuidance>[0]['entry']} />
+      ) : (
+        <p role="alert">No generated block guidance is available for “{text(block.id)}”.</p>
+      );
+    }
     case 'block':
       return <PortableTextBlockView block={block} />;
     case 'table': {

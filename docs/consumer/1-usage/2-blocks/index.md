@@ -3,12 +3,9 @@ title: Blocks
 description: Choose Docs blocks to clarify a reader's task.
 ---
 
-import blockApi from '../../../../dist/cache/blocks-api.json';
-import { BlockGuidance } from '../../../../dist/lib/components/BlockGuidance.js';
-
 Start with the reader's task and the information hierarchy. Use a block when its shape makes a relationship easier to understand.
 
-Before drafting a leaf, read the guidance for every block in this reference so the choice of blocks is informed. Apply each relevant rule to every instance, including examples and nested blocks. Check both the MDX source and rendered result; a successful build does not replace those checks.
+Before drafting a leaf, read the guidance for every block in this reference so the choice of blocks is informed. Apply each relevant rule to every instance, including examples and nested blocks. Check both the Markdown source and rendered result; a successful build does not replace those checks.
 
 ## Choose by reader need
 
@@ -36,19 +33,19 @@ Set the page identity first, then organise its explanation and supporting materi
 
 ### Frontmatter
 
-<BlockGuidance client:load entry={blockApi.frontmatter} />
+<DocsBlock data='{"_type":"blockGuidance","id":"frontmatter"}' />
 
 ### Prose
 
-<BlockGuidance client:load entry={blockApi.prose} />
+<DocsBlock data='{"_type":"blockGuidance","id":"prose"}' />
 
 ### Lists and links
 
-<BlockGuidance client:load entry={blockApi['lists-and-links']} />
+<DocsBlock data='{"_type":"blockGuidance","id":"lists-and-links"}' />
 
 ### Code
 
-<BlockGuidance client:load entry={blockApi.code} />
+<DocsBlock data='{"_type":"blockGuidance","id":"code"}' />
 
 ## Relationships
 
@@ -56,23 +53,23 @@ Choose a structure only when it makes comparison, connection, alternatives, or o
 
 ### Tables
 
-<BlockGuidance client:load entry={blockApi.tables} />
+<DocsBlock data='{"_type":"blockGuidance","id":"tables"}' />
 
 ### Diagrams
 
-<BlockGuidance client:load entry={blockApi.diagrams} />
+<DocsBlock data='{"_type":"blockGuidance","id":"diagrams"}' />
 
 ### Tabs
 
-<BlockGuidance client:load entry={blockApi.tabs} />
+<DocsBlock data='{"_type":"blockGuidance","id":"tabs"}' />
 
 ### Accordions
 
-<BlockGuidance client:load entry={blockApi.accordions} />
+<DocsBlock data='{"_type":"blockGuidance","id":"accordions"}' />
 
 ### Asides
 
-<BlockGuidance client:load entry={blockApi.asides} />
+<DocsBlock data='{"_type":"blockGuidance","id":"asides"}' />
 
 ## Supporting content
 
@@ -80,15 +77,15 @@ Add media, notation, or host-provided blocks when they help readers inspect, cal
 
 ### Images
 
-<BlockGuidance client:load entry={blockApi.images} />
+<DocsBlock data='{"_type":"blockGuidance","id":"images"}' />
 
 ### Math
 
-<BlockGuidance client:load entry={blockApi.math} />
+<DocsBlock data='{"_type":"blockGuidance","id":"math"}' />
 
 ### Embeds
 
-<BlockGuidance client:load entry={blockApi['embeds-and-custom-blocks']} />
+<DocsBlock data='{"_type":"blockGuidance","id":"embeds-and-custom-blocks"}' />
 
 ### Custom blocks
 
@@ -129,10 +126,10 @@ Render the MDX leaf through the existing route and layout. If its component is m
 
 ### Quiz
 
-<BlockGuidance client:load entry={blockApi.quiz} />
+<DocsBlock data='{"_type":"blockGuidance","id":"quiz"}' />
 
 ### TypeScript docs
 
-<BlockGuidance client:load entry={blockApi['typescript-docs']} />
+<DocsBlock data='{"_type":"blockGuidance","id":"typescript-docs"}' />
 
 For the shared block contracts and host configuration, see the [component reference](../../../developer/component/blocks/).

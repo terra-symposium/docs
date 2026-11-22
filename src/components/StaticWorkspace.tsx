@@ -219,6 +219,7 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
  * @param srcMarkdown Original Markdown source retained for downloads.
  * @param srcPath Original filename used for downloaded Markdown.
  * @param content Portable Text content supplied for the selected page.
+ * @param blockGuidanceEntries Generated block reference content for Docs Markdown.
  * @param attachments Attachment metadata for the selected page.
  * @param updatedAt Fallback update timestamp when the selected leaf has none.
  * @param renderContent Host-rendered page content that replaces Markdown rendering.
@@ -245,6 +246,7 @@ export function DocsStaticWorkspace({
   sourceMarkdown: srcMarkdown,
   sourcePath: srcPath,
   content,
+  blockGuidanceEntries,
   attachments = [],
   updatedAt,
   renderContent,
@@ -277,6 +279,7 @@ export function DocsStaticWorkspace({
    */
   sourcePath?: string;
   content?: unknown;
+  blockGuidanceEntries?: Record<string, unknown>;
   attachments?: DocsAttachment[];
   updatedAt?: string;
   renderContent?: ReactNode;
@@ -336,11 +339,12 @@ export function DocsStaticWorkspace({
         : '';
   // hygiene-ignore single-use -- Resolve asset URLs before choosing the render fallback; moving this call into the edited branch would defer source validation.
   const editedPreview = srcPath ? siteImageUrls(srcBody, srcPath, rootPath) : srcBody;
+  const markdownOptions = blockGuidanceEntries ? { blockGuidanceEntries } : undefined;
   const contentSlot =
-    (edited ? <DocsMarkdown markdown={editedPreview} /> : undefined) ??
+    (edited ? <DocsMarkdown markdown={editedPreview} options={markdownOptions} /> : undefined) ??
     renderContent ??
     (hasRenderableChildren(children) ? children : undefined) ??
-    (markdownSrc ? <DocsMarkdown markdown={markdownSrc} /> : undefined);
+    (markdownSrc ? <DocsMarkdown markdown={markdownSrc} options={markdownOptions} /> : undefined);
   const readyContent =
     contentSlot !== undefined || staticContent ? (
       <StaticContentSlot key={currentPath}>{contentSlot ?? null}</StaticContentSlot>

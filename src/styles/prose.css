@@ -6,6 +6,8 @@
 PROSE AND EDITOR CONTENT
 //////////////////////////////////////////////////*/
 
+.prose { text-wrap: pretty; }
+
 /* ARTICLE QUOTES */
 /* Use one article quote treatment in both Markdown prose and portable content. */
 :is(.prose, .copy) blockquote {
@@ -51,9 +53,12 @@ PROSE AND EDITOR CONTENT
   border-block-start: 0 !important;
   padding-block-start: 0 !important;
 }
-.copy[data-docs-article-editor] > [data-style='h2']:not(:first-child) { margin-block-start: 4rem !important; }
-.copy[data-docs-article-editor] > :is([data-style='h4'], [data-style='h5']):not(:first-child) { margin-block-start: 1.5rem !important; }
-.copy[data-docs-article-editor] > [data-style='h6']:not(:first-child) { margin-block-start: 1.25rem !important; }
+.copy[data-docs-article-editor] > :is([data-style='h2'], [data-style='h3'], [data-style='h4'], [data-style='h5'], [data-style='h6']) { margin-block-end: -0.75rem !important; }
+.copy[data-docs-article-editor] > [data-style='h2']:not(:first-child) { margin-block-start: 5rem !important; }
+.copy[data-docs-article-editor] > [data-style='h3']:not(:first-child) { margin-block-start: 3rem !important; }
+.copy[data-docs-article-editor] > [data-style='h4']:not(:first-child) { margin-block-start: 2.5rem !important; }
+.copy[data-docs-article-editor] > [data-style='h5']:not(:first-child) { margin-block-start: 2rem !important; }
+.copy[data-docs-article-editor] > [data-style='h6']:not(:first-child) { margin-block-start: 1.5rem !important; }
 .copy[data-docs-article-editor] > [data-style='blockquote']:not(:first-child) { margin-block-start: 1.5rem !important; }
 /* Reveal the fade backing only while the toolbar is stuck at the top edge. */
 @container docs-toolbar scroll-state(stuck: top) { .toolbar-backdrop { display: block; } }
@@ -73,15 +78,17 @@ PROSE AND EDITOR CONTENT
 /* SHARED CONTENT RHYTHM */
 /* Apply one block rhythm to view, editor, and static MDX content. Astro puts
    static MDX inside .copy beneath the view root. */
-:is(.prose[data-docs-body-content], .copy, .flow) { --docs-block-gap: 1rem; }
-:is(.prose[data-docs-body-content], .copy, .flow) > * { margin-block: 0 !important; }
-:is(.prose[data-docs-body-content], .copy, .flow) > * + * { margin-block-start: var(--docs-block-gap) !important; }
+:is(.prose[data-docs-body-content], .copy, .flow, .docs-block-stack) { --docs-block-gap: 0.75rem; }
+:is(.prose[data-docs-body-content], .copy, .flow, .docs-block-stack) > * { margin-block: 0 !important; }
+:is(.prose[data-docs-body-content], .copy, .flow, .docs-block-stack) > * + * { margin-block-start: var(--docs-block-gap) !important; }
 .copy > :first-child { margin-block-start: 0 !important; padding-block-start: 0 !important; border-block-start-width: 0 !important; }
 /* Center spacing on wrappers emitted for Portable Text paragraph blocks. */
 .prose div.p { margin-top: 1.25em; margin-bottom: 1.25em; }
 /* STATIC CODE BLOCKS */
 /* Static MDX code is part of the article, not an aside. */
-.code-block { overflow: hidden; border: 1px solid rgb(var(--primary-6)); border-radius: 0.125rem; background: rgb(var(--primary-1)); }
+.code-block { overflow: hidden; border: 1px solid rgb(var(--primary-6)); border-radius: 0.125rem; background: rgb(var(--primary-1)); color: rgb(var(--primary-12)); }
+.code-block .cm-content { color: rgb(var(--primary-12)); }
+.docs-accordion-item > * { margin-block: 0 !important; }
 .code-block .code-header {
   display: flex;
   align-items: center;
@@ -97,14 +104,16 @@ PROSE AND EDITOR CONTENT
 :is(.prose[data-docs-body-content], .copy, .flow) > :is(h2, h3, h4, h5, h6) {
   border-block-start: 0 !important;
   padding-block-start: 0 !important;
+  margin-block-end: -0.5rem !important;
 }
 :is(.prose[data-docs-body-content], .copy) > :is(.code-block, aside[data-docs-aside]) { margin-block-end: 0 !important; }
 aside[data-docs-aside] > .title { margin-block: 0 !important; }
 aside[data-docs-aside] > * + * { margin-block: 0 !important; margin-block-start: 0.75rem !important; }
-:is(.prose[data-docs-body-content], .copy, .flow) > h2:not(:first-child) { margin-block-start: 4rem !important; }
-:is(.prose[data-docs-body-content], .copy, .flow) > h3:not(:first-child) { margin-block-start: 1rem !important; }
-:is(.prose[data-docs-body-content], .copy, .flow) > :is(h4, h5):not(:first-child) { margin-block-start: 1.5rem !important; }
-:is(.prose[data-docs-body-content], .copy, .flow) > h6:not(:first-child) { margin-block-start: 1.25rem !important; }
+:is(.prose[data-docs-body-content], .copy, .flow) > h2:not(:first-child) { margin-block-start: 5rem !important; }
+:is(.prose[data-docs-body-content], .copy, .flow) > h3:not(:first-child) { margin-block-start: 3rem !important; }
+:is(.prose[data-docs-body-content], .copy, .flow) > h4:not(:first-child) { margin-block-start: 2.5rem !important; }
+:is(.prose[data-docs-body-content], .copy, .flow) > h5:not(:first-child) { margin-block-start: 2rem !important; }
+:is(.prose[data-docs-body-content], .copy, .flow) > h6:not(:first-child) { margin-block-start: 1.5rem !important; }
 
 /* CALLOUT BODY RHYTHM */
 /* Use a tighter rhythm inside callouts, whether their body is Markdown or Portable Text. */

@@ -140,6 +140,33 @@ function TsDocsRenderer({
  * @param block TypeScript Docs block selecting the API scope to display.
  *
  * @return The selected API reference, or `null` when the block has no scope.
+ *
+ * @docsId typescript-docs
+ * @docsUseWhen Readers need API details after they understand the task the API supports.
+ * @docsConstraint Use a TypeScript docs block only for a named API scope the host actually serves.
+ * @docsConstraint Explain the task and the API’s relevance before the generated reference.
+ * @docsDo Name the API readers should inspect first.
+ * @docsDo Confirm the selected scope exists at the published route.
+ * @docsDont Do not use a large reference for one trivial call; use a short code example.
+ * @docsDont Do not use an empty or unavailable scope.
+ * @docsTip Place the generated reference after the reader understands the task it supports.
+ * @docsRenderKind tsdocs
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-typescript.png | Docs Insert content menu with TypeScript docs highlighted
+ * @docsInsertionStep After explaining the API, choose + Insert content → TypeScript docs.
+ * @docsInsertionStep Choose a scope the host serves and publish it at the documented route.
+ * @docsInsertionStep Preview the generated reference and verify the API scope resolves.
+ * @docsSyntax
+ * ```mdx
+ * ## Component API
+ *
+ * Use this reference to check the props after reading the edit-and-save flow.
+ *
+ * <TsDocs scope="@terra-symposium/docs" />
+ * ```
+ * @docsRenderedExample
+ * ## Component API
+ *
+ * Use this reference to check the props after reading the edit-and-save flow.
  */
 export function TsDocs({
   block,

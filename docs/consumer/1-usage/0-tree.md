@@ -5,13 +5,27 @@ description: Organise trees, branches, leaves, and their attachments in local an
 
 ## Hierarchy
 
-A Docs tree leads readers from a subject to a document. Choose the level that owns each item before creating it.
+A Docs tree leads readers from a subject to a document. Design the hierarchy around the reader's questions before creating nodes. Treat supplied folders, slide decks, and lecture numbers as source labels, not approved navigation groups. Split a source when it serves two tasks; combine sources when they serve one. Reconsider the tree whenever new material changes those boundaries.
 
 | 🧭 Level  | Purpose               | Contains                   |
 | --------- | --------------------- | -------------------------- |
 | 🌳 Tree   | Top-level subject     | Branches and direct leaves |
 | 🪾 Branch | Related documents     | Leaves                     |
 | 🍁 Leaf   | One readable document | A page body                |
+
+:::example[Rebuild lecture groups]
+
+Three lectures arrive as separate slide decks. Lecture 1 covers setup and editing; lectures 2 and 3 together explain one publishing task. Keep their distinct claims, but organise the reader's path by outcome:
+
+| 📚 Source material    | Reader task | Docs leaf      |
+| --------------------- | ----------- | -------------- |
+| 🧰 Lecture 1: setup   | Prepare     | Get started    |
+| ✏️ Lecture 1: editing | Edit        | Edit pages     |
+| 🚀 Lectures 2 and 3   | Publish     | Publish a site |
+
+The source-to-leaf map records coverage; the sidebar follows the reader's tasks rather than the lecture boundaries.
+
+:::
 
 |||[Local]
 
@@ -122,9 +136,9 @@ When exporting, copy source files with the assets they use.
 4. Reload and confirm the destination and authorised URL.
 5. To show it inline, choose **Add attachment** in the editor.
 
-![The editor's Add attachment choice](./2-blocks/ui/insert-attachment.png)
+![The editor's Add attachment choice](./2-blocks/insert-attachment.png)
 
-This screenshot shows inline insertion at step 5, not the tree attachment manager. The [embed guide](/consumer/1-usage/2-blocks/embeds-and-custom-blocks/) explains its visual controls. Review downloaded attachments with exported source before reuse.
+This screenshot shows inline insertion at step 5, not the tree attachment manager. The [Embeds and custom blocks section](/consumer/1-usage/2-blocks/#embeds-and-custom-blocks) explains its visual controls. Review downloaded attachments with exported source before reuse.
 
 |||
 

@@ -160,6 +160,38 @@ function langOf(v: string): string {
  * @return A syntax-highlighted code preview or a CodeMirror editor with the requested controls.
  *
  * @remarks View mode can resolve source-backed blocks through the host adapter; edit mode never commits without the caller's callback.
+ *
+ * @docsId code
+ * @docsUseWhen Show a short literal or a copyable example that advances the reader's task.
+ * @docsConstraint Use inline code for a short identifier or expression and fenced code for a multiline example.
+ * @docsConstraint Label every fenced block with its actual language and explain what readers should do with it.
+ * @docsDo Break long chains and arguments across lines when that improves reading.
+ * @docsDo Keep explanation in prose rather than making readers infer it from code.
+ * @docsDont Do not fence a single short identifier.
+ * @docsDont Do not escape every backtick in nested examples; use a longer outer fence.
+ * @docsDont Do not add imports for built-in Docs Markdown blocks.
+ * @docsDont Do not present an endpoint or component as available unless the host supports it.
+ * @docsTip Source-backed code needs a real host endpoint; verify the fetched value in that host.
+ * @docsDo For source-backed code, use a real host endpoint and explain that it must exist in that host.
+ * @docsDont Do not imply a sample endpoint is a working receiver when it is only illustrative.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-code.png | Docs Insert content menu with Code highlighted
+ * @docsInsertionStep In Edit mode, place the cursor where the example belongs and choose + Insert content → Code.
+ * @docsInsertionStep Choose the real language and enter the multiline example.
+ * @docsInsertionStep Preview and copy the block to confirm the source is useful.
+ * @docsSyntax
+ * ```mdx
+ * Use `onChange` to receive edits:
+ *
+ * ~~~mdx
+ * <Docs mode="edit" value={value} onChange={saveValue} />
+ * ~~~
+ * ```
+ * @docsRenderedExample
+ * Use `onChange` to receive edits:
+ *
+ * ```mdx
+ * <Docs mode="edit" value={value} onChange={saveValue} />
+ * ```
  */
 export function CodeBlock(
   blockOptions:
@@ -645,7 +677,7 @@ export function CodeBlock(
     <ErrorBoundary name="CodeBlock">
       <div
         className={cn(
-          'code-block relative mb-10 mt-0 flow-root w-full max-w-full overflow-hidden rounded-sm border border-primary-6 bg-primary-1',
+          'code-block relative m-0 flow-root w-full max-w-full overflow-hidden rounded-sm border border-primary-6 bg-primary-1',
           '[&_.cm-editor]:!h-auto [&_.cm-editor]:!max-h-none [&_.cm-editor]:!bg-primary-1',
           '[&_.cm-scroller]:!h-auto [&_.cm-scroller]:!max-h-none [&_.cm-scroller]:overflow-x-auto [&_.cm-scroller]:overflow-y-hidden',
           '[&_.cm-scroller]:!text-[13px] [&_.cm-scroller]:!leading-[16px]',

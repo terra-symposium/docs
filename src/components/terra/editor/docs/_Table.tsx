@@ -316,6 +316,37 @@ function TableEditor({
  * @param readOnly Whether the workspace displays or edits this block.
  *
  * @return The table renderer in editable or read-only mode.
+ *
+ * @docsId tables
+ * @docsUseWhen Compare repeated attributes that share meaningful columns.
+ * @docsConstraint Use a table only when multiple rows share meaningful comparison columns.
+ * @docsConstraint Use prose or a list for a single point or a sequence of actions.
+ * @docsConstraint Put meaningful emoji on the independent category axis: first row for column categories, first column for row categories, or both when both axes vary.
+ * @docsConstraint Keep headers short and unbolded; preserve row and cell structure.
+ * @docsDo Use structured table data when host-supplied Portable Text cells need rich content.
+ * @docsDo Use HTML only to preserve necessary structure such as a caption that a simple pipe table cannot express.
+ * @docsDont Do not scatter decorative emoji through dependent value cells.
+ * @docsDont Do not use HTML for an ordinary two-column grid.
+ * @docsDont Do not flatten rich Portable Text cells into prose.
+ * @docsTip Check cell wrapping and scan the category axis in the rendered page.
+ * @docsDo Use a pipe table for simple repeated rows; preserve an HTML table only when structure such as a caption matters.
+ * @docsDo Keep rich host-supplied Portable Text cells structured when they contain more than plain text.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-table.png | Docs Insert content menu with Table highlighted
+ * @docsInsertionStep In Edit mode, place the cursor where the comparison belongs and choose + Insert content → Table.
+ * @docsInsertionStep Enter concise headers and comparable row values; add axis emojis to the varying categories.
+ * @docsInsertionStep Preview cell wrapping and confirm the columns support an actual comparison.
+ * @docsSyntax
+ * ```mdx
+ * | Stage     | Owner |
+ * | --------- | ----- |
+ * | 🖥️ Render | Docs  |
+ * | 💾 Save   | Host  |
+ * ```
+ * @docsRenderedExample
+ * | Stage     | Owner |
+ * | --------- | ----- |
+ * | 🖥️ Render | Docs  |
+ * | 💾 Save   | Host  |
  */
 export function renderTable({
   attributes: attrs,

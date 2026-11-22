@@ -143,15 +143,29 @@ async function buildSearchIndex() {
         throw new Error(`Invalid YAML frontmatter: ${err.message}`, { cause: err });
       }
     }
+    for (const [field, limit] of [
+      ['title', 48],
+      ['description', 85],
+    ]) {
+      const value = frontmatter[field];
+      if (value === undefined) continue;
+      if (typeof value !== 'string' || Array.from(value).length > limit)
+        throw new Error(
+          `Docs ${field} must be a string of at most ${limit} characters: docs/${file.relativePath}`,
+        );
+    }
+    const title =
+      frontmatter.title ??
+      TerraQualityRegex.REGEX_S_S_S_M_REGEX().exec(body)?.[1]?.trim() ??
+      (file.relativePath.replace(MD_MDX_I_REGEX, '').split('/').at(-1) ?? '')
+        .replace(/^\d+[-_]+/, '')
+        .replace(TerraQualityRegex.REGEX_G_REGEX_8(), ' ')
+        .replace(TerraQualityRegex.REGEX_B_P_L_GU_REGEX(), (l) => l.toUpperCase());
+    if (Array.from(title).length > 48)
+      throw new Error(`Docs title must be at most 48 characters: docs/${file.relativePath}`);
     if (!(frontmatter.sidebar?.hidden ?? frontmatter.hidden ?? frontmatter.visibility === 'hidden'))
       records.push({
-        title:
-          frontmatter.title ??
-          TerraQualityRegex.REGEX_S_S_S_M_REGEX().exec(body)?.[1]?.trim() ??
-          (file.relativePath.replace(MD_MDX_I_REGEX, '').split('/').at(-1) ?? '')
-            .replace(/^\d+[-_]+/, '')
-            .replace(TerraQualityRegex.REGEX_G_REGEX_8(), ' ')
-            .replace(TerraQualityRegex.REGEX_B_P_L_GU_REGEX(), (l) => l.toUpperCase()),
+        title,
         description: frontmatter.description ?? '',
         href: route ? `${base}${route}/` : base,
         text: body

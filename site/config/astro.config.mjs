@@ -21,7 +21,7 @@ import { dirname, resolve } from 'node:path';
 import { docsContentPlugin } from '../docs-content-plugin.mjs';
 import { localSourceRebuildPlugin } from '../local-source-rebuild-plugin.mjs';
 import { fileURLToPath } from 'node:url';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/boundaries/astro-integration';
 import { unified } from '@astrojs/markdown-remark';
 
@@ -51,6 +51,22 @@ const requireFromProject = consumerProject.require;
 const reporting = projectManifest.docs?.errorReporting;
 const reportEndpoint = process.env.DOCS_ERROR_REPORT_ENDPOINT || reporting?.endpoint;
 const reportSite = reporting?.site || projectManifest.name;
+const blockSectionIds = [
+  'frontmatter',
+  'prose',
+  'lists-and-links',
+  'code',
+  'tables',
+  'diagrams',
+  'tabs',
+  'accordions',
+  'asides',
+  'images',
+  'math',
+  'embeds-and-custom-blocks',
+  'quiz',
+  'typescript-docs',
+];
 if (!reportEndpoint || !reportSite)
   throw new Error(
     'Docs error reporting requires docs.errorReporting.endpoint and a site name in the consumer package.json.',
@@ -318,14 +334,12 @@ export default defineConfig({
     ['/consumer/1-usage/4-validation', '/consumer/1-usage/1-leaf'],
     ['/consumer/1-usage/0-syntax', '/consumer/1-usage/2-blocks'],
     ['/consumer/1-usage/1-syntax', '/consumer/1-usage/2-blocks'],
-    ...readdirSync(resolve(packageRoot, 'docs/consumer/1-usage/2-blocks'))
-      .filter((name) => name.endsWith('.md') && name !== 'index.md')
-      .flatMap((name) =>
-        ['0-syntax', '1-syntax'].map((prefix) => [
-          `/consumer/1-usage/${prefix}/${name.slice(0, -3)}`,
-          `/consumer/1-usage/2-blocks/${name.slice(0, -3)}`,
-        ]),
-      ),
+    ...blockSectionIds.flatMap((id) =>
+      ['0-syntax', '1-syntax', '2-blocks'].map((prefix) => [
+        `/consumer/1-usage/${prefix}/${id}`,
+        `/consumer/1-usage/2-blocks/#${id}`,
+      ]),
+    ),
   ]),
   integrations: [
     __terraErrorBoundaryIntegration({

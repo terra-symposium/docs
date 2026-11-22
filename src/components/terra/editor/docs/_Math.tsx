@@ -57,6 +57,36 @@ HELPERS
  * @param write Optional callback that persists changes from the edit popover.
  *
  * @return The formatted math expression or editable math control.
+ *
+ * @docsId math
+ * @docsUseWhen A formula communicates a precise relationship that is awkward to express in prose.
+ * @docsConstraint Use KaTeX syntax. Choose inline math for a short expression in a sentence and display math for a multi-part standalone formula.
+ * @docsConstraint Explain variables in nearby text and add a textual description when the formula is essential.
+ * @docsDo Use ordinary text when it expresses the relationship clearly.
+ * @docsDo Use display math for vectors, fractions, indices, integrals, and matrices when they need their own line.
+ * @docsDont Do not squeeze a multi-part formula into a sentence.
+ * @docsDont Do not escape a dollar sign unless it is literal currency or text.
+ * @docsTip Check the rendered expression as well as the Markdown delimiters.
+ * @docsDo KaTeX can express vectors, fractions, indices, integrals, and matrices.
+ * @docsDont Do not put a large matrix or multi-part formula into a crowded sentence.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-math.png | Docs Insert content menu with Block Math highlighted
+ * @docsInsertionStep For display math, choose + Insert content → Block → Math; choose Inline for an expression in a sentence.
+ * @docsInsertionStep Enter KaTeX syntax and explain its variables in nearby text.
+ * @docsInsertionStep Preview the expression and its textual explanation.
+ * @docsSyntax
+ * ```mdx
+ * The relationship is $E = mc^2$.
+ *
+ * $$
+ * \frac{a^2}{b_n}
+ * $$
+ * ```
+ * @docsRenderedExample
+ * The relationship is $E = mc^2$.
+ *
+ * $$
+ * \frac{a^2}{b_n}
+ * $$
  */
 export function renderMath({
   code,

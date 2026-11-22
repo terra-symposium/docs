@@ -8,8 +8,9 @@ IMPORTS
 
 // API
 import postcss from 'postcss';
-import { appendFile, cp, mkdir, readFile, readdir, rm } from 'node:fs/promises';
+import { appendFile, cp, mkdir, readFile, readdir, rename, rm } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 /*//////////////////////////////////////////////////
@@ -19,11 +20,14 @@ CONFIG
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(root, 'src', 'lib', 'terra');
 const output = join(root, 'dist', 'lib', 'lib', 'terra');
+const buildDirectory = process.argv[2];
+if (!buildDirectory)
+  throw new Error('Pass the temporary stylesheet directory to copy-runtime.mjs.');
 // Keep authored Docs prose after generated utilities, matching the original
 // website's cascade where its prose stylesheet loaded after global.css. Styling's
 // effect layer also contains authored @layer rules, so append it last.
-// hygiene-ignore single-use -- Read the built stylesheet before this script deletes its source file later in the copy transaction.
-const workspaceStyles = await readFile(join(root, 'dist', 'lib', 'workspace.css'), 'utf8');
+// hygiene-ignore single-use -- Read staged output before atomically replacing the package stylesheet.
+const workspaceStyles = await readFile(join(buildDirectory, 'workspace.css'), 'utf8');
 // Tailwind has already run. Leave the authored rules intact, but remove their
 // build-time layers so a consumer's Tailwind plugin can process this stylesheet.
 const effectCss = postcss.parse(
@@ -67,12 +71,13 @@ await cp(
   join(root, 'dist', 'lib', 'assets', 'fonts'),
   { recursive: true },
 );
-await appendFile(join(root, 'dist', 'lib', 'style.css'), `\n${workspaceStyles}`);
-await rm(join(root, 'dist', 'lib', 'workspace.css'), { force: true });
+const stagedStylesPath = join(buildDirectory, 'style.css');
+await appendFile(stagedStylesPath, `\n${workspaceStyles}`);
 for (const rule of [...effectCss.nodes]) {
   if (rule.type === 'atrule' && rule.name === 'layer') rule.replaceWith(...(rule.nodes ?? []));
 }
-await appendFile(join(root, 'dist', 'lib', 'style.css'), `\n${effectCss}`);
+await appendFile(stagedStylesPath, `\n${effectCss}`);
 await cp(join(root, 'node_modules', 'katex', 'dist', 'fonts'), join(root, 'dist', 'lib', 'fonts'), {
   recursive: true,
 });
+await rename(stagedStylesPath, join(root, 'dist', 'lib', 'style.css'));

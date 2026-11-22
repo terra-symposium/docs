@@ -1,6 +1,6 @@
 ---
 title: Playwright tests
-description: What the Docs browser tests exercise, how the two site builds are tested, and which specs are outside the default run.
+description: Run Docs browser tests and inspect routes, interaction states, and screenshots.
 ---
 
 ## Run

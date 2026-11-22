@@ -1,0 +1,110 @@
+---
+title: Blocks
+description: Choose Docs blocks to clarify a reader's task.
+---
+
+import blockApi from '../../../../dist/cache/blocks-api.json';
+import { BlockGuidance } from '../../../../dist/lib/components/BlockGuidance.js';
+
+Start with the reader's task and the information hierarchy. Use a block when its shape makes a relationship easier to understand.
+
+Before drafting a leaf, read the guidance for every block in this reference so the choice of blocks is informed. Apply each relevant rule to every instance, including examples and nested blocks. Check both the MDX source and rendered result; a successful build does not replace those checks.
+
+## Choose by reader need
+
+| 🧭 Need                                           | Use                                                                                                                                         |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Organise a page and explain its ideas             | [Frontmatter](#frontmatter), [Prose](#prose), [Lists and links](#lists-and-links), [Code](#code)                                            |
+| Compare, connect, or separate related information | [Tables](#tables), [Diagrams](#diagrams), [Tabs](#tabs), [Accordions](#accordions), [Asides](#asides)                                       |
+| Add supporting material or practice               | [Images](#images), [Math](#math), [Embeds and custom blocks](#embeds-and-custom-blocks), [Quiz](#quiz), [TypeScript docs](#typescript-docs) |
+
+<aside className="callout caution" data-docs-aside="caution">
+  <strong className="title">Reconsider the hierarchy</strong>
+  <p>
+    When new content changes a relationship, revisit the headings, order, and groups. Do not keep
+    the old structure by inertia, preserve lecture chronology automatically, or retain supplied
+    groups without checking what readers need. Reconsider the page outline whenever a new block or
+    example changes the relationship between ideas.
+  </p>
+</aside>
+
+<aside className="callout note" data-docs-aside="note">
+  <strong className="title">Open a block section</strong>
+  <p>
+    Each block shows its render/source example first, followed by accordion items for Do (including
+    tips), Do not (including constraints), and insertion steps. In Edit mode, use
+    <strong>+ Insert content</strong> for available blocks, then switch to View and check the
+    result. The example has <strong>Rendered</strong> and <strong>Code (MDX)</strong> tabs. Tabs and
+    accordions use adjacent Markdown source syntax; the toolbar does not insert them.
+  </p>
+</aside>
+
+## Page structure
+
+Set the page identity first, then organise its explanation and supporting material around the reader’s task.
+
+### Frontmatter
+
+<BlockGuidance client:load entry={blockApi.frontmatter} />
+
+### Prose
+
+<BlockGuidance client:load entry={blockApi.prose} />
+
+### Lists and links
+
+<BlockGuidance client:load entry={blockApi['lists-and-links']} />
+
+### Code
+
+<BlockGuidance client:load entry={blockApi.code} />
+
+## Relationships
+
+Choose a structure only when it makes comparison, connection, alternatives, or optional detail easier to understand.
+
+### Tables
+
+<BlockGuidance client:load entry={blockApi.tables} />
+
+### Diagrams
+
+<BlockGuidance client:load entry={blockApi.diagrams} />
+
+### Tabs
+
+<BlockGuidance client:load entry={blockApi.tabs} />
+
+### Accordions
+
+<BlockGuidance client:load entry={blockApi.accordions} />
+
+### Asides
+
+<BlockGuidance client:load entry={blockApi.asides} />
+
+## Supporting content
+
+Add media, notation, or host-provided blocks when they help readers inspect, calculate, practise, or look up something.
+
+### Images
+
+<BlockGuidance client:load entry={blockApi.images} />
+
+### Math
+
+<BlockGuidance client:load entry={blockApi.math} />
+
+### Embeds and custom blocks
+
+<BlockGuidance client:load entry={blockApi['embeds-and-custom-blocks']} />
+
+### Quiz
+
+<BlockGuidance client:load entry={blockApi.quiz} />
+
+### TypeScript docs
+
+<BlockGuidance client:load entry={blockApi['typescript-docs']} />
+
+For the shared block contracts and host configuration, see the [component reference](../../../developer/component/blocks/).

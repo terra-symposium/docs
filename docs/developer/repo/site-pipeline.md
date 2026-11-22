@@ -23,7 +23,7 @@ The catalog sorts source paths numerically, so filename prefixes control navigat
 
 ## Render the workspace
 
-Astro makes the static routes. Markdown pages pass their source to the shared Docs renderer; MDX pages render compiled content inside the same `DocsSiteLayout`. The layout supplies the sidebar, title, toolbar, breadcrumb when there is a parent page, and the content area. Built-in blocks such as tabs, asides, diagrams, and code are documented in [Syntax](/consumer/1-usage/1-syntax/).
+Astro makes the static routes. Markdown pages pass their source to the shared Docs renderer; MDX pages render compiled content inside the same `DocsSiteLayout`. The layout supplies the sidebar, title, toolbar, breadcrumb when there is a parent page, and the content area. Built-in blocks such as tabs, asides, diagrams, and code are documented in [Blocks](/consumer/1-usage/2-blocks/).
 
 Docs imports Styling controls and theme tokens, then adds prose rules for reading and editing. [Styling in Docs](/developer/4-styling/) explains that ownership boundary. A blank but successful HTTP response is not enough to validate a page: inspect the body, links, images, and interactive blocks in a browser.
 

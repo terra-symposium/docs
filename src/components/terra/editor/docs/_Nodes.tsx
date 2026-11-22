@@ -97,6 +97,37 @@ function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX
  * @param block Portable Text nodes block with graph data and optional layout settings.
  *
  * @return The nodes block inside its rendering error boundary.
+ *
+ * @docsId diagrams
+ * @docsUseWhen A process, dependency, or decision is clearer as connected nodes than as a short list.
+ * @docsConstraint Use a diagram for a process, hierarchy, dependency, or decision only when its connections explain more than a short list or table.
+ * @docsConstraint Keep prose outside the diagram; include complete node and edge arrays in the directive.
+ * @docsConstraint Every edge must point to an existing source and target node.
+ * @docsDo Use origin for a start, process for an action, terminator for an outcome, and terminal for a hard stop.
+ * @docsDo Use decision for meaningful alternatives, data for an input/output, note for short context, group for one stage, and ERD for entities.
+ * @docsDo Put each node or edge object on one line, then inspect labels, direction, spacing, and controls.
+ * @docsDont Do not add a diagram when it only repeats labels or a linear list.
+ * @docsDont Do not point edges to missing nodes or replace required data with empty arrays.
+ * @docsDont Do not use a node type for a different semantic role (for example, an origin for every intermediate step).
+ * @docsTip Prefer a list for a short linear sequence and a table for repeated attributes.
+ * @docsRenderKind nodes
+ * @docsTip Origin marks a start; process an action; terminator an outcome; terminal a hard stop; decision a meaningful branch; data an input/output; note short context; group one stage; ERD an entity.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-nodes.png | Docs Insert content menu with Nodes highlighted
+ * @docsInsertionStep In Edit mode, place the cursor where the relationships belong and choose + Insert content → Nodes.
+ * @docsInsertionStep Add complete node and edge arrays; connect each edge to an existing node.
+ * @docsInsertionStep Preview labels, direction, spacing, and graph controls.
+ * @docsSyntax
+ * ```mdx
+ * <Nodes
+ *   nodes={[
+ *     { id: 'edit', type: 'origin', data: { title: 'Docs receives edit' } },
+ *     { id: 'save', type: 'terminator', data: { title: 'Host saves value' } }
+ *   ]}
+ *   edges={[{ id: 'edit-save', source: 'edit', target: 'save' }]}
+ * />
+ * ```
+ * @docsRenderedExample
+ * The relationship is shown as a flow: Docs receives edit → Host saves value.
  */
 export function NodesBlock({
   block,

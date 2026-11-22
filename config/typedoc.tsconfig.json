@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "outDir": "../dist/cache/typedoc-ts",
+    "noEmit": true
+  },
+  "include": [
+    "../site/src/lib/catalog.ts",
+    "../src/lib/markdown-model.ts",
+    "../src/components/MarkdownContent.tsx",
+    "../src/components/blocks.tsx",
+    "../src/components/terra/editor/docs/_CodeBlock.tsx",
+    "../src/components/terra/editor/docs/_Table.tsx",
+    "../src/components/terra/editor/docs/_Nodes.tsx",
+    "../src/components/terra/editor/docs/_Callout.tsx",
+    "../src/components/terra/editor/docs/_DocsImage.tsx",
+    "../src/components/terra/editor/docs/_Math.tsx",
+    "../src/components/quiz.tsx",
+    "../src/components/terra/editor/docs/_TsDocs.tsx"
+  ]
+}

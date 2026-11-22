@@ -131,6 +131,38 @@ function CalloutEditor({
  * @param readOnly Selects the static callout view when editing is disabled.
  *
  * @return The callout renderer in editable or read-only mode.
+ *
+ * @docsId asides
+ * @docsUseWhen Add one bounded note, tip, warning, or example that changes how nearby content should be read.
+ * @docsConstraint Use one aside for one bounded note, tip, caution, warning, danger, or example.
+ * @docsConstraint Keep the main explanation and required steps in the reading path.
+ * @docsConstraint A callout is not a way to make the page look shorter.
+ * @docsDo Choose note for background/definition, tip for practical advice, caution for a pitfall, warning for a serious issue, danger for a forbidden/high-risk action, and example for concrete behavior.
+ * @docsDo Give each aside a specific title; keep nested lists, tables, and code inside its boundary.
+ * @docsDo Map imported info to note and error to danger.
+ * @docsDo Group adjacent callouts of one purpose in titled accordion items, with example asides inside their related item.
+ * @docsDont Do not hide a required step in a callout.
+ * @docsDont Do not use danger for ordinary background, a vague warning at page end, or a warning for a routine fact.
+ * @docsTip Place the aside beside the decision it affects.
+ * @docsTip In Edit mode choose + Insert content → Callout, set its kind and title, then check the result in View mode.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-callout.png | Docs Insert content menu with Callout highlighted
+ * @docsInsertionStep In Edit mode, place the cursor beside the affected explanation and choose + Insert content → Callout.
+ * @docsInsertionStep Choose the matching kind, enter a specific title, and write one bounded point.
+ * @docsInsertionStep Preview the callout beside the action or decision it affects.
+ * @docsSyntax
+ * ```mdx
+ * :::warning[Save outside the editor]
+ *
+ * `onChange` reports the updated value. Persist it in the host.
+ *
+ * :::
+ * ```
+ * @docsRenderedExample
+ * :::warning[Save outside the editor]
+ *
+ * `onChange` reports the updated value. Persist it in the host.
+ *
+ * :::
  */
 export function renderCallout({
   attributes: attrs,

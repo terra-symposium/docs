@@ -32,7 +32,7 @@ A Markdown task item such as `- [x] Confirm the title` is parsed by Docs. `Markd
 
 ## Prose and hierarchy
 
-The document should lead with the reader's purpose, then use H2 sections, short introductions, and blocks that show a real relationship. The [Authoring guide](/consumer/1-usage/0-authoring/) covers the writing decisions; the [Syntax index](/consumer/1-usage/1-syntax/) gives supported source forms. Styling's component prose has a different job: its source JSDoc describes the public API, authored notes explain appropriate use and accessibility, and live examples show behavior. These sources should agree, but they are maintained in their owning repository.
+The document should lead with the reader's purpose, then use H2 sections, short introductions, and blocks that show a real relationship. The [Authoring guide](/consumer/1-usage/0-authoring/) covers the writing decisions; the [Blocks reference](/consumer/1-usage/2-blocks/) gives supported source forms. Styling's component prose has a different job: its source JSDoc describes the public API, authored notes explain appropriate use and accessibility, and live examples show behavior. These sources should agree, but they are maintained in their owning repository.
 
 Docs uses a 16px gap between adjacent content blocks in View and Edit. Callout content uses a 12px gap, with no bottom margin on its last block. Lists, tables, and controls keep the spacing needed within their own structure.
 

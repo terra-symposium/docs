@@ -647,6 +647,31 @@ export function DocsQuizGenerator({
  * Renders the Markdown opt-in directive using the active host configuration.
  *
  * @returns The configured quiz generator, or an explanation when no host context exists.
+ *
+ * @docsId quiz
+ * @docsUseWhen Readers should practise a concept after the page has explained it.
+ * @docsConstraint Place a quiz after the explanation it tests; it tests understanding and does not replace required page content.
+ * @docsConstraint The host must provide a quiz generator; generated questions and answers remain in the current page session.
+ * @docsDo Explain the concept before asking readers to practise it.
+ * @docsDo Check generated questions and answers in the target host.
+ * @docsDo Use multiple choice for recognition with one supported answer; use keyword answers for a specific term or relationship.
+ * @docsDont Do not promise saved results unless the host persists them.
+ * @docsDont Do not require an unexplained private identifier or use an ambiguous answer set.
+ * @docsTip State where questions/results live so readers know what is and is not saved.
+ * @docsRenderKind quiz
+ * @docsTip Multiple choice tests recognition among alternatives with one supported answer; keyword answer tests recall of a specific term or relationship.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-quiz.png | Docs Insert content menu with Quiz generator highlighted
+ * @docsInsertionStep After the explanation, choose + Insert content → Quiz generator.
+ * @docsInsertionStep In View mode, choose question count and types, then generate and inspect the questions.
+ * @docsInsertionStep Confirm results remain in the page session unless the host explicitly persists them.
+ * @docsSyntax
+ * ```mdx
+ * After explaining the concept, practise the key ideas:
+ *
+ * <Quiz />
+ * ```
+ * @docsRenderedExample
+ * After explaining the concept, practise the key ideas:
  */
 export function DocsQuizBlock(): JSX.Element {
   const context = useDocsQuizContext();

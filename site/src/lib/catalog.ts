@@ -89,7 +89,39 @@ const pageInputs = {
 const base = import.meta.env.BASE_URL;
 const routes = new Map<string, string>();
 /**
- * Docs pages sorted by their source paths, including numeric filename prefixes.
+ * Builds the page catalogue from repository Markdown and its frontmatter.
+ *
+ * @docsId frontmatter
+ * @docsUseWhen Every repository-backed leaf needs a title and description before its body.
+ * @docsConstraint Every repository-backed leaf starts with YAML frontmatter containing title and description.
+ * @docsConstraint The title is at most 48 characters; the description is at most 85 characters. Count spaces and punctuation.
+ * @docsConstraint Keep each value on one line; quote YAML-significant punctuation such as a colon.
+ * @docsConstraint The local catalogue reads title and description, but rejects order and sidebar.order; filenames determine navigation order.
+ * @docsConstraint Audience assumptions belong in the authoring brief unless the active host schema supports that metadata.
+ * @docsDo Describe the page purpose, not its source filename or format.
+ * @docsDo Check host-specific metadata against that host’s schema before adding it.
+ * @docsDo Use numbered filenames when setting local navigation order.
+ * @docsDont Do not add metadata the catalogue does not read.
+ * @docsDont Do not split a title or description across lines.
+ * @docsTip Treat title and description as navigation and search labels; keep them concise and meaningful.
+ * @docsTip A short description is typically near 75 characters; never exceed the strict 85-character maximum.
+ * @docsInsertionStep Put the YAML fence at the start of the Markdown leaf.
+ * @docsInsertionStep Enter a one-line `title` and `description`, then preview the navigation and search labels.
+ * @docsSyntax
+ * ```mdx
+ * ---
+ * title: Save Docs edits
+ * description: Receive editor changes and save them in the host.
+ * ---
+ *
+ * ## Save edits
+ * ```
+ * @docsRenderedExample
+ * # Save Docs edits
+ *
+ * *Receive editor changes and save them in the host.*
+ *
+ * ## Save edits
  */
 export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
   .filter(
@@ -114,19 +146,31 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
     routes.set(slug, f);
     const markdown = pageInputs.sources[f] ?? '';
     const frontmatter = m.frontmatter ?? {};
+    for (const [field, limit] of [
+      ['title', 48],
+      ['description', 85],
+    ] as const) {
+      const value = frontmatter[field];
+      if (value === undefined) continue;
+      if (typeof value !== 'string' || Array.from(value).length > limit)
+        throw new Error(`Docs ${field} must be a string of at most ${limit} characters: ${f}`);
+    }
     if ('order' in frontmatter || (frontmatter.sidebar && 'order' in frontmatter.sidebar))
       throw new Error(`Docs page order comes from its filename, not frontmatter: ${f}`);
+    const title =
+      frontmatter.title ??
+      (TerraQualityRegex.REGEX_S_S_S_M_REGEX()
+        .exec(markdown.replace(S_N_S_S_N_S_N_REGEX, ''))?.[1]
+        ?.trim() ||
+        (slug.split('/').at(-1) || 'Overview')
+          .replace(G_REGEX(), ' ')
+          .replace(B_P_L_GU_REGEX(), (initial) => initial.toUpperCase()));
+    if (Array.from(title).length > 48)
+      throw new Error(`Docs title must be at most 48 characters: ${f}`);
     return {
       file: f,
       slug,
-      title:
-        frontmatter.title ??
-        (TerraQualityRegex.REGEX_S_S_S_M_REGEX()
-          .exec(markdown.replace(S_N_S_S_N_S_N_REGEX, ''))?.[1]
-          ?.trim() ||
-          (slug.split('/').at(-1) || 'Overview')
-            .replace(G_REGEX(), ' ')
-            .replace(B_P_L_GU_REGEX(), (initial) => initial.toUpperCase())),
+      title,
       ...((frontmatter.sidebar?.label ?? frontmatter.label)
         ? { sidebarLabel: frontmatter.sidebar?.label ?? frontmatter.label }
         : {}),

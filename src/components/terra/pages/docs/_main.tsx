@@ -2434,9 +2434,7 @@ const EditorSurfaces = {
 			<header className='document-header relative z-10 w-full print:!mb-8 print:border-none'>
 				<div className={cn('mx-auto w-full px-6 pb-10 pt-7 transition-opacity duration-200 md:px-10 print:!pb-3', full ? 'max-w-none' : 'max-w-7xl')}>
 					<div>
-						<Label htmlFor='docs-title' className='sr-only'>
-							Title
-						</Label>
+						<Label htmlFor='docs-title' className='sr-only'>Title</Label>
 						<Input
 							ref={titleRef}
 							id='docs-title'
@@ -2450,9 +2448,11 @@ const EditorSurfaces = {
 							}}
 							placeholder='Leaf title'
 							disabled={!editable}
-							className='mb-2 mt-0 h-fit border-none bg-transparent p-0 font-sans tracking-tight text-4xl text-primary-12 shadow-none focus-visible:ring-0 md:text-5xl disabled:cursor-default disabled:opacity-100 dark:bg-transparent'
+							className={cn('mb-2 mt-0 h-fit border-none bg-transparent p-0 font-sans tracking-tight text-4xl text-primary-12 shadow-none focus-visible:ring-0 md:text-5xl disabled:cursor-default disabled:opacity-100 dark:bg-transparent', !editable && 'sr-only')}
+							style={!editable ? { width: 1, height: 1 } : undefined}
 							suppressHydrationWarning
 						/>
+						{!editable && <h1 className='mb-2 mt-0 break-words font-sans text-4xl tracking-tight text-primary-12 md:text-5xl' suppressHydrationWarning>{draft.title}</h1>}
 					</div>
 					<div>
 						<Label htmlFor='docs-description' className='sr-only'>

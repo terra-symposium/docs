@@ -191,16 +191,8 @@
 .callout {
   margin: 14px 0;
   padding: 12px 16px;
-  border-left: 4px solid var(--docs-accent, #216750);
-  background: #edf4ef;
-}
-.callout.warning {
-  border-color: #b16d22;
-  background: #fff4e5;
-}
-.callout.error {
-  border-color: #a53d43;
-  background: #fff0f0;
+  border-left: 4px solid rgb(var(--primary-7));
+  background: rgb(var(--primary-2));
 }
 .diagram svg {
   display: block;

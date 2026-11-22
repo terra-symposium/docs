@@ -8,8 +8,14 @@ IMPORTS
 
 // API
 import assert from 'node:assert/strict';
+import console from 'node:console';
+import { readFile } from 'node:fs/promises';
+import { URL } from 'node:url';
+import { createElement } from 'react';
+import { DocsMarkdown } from '../dist/lib/components/MarkdownContent.js';
 import { docsValueToMarkdown, markdownToDocsValue, renderMarkdown } from '../dist/lib/lib/index.js';
 import { replaceCanonicalComponents } from '../dist/lib/lib/markdown-model.js';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { test } from 'node:test';
 
 /*//////////////////////////////////////////////////
@@ -81,4 +87,36 @@ test('accordion bodies can contain fenced delimiter examples', () => {
   assert.equal(value[0]?._type, 'accordion');
   assert.equal(value[0].items[0].content[0]?._type, 'code');
   assert.match(value[0].items[0].content[0].value, /===/);
+});
+
+test('Get started preview tabs parse as one complete group', async () => {
+  const source = await readFile(
+    new URL('../docs/consumer/0-configuration/0-install.md', import.meta.url),
+    'utf8',
+  );
+  const groups = markdownToDocsValue(source).filter((block) => block._type === 'tabs');
+  assert.ok(
+    groups.some(
+      (group) => group.items.map((item) => item.title).join(',') === 'Preview,Build,Check',
+    ),
+  );
+  const html = renderToStaticMarkup(createElement(DocsMarkdown, { markdown: source }));
+  assert.match(html, /role="tab"[^>]*>Preview/);
+  assert.match(html, /role="tab"[^>]*>Build/);
+  assert.match(html, /role="tab"[^>]*>Check/);
+  assert.doesNotMatch(html, /\|\|\|\[Check\]/);
+});
+
+test('unclosed tab markers report their source line', () => {
+  const errors = [];
+  const original = console.error;
+  console.error = (...args) => errors.push(args);
+  try {
+    markdownToDocsValue('Intro\n\n|||[Build]\n\nBody\n\n|||[Check]\n\nMore\n\n|||');
+  } finally {
+    console.error = original;
+  }
+  assert.equal(errors.length, 1);
+  assert.match(errors[0][0], /Unclosed group marker/);
+  assert.deepEqual(errors[0][1], { delimiter: '|||', title: 'Build', line: 3 });
 });

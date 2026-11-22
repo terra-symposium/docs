@@ -1181,6 +1181,54 @@ function tableBlock(
  * @param options Optional rich-block feature switches for this conversion.
  *
  * @return Portable Text and rich Docs blocks representing the source.
+ *
+ * @docsId prose
+ * @docsUseWhen Write a readable page with headings, paragraphs, inline emphasis, and links.
+ * @docsConstraint Begin the body with an H2; nest H3 beneath H2 and H4 beneath H3. Never skip a heading level.
+ * @docsConstraint Use short, task-focused headings; number headings only for a real linear process.
+ * @docsConstraint Introduce an H2 or H3 before placing a table or diagram beneath it.
+ * @docsDo Use ordinary Markdown for connected ideas; keep each paragraph about one idea.
+ * @docsDo Use inline code for literal names and expressions.
+ * @docsDo Use bold only when the distinction changes meaning; use italics sparingly.
+ * @docsDo Preserve meaningful imported underline and strikethrough; explain quotations that matter.
+ * @docsDont Do not use decorative emoji in headings.
+ * @docsDont Do not bold a sentence just for emphasis; rewrite it for clarity.
+ * @docsDont Do not use H5/H6 for ordinary emphasis; retain deep levels only when source hierarchy requires them.
+ * @docsTip Reconsider the whole information hierarchy whenever content is added or moved.
+ * @docsTip Organise by reader task, not source order, lecture chronology, or supplied groups.
+ * @docsDo Use H2 for each main body section, H3 for a subsection, and H4 only under H3 when needed.
+ * @docsTip H5 and H6 are for genuinely necessary imported depth; prefer a shallower page.
+ * @docsTip A blockquote sets off attributed source wording; avoid quoting ordinary instructions.
+ * @docsTip Bold may mark a key term when the distinction changes meaning; italics can distinguish a term.
+ * @docsTip Preserve meaningful imported underline; strikethrough can show a superseded value when the old value matters.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/docs-authoring-ui.png | Docs Authoring page showing headings and a code example
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/block-type-menu.png | Docs editor Block type menu with Heading 2 highlighted
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/formatting.png | Docs editor toolbar with inline formatting and link controls
+ * @docsInsertionStep In Edit mode, open Block type and choose Normal, Heading 2–6, or Quote.
+ * @docsInsertionStep Use inline controls for emphasis and links; enter inline code in Markdown source.
+ * @docsInsertionStep Preview the heading outline, formatting, and links.
+ * @docsSyntax
+ * ```mdx
+ * ## Save Docs edits
+ *
+ * The host receives each edit through `onChange`.
+ *
+ * ### Persist
+ *
+ * Save the updated value so it survives a reload.
+ *
+ * > The host owns storage.
+ * ```
+ * @docsRenderedExample
+ * ## Save Docs edits
+ *
+ * The host receives each edit through `onChange`.
+ *
+ * ### Persist
+ *
+ * Save the updated value so it survives a reload.
+ *
+ * > The host owns storage.
  */
 export function markdownToDocsValue(markdown: string, options: DocsBlockOptions = {}): DocsValue {
   return parseMarkdown(markdown, options, []);
@@ -1321,6 +1369,13 @@ function parseMarkdown(
         groupRanges.push({ ...group, closeStart: groupOffset, end: lineEnd });
     }
     groupOffset = lineEnd;
+  }
+  for (const group of groupStack) {
+    console.error('[DOCS:markdown] Unclosed group marker.', {
+      delimiter: group.delimiter,
+      title: group.title,
+      line: calloutSrc.slice(0, group.start).split('\n').length,
+    });
   }
   const adjacentGroups: MarkdownGroup[][] = [];
   for (const range of groupRanges) {

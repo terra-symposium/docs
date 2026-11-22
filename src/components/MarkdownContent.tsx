@@ -7,7 +7,7 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
-import { docsValueToMarkdown, markdownToDocsValue } from '../lib/markdown-model.js';
+import { markdownToDocsValue } from '../lib/markdown-model.js';
 
 // COMPONENTS
 import { DocsRichBlock } from './blocks.js';
@@ -62,6 +62,47 @@ HELPERS
  * @param options - Host-specific block renderers available to the conversion.
  *
  * @returns React elements for converted rich blocks, including shared tabs and accordions.
+ *
+ * @docsId lists-and-links
+ * @docsUseWhen Group related points, ordered actions, or destinations a reader may need next.
+ * @docsConstraint Each list item, including nested items and checklist entries, is at most 75 characters excluding its marker.
+ * @docsConstraint Bullets represent unordered facts; numbered lists represent dependent actions in order.
+ * @docsDo Keep one idea per item and preserve order when actions depend on it.
+ * @docsDo Put supporting details in short nested items under their owning point.
+ * @docsDo Use prose outside the list if a point cannot be split without losing meaning.
+ * @docsDo Use descriptive links whose labels name the destination or reader outcome.
+ * @docsDo Use [ ] and [x] for read-only checklist states, marking complete only after checking.
+ * @docsDont Do not number unordered facts or use “click here” as the only link label.
+ * @docsDont Do not mark a checklist item complete before verifying it.
+ * @docsTip If a long list has comparable attributes, consider a table; otherwise keep the list.
+ * @docsTip For lists too long to scan, consider a table only if items share comparable attributes.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/formatting.png | Docs editor toolbar with the Link button
+ * @docsInsertionStep Enter `-`, `1.`, or checklist markers in Markdown source for the required list type.
+ * @docsInsertionStep For a link, select its label, choose Link, and enter the destination.
+ * @docsInsertionStep Preview list nesting, order, checklist state, and destination.
+ * @docsSyntax
+ * ```mdx
+ * - Save the updated value.
+ *   - Docs reports edits through `onChange`.
+ *   - The host chooses when and where to persist them.
+ *
+ * 1. Make an edit.
+ * 2. Save the result.
+ *
+ * - [ ] Check the rendered route.
+ *
+ * [Read Docs setup](../../../0-configuration/0-install/)
+ * ```
+ * @docsRenderedExample
+ * - The host receives the value.
+ * - The host chooses when to save it.
+ *
+ * 1. Pass `onChange` to Docs.
+ * 2. Save the updated value.
+ *
+ * - [ ] Check the rendered route.
+ *
+ * [Read Docs setup](../../../0-configuration/0-install/)
  */
 export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Element {
   return (
@@ -76,6 +117,7 @@ export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Elem
  * @param options - Optional renderer and block configuration.
  *
  * @returns React elements for the grouped document blocks.
+ *
  */
 export function DocsBlocks({
   blocks,
@@ -218,60 +260,195 @@ function MarkdownGroup({
 }): JSX.Element {
   const items = Array.isArray(block.items) ? (block.items as Record<string, unknown>[]) : [];
   /**
-   * Converts one group's stored content to Markdown before sending it through the shared renderer.
+   * Renders parsed group content directly, or parses its Markdown fallback.
    *
    * @param item Tab or accordion item with either parsed child content or a Markdown fallback.
    *
-   * @returns The item's Markdown source, preferring its structured `content` field when available.
+   * @returns The item's rendered content.
    */
-  const body = (item: Record<string, unknown>): string => {
+  const body = (item: Record<string, unknown>): JSX.Element => {
     const content = Array.isArray(item.content) ? item.content : [];
-    return content.length
-      ? docsValueToMarkdown(content as Parameters<typeof docsValueToMarkdown>[0])
-      : typeof item.markdown === 'string'
-        ? item.markdown
-        : '';
-  };
-  if (block._type === 'tabs')
-    return (
-      <Tabs defaultValue="tab-0">
-        <TabsList
-          variant="line"
-          className="mb-0 w-full justify-start gap-0 border-b border-primary-6"
-        >
-          {items.map((i, v) => (
-            <TabsTrigger
-              key={v}
-              value={`tab-${v}`}
-              variant="primary-underline"
-              selection="line"
-              className="-mb-px rounded-none border-0 bg-transparent px-4 py-2 font-normal text-primary-11 shadow-none hover:bg-transparent hover:text-primary-12 enabled:hover:no-underline after:bg-primary-9 data-[state=active]:font-semibold data-[state=active]:text-primary-12"
-            >
-              {typeof i.title === 'string' && i.title ? i.title : `Tab ${v + 1}`}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        {items.map((i, v) => (
-          <TabsContent
-            key={v}
-            value={`tab-${v}`}
-            className="mt-0 rounded-b-sm border border-t-0 border-primary-6 p-4"
-          >
-            <DocsMarkdown markdown={body(i)} options={options} />
-          </TabsContent>
-        ))}
-      </Tabs>
+    return content.length ? (
+      <DocsBlocks blocks={content as RichBlock[]} options={options} />
+    ) : (
+      <DocsMarkdown
+        markdown={typeof item.markdown === 'string' ? item.markdown : ''}
+        options={options}
+      />
     );
+  };
+  if (block._type === 'tabs') return <MarkdownTabs items={items} body={body} />;
+  return <MarkdownAccordions items={items} body={body} />;
+}
+
+/**
+ * Renders mutually exclusive routes that reach the same outcome.
+ *
+ * @param items Ordered alternatives with reader-facing tab titles.
+ * @param body Renders the parsed Markdown body for one alternative.
+ *
+ * @returns A tab list with one complete route visible at a time.
+ *
+ * @docsId tabs
+ * @docsUseWhen Present alternatives that reach the same outcome and require one reader choice.
+ * @docsConstraint Tabs are for mutually exclusive alternatives that reach the same outcome.
+ * @docsConstraint Keep facts shared by all alternatives before the tabs.
+ * @docsConstraint Each alternative must be titled and complete; number actions in reading order.
+ * @docsConstraint Local and Hosted procedures, platform-specific commands, and other either/or paths must use titled tabs.
+ * @docsDo Use tabs for alternatives the reader must choose between.
+ * @docsDo Keep each tab directive adjacent to the other alternatives.
+ * @docsDont Do not put alternatives in side-by-side table columns.
+ * @docsDont Do not use tabs for information readers need all at once or for consecutive steps.
+ * @docsTip When one option’s information does not apply to another, tabs make the choice explicit.
+ * @docsDo Keep shared facts before the alternatives; each tab body should be a complete route with its own numbered steps.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/editor-toolbar.png | Docs editor toolbar; it has no Tabs insertion button
+ * @docsInsertionStep Tabs have no toolbar insertion button. Add adjacent titled `|||[Title]` directives in Markdown source.
+ * @docsInsertionStep Keep shared facts before the alternatives and give each tab a complete route.
+ * @docsInsertionStep Switch through every tab in View mode.
+ * @docsSyntax
+ * ```mdx
+ * Choose the workflow that matches your project:
+ *
+ * |||[Local]
+ *
+ * 1. Edit the Markdown file.
+ * 2. Rebuild the site.
+ *
+ * |||
+ *
+ * |||[Hosted]
+ *
+ * 1. Save through the host adapter.
+ * 2. Confirm the reader route.
+ *
+ * |||
+ * ```
+ * @docsRenderedExample
+ * Choose the workflow that matches your project:
+ *
+ * |||[Local]
+ *
+ * 1. Edit the Markdown file.
+ * 2. Rebuild the site.
+ *
+ * |||
+ *
+ * |||[Hosted]
+ *
+ * 1. Save through the host adapter.
+ * 2. Confirm the reader route.
+ *
+ * |||
+ */
+export function MarkdownTabs({
+  items,
+  body,
+}: {
+  items: Record<string, unknown>[];
+  body: (item: Record<string, unknown>) => JSX.Element;
+}): JSX.Element {
+  return (
+    <Tabs defaultValue="tab-0">
+      <TabsList
+        variant="line"
+        className="mb-0 w-full justify-start gap-0 border-b border-primary-6"
+      >
+        {items.map((item, index) => (
+          <TabsTrigger
+            key={index}
+            value={`tab-${index}`}
+            variant="primary-underline"
+            selection="line"
+            className="-mb-px rounded-none border-0 bg-transparent px-4 py-2 font-normal text-primary-11 shadow-none hover:bg-transparent hover:text-primary-12 enabled:hover:no-underline after:bg-primary-9 data-[state=active]:font-semibold data-[state=active]:text-primary-12"
+          >
+            {typeof item.title === 'string' && item.title ? item.title : `Tab ${index + 1}`}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {items.map((item, index) => (
+        <TabsContent
+          key={index}
+          value={`tab-${index}`}
+          className="docs-block-stack mt-0 rounded-b-sm border border-t-0 border-primary-6 p-4"
+        >
+          {body(item)}
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
+/**
+ * Renders independent cases that readers may inspect in any order.
+ *
+ * @param items Independent entries with reader-facing accordion headings.
+ * @param body Renders the parsed Markdown body for one entry.
+ *
+ * @returns A group of expandable items, one per independent case.
+ *
+ * @docsId accordions
+ * @docsUseWhen Let readers inspect parallel details without forcing every detail into the main reading path.
+ * @docsConstraint Accordion items are independent cases, examples, questions, or optional explanations in one category.
+ * @docsConstraint Shared context, required actions, decisions, and serious warnings remain visible outside collapsed content.
+ * @docsConstraint A stack of callouts serving one purpose should become titled accordion items.
+ * @docsDo Give each item a title naming its case and its own supporting detail.
+ * @docsDo Put an example aside inside the item it illustrates, retaining its boundary.
+ * @docsDo Put each delimiter on its own line with blank lines around the body.
+ * @docsDont Do not combine unrelated details in one item or split one ordered procedure across items.
+ * @docsDont Do not hide a required action or warning in a closed panel.
+ * @docsDont An aside does not replace an accordion when several parallel items need titles.
+ * @docsTip A run of same-purpose callouts is a cue to group them; test each panel in View mode.
+ * @docsDo An example aside may live inside the accordion item for its case; retain the aside boundary.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/editor-toolbar.png | Docs editor toolbar; it has no Accordion insertion button
+ * @docsInsertionStep Accordions have no toolbar insertion button. Add adjacent titled `===[Title]` directives in Markdown source.
+ * @docsInsertionStep Give each independent item its own supporting detail; keep required actions outside.
+ * @docsInsertionStep Open every panel in View mode and check nested examples.
+ * @docsSyntax
+ * ```mdx
+ * Optional cases can be inspected independently:
+ *
+ * ===[Local]
+ *
+ * Edit the Markdown file and rebuild the site.
+ *
+ * ===
+ *
+ * ===[Hosted]
+ *
+ * Save through the host adapter and confirm the reader route.
+ *
+ * ===
+ * ```
+ * @docsRenderedExample
+ * Optional cases can be inspected independently:
+ *
+ * ===[Local]
+ *
+ * Edit the Markdown file and rebuild the site.
+ *
+ * ===
+ *
+ * ===[Hosted]
+ *
+ * Save through the host adapter and confirm the reader route.
+ *
+ * ===
+ */
+export function MarkdownAccordions({
+  items,
+  body,
+}: {
+  items: Record<string, unknown>[];
+  body: (item: Record<string, unknown>) => JSX.Element;
+}): JSX.Element {
   return (
     <Accordion type="multiple" variant="sm">
-      {items.map((i, v) => (
-        <AccordionItem key={v} value={`accordion-${v}`} className="py-2 [&>*]:!my-0">
+      {items.map((item, index) => (
+        <AccordionItem key={index} value={`accordion-${index}`} className="docs-accordion-item">
           <AccordionTrigger>
-            {typeof i.title === 'string' && i.title ? i.title : `Item ${v + 1}`}
+            {typeof item.title === 'string' && item.title ? item.title : `Item ${index + 1}`}
           </AccordionTrigger>
-          <AccordionContent>
-            <DocsMarkdown markdown={body(i)} options={options} />
-          </AccordionContent>
+          <AccordionContent className="docs-block-stack">{body(item)}</AccordionContent>
         </AccordionItem>
       ))}
     </Accordion>

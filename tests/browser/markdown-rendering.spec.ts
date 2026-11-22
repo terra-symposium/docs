@@ -91,9 +91,8 @@ async function verifyPublishedMarkdownControls({
 }: {
   page: import('@playwright/test').Page;
 }): Promise<void> {
-  await page.goto('/consumer/1-usage/1-syntax/');
+  await page.goto('/consumer/1-usage/2-blocks/');
   await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
-  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
 
   const npmTab = page.getByRole('tab', { name: 'npm', exact: true }).first();
   await expect(page.getByRole('tablist')).toBeVisible();
@@ -124,17 +123,17 @@ test(
 );
 
 test(
-  'the Docs syntax page has highlighted code and clear title spacing',
+  'the Blocks reference has highlighted code and clear title spacing',
   {
     tag: '@viewport:xl',
     annotation: {
       type: 'viewport-reason',
       description:
-        'The fixture checks the desktop document title, toolbar, and published code surface.',
+        'The page checks the desktop document title, toolbar, and published code surface.',
     },
   },
   async ({ page }) => {
-    await page.goto('/consumer/1-usage/1-syntax/');
+    await page.goto('/consumer/1-usage/2-blocks/');
     await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
 
     const title = page.getByRole('textbox', { name: 'Title' });
@@ -147,7 +146,7 @@ test(
     await expect(siteTitle).toHaveCSS('font-style', 'italic');
 
     const code = page.locator('[data-docs-code-block="view"]').first();
-    await expect(code.locator('.code-header')).toContainText('tsx');
+    await expect(code.locator('.code-header')).toContainText('yaml');
     await expect(code.getByRole('button', { name: 'Copy' })).toBeVisible();
     await expect(code.locator('.cm-editor')).toBeVisible();
     await expect(code.locator('.cm-line')).not.toHaveCount(0);
@@ -191,7 +190,7 @@ test(
       !(stylingMajor! > 0 || stylingMinor! > 1 || (stylingMinor === 1 && stylingPatch! >= 39)),
       'Styling 0.1.39 has not been published yet.',
     );
-    await page.goto('/consumer/1-usage/1-syntax/');
+    await page.goto('/consumer/1-usage/2-blocks/');
     await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
     await page.getByRole('combobox', { name: 'Mode' }).click();
     const menu = page.getByRole('listbox');

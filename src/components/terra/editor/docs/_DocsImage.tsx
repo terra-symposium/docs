@@ -84,6 +84,34 @@ function Img({ block }: { block: DocsImgBlock }): JSX.Element {
  * @param readOnly Whether the workspace displays or edits this block.
  *
  * @return The image renderer in editable or read-only mode.
+ *
+ * @docsId images
+ * @docsUseWhen A visual explains a detail that prose or a diagram cannot show as clearly.
+ * @docsConstraint Use an image only when it shows a detail or spatial relationship the surrounding text needs.
+ * @docsConstraint Meaningful images require specific alt text; image paths in repository Markdown are relative to the leaf.
+ * @docsConstraint Keep downloadable attachments in the leaf’s attachment view.
+ * @docsDo Name the visible detail in alt text and explain what the reader should notice nearby.
+ * @docsDo Use a standalone image after its explanation; small meaningful status images may sit inline.
+ * @docsDont Do not use empty alt text for a meaningful image.
+ * @docsDont Do not embed a full screenshot mid-sentence or use an image that merely repeats nearby prose.
+ * @docsDont Use text or code when the reader needs exact wording or copyable source.
+ * @docsTip In a host editor, choose Add attachment, select the existing image, choose Visual embed, and check its alt text.
+ * @docsDo A standalone image follows the sentence naming what to inspect; a small status image can be inline when it does not interrupt reading.
+ * @docsDo Empty alt text is reserved for decorative images, never meaningful screenshots.
+ * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-attachment.png | Docs Insert content menu with Add attachment highlighted
+ * @docsInsertionStep In Edit mode, choose + Insert content → Add attachment and select an existing image.
+ * @docsInsertionStep Choose Visual embed, then write specific alt text for meaningful content.
+ * @docsInsertionStep Preview the image beside its explanation and confirm the asset loads.
+ * @docsSyntax
+ * ```mdx
+ * This screenshot shows how headings and code appear in Docs:
+ *
+ * ![Docs page showing headings and a code example](/_docs/assets/consumer/1-usage/2-blocks/docs-authoring-ui.png "Rendered Docs page")
+ * ```
+ * @docsRenderedExample
+ * This screenshot shows how headings and code appear in Docs:
+ *
+ * ![Docs page showing headings and a code example](/_docs/assets/consumer/1-usage/2-blocks/docs-authoring-ui.png "Rendered Docs page")
  */
 export function renderImage({
   attributes: attrs,

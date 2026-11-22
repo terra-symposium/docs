@@ -36,7 +36,7 @@ Use Markdown files to publish a website. No application code is needed.
 3. Add the `docs` settings and preview/build scripts to `package.json` in step 3.
 4. Edit pages in a text editor, or select **Edit** on the site and press **Save** to download an updated Markdown file. Replace the original file with the download, then commit and deploy it. The browser cannot write directly to the source repository.
 
-Use [Tree](/consumer/1-usage/0-tree/) for page order and navigation, and [Syntax](/consumer/1-usage/1-syntax/) for rich blocks.
+Use [Tree](/consumer/1-usage/0-tree/) for page order and navigation, and [Blocks](/consumer/1-usage/2-blocks/) for rich content.
 
 |||
 
@@ -130,13 +130,13 @@ Install the tools your project needs before continuing.
 
 Folders create navigation trees and branches. Number prefixes set their order and remain in the URL; [Tree](/consumer/1-usage/0-tree/) explains labels, ordering, and hidden leaves. Keep assets in their owning tree, branch, or leaf folder and use relative paths. In a hosted workspace, the application supplies equivalent leaf metadata and navigation through its adapter.
 
-Use the [Authoring guide](/consumer/1-usage/0-authoring/) to plan each page and the [Syntax index](/consumer/1-usage/1-syntax/) to see the available blocks.
+Use the [Authoring guide](/consumer/1-usage/0-authoring/) to plan each page and the [Blocks reference](/consumer/1-usage/2-blocks/) to choose supported content forms.
 
 ===[Optional blocks and navigation]
 
 | Feature                                                   | How to use it                                                                                                                                       |
 | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Built-in tables, images, asides, tabs, math, and diagrams | Write the form shown in the [Syntax index](/consumer/1-usage/1-syntax/). They need no separate installation.                                        |
+| Built-in tables, images, asides, tabs, math, and diagrams | Write the form shown in the [Blocks reference](/consumer/1-usage/2-blocks/). They need no separate installation.                                    |
 | Custom blocks                                             | A developer registers a renderer through the hosted workspace's `customBlocks` prop. A `package.json` setting cannot register a React component.    |
 | Quiz and TypeScript reference                             | The application must supply the quiz generator or reference data. Adding `<Quiz />` or `<TsDocs />` alone does not provide them.                    |
 | Manual sidebar in an embedded site                        | A developer passes ordered `trees` to `DocsSiteLayout`. A local site uses the folders and filenames described in [Tree](/consumer/1-usage/0-tree/). |
@@ -160,6 +160,61 @@ pnpm run docs
 ```
 
 For a hosted workspace, start your application's development server and open its Docs route. In either case, check the rendered headings, code, images, links, navigation, and narrow-screen layout. Follow [Validation](/consumer/1-usage/4-validation/) before publishing.
+
+|||[Preview]
+
+Start with a project configured by [Get started](/consumer/0-configuration/0-install/). Run the preview from the directory containing `package.json`:
+
+```sh
+pnpm run docs
+```
+
+Open the address printed by the command. Edit a file under `docs/`, then check its page, navigation, search result, links, images, and narrow-screen layout. The preview is for local review; it does not publish changes.
+
+|||
+
+|||[Build]
+
+When the pages are ready, stop the preview and run:
+
+```sh
+pnpm run build
+```
+
+The `docs.out` setting in `package.json` names the output folder. With `"out": "dist/docs"`, publish **the contents of `dist/docs/`** to your static host. Set `docs.site` to the public origin and `docs.base` to the path beneath it. For a site at `https://docs.example.com/handbook/`, use:
+
+```json
+{
+  "docs": {
+    "site": "https://docs.example.com",
+    "base": "/handbook/",
+    "out": "dist/docs"
+  }
+}
+```
+
+Keep the other `docs` settings from [Get started](/consumer/0-configuration/0-install/), including the required error report receiver. A successful build creates files locally; deploy them using your host's normal release process.
+
+|||
+
+|||[Check]
+
+Use the public URL after deployment, since a local preview cannot prove that the host serves the correct base path or assets.
+
+1. Open the home page and one nested page directly from their URLs.
+2. Follow a sidebar link and a link inside a page; check that images and attachments load.
+3. Search for a visible page. Check that a page marked `sidebar.hidden: true` stays out of navigation and search.
+4. Open a missing route and confirm the site's 404 page appears.
+
+:::caution[Private pages need host access control]
+
+`sidebar.hidden` removes a page from navigation and search but leaves its URL available. Restrict private content at the web host.
+
+:::
+
+For page order and visibility, see [Tree](/consumer/1-usage/0-tree/). For a fuller review of a page's content, use [Validation](/consumer/1-usage/4-validation/).
+
+|||
 
 ## 6. Publish
 

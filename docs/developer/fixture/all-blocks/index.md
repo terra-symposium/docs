@@ -46,8 +46,11 @@ Tabs body.
 <TsDocs scope="@terra/example" />
 
 <Nodes
-nodes={[{ id: 'start', type: 'process', data: { title: 'Start' } }]}
-edges={[]}
+nodes={[
+{ id: 'start', type: 'process', data: { title: 'Start' } },
+{ id: 'finish', type: 'process', data: { title: 'Finish' } }
+]}
+edges={[{ id: 'start-to-finish', source: 'start', target: 'finish' }]}
 />
 
 <Leaf id="fixture-leaf" />

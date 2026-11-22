@@ -155,20 +155,26 @@ Assess a page against its reader's task and the relevant Docs guidance. Keep use
 
 **Review sequence**
 
-1. Read the target, [Leaf](/consumer/1-usage/1-leaf/), and [Blocks](/consumer/1-usage/2-blocks/).
+1. Read the target and the [Leaf](/consumer/1-usage/1-leaf/) and [Blocks](/consumer/1-usage/2-blocks/) guidance.
    - Identify the reader goal and rules for each used block.
-2. Map the heading hierarchy and each substantive block.
+2. Test whether the leaf earns its place for that reader.
+   - Name what the reader can understand, decide, or do after reading it.
+   - Separate mechanisms, choices, limits, examples from familiar advice.
+   - Flag leaves that add no knowledge beyond common sense or repeat peers.
+   - Recommend evidence, a merge, or removal when a leaf adds no value.
+   - Polish, orderly headings, and a passing build do not prove value.
+3. Map the heading hierarchy and each substantive block.
    - Check title ≤48 chars; description ≤85.
    - Nest H3s under H2; flag a flat row of small H2s.
    - Rewrite headings over six words or 48 chars.
    - Challenge inherited tree, leaf, and source groupings.
    - Check whether chronology hides conceptual dependencies.
    - Match blocks to relationships; compare peer pages for density.
-3. Read the whole rendered page at desktop and narrow widths.
+4. Read the whole rendered page at desktop and narrow widths.
    - Open tabs and accordions; inspect links, overflow, and diagrams.
-4. Request an independent review without sharing findings or scores.
+5. Request an independent review without sharing findings or scores.
    - Reconcile its evidence with your own observations.
-5. Report each problem's reader impact, evidence, and repair.
+6. Report each problem's reader impact, evidence, and repair.
    - Disclose uninspected states; never call an incomplete review clean.
 
 If unavailable, label this a single review. Use one or two scope sentences, one strengths paragraph, and **one negative-findings table**. Add one row per supported issue. Compare source and rendering; apply [Validation](#validation). Heading defects count even when the build passes.
@@ -683,7 +689,7 @@ Inspect every task response or Docs page through all seven dimensions below. The
 | ------------ | ------------------------------------------------------------------ |
 | 📚 Sources   | Are distinct points, links, examples, and conflicts accounted for? |
 | 🧭 Hierarchy | Do tree, leaves, and headings follow reader tasks?                 |
-| 📝 Content   | Are claims accurate, clear, and usable for the intended reader?    |
+| 📝 Content   | Are its claims accurate and useful beyond common sense?            |
 | 🧩 Syntax    | Do blocks and authored markup follow their rules?                  |
 | ♿ Render    | Does the whole page work at desktop and narrow widths?             |
 | 🚀 Publish   | Do saved and public states preserve meaning and access?            |

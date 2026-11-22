@@ -314,6 +314,7 @@ export default defineConfig({
     ['/consumer/1-usage/2-tree-handling', '/consumer/1-usage/0-tree'],
     ['/consumer/1-usage/1-authoring', '/consumer/1-usage/1-leaf'],
     ['/consumer/1-usage/0-authoring', '/consumer/1-usage/1-leaf'],
+    ['/consumer/1-usage/3-posterity', '/consumer/1-usage/1-leaf'],
     ['/consumer/1-usage/0-syntax', '/consumer/1-usage/2-blocks'],
     ['/consumer/1-usage/1-syntax', '/consumer/1-usage/2-blocks'],
     ...readdirSync(resolve(packageRoot, 'docs/consumer/1-usage/2-blocks'))

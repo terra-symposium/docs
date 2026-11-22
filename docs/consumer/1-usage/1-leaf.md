@@ -138,6 +138,8 @@ This reports edits into the host's state; it does not persist them. Check prop n
 
 Choose what the request asks you to do with the material. These transformations have different preservation boundaries. If a document arrives without a task, use **Convert**.
 
+When assigning an AI task, provide the source material, intended reader, desired outcome, transformation, and preservation boundary. Keep source data separate from instructions. Check what the agent actually retrieved before relying on its draft, and record uncertain or conflicting claims instead of inventing a resolution. Polish changes wording and hierarchy, not facts; Compare identifies both shared and missing information.
+
 :::example[Name the transformation]
 
 Avoid an instruction that silently changes the source's scope:
@@ -266,6 +268,29 @@ Verification: compare the sentence with the component contract.
 ```
 
 :::
+
+## Preserve context
+
+Keep the reason a page exists and the constraints behind its advice. Code shows how a system works; a durable explanation records the business need, architectural decision, trade-off, and outcome that code alone cannot show. A performance refactor that leaves behaviour intact should rarely require rewriting that explanation.
+
+Keep the context a future author needs in the authoring brief: the reader's prior knowledge, exclusions, unresolved questions, source claims, and reasons for the final wording. Put context in published prose when readers need it. Use a `context` field only when the host supports one; do not invent fields for repository-backed pages. Add new information to the earlier study concept it extends instead of repeating it in the newest leaf.
+
+For example, a pricing brief can say that the reader has seen the features page, is comparing a competitor, and needs an explanation of return on investment rather than technical specifications. This guides the draft without unsupported frontmatter.
+
+### AI comments
+
+Use a short, single-line `{/* comment */}` beside content only when an agent may otherwise miss important intent or ambiguity. Do not restate visible prose, expose private source data, or fill the page with agent instructions.
+
+### Provenance
+
+Keep a source manifest, coverage audit, and revision trail outside the published leaf. Retain useful source links in the page when readers need to follow them.
+
+| Source of the page                   | Revision trail                             |
+| ------------------------------------ | ------------------------------------------ |
+| 📄 Repository-backed Markdown or MDX | Git history                                |
+| ☁️ Hosted document                   | The host's revision system, when available |
+
+A future author should be able to trace a claim to its source and understand why the final wording was chosen. [Validation](/consumer/1-usage/4-validation/) specifies the checks and records required before publication.
 
 ## Voice
 

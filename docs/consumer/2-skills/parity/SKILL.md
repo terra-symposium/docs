@@ -1,6 +1,10 @@
 ---
 name: docs-content-render-parity
 description: Diagnose and fix mismatches between local Markdown or remote Docs records and what a Docs instance displays. Use for content conversion, host adapters, rich blocks, TOCs, attachments, or shared Docs rendering regressions.
+skill: true
+metadata:
+  related-files:
+    - src/lib/markdown-model.ts
 ---
 
 # Docs content and rendering parity

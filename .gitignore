@@ -3,6 +3,7 @@ node_modules/
 
 # Build and generated output
 dist/
+/.agents/skills/
 dist/.docs/
 lib-dist/
 site-dist/

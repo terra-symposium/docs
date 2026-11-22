@@ -1,0 +1,32 @@
+{
+  "name": "@terra-symposium/skills",
+  "version": "0.1.2",
+  "description": "Compile Docs-authored agent skills for repository and plugin discovery.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24.12.0"
+  },
+  "files": [
+    "bin",
+    "src",
+    "dist/docs"
+  ],
+  "bin": {
+    "terra-skills": "bin/terra-skills.mjs"
+  },
+  "exports": {
+    ".": "./src/index.mjs",
+    "./authoring.md": "./dist/docs/authoring.md"
+  },
+  "scripts": {
+    "build": "node scripts/copy-docs.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "yaml": "^2.7.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

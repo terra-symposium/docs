@@ -1,6 +1,10 @@
 ---
 name: custom-components
 description: Add reusable React/TSX examples to Docs Markdown pages while keeping the shared Docs layout, generated navigation, and existing Styling UI.
+skill: true
+metadata:
+  related-files:
+    - src/components/SiteLayout.astro
 ---
 
 # Custom components in Docs

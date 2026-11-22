@@ -85,7 +85,9 @@
     "build:dev": "tsc --noEmitOnError -p config/tsconfig.json && tailwindcss --postcss config/tailwind.postcss.config.mjs -c config/tailwind.docs.config.mjs -i src/styles/style.css -o dist/lib/style.css --minify && tailwindcss --postcss config/tailwind.postcss.config.mjs -c config/tailwind.docs.config.mjs -i src/styles/workspace.css -o dist/lib/workspace.css --minify && node scripts/copy-runtime.mjs",
     "test:browser": "pnpm run build && pnpm exec astro build --config config/astro.config.mjs && node bin/docs.mjs build && playwright test --config config/playwright.config.ts && playwright test --config config/playwright.published.config.ts",
     "check": "prettier --config config/.prettierrc.json --ignore-path config/.prettierignore --check . && eslint --config config/eslint.config.js . && tsc --noEmit -p config/tsconfig.json",
-    "test:unit": "pnpm run build && node --test tests/*.test.mjs",
+    "test:unit": "pnpm run build && node --test tests/*.test.mjs && pnpm --filter @terra-symposium/skills test",
+    "skills:prepare": "terra-skills prepare",
+    "skills:check": "terra-skills check",
     "test": "pnpm run test:unit && pnpm run test:browser",
     "prepare": "husky config/husky"
   },
@@ -108,7 +110,8 @@
     "tailwindcss": "^3.4.3",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.2",
-    "vite": "8.3.4"
+    "vite": "8.3.4",
+    "@terra-symposium/skills": "workspace:0.1.2"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "7.3.5",

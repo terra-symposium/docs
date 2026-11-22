@@ -1,58 +1,46 @@
 ---
 title: Styling in Docs
-description: How the Styling package, Docs components, and prose styles form one workspace.
+description: Find which repository owns a Docs visual or interaction issue.
 ---
 
-## Purpose and ownership
+## Find the owner
 
-Docs uses `@terra-symposium/styling` for reusable controls and a hue-based visual system. The aim is a consistent interface across Terra sites while keeping document content readable and editable. Styling owns the shared component API, variants, fonts, global control styles, and palette helpers. Docs owns the document model, Markdown rendering, editor behavior, navigation, and prose rules specific to a reading surface.
+When a Docs page looks wrong, trace the symptom to the layer that controls it before changing CSS or a component. The boundary can cross repositories: Docs interprets document meaning, Styling supplies shared controls and palette tools, and the host chooses the page data and hue.
 
-| 🧩 Concern                  | 📚 Source of truth                                             | 🧭 Examples in Docs                             |
-| --------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
-| 🎛️ Controls and interaction | Styling `src/components/ui/` and `@terra-symposium/styling/ui` | Buttons, tabs, accordions, dialogs, checkboxes  |
-| 🎨 Palette and fonts        | Styling hue helpers and `global.css`                           | Sidebar accent, control colors, type families   |
-| 📄 Document structure       | Docs Markdown model and renderers                              | Headings, lists, tables, asides, code, diagrams |
-| 📝 Reading rhythm           | Docs `src/styles/prose.css`                                    | Block gaps, headings, callouts, code, lists     |
-| 🧭 Workspace layout         | Docs site and workspace components                             | Navigation, toolbar, content column             |
+| 🧭 Symptom                                                                   | 🛠️ Likely owner                                                                                                                                                      |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🎛️ A shared button, tab, accordion, or checkbox looks or behaves incorrectly | Styling component, variant, or usage note. Start at its [component reference](https://github.com/Terra-Symposium/styling/tree/development/docs/styling/1-colouring). |
+| 🧩 A Markdown construct is parsed or converted incorrectly                   | Docs Markdown model and renderer. Compare source, View output, and Edit round trip.                                                                                  |
+| 🎨 The page has the wrong accent colour                                      | Trace host hue → Docs theme mapping → Styling palette output. Change the first incorrect value in that chain.                                                        |
+| 📝 Article headings, lists, or callouts have the wrong spacing               | Docs `src/styles/prose.css`. Compare the affected block in View and Edit.                                                                                            |
+| 🧭 Sidebar, toolbar, or page layout is misplaced                             | Docs workspace or site layout. Inspect the affected route.                                                                                                           |
 
-The [Styling component catalog](https://github.com/Terra-Symposium/styling/tree/development/docs/styling/1-colouring) documents the upstream controls. Its [component pipeline guide](https://github.com/Terra-Symposium/styling/blob/development/docs/styling/0-repository-guide/3-component-pipeline.md) explains how TypeScript metadata, authored guidance, demos, and routes become that catalog.
+For shared controls, Styling owns the public component API and its supported variants. For authored documents, Docs owns the meaning and conversion of Markdown. A rendered element can involve both: fix the layer whose behavior is wrong.
 
-## From Styling to a Docs page
+:::example[Trace a checklist]
 
-1. Styling builds its public UI entry point and `global.css`. The Docs package imports that compiled stylesheet in `src/styles/style.css` and imports shared controls from `@terra-symposium/styling/ui`.
-2. Docs adds `docs-theme.css` and `prose.css`, then builds its public `style.css`. Hosts import `@terra-symposium/docs/style.css` once for the complete page. The source also builds an internal `workspace.css` for integrations that already load Styling's UI bundle; it is not a separate public package export.
-3. The site reads Markdown or MDX from `docs/`, builds the navigation tree and search index, then renders each page through the shared workspace. The same prose rules cover View and Edit content; the host supplies routes, data, and permissions.
-4. A visual change is checked in both a static page and the editable workspace, at narrow and wide widths. A component change is also checked against the Styling catalog and its public export.
-
-:::example[Checklist rendering]
-
-A Markdown task item such as `- [x] Confirm the title` is parsed by Docs. `MarkdownContent` renders its state with Styling's `Checkbox`, disabled for read-only content. Styling supplies the control; Docs decides that the source is a checklist and preserves the text during conversion.
+Docs parses `- [x] Confirm the title` as a checked task item. It keeps the task text and state during conversion, then renders Styling's shared `Checkbox` in read-only mode. If the source becomes the wrong block, inspect Docs parsing; if the checkbox control itself is wrong, inspect Styling.
 
 :::
 
-## Prose and hierarchy
+## Follow the page path
 
-The document should lead with the reader's purpose, then use H2 sections, short introductions, and blocks that show a real relationship. The [Authoring guide](/consumer/1-usage/0-authoring/) covers the writing decisions; the [Blocks reference](/consumer/1-usage/2-blocks/) gives supported source forms. Styling's component prose has a different job: its source JSDoc describes the public API, authored notes explain appropriate use and accessibility, and live examples show behavior. These sources should agree, but they are maintained in their owning repository.
+Styling builds the shared controls, fonts, and global styles. Docs imports those controls and styles, then adds its theme mapping, article rhythm, Markdown rendering, and workspace. The Docs site or an embedding host supplies the route, content, permissions, and optional hue. An embedding host imports the complete Docs stylesheet once:
 
-Docs uses a 12px base gap between adjacent content blocks in View and Edit. Heading spacing overrides that base gap as shown below. Callout content uses a 12px gap, with no bottom margin on its last block. Lists, tables, and controls keep the spacing needed within their own structure.
+```tsx
+import '@terra-symposium/docs/style.css';
+```
 
-| 🧱 Heading | 📏 Top space after another block |
-| ---------- | -------------------------------: |
-| 🧭 `h2`    |                             80px |
-| 🪜 `h3`    |                             48px |
-| ↳ `h4`     |                             40px |
-| ↳ `h5`     |                             32px |
-| ⋯ `h6`     |                             24px |
+The [host integration guide](/developer/component/host-integration/) explains host-owned data and theme inputs. The [site pipeline](/developer/repo/site-pipeline/) traces a repository page through catalog, rendering, and static output.
 
-The first block in a content container has no top margin. A heading after an opening paragraph still uses the spacing shown above. Docs keeps these rules in `src/styles/prose.css`; do not add one-off margins to authored pages to compensate for a renderer problem.
+## Verify the change
 
-## Change the right layer
+| Change                                | Required check                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🎛️ Styling control or variant         | In the Styling repository, run `pnpm run build`, `pnpm run docs:check`, and relevant component tests. Inspect the catalog and detail route; exercise keyboard use, responsive layout, colour variants, dark mode, and copyable examples. Read the [component pipeline guide](https://github.com/Terra-Symposium/styling/blob/development/docs/styling/0-repository-guide/3-component-pipeline.md). |
+| 🧩 Docs parsing or conversion         | Run the relevant unit and browser checks. Compare Markdown source with View output and the Edit round trip.                                                                                                                                                                                                                                                                                        |
+| 📝 Docs article styles or site layout | Run `pnpm run docs`, open the changed route, and inspect the actual page at wide and narrow widths.                                                                                                                                                                                                                                                                                                |
 
-| 🧩 Problem                                             | 🛠️ Change and verify...                                                     |
-| ------------------------------------------------------ | --------------------------------------------------------------------------- |
-| 🎛️ A shared control's variant, state, or accessibility | Styling component and its demo; run its build and `docs:check`.             |
-| 📄 A Docs block's parsing or round trip                | Docs Markdown model and renderer; run unit tests and inspect View and Edit. |
-| 📝 Spacing or typography inside an article             | Docs prose stylesheet; inspect Markdown, MDX, callouts, and narrow layouts. |
-| 🧭 Site navigation or page routes                      | Docs catalog and layout; build the site and open the affected route.        |
+Use [Quality and tests](/developer/repo/quality-and-tests/) for the exact Docs commands and what each one proves. A successful build confirms compilation; it does not confirm the page looks or behaves correctly.
 
-See [Develop Docs](/developer/repo/development/) for this repository's checks and [Quality and tests](/developer/repo/quality-and-tests/) for the exact commands.
+For heading hierarchy and block choice, use the [Authoring guide](/consumer/1-usage/0-authoring/) and [Blocks reference](/consumer/1-usage/2-blocks/). For component props and host contracts, use the [component reference](/developer/component/blocks/).

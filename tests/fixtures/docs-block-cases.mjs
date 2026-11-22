@@ -3,6 +3,11 @@
  * Data-driven Markdown examples for Docs block parsing and serialization tests.
  */
 
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
+
+// prettier-ignore
 export const DOCS_BLOCK_TEST_CASES = [
   { name: 'heading', source: '## Heading', types: ['block'] },
   { name: 'paragraph', source: 'Paragraph with **bold** text.', types: ['block'] },
@@ -14,17 +19,8 @@ export const DOCS_BLOCK_TEST_CASES = [
   { name: 'callout', source: ':::tip[Note]\n\nCallout body.\n\n:::', types: ['callout'] },
   { name: 'accordion', source: '===[Item]\n\nAccordion body.\n\n===', types: ['accordion'] },
   { name: 'tabs', source: '|||[Item]\n\nTabs body.\n\n|||', types: ['tabs'] },
-  {
-    name: 'embed',
-    source: '<Embed src="https://example.com" title="Example" />',
-    types: ['embed'],
-  },
+  { name: 'embed', source: '<Embed src="https://example.com" title="Example" />', types: ['embed'], },
   { name: 'tsdocs', source: '<TsDocs scope="@terra/example" />', types: ['tsDocs'] },
-  {
-    name: 'nodes',
-    source:
-      '<Nodes nodes={`[{ "id": "start", "type": "process", "data": { "title": "Start" } }]} edges={`[]`} />',
-    types: ['block'],
-  },
+  { name: 'nodes', source: '<Nodes nodes={`[{ "id": "start", "type": "process", "data": { "title": "Start" } }]} edges={`[]`} />', types: ['block'], },
   { name: 'custom component', source: '<Leaf id="fixture-leaf" />', types: ['raw'] },
 ];

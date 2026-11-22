@@ -8,7 +8,7 @@ description: Use math notation when a formula conveys a relationship more clearl
 Choose inline math for an expression in a sentence and block math when a formula needs its own line.
 
 <table>
-<thead><tr><th>Code</th><th>UI</th></tr></thead>
+<thead><tr><th>💻 Code</th><th>🖥️ UI</th></tr></thead>
 <tbody><tr>
 <td><pre data-language="md">Energy is &#36;E = mc^2&#36;.&#10;&#10;&#36;&#36;&#10;\frac{a^2}{b_n}&#10;&#36;&#36;</pre></td>
 <td>
@@ -23,10 +23,13 @@ Choose inline math for an expression in a sentence and block math when a formula
 
 ## Dos and don'ts
 
-- ✅ Do use KaTeX syntax for vectors, fractions, indices, integrals, and matrices.
+- ✅ Do use KaTeX syntax for mathematical forms.
+  - Cover vectors, fractions, indices, integrals, and matrices.
 - ✅ Do use ordinary text when the relationship is clear without notation.
-- ❌ Don't squeeze a multi-part formula into a sentence when it needs a display block.
-- ❌ Don't escape a dollar sign unless it should remain literal currency or text.
+- ❌ Don't squeeze a multi-part formula into a sentence.
+  - Give it a display block when needed.
+- ❌ Don't escape a dollar sign unnecessarily.
+  - Escape it only for literal currency or text.
 
 ## Preview
 
@@ -60,7 +63,7 @@ The full matrix is $\begin{bmatrix}a & b \\ c & d\end{bmatrix}$ inside a crowded
 
 Choose the form that fits the reader’s task.
 
-| Variant                                                     | Good example                                                                | Bad example                              |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------- |
-| **Inline math** — Keep a short expression in a sentence.    | Energy is $E = mc^2$.                                                       | A display block for one short symbol.    |
-| **Block math** — Give a multi-part expression its own line. | Use a separate display block with `$$` delimiters around `\frac{a^2}{b_n}`. | A long formula squeezed into a sentence. |
+| Variant                                                        | Good example                                                                | Bad example                              |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------- |
+| ➕ **Inline math** — Keep a short expression in a sentence.    | Energy is $E = mc^2$.                                                       | A display block for one short symbol.    |
+| 🧮 **Block math** — Give a multi-part expression its own line. | Use a separate display block with `$$` delimiters around `\frac{a^2}{b_n}`. | A long formula squeezed into a sentence. |

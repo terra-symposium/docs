@@ -19,11 +19,11 @@ The generated site is a static publication of authored files. The browser can di
 
 The CLI scans Markdown and MDX files under `docs/`. Only `index.md` or `index.mdx` may sit directly at that root; other pages belong in folders. It rejects duplicate routes and a user-authored `404` route. A page hidden by frontmatter remains routable but is omitted from navigation and search. Assets beside pages are copied to `_docs/assets/`; the catalog rewrites relative image paths to those copies.
 
-The catalog sorts source paths numerically, so filename prefixes control navigation order and remain in URLs. [Tree handling](/consumer/1-usage/2-tree-handling/) documents renames, labels, and visibility.
+The catalog sorts source paths numerically, so filename prefixes control navigation order and remain in URLs. [Tree](/consumer/1-usage/0-tree/) documents renames, labels, and visibility.
 
 ## Render the workspace
 
-Astro makes the static routes. Markdown pages pass their source to the shared Docs renderer; MDX pages render compiled content inside the same `DocsSiteLayout`. The layout supplies the sidebar, title, toolbar, breadcrumb when there is a parent page, and the content area. Built-in blocks such as tabs, asides, diagrams, and code are documented in [Syntax](/consumer/1-usage/0-syntax/).
+Astro makes the static routes. Markdown pages pass their source to the shared Docs renderer; MDX pages render compiled content inside the same `DocsSiteLayout`. The layout supplies the sidebar, title, toolbar, breadcrumb when there is a parent page, and the content area. Built-in blocks such as tabs, asides, diagrams, and code are documented in [Syntax](/consumer/1-usage/1-syntax/).
 
 Docs imports Styling controls and theme tokens, then adds prose rules for reading and editing. [Styling in Docs](/developer/4-styling/) explains that ownership boundary. A blank but successful HTTP response is not enough to validate a page: inspect the body, links, images, and interactive blocks in a browser.
 

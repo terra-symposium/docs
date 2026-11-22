@@ -8,7 +8,7 @@ description: Use a quiz only when readers should test their understanding of the
 Place a quiz after the explanation it tests so readers can answer from the page.
 
 <table>
-<thead><tr><th>Code</th><th>UI</th></tr></thead>
+<thead><tr><th>💻 Code</th><th>🖥️ UI</th></tr></thead>
 <tbody><tr>
 <td><pre data-language="md">&lt;Quiz /&gt;</pre></td>
 <td>
@@ -23,7 +23,8 @@ Place a quiz after the explanation it tests so readers can answer from the page.
 ## Dos and don'ts
 
 - ✅ Do explain the concept before testing it.
-- ✅ Do state that generated questions and results stay in the current page session.
+- ✅ Do state where generated questions and results remain.
+  - They stay in the current page session.
 - ❌ Don’t replace required page content with a quiz.
 - ❌ Don’t promise saved results unless the host actually persists them.
 
@@ -53,7 +54,7 @@ Putting `<Quiz />` before any explanation cannot replace the missing lesson.
 
 Choose the form that fits the reader’s task.
 
-| Variant                                                                                          | Good example                                                                                | Bad example                                  |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| **Multiple choice** — Test recognition among alternatives after the source explains the concept. | “Who persists an edit? A. Docs B. The host C. The browser tab” has one supported answer: B. | `An ambiguous answer set.`                   |
-| **Keyword answer** — Test recall of a specific term or relationship.                             | “Which callback reports an edit?” has the keyword answer `onChange`.                        | `Require an unexplained private identifier.` |
+| Variant                                                                                             | Good example                                                                                | Bad example                                  |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 🔘 **Multiple choice** — Test recognition among alternatives after the source explains the concept. | “Who persists an edit? A. Docs B. The host C. The browser tab” has one supported answer: B. | `An ambiguous answer set.`                   |
+| 🔤 **Keyword answer** — Test recall of a specific term or relationship.                             | “Which callback reports an edit?” has the keyword answer `onChange`.                        | `Require an unexplained private identifier.` |

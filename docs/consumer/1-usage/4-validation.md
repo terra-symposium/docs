@@ -1,25 +1,9 @@
-## Validation
+---
+title: Validation
+description: Check source coverage, page content, rendering, publication, and records.
+---
 
-Verify a Docs leaf from source coverage through rendering, publication, and history using the five-stage linear process below, as merely building the site does not confirm that the Markdown is valid. Small changes may require only some of these stages, whereas large changes require all five.
-
-<Nodes
-nodes={[
-{"id":"sources","type":"origin","data":{"title":"1. Account for sources"}},
-{"id":"draft","type":"process","data":{"title":"2. Review the draft"}},
-{"id":"render","type":"process","data":{"title":"3. Inspect the rendered page"}},
-{"id":"publish","type":"process","data":{"title":"4. Check edits and publication"}},
-{"id":"record","type":"terminator","data":{"title":"5. Record the result"}}
-]}
-edges={[
-{"id":"sources-draft","source":"sources","target":"draft"},
-{"id":"draft-render","source":"draft","target":"render"},
-{"id":"render-publish","source":"render","target":"publish"},
-{"id":"publish-record","source":"publish","target":"record"}
-]}
-direction="TB"
-/>
-
-## 1. Account for sources
+## 1. Sources
 
 Check the source record and every usable attachment before writing, resolving or stating missing material and conflicts up front. Return any exact validation failure to a bounded repair attempt.
 
@@ -29,54 +13,55 @@ Agents must note that after the _fourth_ failed attempt accessing an attachment,
 
 :::
 
-## 2. Review the draft
+## 2. Content
+
+Read the page from top to bottom against its sources. Check each kind of claim against its owning evidence:
+
+| Claim                                                                           | Evidence to inspect                               |
+| ------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 🧾 Names, dates, behaviour, constraints, and examples                           | Supplied source and current product behaviour     |
+| 📦 Package names, exports, flags, schema fields, requirements, and side effects | Manifests, declarations, implementation, or tests |
+| ⏳ Commands, version requirements, API names, links, and screenshots            | Current source and reachable destinations         |
+
+Check the order of ideas as well as individual facts. Keep the prose focused on the reader's task, explain context the implementation cannot show, and use plain Australian English. Put prerequisites before commands, keep examples runnable, and keep copyable text in source or code blocks rather than screenshots. Use synthetic data instead of credentials, personal information, or production payloads. Avoid repeating another leaf's reference material.
+
+Strip leftover AI tool citation markers (`[cite]`, numbered markers such as `[cite: 1–2]` or `[cite: …]`, and `[cite_start]`) without deleting useful source links. In an editor, search for numbered markers with `\[cite:\s*\d+(?:\s*[-–]\s*\d+)?(?:\s*,\s*\d+(?:\s*[-–]\s*\d+)?)*\]`, then search separately for `\[cite_start\]` and plain `[cite]`.
+
+## 3. Syntax
+
+Before a leaf is written, read every block guide in the [Syntax reference](/consumer/1-usage/1-syntax/). During validation, check every authored instance, example, and nested block against its rules. Count at most 75 characters per list item; put longer support in sublist points. Check that each table places meaningful emojis on its independent axis: the first row, first column, or both. Run automated sanitisation on legacy Docs migrations.
 
 Author, sanitise, and verify the Markdown leaf under `docs/` before rendering. Check its frontmatter and opening H2 heading, keep images beside the page using relative source paths, and use a meaningful Docs block wherever it clarifies a substantial relationship.
-
-### Content and artifact cleanup
-
-Read the page from top to bottom against its sources to verify names, dates, props,
-defaults, behaviour, constraints, links, examples, and the order of ideas. Confirm that
-the prose stays focused on the reader's task and explains context the implementation
-cannot show in plain Australian English. Recheck expiring facts—commands, version
-requirements, API names, external links, and screenshots—and keep copyable text in
-source or code blocks rather than screenshots.
-
-Strip leftover AI tool citation markers (`[cite]`, numbered markers such as
-`[cite: 1–2]` or `[cite: …]`, and `[cite_start]`)
-without deleting useful source links. In an editor, search for numbered markers with
-`\[cite:\s*\d+(?:\s*[-–]\s*\d+)?(?:\s*,\s*\d+(?:\s*[-–]\s*\d+)?)*\]`,
-then search separately for `\[cite_start\]` and plain `[cite]`.
-
-Expand the two reference collections below to verify authored markup rules and run
-automated sanitisation on legacy Docs migrations.
-
-===[Syntax and formatting rules]
 
 Check authored markup against the [block contract](/developer/component/blocks/) and Docs
 blocks documentation before rendering:
 
 - Do not invent generic directives such as `:::docs`.
-- Place every block opener (such as `|||[TypeScript API]`, `===[Details]`, or `:::note[Note]`) on its own line
+- Put every block opener on its own line.
+  - Examples: `|||[TypeScript API]`, `===[Details]`, `:::note[Note]`.
   - Leave one blank line before its body
   - Leave one blank line before the matching closer.
-- Remove standalone `---` dividers from page content because presentation spacing belongs to the Docs styles
-  - Preserve only the opening and closing `---` frontmatter fences and examples inside code fences.
-- Escape `&lt;`, `:`, or `$` only when the parser would otherwise treat them as HTML, a YAML field boundary, or math.
+- Remove standalone `---` dividers from page content.
+  - Docs styles provide presentation spacing.
+  - Keep frontmatter fences and examples inside code fences.
+- Escape `&lt;`, `:`, or `$` only when the parser requires it.
+  - Check HTML, YAML field boundaries, and math contexts.
 - Give every fenced code block a language info string
   - Use `text` when no better language applies
-  - Keep single backticks inline so they never receive a code-block header or copy button.
+  - Keep single backticks inline.
+    - They must not gain a code-block header or copy button.
 - Use a fence longer than any backtick run inside the example
-  - E.g. such as a longer outer fence to demonstrate a fence inside a fence)
+  - Use four outer backticks to show a three-backtick fence.
   - Verify that the rendered example matches the literal source.
-- Use Markdown tables for ordinary tabular text, keeping HTML tables when classes or fragile embedded components require them.
-- Use a brief, single-line AI-facing comment only when it preserves intent a future author might miss
-  - Do not repeat visible prose or filling the page with comments.
-- Keep audience assumptions, exclusions, and unresolved questions in the authoring brief when they do not belong in the published leaf.
+- Use Markdown tables for ordinary tabular text.
+  - Keep HTML when classes or fragile components require it.
+- Use a short, single-line AI comment only for hidden intent.
+  - It should explain ambiguity a future author might miss.
+  - Do not repeat visible prose or fill the page with comments.
+- Keep private planning context in the authoring brief.
+  - Include assumptions, exclusions, and unresolved questions.
 
-===
-
-===[Legacy markup migration and sanitisation]
+### Migration
 
 If the edit migrates legacy Docs markup, follow
 [Migrate content](/developer/repo/content-migration/) before changing files in bulk, and
@@ -85,8 +70,10 @@ use the shared `docs-sanitization` skill
 `scripts/docs-sanitize/`) to audit and safely repair fenced blocks, diagram
 data, and legacy component tags:
 
-<Code language="sh">{`python3 /path/to/docs/scripts/docs-sanitize/cli.py check /path/to/consumer/docs
-python3 /path/to/docs/scripts/docs-sanitize/cli.py fix /path/to/consumer/docs`}`
+```sh
+python3 /path/to/docs/scripts/docs-sanitize/cli.py check /path/to/consumer/docs
+python3 /path/to/docs/scripts/docs-sanitize/cli.py fix /path/to/consumer/docs
+```
 
 `check` is read-only and exits nonzero for findings, whereas `fix`
 performs only deterministic transformations: splitting Docs delimiters onto their own
@@ -118,14 +105,7 @@ Complete these manual migration checks alongside automated fixes:
   the source is unavailable, leave the finding and report it rather than inventing a
   diagram).
 
-===
-
-### Pre-output check
-
-For AI-generated page content, scan the complete draft against all source, structure,
-content, syntax, and cleanup requirements above before sending it. If any check fails,
-repair the draft and scan it again; do not present the page or mark a check complete
-until the revised draft passes and can advance to rendering.
+For AI-generated page content, scan the complete draft against the source, structure, content, syntax, and cleanup requirements in this guide. Repair any failure and scan again before presenting the page or advancing to rendering.
 
 <Nodes
 nodes={[
@@ -142,89 +122,70 @@ edges={[
 {"id":"repair-scan","source":"repair","target":"scan","label":"Re-scan"},
 {"id":"decide-ready","source":"decide","target":"ready","label":"Yes"}
 ]}
-direction="LR"
-height={360}
 />
 
-## 3. Inspect the rendered page
+## 4. Render
 
-Verify what readers actually see and use, because a compiled site alone does not prove that intended content survived rendering. Preview the changed route with `pnpm run docs` to read the page and test its links, code examples, images, and interactive blocks, then run `pnpm run build` (the configured Docs build) and relevant tests, review the diff, and open the page's real route in the target renderer.
+Verify what readers actually see and use; a compiled site alone does not prove that intended content survived rendering. In a project created from the Docs template, `pnpm run docs` starts the preview and `pnpm run build` creates the static output. Other hosts may use different scripts; use their configured preview and build commands.
 
-Compare headings, prose, lists, tables, asides, code, diagrams, links, images, and attachments against the source. Inspect both a narrow layout and a second page to verify that navigation labels or descriptions do not leak between pages, and confirm that unsupported or disabled source material remains recoverable instead of disappearing or appearing as raw JSON.
+Inspect the rendered result in this order:
 
-### Conversion, navigation, and assets
+1. Open the changed route and compare it with the source.
+   - Check headings, prose, lists, tables, and asides.
+   - Check code, diagrams, links, images, and attachments.
+   - Check interactive blocks.
+2. Inspect a narrow layout and a second page.
+   - Check that labels and descriptions do not leak between pages.
+3. Confirm that unsupported source material stays recoverable.
+   - It must not vanish or appear as raw JSON.
+4. Review the build, relevant tests, and diff.
 
-When conversion logic changes, check Markdown-to-value and value-to-Markdown round trips—covering heading levels, marks, list nesting, table cells, block attributes, diagrams, links, and attachments—and run browser tests when editor behaviour changes. Moving a file or changing its number prefix alters its URL, so update incoming links and check both the old and new routes; see [Tree handling](/consumer/1-usage/2-tree-handling/) for labels, ordering, and hidden pages.
+### Round trips
+
+When conversion logic changes, check Markdown-to-value and value-to-Markdown round trips—covering heading levels, marks, list nesting, table cells, block attributes, diagrams, links, and attachments—and run browser tests when editor behaviour changes.
+
+### Routes and assets
+
+Moving a file or changing its number prefix alters its URL, so update incoming links and check both the old and new routes; see [Tree](/consumer/1-usage/0-tree/) for labels, ordering, and hidden pages.
 
 Use the table below to verify structural and asset changes in local preview and again
 after publication.
 
-<table>
-  <thead>
-    <tr>
-      <th>Change</th>
-      <th>Check in preview and after publication</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Rename a page or folder</td>
-      <td>Sidebar order, page URL, and incoming links</td>
-    </tr>
-    <tr>
-      <td>Replace an image or attachment</td>
-      <td>Relative source path, rendered image or download, and alt text</td>
-    </tr>
-    <tr>
-      <td>Hide a page</td>
-      <td>Sidebar and search visibility; access control at the web host if private</td>
-    </tr>
-    <tr>
-      <td>Change `docs.base`</td>
-      <td>Nested links and assets at the public base path</td>
-    </tr>
-  </tbody>
-</table>
+| Change                            | Check in preview and after publication                                   |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| 📄 Rename a page or folder        | Sidebar order, page URL, and incoming links                              |
+| 🖼️ Replace an image or attachment | Relative source path, rendered image or download, and alt text           |
+| 🙈 Hide a page                    | Sidebar and search visibility; access control at the web host if private |
+| 🌐 Change `docs.base`             | Nested links and assets at the public base path                          |
 
-## 4. Check edits and publication
+## 5. Publish
 
-Where the host supports editing or publication, trace the page through its save, release,
-and history workflows. Docs parses and renders content, whereas the host supplies routes,
-assets, and registered custom blocks while controlling authentication, permissions,
-persistence, publication, and asset storage—verify these boundaries against the host's
-actual behaviour and records.
+Trace the page through the host's supported save, release, and history workflows. Docs parses and renders content. The host supplies routes, assets, and registered custom blocks and controls authentication, permissions, persistence, publication, and asset storage. Verify those responsibilities against behaviour and records.
 
-### Edits, release, and version history
+| Stage             | Evidence to check                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 💾 Save           | Save and reload editable content; compare its meaning with the source.                                                                                  |
+| 🔀 Concurrency    | If revisions exist, confirm that concurrent edits cannot silently overwrite one another.                                                                |
+| 🚀 Release        | Deploy the folder configured by `docs.out` through the site's normal process. Local preview establishes local rendering only.                           |
+| 🔐 Access         | Verify authorised reads and writes and attachment ownership through the host.                                                                           |
+| 🌐 Published page | Inspect the deployed route, navigation, links, content, assets, and attachment URLs. Record the source revision when available.                         |
+| 🕰️ History        | Track repository Markdown and MDX in Git. Where the host has revisions, verify they remain readable and traceable to the source material and decisions. |
 
-For editable content, save, reload, and compare the page to verify that meaning is
-preserved; if the host exposes revisions, confirm that concurrent edits cannot silently
-overwrite one another, and confirm publication separately when supported. Deploy the
-folder configured by `docs.out` using the site's normal release process,
-noting that local preview verifies local rendering only.
-
-When publishing is supported, verify authorised reads and writes, attachment ownership,
-and published content and attachment URLs through the host's workflow, then inspect the
-deployed route—checking the same navigation, links, and assets—and record the source
-revision when available. Keep the page's evolution accessible without cluttering its
-published body by tracking repository-backed Markdown or MDX pages with Git, and where a
-remote host supports history, verify that revisions can be read and traced back to the
-source material and decisions that produced them.
-
-## 5. Record the result
+## 6. Record
 
 Leave enough evidence for another author to reproduce the outcome from source material to
 the published leaf, keeping all records outside the published leaf. The table below
 defines the four audit records required to capture the draft's hierarchy, meaning, links,
 blocks, artifact cleanup, routes, interaction states, attachment handling, and revision.
 
-| Record             | What it establishes                                                                            |
-| ------------------ | ---------------------------------------------------------------------------------------------- |
-| Source manifest    | Which sources and attachments were available, including failed collection or missing material. |
-| Coverage audit     | How each distinct source point and explicit list item was handled in the leaf.                 |
-| Generation trace   | How collected material and authoring decisions produced the final draft.                       |
-| Publication record | Which source revision, deployed route, interaction states, and attachment URLs were inspected. |
+| Record                | What it establishes                                                                            |
+| --------------------- | ---------------------------------------------------------------------------------------------- |
+| 📚 Source manifest    | Which sources and attachments were available, including failed collection or missing material. |
+| ✅ Coverage audit     | How each distinct source point and explicit list item was handled in the leaf.                 |
+| 🧭 Generation trace   | How collected material and authoring decisions produced the final draft.                       |
+| 📰 Publication record | Which source revision, deployed route, interaction states, and attachment URLs were inspected. |
 
-### Validation log and limits
+### Validation log
 
 Every AI-generated page response must end with a concise Validation Log after the page
 body, kept in the accompanying response or workflow record outside the content saved as
@@ -232,13 +193,15 @@ the published page. Report failed or unverified checks truthfully rather than ch
 them off, and state any access or rendering limit concretely rather than claiming a check
 you could not perform.
 
+The example below shows an incomplete publication check rather than marking it as passed:
+
 ```md
 ### Validation Log
 
 - [x] Sources: Required sources, explicit points, attachments, conflicts, and repair limits accounted for.
 - [x] Structure & Content: Opening H2, heading hierarchy, meaning, expiring facts, links, and Australian English verified.
 - [x] Syntax & Cleanup: Docs blocks, dividers, escaping, code fences, sanitisation, and tool artifact removal verified.
-- [x] Rendering & Routes: Local preview, build diff, layout isolation, round trips, navigation, and assets inspected.
-- [x] Edits & Publication: Host boundaries, saved edits, deployed \`docs.out\` route, permissions, and revision history checked.
-- [x] Records & Limits: Audit records stored outside the leaf and any access or rendering limits stated concretely.
+- [ ] Rendering & Routes: Local preview and layout inspection pending; build and link checks passed.
+- [ ] Edits & Publication: No deployed route or host revision was available to inspect.
+- [x] Records & Limits: Audit records stored outside the leaf; the missing publication evidence is recorded.
 ```

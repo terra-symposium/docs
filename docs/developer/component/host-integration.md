@@ -69,4 +69,4 @@ Docs renders and edits values supplied by the host. It does not authenticate use
 
 ## Add optional behavior
 
-Pass `blocks` to disable selected built-in renderers and `customBlocks` to register host-specific components. The host supplies data and access rules for quizzes and TypeScript references. A quiz generator callback belongs behind a server endpoint; keep its credentials on the server. See [Syntax](/consumer/1-usage/0-syntax/) for the authored forms and [Component reference](/developer/component/blocks/) for the block contracts.
+Pass `blocks` to disable selected built-in renderers and `customBlocks` to register host-specific components. The host supplies data and access rules for quizzes and TypeScript references. A quiz generator callback belongs behind a server endpoint; keep its credentials on the server. See [Syntax](/consumer/1-usage/1-syntax/) for the authored forms and [Component reference](/developer/component/blocks/) for the block contracts.

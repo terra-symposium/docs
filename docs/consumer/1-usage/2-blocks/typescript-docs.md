@@ -8,7 +8,7 @@ description: Use a TypeScript docs block when the host provides API reference da
 Name a host-supported scope and explain what readers should check in the generated reference.
 
 <table>
-<thead><tr><th>Code</th><th>UI</th></tr></thead>
+<thead><tr><th>💻 Code</th><th>🖥️ UI</th></tr></thead>
 <tbody><tr>
 <td><pre data-language="md">&lt;TsDocs scope="@terra-symposium/docs" /&gt;</pre></td>
 <td>
@@ -22,9 +22,11 @@ Name a host-supported scope and explain what readers should check in the generat
 
 ## Dos and don'ts
 
-- ✅ Do explain which API readers should inspect before the generated reference.
+- ✅ Do name the API readers should inspect first.
+  - Place this before the generated reference.
 - ✅ Do confirm that the scope exists at the published route.
-- ❌ Don’t use a full generated reference for one trivial call; use a short code example instead.
+- ❌ Don’t use a full reference for one trivial call.
+  - Use a short code example instead.
 
 ## Preview
 

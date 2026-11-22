@@ -7,8 +7,15 @@ description: Use tabs for genuine alternatives that reach the same outcome, such
 
 Use headings or a list when readers need all the information, or when the sections are consecutive steps rather than alternatives.
 
+When information applies to one choice but not another, always put the
+alternatives in titled tabs. This is a strict block rule. Local and Hosted
+instructions, platform-specific commands, and other either/or paths must
+not be mixed into a comparison table or repeated under parallel headings.
+Keep facts shared by every path before the tabs. Each tab must contain a
+complete, numbered procedure when its content describes a process.
+
 <table>
-<thead><tr><th>Code</th><th>UI</th></tr></thead>
+<thead><tr><th>💻 Code</th><th>🖥️ UI</th></tr></thead>
 <tbody><tr>
 <td><pre data-language="md">|||[pnpm]&#10;&#10;pnpm add @terra-symposium/docs&#10;&#10;|||&#10;&#10;|||[npm]&#10;&#10;npm install @terra-symposium/docs&#10;&#10;|||</pre></td>
 <td>
@@ -24,7 +31,10 @@ Use headings or a list when readers need all the information, or when the sectio
 
 - ✅ Do use tabs for alternatives that reach the same result.
 - ✅ Do give each choice a useful title and complete body.
-- ❌ Don’t split consecutive steps across tabs or separate related tab directives with prose.
+- ✅ Do put Local and Hosted instructions in separate tabs.
+- ❌ Don’t put mutually exclusive paths in side-by-side table columns.
+- ❌ Don’t split consecutive steps across tabs.
+  - Keep related tab directives together.
 
 ## Preview
 

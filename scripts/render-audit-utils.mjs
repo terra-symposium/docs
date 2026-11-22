@@ -8,7 +8,7 @@
  *
  * @returns Text with CR/CRLF converted to LF, trailing horizontal space removed, and final line breaks dropped.
  */
-export function normalizeCodeForAudit(value) {
+export function normCodeForAudit(value) {
   const lines = String(value ?? '')
     .replaceAll('\r\n', '\n')
     .replaceAll('\r', '\n')

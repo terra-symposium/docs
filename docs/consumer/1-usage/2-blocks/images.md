@@ -8,7 +8,7 @@ description: Use an image block when a visual shows a detail or spatial relation
 Use text or a code block when readers need exact wording or copyable source. Avoid images that merely repeat nearby prose.
 
 <table>
-<thead><tr><th>Code</th><th>UI</th></tr></thead>
+<thead><tr><th>💻 Code</th><th>🖥️ UI</th></tr></thead>
 <tbody><tr>
 <td><pre data-language="md">![The Docs Authoring page](./docs-authoring-ui.png)</pre></td>
 <td>
@@ -23,9 +23,11 @@ Use text or a code block when readers need exact wording or copyable source. Avo
 ## Dos and don'ts
 
 - ✅ Do use images that show a detail or relationship the text needs.
-- ✅ Do write alt text that names the visible detail and keep image paths relative to the leaf.
+- ✅ Do name the visible detail in alt text.
+  - Keep image paths relative to the leaf.
 - ✅ Do keep downloadable attachments in the leaf’s attachment view.
-- ❌ Don’t use an empty alt for a meaningful image or embed a full screenshot mid-sentence.
+- ❌ Don’t use empty alt text for a meaningful image.
+  - Do not embed a full screenshot mid-sentence.
 
 ## Preview
 
@@ -57,7 +59,7 @@ The image has no alt text or explanation of the detail readers should notice.
 
 Choose the form that fits the reader’s task.
 
-| Variant                                                                                                 | Good example                                                                                                                                 | Bad example                           |
-| ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **Standalone image** — Show a visual that the surrounding explanation refers to.                        | `![The Docs Authoring page showing a code example](./docs-authoring-ui.png)` on its own line, after a sentence naming the detail to inspect. | Unexplained decorative image          |
-| **Inline image** — Place a small meaningful image within a sentence when it does not interrupt reading. | `Build status: ![Passing](./status-passing.svg)` places a small status icon next to its label. Use an actual small asset in the host.        | Full screenshot embedded mid-sentence |
+| Variant                                                                                                    | Good example                                                                                                                                 | Bad example                           |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| 🖼️ **Standalone image** — Show a visual that the surrounding explanation refers to.                        | `![The Docs Authoring page showing a code example](./docs-authoring-ui.png)` on its own line, after a sentence naming the detail to inspect. | Unexplained decorative image          |
+| 🔹 **Inline image** — Place a small meaningful image within a sentence when it does not interrupt reading. | `Build status: ![Passing](./status-passing.svg)` places a small status icon next to its label. Use an actual small asset in the host.        | Full screenshot embedded mid-sentence |

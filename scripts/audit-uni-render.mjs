@@ -14,7 +14,7 @@ import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { normalizeCodeForAudit } from './render-audit-utils.mjs';
+import { normCodeForAudit } from './render-audit-utils.mjs';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../src/lib/terra/regex.mjs';
@@ -1845,8 +1845,8 @@ for (let index = 0; index < leaves.length; index++) {
     codeIndex < Math.min(srcCode.length, dom.codeBlocks?.length ?? 0);
     codeIndex++
   ) {
-    const expected = normalizeCodeForAudit(srcCode[codeIndex].value);
-    const actual = normalizeCodeForAudit(dom.codeBlocks[codeIndex].code);
+    const expected = normCodeForAudit(srcCode[codeIndex].value);
+    const actual = normCodeForAudit(dom.codeBlocks[codeIndex].code);
     if (expected !== actual)
       failures.push({
         page: leaf.id,
@@ -1875,7 +1875,7 @@ for (let index = 0; index < leaves.length; index++) {
     rawIndex < Math.min(srcRaw.length, dom.rawBlocks?.length ?? 0);
     rawIndex++
   ) {
-    const expected = normalizeCodeForAudit(srcRaw[rawIndex].markdown);
+    const expected = normCodeForAudit(srcRaw[rawIndex].markdown);
     if (isMarkdownThematicBreak(expected)) {
       if (!dom.rawBlocks[rawIndex].divider)
         failures.push({
@@ -1888,9 +1888,7 @@ for (let index = 0; index < leaves.length; index++) {
         });
       continue;
     }
-    const actual = normalizeCodeForAudit(
-      normPageAssetUrls(dom.rawBlocks[rawIndex].code, leaf.path),
-    );
+    const actual = normCodeForAudit(normPageAssetUrls(dom.rawBlocks[rawIndex].code, leaf.path));
     if (expected.trim() !== actual.trim())
       failures.push({
         page: leaf.id,

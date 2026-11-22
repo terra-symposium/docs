@@ -61,7 +61,7 @@ For each defect, keep a short record of the expected source value, the normalize
 
 ## Keep the tree, leaves, and attachments consistent
 
-The TOC contains trees, branches, and leaves. Attachments belong to leaves; they are shown in that leaf’s Attachments view and must not become TOC entries or a duplicate appended list in the Markdown body.
+The TOC contains trees, branches, and leaves. Each level can own attachments. Keep tree-wide resources on the tree index, branch-wide resources on the branch index, and leaf-specific resources on the leaf. Show attachments in the owning node's collection; do not turn them into TOC entries or append a duplicate list to the Markdown body.
 
 For repository-backed content, keep each leaf’s `index.md` and its files together, for example:
 
@@ -72,7 +72,7 @@ content/<tree>/<branch>/<leaf>/
  diagram.png
 ```
 
-Store title, route, order, stable source ID, and attachment metadata in the TOC or host config. Put branch-owned files on an explicit branch Overview leaf. Use relative links for sibling assets. Keep raw exports, checksums, and audit manifests in an archive location only when they are needed for provenance or recovery; do not maintain redundant generated copies in active content, `public`, and build output.
+Store title, route, order, stable source ID, and attachment metadata in the TOC or host config. For a repository-backed site without first-class branch attachments, keep branch-wide files in the branch folder and link to them relatively from the relevant leaves. Use relative links for sibling assets. Keep raw exports, checksums, and audit manifests in an archive location only when they are needed for provenance or recovery; do not maintain redundant generated copies in active content, `public`, and build output.
 
 Check that changing the selected leaf changes only the active document, not sibling tree labels. Check tree switching, direct routes, order, orphans, empty attachments, multiple attachments, images, downloadable documents, and any host-specific attachment types. Open representative files in the browser and confirm the attachment count and URLs against the source manifest.
 

@@ -50,4 +50,4 @@ Use the public URL after deployment, since a local preview cannot prove that the
 
 :::
 
-For page order and visibility, see [Tree handling](/consumer/1-usage/2-tree-handling/). For a fuller review of a page's content, use [Validation](/consumer/1-usage/4-validation/).
+For page order and visibility, see [Tree](/consumer/1-usage/0-tree/). For a fuller review of a page's content, use [Validation](/consumer/1-usage/4-validation/).

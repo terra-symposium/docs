@@ -91,7 +91,7 @@ async function verifyPublishedMarkdownControls({
 }: {
   page: import('@playwright/test').Page;
 }): Promise<void> {
-  await page.goto('/consumer/1-usage/0-syntax/');
+  await page.goto('/consumer/1-usage/1-syntax/');
   await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
 
@@ -134,7 +134,7 @@ test(
     },
   },
   async ({ page }) => {
-    await page.goto('/consumer/1-usage/0-syntax/');
+    await page.goto('/consumer/1-usage/1-syntax/');
     await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
 
     const title = page.getByRole('textbox', { name: 'Title' });
@@ -191,7 +191,7 @@ test(
       !(stylingMajor! > 0 || stylingMinor! > 1 || (stylingMinor === 1 && stylingPatch! >= 39)),
       'Styling 0.1.39 has not been published yet.',
     );
-    await page.goto('/consumer/1-usage/0-syntax/');
+    await page.goto('/consumer/1-usage/1-syntax/');
     await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
     await page.getByRole('combobox', { name: 'Mode' }).click();
     const menu = page.getByRole('listbox');

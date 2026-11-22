@@ -70,9 +70,9 @@ const pathKey = (value: string): string => {
  * @returns Whether the current route is the link target or a descendant route.
  */
 const isActivePath = (href: string, currentPath: string): boolean => {
-  const target = pathKey(href);
+  const tgt = pathKey(href);
   const current = pathKey(currentPath);
-  return current === target || current.startsWith(`${target}/`);
+  return current === tgt || current.startsWith(`${tgt}/`);
 };
 
 /**

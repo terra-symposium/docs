@@ -47,18 +47,18 @@ function publicRoute(file, docsRoot, base) {
 /**
  * Rewrites a Markdown or HTML link target to the corresponding public page or copied asset.
  *
- * @param rawTarget - Authored target, including optional angle brackets, query, fragment, and suffix.
+ * @param rawTgt - Authored target, including optional angle brackets, query, fragment, and suffix.
  * @param srcFile - Markdown file containing the target.
  * @param docsRoot - Root directory used to reject links that escape the Docs content tree.
  * @param base - Public deployment base path.
  *
  * @return Rewritten target when it maps to local Docs content; otherwise the authored target.
  */
-function rewriteTarget(rawTarget, srcFile, docsRoot, base) {
-  const target = rawTarget.trim();
-  if (!target || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(target)) return rawTarget;
-  const match = /^(<[^>]+>|[^\s]+)([\s\S]*)$/.exec(target);
-  if (!match) return rawTarget;
+function rewriteTgt(rawTgt, srcFile, docsRoot, base) {
+  const tgt = rawTgt.trim();
+  if (!tgt || /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(tgt)) return rawTgt;
+  const match = /^(<[^>]+>|[^\s]+)([\s\S]*)$/.exec(tgt);
+  if (!match) return rawTgt;
   const bracketed = match[1].startsWith('<') && match[1].endsWith('>');
   const suffix = match[2];
   const [filePath, ...hashParts] = (bracketed ? match[1].slice(1, -1) : match[1]).split('#');
@@ -82,11 +82,11 @@ function rewriteTarget(rawTarget, srcFile, docsRoot, base) {
   try {
     resolvedPath = resolve(srcFile, '..', decodeURIComponent(cPath));
   } catch {
-    return rawTarget;
+    return rawTgt;
   }
   const relativePath = relative(docsRoot, resolvedPath);
   if (relativePath.startsWith(`..${sep}`) || relativePath === '..' || !existsSync(resolvedPath))
-    return rawTarget;
+    return rawTgt;
   const rewritten = markdownExts.has(extname(resolvedPath).toLowerCase())
     ? publicRoute(resolvedPath, docsRoot, base)
     : `${base}_docs/assets/${relativePath.split(sep).join('/')}`;
@@ -139,13 +139,13 @@ export function docsContentPlugin({ root, base }) {
       return mapOutsideCode(
         src.replace(
           /(!?\[[^\]]*\]\()([^)]+)(\))/g,
-          (_full, b, t, a) => `${b}${rewriteTarget(t, srcFile, docsRoot, base)}${a}`,
+          (_full, b, t, a) => `${b}${rewriteTgt(t, srcFile, docsRoot, base)}${a}`,
         ),
         (s) =>
           s.replace(
             /\b(src|href)=(['"])(.*?)\2/g,
             (full, attribute, quote, target) =>
-              `${attribute}=${quote}${rewriteTarget(target, srcFile, docsRoot, base)}${quote}`,
+              `${attribute}=${quote}${rewriteTgt(target, srcFile, docsRoot, base)}${quote}`,
           ),
       );
     },

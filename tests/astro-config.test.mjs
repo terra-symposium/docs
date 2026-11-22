@@ -93,8 +93,8 @@ test('Vite pre-optimizes every JavaScript entry in the public Docs export map', 
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   const runtimeExports = Object.entries(manifest.exports)
     .filter(([, entry]) => {
-      const target = typeof entry === 'string' ? entry : entry?.import;
-      return typeof target === 'string' && target.endsWith('.js');
+      const tgt = typeof entry === 'string' ? entry : entry?.import;
+      return typeof tgt === 'string' && tgt.endsWith('.js');
     })
     .map(([key]) => `${manifest.name}${key === '.' ? '' : key.slice(1)}`);
   for (const entry of runtimeExports) assert.ok(DOCS_VITE_OPTIMIZE_DEPS.includes(entry));

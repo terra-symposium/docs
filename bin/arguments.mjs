@@ -10,7 +10,9 @@
  *
  * @param args Arguments after the Docs mode; recognized value-taking options
  *   are removed while Astro flags retain their original order.
+ *
  * @returns Docs option values and the remaining arguments for Astro.
+ *
  * @throws {Error} When a Docs option that requires a value is missing one.
  */
 export function parseDocsArguments(args) {

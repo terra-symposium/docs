@@ -34,9 +34,9 @@ export async function initDocsProject(args) {
   const template = resolve(dirname(fileURLToPath(import.meta.url)), '../template');
   await mkdir(dest);
   for (const file of starterFiles) {
-    const target = join(dest, file);
-    await mkdir(dirname(target), { recursive: true });
-    await copyFile(join(template, file), target);
+    const tgt = join(dest, file);
+    await mkdir(dirname(tgt), { recursive: true });
+    await copyFile(join(template, file), tgt);
   }
 
   if (!args.includes('--no-install')) {

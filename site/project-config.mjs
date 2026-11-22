@@ -82,20 +82,20 @@ export function createProjectExportAliases(manifest, packageRoot) {
    */
   const escapeRegex = (value) => value.replace(TerraQualityRegex.REGEX_G_REGEX_9(), '\\$&');
   return Object.entries(manifest.exports).flatMap(([k, e]) => {
-    const target = typeof e === 'string' ? e : (e?.import ?? e?.default);
-    if (!target?.startsWith('./')) return [];
+    const tgt = typeof e === 'string' ? e : (e?.import ?? e?.default);
+    if (!tgt?.startsWith('./')) return [];
     const prefix = manifest.name + (k === '.' ? '' : k.slice(1));
     if (k.includes('*')) {
       const [prefixStart, prefixEnd = ''] = prefix.split('*');
       return [
         {
           find: new RegExp(`^${escapeRegex(prefixStart)}(.+)${escapeRegex(prefixEnd)}$`),
-          replacement: resolve(packageRoot, target.replace('*', '$1')),
+          replacement: resolve(packageRoot, tgt.replace('*', '$1')),
         },
       ];
     }
     return [
-      { find: new RegExp(`^${escapeRegex(prefix)}$`), replacement: resolve(packageRoot, target) },
+      { find: new RegExp(`^${escapeRegex(prefix)}$`), replacement: resolve(packageRoot, tgt) },
     ];
   });
 }

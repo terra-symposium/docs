@@ -27,7 +27,9 @@ HELPERS
 
 /**
  * Collect files recursively under a directory.
+ *
  * @param root Directory to walk.
+ *
  * @return Sorted file paths, or an empty list when the directory is missing.
  */
 async function filesBelow(root) {
@@ -49,8 +51,10 @@ async function filesBelow(root) {
 
 /**
  * Parse a marked Markdown page's YAML frontmatter.
+ *
  * @param src Complete Markdown source.
  * @param path Source path for diagnostics.
+ *
  * @return Parsed metadata and Markdown body.
  */
 function splitFrontmatter(src, path) {
@@ -69,9 +73,11 @@ function splitFrontmatter(src, path) {
 
 /**
  * Reject broken relative links in the portable skill bundle.
+ *
  * @param contents Markdown content to inspect.
  * @param file Generated relative path.
  * @param expected Compiled file map.
+ *
  * @return Nothing; throws when a link cannot resolve.
  */
 function validLinks(contents, file, expected) {
@@ -92,7 +98,9 @@ API
 
 /**
  * Compile marked Docs skill pages into a portable file map.
+ *
  * @param root Repository root.
+ *
  * @return Number of skills and their generated file map.
  */
 export async function compileSkills(root) {
@@ -146,7 +154,9 @@ export async function compileSkills(root) {
 
 /**
  * Write compiled skills to the repository discovery directory.
+ *
  * @param root Repository root.
+ *
  * @return Number of written skills and files.
  */
 export async function prepareSkills(root) {
@@ -173,7 +183,9 @@ export async function prepareSkills(root) {
 
 /**
  * Compare generated discovery files with Docs without changing the repository.
+ *
  * @param root Repository root.
+ *
  * @return Number of checked skills and files.
  */
 export async function checkSkills(root) {

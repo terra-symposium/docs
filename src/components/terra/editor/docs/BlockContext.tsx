@@ -46,7 +46,7 @@ type BlockAction =
 /**
  * DOM element carrying optional commands used by the shared block context menu.
  */
-type BlockActionTarget = HTMLElement & { __blockActions?: BlockAction[] };
+type BlockActionTgt = HTMLElement & { __blockActions?: BlockAction[] };
 
 /*//////////////////////////////////////////////////
 HELPERS
@@ -78,11 +78,11 @@ export function BlockContext({
             <div
               className="relative w-full"
               onContextMenuCapture={(e) => {
-                let current: BlockActionTarget | null =
+                let current: BlockActionTgt | null =
                   e.target instanceof HTMLElement
-                    ? (e.target as BlockActionTarget)
+                    ? (e.target as BlockActionTgt)
                     : e.target instanceof Node
-                      ? (e.target.parentElement as BlockActionTarget | null)
+                      ? (e.target.parentElement as BlockActionTgt | null)
                       : null;
                 const nActions: BlockAction[] = [];
                 while (current && current !== e.currentTarget) {
@@ -90,7 +90,7 @@ export function BlockContext({
                     if (nActions.length) nActions.push({ sep: true });
                     nActions.push(...current.__blockActions);
                   }
-                  current = current.parentElement as BlockActionTarget | null;
+                  current = current.parentElement as BlockActionTgt | null;
                 }
                 if (!nActions.length) {
                   const block = (e.target as HTMLElement).closest<HTMLElement>(

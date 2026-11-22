@@ -95,14 +95,14 @@ export const actions = new Proxy(
      * Builds a nested action path when consumers access an operation property.
      *
      * @param this - Proxy handler reused by nested proxies to keep extending the same operation path.
-     * @param target - Action proxy whose accumulated operation path is extended.
+     * @param tgt - Action proxy whose accumulated operation path is extended.
      * @param key - Property name appended to that path; symbol properties are not proxied.
      *
      * @returns A nested action proxy for string properties, or `undefined` for symbols.
      */
-    get(this: ProxyHandler<ActionProxy>, target, key) {
+    get(this: ProxyHandler<ActionProxy>, tgt, key) {
       if (typeof key !== 'string') return undefined;
-      const path = target[actionPath] ? `${target[actionPath]}.${key}` : key;
+      const path = tgt[actionPath] ? `${tgt[actionPath]}.${key}` : key;
       return new Proxy(
         Object.assign(
           /**

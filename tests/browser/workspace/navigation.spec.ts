@@ -308,9 +308,9 @@ test.describe('shared shell and document navigation', () => {
       await waitForWorkspaceReady(p);
       const toc = p.getByRole('navigation', { name: 'On this page' });
       await expect(toc).toBeVisible();
-      const target = toc.getByRole('link', { name: 'Jump to Find the implementation' });
-      await expect(target).toBeVisible();
-      await target.click();
+      const tgt = toc.getByRole('link', { name: 'Jump to Find the implementation' });
+      await expect(tgt).toBeVisible();
+      await tgt.click();
       await expect(p).toHaveURL(/#find-the-implementation$/);
       await expect
         .poll(

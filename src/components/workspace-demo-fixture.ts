@@ -882,11 +882,11 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         }
         changed = true;
       } else if (op === 'write.doc.retargetSources') {
-        const target = findDoc(state, request.targetId);
+        const tgt = findDoc(state, request.targetId);
         const srcIds = Array.isArray(request.sourceIds)
           ? request.sourceIds.filter((v): v is string => typeof v === 'string')
           : [];
-        if (!target || srcIds.length === 0) {
+        if (!tgt || srcIds.length === 0) {
           return { error: new Error('The merge target or source pages could not be found.') };
         }
         /**
@@ -898,18 +898,18 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
          */
         const attachmentKey = (attachment: DocsHostAttachment): string =>
           attachment.id || `${attachment.path}\u0000${attachment.name}`;
-        const seenAttachments = new Set(target.attachments.map(attachmentKey));
+        const seenAttachments = new Set(tgt.attachments.map(attachmentKey));
         for (const srcId of srcIds) {
           const source = findDoc(state, srcId);
-          if (!source || source.id === target.id) continue;
+          if (!source || source.id === tgt.id) continue;
           for (const attachment of source.attachments) {
             const key = attachmentKey(attachment);
             if (!seenAttachments.has(key)) {
               seenAttachments.add(key);
-              target.attachments.push(clone(attachment));
+              tgt.attachments.push(clone(attachment));
             }
             const asset = state.assets[attachment.path];
-            if (asset) asset.docId = target.id;
+            if (asset) asset.docId = tgt.id;
           }
         }
         data = true;

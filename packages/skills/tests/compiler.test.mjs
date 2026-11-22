@@ -32,7 +32,9 @@ HELPERS
 
 /**
  * Run a fixture in an isolated temporary repository.
+ *
  * @param fn Async fixture body.
+ *
  * @return The fixture body's result.
  */
 async function fixture(fn) {
@@ -46,9 +48,11 @@ async function fixture(fn) {
 
 /**
  * Write a Docs skill source page.
+ *
  * @param root Temporary repository root.
  * @param src Markdown source.
  * @param name Source folder name.
+ *
  * @return Source folder path.
  */
 async function page(root, src, name = 'sample') {

@@ -583,7 +583,7 @@ function Nav({
             .replace(TerraQualityRegex.REGEX_MD_MDX_PDF_I_REGEX(), '')
             .replace(TerraQualityRegex.REGEX_G_REGEX_35(), '');
         const targetPath = cPath(leafTitle.path);
-        const targetBasename = targetPath.split('/').at(-1)?.toLowerCase() ?? '';
+        const tgtBasename = targetPath.split('/').at(-1)?.toLowerCase() ?? '';
         let basenameCount = 0;
         const basenameCandidates = [...nodes];
         while (basenameCandidates.length > 0 && basenameCount < 2) {
@@ -593,7 +593,7 @@ function Nav({
               cPath(node.path || '')
                 .split('/')
                 .at(-1)
-                ?.toLowerCase() === targetBasename,
+                ?.toLowerCase() === tgtBasename,
             );
           else if (node.children) for (const child of node.children) basenameCandidates.push(child);
         }
@@ -619,10 +619,10 @@ function Nav({
               nodePath === leafTitle.path ||
               node.origName === leafTitle.path ||
               normNodePath === targetPath ||
-              (targetBasename !== 'index' &&
-                targetBasename !== '' &&
+              (tgtBasename !== 'index' &&
+                tgtBasename !== '' &&
                 basenameCount === 1 &&
-                normNodePath.split('/').at(-1)?.toLowerCase() === targetBasename)
+                normNodePath.split('/').at(-1)?.toLowerCase() === tgtBasename)
             ) {
               frame.target.push({ ...node, title: leafTitle.title });
             } else frame.target.push(node);

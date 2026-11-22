@@ -110,14 +110,14 @@ export function extractAllNodeIds(nodes: TreeType[]): string[] {
  * Returns the children at the branch addressed by a slash-separated path.
  *
  * @param nodes - Root nodes of the Docs navigation tree.
- * @param targetPath - Original-name path of the branch whose children are requested.
+ * @param tgtPath - Original-name path of the branch whose children are requested.
  *
  * @return Matching siblings, or an empty list when any path segment is absent.
  */
-export function getSiblings(nodes: TreeType[], targetPath: string): TreeType[] {
-  if (!targetPath || targetPath === '.') return nodes;
+export function getSiblings(nodes: TreeType[], tgtPath: string): TreeType[] {
+  if (!tgtPath || tgtPath === '.') return nodes;
   let current = nodes;
-  for (const segment of targetPath.split('/')) {
+  for (const segment of tgtPath.split('/')) {
     const branch = current.find((n): n is Branch => n.type === 'branch' && n.origName === segment);
     if (!branch?.children) return [];
     current = branch.children;

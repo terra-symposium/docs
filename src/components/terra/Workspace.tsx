@@ -89,33 +89,33 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     aRoute = undefined;
   }
   let hue = workspaceOptions.host.hue;
-  for (const target of [
+  for (const tgt of [
     aRoute?.leafId,
     aRoute && ('treeId' in aRoute ? aRoute.branchId : aRoute.groupId),
     aRoute && ('treeId' in aRoute ? aRoute.treeId : aRoute.sectionId),
     aRoute?.targetId,
   ]) {
-    if (!target) continue;
+    if (!tgt) continue;
     const pending = workspaceOptions.tree
       .slice()
       .reverse()
       .map((n) => ({ node: n, ancestors: [] as typeof workspaceOptions.tree }));
-    let foundTarget = false;
+    let foundTgt = false;
     while (pending.length > 0) {
       const current = pending.pop();
       if (!current) continue;
-      if (current.node.origName === target || current.node.path === target) {
+      if (current.node.origName === tgt || current.node.path === tgt) {
         for (const node of [...current.ancestors, current.node]) {
           if (typeof node.hue === 'number') hue = node.hue;
         }
-        foundTarget = true;
+        foundTgt = true;
         break;
       }
       for (const child of [...(current.node.children ?? [])].reverse()) {
         pending.push({ node: child, ancestors: [...current.ancestors, current.node] });
       }
     }
-    if (foundTarget) break;
+    if (foundTgt) break;
   }
   const theme = hue === undefined ? undefined : docsHueTheme(hue);
 
@@ -172,17 +172,17 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     // under body. Mirror only the Docs palette there so those portals inherit
     // the same hue as the inline workspace, as they did when the site applied
     // the hue palette to the document root before extraction.
-    const target = document.body;
+    const tgt = document.body;
     const origValues = new Map<string, { value: string; priority: string }>();
     const appliedValues = new Map<string, string>();
     const origThemeClasses = {
-      dark: target.classList.contains('dark'),
-      light: target.classList.contains('light'),
-      docsScope: target.classList.contains('docs-theme-scope'),
+      dark: tgt.classList.contains('dark'),
+      light: tgt.classList.contains('light'),
+      docsScope: tgt.classList.contains('docs-theme-scope'),
     };
     const origBodyFont = {
-      value: target.style.getPropertyValue('font-family'),
-      priority: target.style.getPropertyPriority('font-family'),
+      value: tgt.style.getPropertyValue('font-family'),
+      priority: tgt.style.getPropertyPriority('font-family'),
     };
     let appliedBodyFont: string | undefined;
     let appliedThemeClasses: { dark: boolean; light: boolean } | undefined;
@@ -195,12 +195,12 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
       // The original Radix primitives portal directly to body. Make that
       // destination a Docs scope so the extracted bundle's scoped variants
       // continue to style menus, selects, dialogs, and popovers there.
-      target.classList.add('docs-theme-scope');
+      tgt.classList.add('docs-theme-scope');
       // Sanity's global editor styles supplied Inter on the original Docs route.
       // Keep body-mounted Radix menus and dialogs on that same Docs typeface.
       const docsFont = computed.fontFamily;
-      if (docsFont && target.style.fontFamily !== docsFont) {
-        target.style.fontFamily = docsFont;
+      if (docsFont && tgt.style.fontFamily !== docsFont) {
+        tgt.style.fontFamily = docsFont;
       }
       appliedBodyFont = docsFont;
       for (const token of [
@@ -219,11 +219,11 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
         if (!value) continue;
         if (!origValues.has(token)) {
           origValues.set(token, {
-            value: target.style.getPropertyValue(token),
-            priority: target.style.getPropertyPriority(token),
+            value: tgt.style.getPropertyValue(token),
+            priority: tgt.style.getPropertyPriority(token),
           });
         }
-        if (target.style.getPropertyValue(token) !== value) target.style.setProperty(token, value);
+        if (tgt.style.getPropertyValue(token) !== value) tgt.style.setProperty(token, value);
         appliedValues.set(token, value);
       }
       const explicitTheme = workspace.closest<HTMLElement>('.dark, .light');
@@ -232,14 +232,14 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
           dark: explicitTheme.classList.contains('dark'),
           light: explicitTheme.classList.contains('light'),
         };
-        target.classList.toggle('dark', nClasses.dark);
-        target.classList.toggle('light', nClasses.light);
+        tgt.classList.toggle('dark', nClasses.dark);
+        tgt.classList.toggle('light', nClasses.light);
         appliedThemeClasses = nClasses;
       }
     };
     syncPortalTheme();
     const observer = new MutationObserver(syncPortalTheme);
-    for (let el: HTMLElement | null = workspace; el && el !== target; el = el.parentElement) {
+    for (let el: HTMLElement | null = workspace; el && el !== tgt; el = el.parentElement) {
       observer.observe(el, {
         attributes: true,
         attributeFilter: ['class', 'style'],
@@ -251,26 +251,26 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
       observer.disconnect();
       darkPreference.removeEventListener('change', syncPortalTheme);
       for (const [token, orig] of origValues) {
-        if (target.style.getPropertyValue(token) !== appliedValues.get(token)) continue;
-        if (orig.value) target.style.setProperty(token, orig.value, orig.priority);
-        else target.style.removeProperty(token);
+        if (tgt.style.getPropertyValue(token) !== appliedValues.get(token)) continue;
+        if (orig.value) tgt.style.setProperty(token, orig.value, orig.priority);
+        else tgt.style.removeProperty(token);
       }
-      if (appliedBodyFont && target.style.fontFamily === appliedBodyFont) {
+      if (appliedBodyFont && tgt.style.fontFamily === appliedBodyFont) {
         if (origBodyFont.value) {
-          target.style.setProperty('font-family', origBodyFont.value, origBodyFont.priority);
+          tgt.style.setProperty('font-family', origBodyFont.value, origBodyFont.priority);
         } else {
-          target.style.removeProperty('font-family');
+          tgt.style.removeProperty('font-family');
         }
       }
       if (appliedThemeClasses) {
-        if (target.classList.contains('dark') === appliedThemeClasses.dark) {
-          target.classList.toggle('dark', origThemeClasses.dark);
+        if (tgt.classList.contains('dark') === appliedThemeClasses.dark) {
+          tgt.classList.toggle('dark', origThemeClasses.dark);
         }
-        if (target.classList.contains('light') === appliedThemeClasses.light) {
-          target.classList.toggle('light', origThemeClasses.light);
+        if (tgt.classList.contains('light') === appliedThemeClasses.light) {
+          tgt.classList.toggle('light', origThemeClasses.light);
         }
       }
-      if (!origThemeClasses.docsScope) target.classList.remove('docs-theme-scope');
+      if (!origThemeClasses.docsScope) tgt.classList.remove('docs-theme-scope');
     };
   }, []);
   return (

@@ -92,9 +92,9 @@ export function siteImageUrls(markdown: string, srcPath: string, base = '/'): st
         return line;
       }
       if (fence) return line;
-      const rewrite = (match: string, opener: string, target: string, closer: string) => {
-        if (/^(?:[a-z][a-z\d+.-]*:|\/\/|\/|#)/i.test(target)) return match;
-        return `${opener}${base}_docs/assets/${new URL(target, srcUrl).pathname.slice(1)}${closer}`;
+      const rewrite = (match: string, opener: string, tgt: string, closer: string) => {
+        if (/^(?:[a-z][a-z\d+.-]*:|\/\/|\/|#)/i.test(tgt)) return match;
+        return `${opener}${base}_docs/assets/${new URL(tgt, srcUrl).pathname.slice(1)}${closer}`;
       };
       if (/<img\b/i.test(line))
         return line.replace(/(<img\b[^>]*\bsrc=["'])([^"']+)(["'])/gi, rewrite);

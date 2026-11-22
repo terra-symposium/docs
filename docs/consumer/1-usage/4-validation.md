@@ -1,9 +1,6 @@
 ## Validation
 
-Verify a Docs leaf from source coverage through rendering, publication, and history using
-the five-stage linear process below, as merely building the site does not confirm that
-the Markdown is valid. Small changes may require only some of these stages, whereas
-large changes require all five.
+Verify a Docs leaf from source coverage through rendering, publication, and history using the five-stage linear process below, as merely building the site does not confirm that the Markdown is valid. Small changes may require only some of these stages, whereas large changes require all five.
 
 <Nodes
 nodes={[
@@ -24,23 +21,17 @@ direction="TB"
 
 ## 1. Account for sources
 
-Check the source record and every usable attachment before writing, resolving or stating
-missing material and conflicts up front. Return any exact validation failure to a bounded
-repair attempt.
+Check the source record and every usable attachment before writing, resolving or stating missing material and conflicts up front. Return any exact validation failure to a bounded repair attempt.
 
 :::caution[Stop after four failed repairs]
 
-Agents must note that after the _fourth_ failed attempt accessing an attachment, you must
-preserve the diagnostics and stop without writing the leaf.
+Agents must note that after the _fourth_ failed attempt accessing an attachment, you must preserve the diagnostics and stop without writing the leaf.
 
 :::
 
 ## 2. Review the draft
 
-Author, sanitise, and verify the Markdown leaf under <code>docs/</code> before rendering.
-Check its frontmatter and opening H2 heading, keep images beside the page using relative
-source paths, and use a meaningful Docs block wherever it clarifies a substantial
-relationship.
+Author, sanitise, and verify the Markdown leaf under <code>docs/</code> before rendering. Check its frontmatter and opening H2 heading, keep images beside the page using relative source paths, and use a meaningful Docs block wherever it clarifies a substantial relationship.
 
 ### Content and artifact cleanup
 

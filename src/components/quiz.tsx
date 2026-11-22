@@ -262,7 +262,7 @@ export function DocsQuizGenerator({
   const question = quiz?.questions[index];
   return (
     <section
-      className="docs-quiz my-6 rounded-xl border border-primary-6 bg-primary-2 p-5"
+      className="quiz my-6 rounded-xl border border-primary-6 bg-primary-2 p-5"
       aria-label="Quiz generator"
     >
       <h2 className="mb-2 text-xl font-semibold">{quiz?.title ?? `Quiz: ${title}`}</h2>

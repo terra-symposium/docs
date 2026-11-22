@@ -74,7 +74,7 @@ export function BlockContext({
     <ErrorBoundary name="BlockContext">
       <ContextMenu onOpenChange={(o) => !o && setActions(null)}>
         <ContextMenuTrigger asChild>
-          <div className="docs-context-menu-trigger-wrapper">
+          <div className="context-menu">
             <div
               className="relative w-full"
               onContextMenuCapture={(e) => {
@@ -107,7 +107,7 @@ export function BlockContext({
                         new CustomEvent('docs:block-select', {
                           detail: {
                             block,
-                            decorator: block.closest('.docs-context-wrapper') || block,
+                            decorator: block.closest('.context-wrapper') || block,
                           },
                         }),
                       ),

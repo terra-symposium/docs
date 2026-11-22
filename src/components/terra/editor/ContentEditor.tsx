@@ -1329,8 +1329,8 @@ export function ContentEditor({
                 aria-readonly={readOnly || undefined}
                 className={
                   articleLayout
-                    ? 'docs-content w-full max-w-none text-primary-12 outline-none'
-                    : 'docs-content mx-auto max-w-3xl text-base leading-8 text-primary-12 [&_a:not([data-docs-flow-node-link])]:text-secondary-10 [&_a:not([data-docs-flow-node-link])]:underline [&_h2]:mb-3 [&_h2]:mt-10 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mb-3 [&_h3]:mt-8 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mb-2 [&_h4]:mt-6 [&_h4]:text-xl [&_h5]:mb-2 [&_h5]:mt-6 [&_h5]:font-semibold [&_h6]:mb-2 [&_h6]:mt-5 [&_h6]:font-semibold [&_p:first-child]:mt-0 [&_p]:my-4 outline-none'
+                    ? 'copy w-full max-w-none text-primary-12 outline-none'
+                    : 'copy mx-auto max-w-3xl text-base leading-8 text-primary-12 [&_a:not([data-docs-flow-node-link])]:text-secondary-10 [&_a:not([data-docs-flow-node-link])]:underline [&_h2]:mb-3 [&_h2]:mt-10 [&_h2]:text-3xl [&_h2]:font-semibold [&_h3]:mb-3 [&_h3]:mt-8 [&_h3]:text-2xl [&_h3]:font-semibold [&_h4]:mb-2 [&_h4]:mt-6 [&_h4]:text-xl [&_h5]:mb-2 [&_h5]:mt-6 [&_h5]:font-semibold [&_h6]:mb-2 [&_h6]:mt-5 [&_h6]:font-semibold [&_p:first-child]:mt-0 [&_p]:my-4 outline-none'
                 }
                 data-docs-article-editor={articleLayout || undefined}
                 contentEditable={!readOnly}

@@ -66,7 +66,7 @@ test('renders a labelled code block and image inside an HTML table cell', () => 
       '<td><p><strong>Step 1:</strong> Choose Math.</p><img src="/example.png" alt="Math menu" /></td>' +
       '</tr></table>',
   );
-  assert.match(html, /docs-code-block/);
+  assert.match(html, /code-block/);
   assert.match(html, />md</);
   assert.match(html, /Energy is \$E = mc\^2\$\./);
   assert.match(html, /\\frac\{a\^2\}\{b_n\}/);
@@ -81,11 +81,11 @@ test('sanitizes script markup and dangerous links', () => {
 });
 test('renders Docs callout directives as shared rich blocks', () => {
   const html = renderMarkdown(':::warning[Check this]\nReview **the source**.\n:::');
-  assert.match(html, /docs-callout docs-callout-warning/);
-  assert.match(html, /data-docs-aside="warning"><strong class="aside-title">Check this<\/strong>/);
+  assert.match(html, /class="callout warning"/);
+  assert.match(html, /data-docs-aside="warning"><strong class="title">Check this<\/strong>/);
   assert.match(html, /Review <\/span><span><strong>the source<\/strong>/);
   assert.doesNotMatch(
     renderMarkdown(':::warning[Check this]\nBody.\n:::', { callout: false }),
-    /docs-callout/,
+    /class="callout/,
   );
 });

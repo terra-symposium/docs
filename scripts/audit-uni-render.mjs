@@ -157,7 +157,7 @@ const screenshotSamples = [
   {
     family: 'code',
     id: 'BsQUwF6kisLoqnrcb5aHos',
-    selector: '[aria-label="Document viewer"] .docs-code-block[data-docs-code-block="view"]',
+    selector: '[aria-label="Document viewer"] .code-block[data-docs-code-block="view"]',
   },
   {
     family: 'raw',
@@ -177,7 +177,7 @@ const screenshotSamples = [
   {
     family: 'math',
     id: 'uqEPoah3utAOCg4wMblA3a',
-    selector: '[aria-label="Document viewer"] .docs-math',
+    selector: '[aria-label="Document viewer"] .math',
   },
   {
     family: 'embed',
@@ -1266,8 +1266,8 @@ for (let index = 0; index < leaves.length; index++) {
       if (el.matches('img') || el.querySelector(':scope > img')) return 'docImage';
       if (el.matches('iframe') || el.querySelector(':scope > iframe')) return 'embed';
       if (
-        el.matches('.docs-math, .docs-math-wrapper') ||
-        el.querySelector(':scope > .docs-math, :scope > .docs-math-wrapper')
+        el.matches('.math, .math-wrapper') ||
+        el.querySelector(':scope > .math, :scope > .math-wrapper')
       )
         return 'math';
       if (el.querySelector('[role="tablist"][aria-label="Tab options"]')) return 'tabs';
@@ -1301,9 +1301,7 @@ for (let index = 0; index < leaves.length; index++) {
     const readCode = (block) => {
       const lines = [...block.querySelectorAll('.cm-content .cm-line')];
       if (lines.length) return lines.map((line) => line.textContent ?? '').join('\n');
-      return [
-        ...block.querySelectorAll('[data-docs-code-fb] .docs-code-block-fallback-line > span'),
-      ]
+      return [...block.querySelectorAll('[data-docs-code-fb] .code-line > span')]
         .map((line) => line.textContent ?? '')
         .join('\n');
     };
@@ -1320,7 +1318,7 @@ for (let index = 0; index < leaves.length; index++) {
       const cellText = (cell) => {
         const clone = cell.cloneNode(true);
         clone
-          .querySelectorAll('.docs-code-block, .docs-math, .docs-math-wrapper, .katex')
+          .querySelectorAll('.code-block, .math, .math-wrapper, .katex')
           .forEach((node) => node.remove());
         // innerText is empty on a detached clone; compare the actual text nodes.
         return clone.textContent ?? '';
@@ -1331,10 +1329,10 @@ for (let index = 0; index < leaves.length; index++) {
       };
     });
     // hygiene-ignore single-use -- Collect visible code blocks before raw and graph probes; preserve snapshot extraction order.
-    const codeBlocks = all('.docs-code-block[data-docs-code-block="view"]')
+    const codeBlocks = all('.code-block[data-docs-code-block="view"]')
       .filter((block) => !block.closest('[data-docs-editor-block="Raw Markdown"]'))
       .map((block) => ({
-        language: block.querySelector('.docs-code-block-header p')?.textContent?.trim() ?? '',
+        language: block.querySelector('.code-header p')?.textContent?.trim() ?? '',
         code: readCode(block),
       }));
     // hygiene-ignore single-use -- Collect raw blocks before graph probes; preserve snapshot extraction order.
@@ -1501,7 +1499,7 @@ for (let index = 0; index < leaves.length; index++) {
         naturalWidth: img.naturalWidth,
         naturalHeight: img.naturalHeight,
       })),
-      math: all('.docs-math annotation[encoding="application/x-tex"]').map(
+      math: all('.math annotation[encoding="application/x-tex"]').map(
         (annotation) => annotation.textContent ?? '',
       ),
       inlineSpans,
@@ -2433,7 +2431,7 @@ if (textAttachmentEntry?.attachment) {
     await card.click();
     const dialog = page.getByRole('dialog').last();
     await dialog.waitFor({ state: 'visible', timeout: 10000 });
-    const preview = dialog.locator('.docs-code-block').first();
+    const preview = dialog.locator('.code-block').first();
     await preview.waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForFunction(
       ({ selector: s, expected: e }) => {
@@ -2450,7 +2448,7 @@ if (textAttachmentEntry?.attachment) {
             .trim();
         return norm(document.querySelector(s)?.textContent).includes(norm(e).slice(0, 120));
       },
-      { selector: '[role="dialog"] .docs-code-block', expected: expectedText },
+      { selector: '[role="dialog"] .code-block', expected: expectedText },
       { timeout: 10000 },
     );
     const renderedText = await preview.innerText();

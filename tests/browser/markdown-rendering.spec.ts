@@ -39,7 +39,7 @@ test(
   async ({ page }) => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto('/developer/fixture/code/');
-    const prose = page.locator('.docs-page-content');
+    const prose = page.locator('.copy');
     await expect(prose.locator('> p').first()).toHaveCSS('margin-top', '0px');
     expect(
       await prose
@@ -52,11 +52,11 @@ test(
             : 0;
         }),
     ).toBeGreaterThanOrEqual(40);
-    const block = page.locator('.docs-static-code-block');
+    const block = page.locator('.code-block');
     await expect(block).toBeVisible();
-    await expect(block.locator('.docs-code-block-header')).toHaveCSS('display', 'flex');
-    await expect(block.locator('.docs-code-block-header')).toHaveCSS('border-bottom-width', '1px');
-    await expect(block.locator('.docs-static-code-language')).toHaveText('sh');
+    await expect(block.locator('.code-header')).toHaveCSS('display', 'flex');
+    await expect(block.locator('.code-header')).toHaveCSS('border-bottom-width', '1px');
+    await expect(block.locator('.code-language')).toHaveText('sh');
     await expect(block.locator('pre.astro-code .line span').first()).toBeVisible();
     await block.getByRole('button', { name: 'Copy sh code' }).click();
     await expect(block.getByRole('button')).toHaveText('Copied');
@@ -147,7 +147,7 @@ test(
     await expect(siteTitle).toHaveCSS('font-style', 'italic');
 
     const code = page.locator('[data-docs-code-block="view"]').first();
-    await expect(code.locator('.docs-code-block-header')).toContainText('tsx');
+    await expect(code.locator('.code-header')).toContainText('tsx');
     await expect(code.getByRole('button', { name: 'Copy' })).toBeVisible();
     await expect(code.locator('.cm-editor')).toBeVisible();
     await expect(code.locator('.cm-line')).not.toHaveCount(0);

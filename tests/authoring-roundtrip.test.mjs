@@ -23,7 +23,7 @@ test('all authored aside types retain their type and render', () => {
     const exported = docsValueToMarkdown(blocks);
     assert.match(exported, new RegExp(`^:::${kind}\\[Title\\]`));
     const rendered = renderMarkdown(exported);
-    assert.match(rendered, new RegExp(`docs-callout-${kind}`));
+    assert.match(rendered, new RegExp(`class="callout ${kind}"`));
     assert.match(rendered, new RegExp(`data-docs-aside="${kind}"`));
   }
 });

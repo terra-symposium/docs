@@ -8,3 +8,7 @@ tests/results/
 .astro/
 pnpm-lock.yaml
 ../tests/results/
+
+# Keep authored CSS outside Prettier.
+**/*.css
+../**/*.css

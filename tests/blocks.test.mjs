@@ -232,7 +232,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
       ]);
       const rendered = renderMarkdown(nestedMarkdown);
       const restored = markdownToDocsValue(nestedMarkdown);
-      assert.match(rendered, /docs-callout/);
+      assert.match(rendered, /class="callout/);
       assert.match(rendered, /data-docs-editor-block="Nodes"/);
       assert.doesNotMatch(rendered, /_type:\s*nodes/);
       assert.equal(restored[0]._type, 'callout');
@@ -284,7 +284,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.doesNotMatch(markdown, /DOCSBLOCK\d+PLACEHOLDER/);
       assert.match(markdown, /```yaml\nnode_data: "graph"\n```/);
       const rendered = renderMarkdown(markdown);
-      assert.match(rendered, /docs-callout/);
+      assert.match(rendered, /class="callout/);
       assert.match(rendered, /node_data:/);
       assert.doesNotMatch(rendered, /DOCSBLOCK|_type: code/);
       const restored = markdownToDocsValue(markdown);
@@ -311,7 +311,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.ok(callout.content.some((block) => block._type === 'nodes'));
       assert.equal(callout.markdown, undefined);
       const html = renderToStaticMarkup(createElement(DocsRichBlock, { block: callout }));
-      assert.match(html, /docs-callout-example/);
+      assert.match(html, /class="callout example"/);
       assert.match(html, /data-docs-editor-block="Nodes"/);
       assert.match(html, /The audio workflow begins here\./);
       assert.match(html, /The workflow continues here\./);
@@ -929,7 +929,7 @@ Identify suitable companies and provide:
           withoutPortableTextKeys([value]),
         );
         assert.doesNotMatch(renderMarkdown(markdown), /DOCSBLOCK|_type: math/);
-        assert.match(renderMarkdown(markdown), /docs-math/);
+        assert.match(renderMarkdown(markdown), /class="math/);
       }
     });
     test('canonical Docs components import into their matching rich blocks', () => {
@@ -1099,7 +1099,7 @@ Identify suitable companies and provide:
       assert.equal(docsValueToMarkdown(restored), markdown);
       const rendered = renderMarkdown(markdown);
       assert.match(rendered, /<table[\s>]/);
-      assert.match(rendered, /docs-callout/);
+      assert.match(rendered, /class="callout/);
       assert.match(rendered, /Classes and objects are the primary building blocks\./);
       assert.doesNotMatch(rendered, /_type: (?:block|block|span)/);
     });
@@ -1143,8 +1143,8 @@ Identify suitable companies and provide:
   test.describe('Markdown formatting and inline content', () => {
     test('rich Markdown rendering escapes unsafe content and supports block opt-out', () => {
       const src = ':::note[Safe]\n\nHello\n\n:::';
-      assert.match(renderMarkdown(src), /docs-callout/);
-      assert.doesNotMatch(renderMarkdown(src, { callout: false }), /docs-callout/);
+      assert.match(renderMarkdown(src), /class="callout/);
+      assert.doesNotMatch(renderMarkdown(src, { callout: false }), /class="callout/);
       assert.doesNotMatch(
         renderMarkdown(
           '<DocsBlock type="docImage" data={{"_type":"docImage","url":"javascript:alert(1)","alt":"bad"}} />',

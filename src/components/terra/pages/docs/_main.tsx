@@ -1704,7 +1704,7 @@ const EditorSurfaces = {
               tgt
                 ?.closest<HTMLElement>('[data-block-gutter="true"]')
                 ?.parentElement?.querySelector<HTMLElement>(
-                  '[data-docs-editor-block], [data-editor-block], .docs-editor-block',
+                  '[data-docs-editor-block], [data-editor-block], .editor-block',
                 ) ?? tgt?.closest<HTMLElement>('[data-docs-editor-block], [data-editor-block]');
             const dec =
               block?.closest<HTMLElement>('[data-lexical-decorator="true"]') ??
@@ -1773,7 +1773,7 @@ const EditorSurfaces = {
             return;
           focus(decorator, decorator.getBoundingClientRect().width > 0 ? 'left' : 'right');
           const block = decorator.querySelector<HTMLElement>(
-            '[data-docs-editor-block], .docs-math-wrapper, [data-math-code], [data-docs-view-root="true"]',
+            '[data-docs-editor-block], .math-wrapper, [data-math-code], [data-docs-view-root="true"]',
           );
           if (block)
             document.dispatchEvent(new CustomEvent('docs:block-selected', { detail: { block } }));
@@ -2431,7 +2431,7 @@ const EditorSurfaces = {
     // RENDER
     // prettier-ignore
     return (
-			<header className='docs-document-header relative z-10 w-full print:!mb-8 print:border-none'>
+			<header className='document-header relative z-10 w-full print:!mb-8 print:border-none'>
 				<div className={cn('mx-auto w-full px-6 pb-10 pt-7 transition-opacity duration-200 md:px-10 print:!pb-3', full ? 'max-w-none' : 'max-w-7xl')}>
 					<div>
 						<Label htmlFor='docs-title' className='sr-only'>
@@ -3205,7 +3205,7 @@ export default function Scaffold({
   }
   return (
     <SidebarProvider
-      className="docs-workspace font-docs"
+      className="workspace font-docs"
       open={shellState.hydrated ? shellState.sidebarOpen : true}
       onOpenChange={(n) => {
         $sidebar.set(n);
@@ -3289,14 +3289,14 @@ export default function Scaffold({
                         {/* All modes keep their controls in the same full-width toolbar position. */}
                         {a === 'edit' ? (
                           <div
-                            className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto mb-5 w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
+                            className="toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto mb-5 w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
                             data-docs-edit-toolbar-slot
                             data-docs-toolbar-frame
                             data-docs-toolbar-scroll
                           >
                             <div
                               aria-hidden="true"
-                              className="docs-toolbar-backdrop pointer-events-none absolute inset-x-0 -bottom-12 -top-16 z-0"
+                              className="toolbar-backdrop pointer-events-none absolute inset-x-0 -bottom-12 -top-16 z-0"
                             />
                           </div>
                         ) : (

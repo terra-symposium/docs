@@ -33,7 +33,7 @@ test.describe('read-only routes, Markdown, and responsive rendering', () => {
       await expect(p.getByRole('textbox', { name: 'Search pages' })).toHaveCount(0);
       await expect(p.getByRole('heading', { name: '1. Prepare' })).toBeVisible();
       await p.screenshot({ path: t.outputPath('docs-static-desktop.png'), fullPage: true });
-      const mobileHeader = p.locator('.docs-workspace header.md\\:hidden');
+      const mobileHeader = p.locator('.workspace header.md\\:hidden');
       await expect
         .poll(() => mobileHeader.evaluate((element) => getComputedStyle(element).display))
         .toBe('none');
@@ -468,10 +468,10 @@ test.describe('read-only routes, Markdown, and responsive rendering', () => {
       await p.emulateMedia({ colorScheme: 'dark' });
       const darkModeState = await p.evaluate(() => ({
         htmlClass: document.documentElement.className,
-        scopeClass: document.querySelector('.docs-theme-scope')?.className ?? '',
-        colorScheme: getComputedStyle(document.querySelector('.docs-theme-scope')!).colorScheme,
+        scopeClass: document.querySelector('.theme-scope')?.className ?? '',
+        colorScheme: getComputedStyle(document.querySelector('.theme-scope')!).colorScheme,
         media: matchMedia('(prefers-color-scheme: dark)').matches,
-        primary: getComputedStyle(document.querySelector('.docs-theme-scope')!)
+        primary: getComputedStyle(document.querySelector('.theme-scope')!)
           .getPropertyValue('--primary-1')
           .trim(),
       }));

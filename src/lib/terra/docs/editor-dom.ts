@@ -125,7 +125,7 @@ export function codeViewOf(): EditorView | null {
   return (
     (
       (document.activeElement instanceof Element
-        ? document.activeElement.closest<HTMLElement>('.docs-code-block .cm-editor')
+        ? document.activeElement.closest<HTMLElement>('.code-block .cm-editor')
         : null) as (HTMLElement & { cmView?: { view?: EditorView } }) | null
     )?.cmView?.view ?? null
   );

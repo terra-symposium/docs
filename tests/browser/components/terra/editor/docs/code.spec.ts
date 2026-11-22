@@ -124,7 +124,7 @@ test(
       { readOnly: true },
     );
     const code = p.locator('[data-docs-code-block="view"]');
-    await expect(code.locator('.docs-code-block-header')).toContainText('typescript');
+    await expect(code.locator('.code-header')).toContainText('typescript');
     await expect(code.getByRole('button', { name: 'Copy' })).toBeVisible();
     await expect(code.locator('.cm-line')).toContainText('const received = 42;');
     await expect(code.locator('.cm-line span').first()).toBeVisible();

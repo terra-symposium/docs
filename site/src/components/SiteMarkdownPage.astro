@@ -49,7 +49,7 @@ const layoutProps = {
 		<body>
 			{Content ? (
 				<DocsSiteLayout {...layoutProps}>
-					<main class="docs-page-content"><Content components={{ CodeBlock: DocsCodeBlock, Nodes: DocsNodes }} /></main>
+					<main class="copy"><Content components={{ CodeBlock: DocsCodeBlock, Nodes: DocsNodes }} /></main>
 				</DocsSiteLayout>
 			) : (
 				<DocsSiteLayout {...layoutProps} />

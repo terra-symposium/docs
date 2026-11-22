@@ -1,6 +1,6 @@
 /* The extracted hue API provides both scales; resolve the active scale here. */
 /* prettier-ignore */
-.docs-theme-scope {
+.theme-scope {
   min-height: 100vh;
   color-scheme: light;
   color: rgb(var(--primary-12));
@@ -24,7 +24,7 @@
 
 @media (prefers-color-scheme: dark) {
   /* prettier-ignore */
-  .docs-theme-scope:not(.light, [data-theme='light'], [data-mode='light']) {
+  .theme-scope:not(.light, [data-theme='light'], [data-mode='light']) {
     color-scheme: dark;
     --primary-1: var(--primaryDark1);           --secondary-1: var(--secondaryDark1);        --gray-1: var(--grayDark1);
     --primary-2: var(--primaryDark2);           --secondary-2: var(--secondaryDark2);        --gray-2: var(--grayDark2);
@@ -42,8 +42,8 @@
 }
 
 /* prettier-ignore */
-.docs-theme-scope:is(.dark, [data-theme='dark'], [data-mode='dark']),
-:is(.dark, [data-theme='dark'], [data-mode='dark']) .docs-theme-scope {
+.theme-scope:is(.dark, [data-theme='dark'], [data-mode='dark']),
+:is(.dark, [data-theme='dark'], [data-mode='dark']) .theme-scope {
   color-scheme: dark;
   --primary-1: var(--primaryDark1);           --secondary-1: var(--secondaryDark1);        --gray-1: var(--grayDark1);
   --primary-2: var(--primaryDark2);           --secondary-2: var(--secondaryDark2);        --gray-2: var(--grayDark2);
@@ -61,8 +61,8 @@
 
 /* An explicit light theme wins over a dark system preference. */
 /* prettier-ignore */
-.docs-theme-scope:is(.light, [data-theme='light'], [data-mode='light']),
-:is(.light, [data-theme='light'], [data-mode='light']) .docs-theme-scope {
+.theme-scope:is(.light, [data-theme='light'], [data-mode='light']),
+:is(.light, [data-theme='light'], [data-mode='light']) .theme-scope {
   color-scheme: light;
   --primary-1: var(--primaryLight1);          --secondary-1: var(--secondaryLight1);       --gray-1: var(--grayLight1);
   --primary-2: var(--primaryLight2);          --secondary-2: var(--secondaryLight2);       --gray-2: var(--grayLight2);

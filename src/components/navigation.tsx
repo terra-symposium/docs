@@ -124,7 +124,7 @@ export function DocsNavigation({
               ) : (
                 <span>{list.parent.node.title}</span>
               )}
-              <ul className="docs-nav-list">{list.items}</ul>
+              <ul className="nav-list">{list.items}</ul>
             </li>,
           );
       }
@@ -159,11 +159,11 @@ export function DocsNavigation({
   }
   return (
     <nav
-      className="docs-nav"
+      className="nav"
       aria-label="Documentation"
       style={{ '--docs-accent': `rgb(${accent.light[8]})` } as CSSProperties}
     >
-      <ul className="docs-nav-list">{rootItems}</ul>
+      <ul className="nav-list">{rootItems}</ul>
     </nav>
   );
 }

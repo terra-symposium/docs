@@ -602,7 +602,7 @@ export function DocsStaticWorkspace({
     },
   };
   return (
-    <div className="docs-theme-scope" {...(theme ? { style: theme } : {})}>
+    <div className="theme-scope" {...(theme ? { style: theme } : {})}>
       <ErrorBoundary
         name="Docs workspace"
         resetKey={currentPath}

@@ -30,7 +30,7 @@ async function openParityFixture(page: import('@playwright/test').Page): Promise
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/parity-demo/');
   await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
-  await expect(page.locator('.docs-document-header')).toBeVisible();
+  await expect(page.locator('.document-header')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -101,7 +101,7 @@ test.describe(
         });
         await p.mouse.move(0, 0);
         await expect(p.getByRole('textbox', { name: 'Search pages' })).toHaveCount(0);
-        await expect(p.locator('.docs-document-header')).toBeVisible();
+        await expect(p.locator('.document-header')).toBeVisible();
         await expect(p.locator('[data-docs-toolbar-frame]')).toBeVisible();
         await expect(p.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue(
           'Salesphere',

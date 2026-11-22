@@ -168,7 +168,7 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     };
   }, [hue]);
   useEffect(() => {
-    const workspace = portalThemeRoot.current?.querySelector<HTMLElement>('.docs-workspace');
+    const workspace = portalThemeRoot.current?.querySelector<HTMLElement>('.workspace');
     if (!workspace || typeof document === 'undefined') return;
 
     // Radix keeps the original Docs portal behavior and mounts menus/dialogs
@@ -181,7 +181,7 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     const origThemeClasses = {
       dark: tgt.classList.contains('dark'),
       light: tgt.classList.contains('light'),
-      docsScope: tgt.classList.contains('docs-theme-scope'),
+      docsScope: tgt.classList.contains('theme-scope'),
     };
     const origBodyFont = {
       value: tgt.style.getPropertyValue('font-family'),
@@ -199,7 +199,7 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
       // The original Radix primitives portal directly to body. Make that
       // destination a Docs scope so the extracted bundle's scoped variants
       // continue to style menus, selects, dialogs, and popovers there.
-      tgt.classList.add('docs-theme-scope');
+      tgt.classList.add('theme-scope');
       // Sanity's global editor styles supplied Inter on the original Docs route.
       // Keep body-mounted Radix menus and dialogs on that same Docs typeface.
       const docsFont = computed.fontFamily;
@@ -274,11 +274,11 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
           tgt.classList.toggle('light', origThemeClasses.light);
         }
       }
-      if (!origThemeClasses.docsScope) tgt.classList.remove('docs-theme-scope');
+      if (!origThemeClasses.docsScope) tgt.classList.remove('theme-scope');
     };
   }, []);
   return (
-    <div ref={portalThemeRoot} className="docs-theme-scope" {...(theme ? { style: theme } : {})}>
+    <div ref={portalThemeRoot} className="theme-scope" {...(theme ? { style: theme } : {})}>
       <DocsQuizProvider
         config={workspaceOptions.quiz ?? {}}
         title={workspaceOptions.title}

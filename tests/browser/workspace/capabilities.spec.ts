@@ -214,7 +214,7 @@ test.describe('tree management and host capability modes', () => {
       await p.setViewportSize({ width: 1280, height: 900 });
       await p.goto('/workspace-readonly/');
       await expect(p.getByRole('link', { name: 'Salesphere Docs' })).toBeVisible();
-      const header = p.locator('.docs-document-header');
+      const header = p.locator('.document-header');
       await expect(header).toContainText('Salesphere');
       await expect(header).toContainText('A page level description for the Salesphere overview.');
       await expect(header).not.toContainText('Product and engineering documentation.');

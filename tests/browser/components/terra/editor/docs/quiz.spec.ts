@@ -76,10 +76,10 @@ test(
   async ({ page: p }) => {
     await openQuizWorkspace(p, { toolbar: true });
     await expect(
-      p.locator('.docs-toolbar-scroll').getByRole('button', { name: 'Generate quiz' }),
+      p.locator('.toolbar-scroll').getByRole('button', { name: 'Generate quiz' }),
     ).toBeVisible();
     await expect(p.getByRole('region', { name: 'Quiz generator' })).toBeVisible();
-    await p.locator('.docs-toolbar-scroll').getByRole('button', { name: 'Generate quiz' }).click();
+    await p.locator('.toolbar-scroll').getByRole('button', { name: 'Generate quiz' }).click();
     const dialog = p.getByRole('dialog', { name: 'Generate a quiz' });
     await dialog.getByLabel('Number of questions').fill('2');
     await dialog.getByLabel('Keyword answer').check();
@@ -119,12 +119,12 @@ test(
       response: { title: 'One question', questions: [response.questions[0]] },
     });
     await expect(
-      p.locator('.docs-toolbar-scroll').getByRole('button', { name: 'Generate quiz' }),
+      p.locator('.toolbar-scroll').getByRole('button', { name: 'Generate quiz' }),
     ).toHaveCount(0);
     await expect(p.getByRole('region', { name: 'Quiz generator' })).toBeVisible();
 
     // An opt-in block remains useful even with the global toolbar disabled.
-    const block = p.locator('[data-docs-view-root] .docs-quiz').last();
+    const block = p.locator('[data-docs-view-root] .quiz').last();
     await block.getByLabel('Number of questions').fill('1');
     await block.getByRole('button', { name: 'Generate quiz' }).click();
     await expect(block.getByText('Question 1 · Multiple choice')).toBeVisible();

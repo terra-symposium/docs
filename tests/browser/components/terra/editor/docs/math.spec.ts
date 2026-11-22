@@ -46,7 +46,7 @@ test.describe(
         .poll(() => p.evaluate(() => document.fonts.check('16px "KaTeX_Main"')))
         .toBe(true);
       expect(missingKatexFonts).toEqual([]);
-      await p.locator('.docs-math-wrapper').evaluate((element) => {
+      await p.locator('.math-wrapper').evaluate((element) => {
         (
           element as HTMLElement & { __blockActions?: Array<{ onSelect?: () => void }> }
         ).__blockActions?.[0]?.onSelect?.();
@@ -63,7 +63,7 @@ test.describe(
             JSON.parse((await p.getByTestId('editor-output').textContent()) ?? '[]')[0]?.code,
         )
         .toBe('y^3');
-      await p.locator('.docs-math-wrapper').evaluate((element) => {
+      await p.locator('.math-wrapper').evaluate((element) => {
         (
           element as HTMLElement & { __blockActions?: Array<{ onSelect?: () => void }> }
         ).__blockActions?.[0]?.onSelect?.();

@@ -38,11 +38,11 @@ test.describe('shared shell and document navigation', () => {
       await expect(p.getByRole('button', { name: /Actions for section/ })).toHaveCount(0);
       await expect(p.getByRole('button', { name: 'Actions for group Start here' })).toHaveCount(0);
       const toolbarPosition = await p.evaluate(() => {
-        const header = document.querySelector('.docs-document-header');
+        const header = document.querySelector('.document-header');
         const toolbar = document.querySelector('[data-docs-toolbar-frame]');
         const proseHeading = document.querySelector<HTMLElement>('[data-docs-view-root] h2');
         const pageContents = document.querySelector<HTMLElement>('nav[aria-label="On this page"]');
-        const workspace = document.querySelector<HTMLElement>('.docs-workspace');
+        const workspace = document.querySelector<HTMLElement>('.workspace');
         return {
           followsHeader:
             !!header &&
@@ -83,7 +83,7 @@ test.describe('shared shell and document navigation', () => {
       expect(toolbarPosition.headingScrollMargin).toBeGreaterThanOrEqual(160);
       const hostPalette = await p.evaluate(() => {
         const host = document.querySelector('.workspace-demo-theme');
-        const workspace = document.querySelector('.docs-workspace');
+        const workspace = document.querySelector('.workspace');
         return {
           host: host ? getComputedStyle(host).getPropertyValue('--primaryLight9').trim() : '',
           workspace: workspace
@@ -93,7 +93,7 @@ test.describe('shared shell and document navigation', () => {
       });
       expect(hostPalette.host).not.toBe('');
       expect(hostPalette.workspace).toBe(hostPalette.host);
-      const mobileHeader = p.locator('.docs-workspace header.md\\:hidden');
+      const mobileHeader = p.locator('.workspace header.md\\:hidden');
       await expect
         .poll(() => mobileHeader.evaluate((element) => getComputedStyle(element).display))
         .toBe('none');

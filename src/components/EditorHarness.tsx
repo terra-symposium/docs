@@ -100,8 +100,8 @@ export default function EditorHarness(): JSX.Element {
   });
   return (
     <StrictMode>
-      <div className="docs-theme-scope">
-        <main className="docs-workspace mx-auto min-h-svh max-w-5xl p-6">
+      <div className="theme-scope">
+        <main className="workspace mx-auto min-h-svh max-w-5xl p-6">
           <ContentEditor
             content={content}
             {...(options.attachments ? { docsAttachments: options.attachments } : {})}

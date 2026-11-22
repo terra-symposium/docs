@@ -8,7 +8,7 @@
  */
 export function enhanceStaticCodeBlocks(root: ParentNode = document): void {
   for (const pre of root.querySelectorAll<HTMLPreElement>(
-    '.docs-page-content pre.astro-code:not([data-docs-code-enhanced])',
+    '.copy pre.astro-code:not([data-docs-code-enhanced])',
   )) {
     pre.dataset.docsCodeEnhanced = 'true';
     const lang =
@@ -16,11 +16,11 @@ export function enhanceStaticCodeBlocks(root: ParentNode = document): void {
       pre.querySelector('code')?.className.match(/language-([\w-]+)/)?.[1] ||
       'text';
     const wrapper = document.createElement('div');
-    wrapper.className = 'docs-static-code-block docs-code-block';
+    wrapper.className = 'code-block';
     const header = document.createElement('div');
-    header.className = 'docs-code-block-header';
+    header.className = 'code-header';
     const label = document.createElement('span');
-    label.className = 'docs-static-code-language';
+    label.className = 'code-language';
     label.textContent = lang;
     const copy = document.createElement('button');
     copy.type = 'button';

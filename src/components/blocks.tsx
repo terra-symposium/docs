@@ -312,7 +312,7 @@ export function DocsRichBlock({
           : [],
       );
       return (
-        <section className="docs-table" data-docs-editor-block="DocsTable">
+        <section data-docs-editor-block="DocsTable">
           {text(block.header) && text(block.header) !== 'Table' && (
             <h3 className="sr-only">{text(block.header)}</h3>
           )}
@@ -337,9 +337,9 @@ export function DocsRichBlock({
         text(block.kind).toLowerCase().replace(TerraQualityRegex.REGEX_A_Z0_9_GI_REGEX(), '') ||
         'note';
       return (
-        <aside className={`docs-callout docs-callout-${kind}`} data-docs-aside={kind}>
-          <strong className="aside-title">{text(block.title)}</strong>
-          <div className="docs-block-flow docs-callout-body">
+        <aside className={`callout ${kind}`} data-docs-aside={kind}>
+          <strong className="title">{text(block.title)}</strong>
+          <div className="flow copy">
             <NestedContent
               value={
                 content.length ? content : typeof block.markdown === 'string' ? block.markdown : ''
@@ -383,9 +383,9 @@ export function DocsRichBlock({
         trust: false,
       });
       return block.inline ? (
-        <span className="docs-math" aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
+        <span className="math" aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
-        <div className="docs-math" aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
+        <div className="math" aria-label={code} dangerouslySetInnerHTML={{ __html: html }} />
       );
     }
     case 'nodes': {
@@ -398,7 +398,7 @@ export function DocsRichBlock({
     }
     case 'tsDocs':
       return (
-        <section className="docs-tsdocs">
+        <section className="tsdocs">
           <strong>TypeScript: {text(block.scope)}</strong>
           {block.markdown && <p>{text(block.markdown)}</p>}
         </section>

@@ -1791,7 +1791,7 @@ export default function Nodes({
         ref={flowContainerRef}
         style={{ height: height ?? internalHeight, ...style }}
         className={cn(
-          'docs-flow size-full overflow-hidden rounded-md border border-primary-6',
+          'flow size-full overflow-hidden rounded-md border border-primary-6',
           interactive && 'scrim-primary-1 scrim-20',
           className,
         )}

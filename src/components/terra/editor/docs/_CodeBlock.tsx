@@ -645,7 +645,7 @@ export function CodeBlock(
     <ErrorBoundary name="CodeBlock">
       <div
         className={cn(
-          'docs-code-block relative mb-10 mt-0 flow-root w-full max-w-full overflow-hidden rounded-sm border border-primary-6 bg-primary-1',
+          'code-block relative mb-10 mt-0 flow-root w-full max-w-full overflow-hidden rounded-sm border border-primary-6 bg-primary-1',
           '[&_.cm-editor]:!h-auto [&_.cm-editor]:!max-h-none [&_.cm-editor]:!bg-primary-1',
           '[&_.cm-scroller]:!h-auto [&_.cm-scroller]:!max-h-none [&_.cm-scroller]:overflow-x-auto [&_.cm-scroller]:overflow-y-hidden',
           '[&_.cm-scroller]:!text-[13px] [&_.cm-scroller]:!leading-[16px]',
@@ -664,7 +664,7 @@ export function CodeBlock(
         contentEditable={blockOptions.tone === 'edit' ? false : undefined}
         suppressContentEditableWarning
       >
-        <div className="docs-code-block-header flex items-center justify-between gap-2 border-b border-primary-6 bg-primary-2 px-2 py-px">
+        <div className="code-header flex items-center justify-between gap-2 border-b border-primary-6 bg-primary-2 px-2 py-px">
           {blockOptions.tone === 'view' ||
           !(blockOptions.tone === 'edit'
             ? blockOptions.languageEditable !== false && !src
@@ -713,7 +713,7 @@ export function CodeBlock(
         <div
           {...(!src && { ref: host })}
           className={cn(
-            'docs-code-block-body w-full max-w-full overflow-x-auto overflow-y-hidden text-inherit',
+            'code-body w-full max-w-full overflow-x-auto overflow-y-hidden text-inherit',
             fullHeight && 'min-h-0 flex-1',
           )}
         >
@@ -742,15 +742,15 @@ export function CodeBlock(
             <div className="min-w-0 max-w-full overflow-x-auto overflow-y-hidden">
               {
                 /* prettier-ignore */ blockOptions.tone === 'view' ? (
-		<div className='docs-code-block-fb m-0 flex max-w-full flex-col overflow-x-auto overflow-y-hidden bg-transparent p-0 text-sm leading-6' data-docs-code-fb='true'>
+		<div className='code-fallback m-0 flex max-w-full flex-col overflow-x-auto overflow-y-hidden bg-transparent p-0 text-sm leading-6' data-docs-code-fb='true'>
 			{(blockOptions.tone === 'view' ? resCode.replace(TerraQualityRegex.REGEX_R_N_G_REGEX(), '\n').split('\n') : []).map((l, i) => (
-				<div key={i} className='docs-code-block-fallback-line flex min-w-full text-sm leading-6'>
+				<div key={i} className='code-line flex min-w-full text-sm leading-6'>
 					<div className='min-w-10 shrink-0 select-none border-r border-primary-6 px-2 text-right font-mono tabular-nums leading-6 text-primary-10'>{i + 1}</div>
 					<span className='block whitespace-pre px-1 leading-6 text-inherit'>{l || ' '}</span>
 				</div>
 			))}
 		</div>
-	) : <div className='docs-code-block-fb m-0 max-w-full overflow-x-auto overflow-y-hidden whitespace-pre bg-transparent p-0 text-inherit' data-docs-code-fb='true'>{resCode}</div>
+	) : <div className='code-fallback m-0 max-w-full overflow-x-auto overflow-y-hidden whitespace-pre bg-transparent p-0 text-inherit' data-docs-code-fb='true'>{resCode}</div>
               }
             </div>
           )}

@@ -1460,7 +1460,7 @@ const {
             ? selBlock
             : decorator instanceof HTMLElement
               ? decorator.querySelector<HTMLElement>(
-                  '[data-docs-editor-block], .docs-math-wrapper, [data-math-code], [data-docs-view-root="true"]',
+                  '[data-docs-editor-block], .math-wrapper, [data-math-code], [data-docs-view-root="true"]',
                 )
               : null;
         const blockVal = block
@@ -1807,7 +1807,7 @@ const {
           let rect = selection.getRangeAt(0).getBoundingClientRect();
           if (rect.width === 0 && rect.height === 0) {
             const codemirrorSel = document.querySelector(
-              '.docs-code-block .cm-selectionBackground, .docs-code-block .cm-search-match',
+              '.code-block .cm-selectionBackground, .code-block .cm-search-match',
             );
             if (codemirrorSel) rect = codemirrorSel.getBoundingClientRect();
           }
@@ -2181,14 +2181,14 @@ const {
     return (
       <ErrorBoundary name="Toolbar">
         <div
-          className="docs-toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto mb-5 !w-full !max-w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
+          className="toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto mb-5 !w-full !max-w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
           data-docs-toolbar-frame
           data-docs-toolbar-scroll
           data-can-edit={editable ? 'true' : 'false'}
         >
           <div
             aria-hidden="true"
-            className="docs-toolbar-backdrop pointer-events-none absolute inset-x-0 -bottom-12 -top-16 z-0"
+            className="toolbar-backdrop pointer-events-none absolute inset-x-0 -bottom-12 -top-16 z-0"
           />
           <div className="relative z-10 rounded-lg border border-primary-6 bg-primary-3 shadow-lg shadow-primary-12/20">
             <TooltipProvider>

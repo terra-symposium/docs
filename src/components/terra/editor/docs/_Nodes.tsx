@@ -55,7 +55,7 @@ function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX
     <ErrorBoundary name="Nodes">
       <div
         className={cn(
-          'docs-block not-prose relative my-0 flow-root transition-all duration-200 [&>:first-child]:!mt-0 [&>:last-child]:!mb-0',
+          'block not-prose relative my-0 flow-root transition-all duration-200 [&>:first-child]:!mt-0 [&>:last-child]:!mb-0',
           className,
         )}
         data-docs-editor-block="Nodes"

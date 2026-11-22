@@ -91,11 +91,7 @@ export function renderMath({
     ];
   }, [code, inline, write]);
   const math = __terraQualityCreateElement(inline ? 'span' : 'div', {
-    className: cn(
-      'docs-math',
-      !inline && 'my-4 flex w-full justify-center overflow-x-auto',
-      className,
-    ),
+    className: cn('math', !inline && 'my-4 flex w-full justify-center overflow-x-auto', className),
     dangerouslySetInnerHTML: {
       __html: useMemo(() => {
         if (!code) return '';
@@ -118,7 +114,7 @@ export function renderMath({
         <span
           ref={ref}
           className={cn(
-            'docs-math-wrapper relative cursor-context-menu select-none outline-none ring-0',
+            'math-wrapper relative cursor-context-menu select-none outline-none ring-0',
             inline ? 'inline-block' : 'block',
           )}
           contentEditable={false}

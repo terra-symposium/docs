@@ -48,10 +48,7 @@ function Callout({ block }: { block: CalloutBlock }): JSX.Element {
   const kind = typeof block.kind === 'string' ? block.kind : 'note';
   return (
     <ErrorBoundary name="CalloutBlock">
-      <aside
-        className="docs-block [&>:first-child]:!mt-0 [&>:last-child]:!mb-0"
-        data-docs-aside={kind}
-      >
+      <aside className="block [&>:first-child]:!mt-0 [&>:last-child]:!mb-0" data-docs-aside={kind}>
         <h4 className="title">
           {typeof block.title === 'string' ? block.title : kind === 'note' ? 'Note' : kind}
         </h4>
@@ -90,7 +87,7 @@ function CalloutEditor({
       <aside
         {...attrs}
         contentEditable={false}
-        className="docs-block rounded-md border border-primary-5 p-4"
+        className="block rounded-md border border-primary-5 p-4"
         data-block="callout"
         data-docs-aside={kind}
       >

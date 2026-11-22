@@ -212,10 +212,11 @@ aside[data-docs-aside] .copy > :last-child { margin-block-end: 0 !important; }
     :is(th, td)[class*='AlignedCell_'] {
       @apply whitespace-normal border border-[var(--baseBgActive)] px-2 py-1;
       > div {
-        @apply block w-full min-w-full;
+        display: block;
+        @apply w-full min-w-full;
         > * { @apply m-0; }
       }
-      :where([contenteditable='true'], p, div.p) { @apply m-0 block w-full min-w-full whitespace-pre-wrap break-words; }
+      :where([contenteditable='true'], p, div.p) { display: block; @apply m-0 w-full min-w-full whitespace-pre-wrap break-words; }
     }
     :is(thead, tbody, tfoot) > tr > :is(th, td)[data-tool-cell='true'],
     > thead > tr > th[class*='_tableToolsCol_'],

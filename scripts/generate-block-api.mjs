@@ -14,6 +14,7 @@ const jsonPath = resolve(cache, 'typedoc-blocks.json');
 const outputPath = resolve(cache, 'blocks-api.json');
 const sourcePaths = [
   'site/src/lib/catalog.ts',
+  'src/lib/host.ts',
   'src/lib/markdown-model.ts',
   'src/components/MarkdownContent.tsx',
   'src/components/blocks.tsx',
@@ -62,6 +63,7 @@ const orderedIds = [
   'images',
   'math',
   'embeds-and-custom-blocks',
+  'custom-blocks',
   'quiz',
   'typescript-docs',
 ];
@@ -139,7 +141,7 @@ const blocks = orderedIds.map((id) => {
     throw new Error(`Block "${id}" needs at least two ordered @docsInsertionStep entries.`);
   if (!renderedExample) throw new Error(`Block "${id}" is missing @docsRenderedExample.`);
   if (!syntax.trim()) throw new Error(`Block "${id}" @docsSyntax must include a source example.`);
-  if (!['markdown', 'nodes', 'embed', 'quiz', 'tsdocs'].includes(renderKind))
+  if (!['markdown', 'nodes', 'embed', 'quiz', 'tsdocs', 'custom'].includes(renderKind))
     throw new Error(`Block "${id}" has invalid @docsRenderKind "${renderKind}".`);
   const code = /```/.test(syntax) ? syntax : `\`\`\`mdx\n${syntax}\n\`\`\``;
   const fenceLanguages = [...code.matchAll(/(?:^|\n)```([A-Za-z][A-Za-z0-9_-]*)/g)].map(

@@ -64,6 +64,7 @@ const blockSectionIds = [
   'images',
   'math',
   'embeds-and-custom-blocks',
+  'custom-blocks',
   'quiz',
   'typescript-docs',
 ];

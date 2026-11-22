@@ -15,6 +15,12 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardHeading,
   Tabs,
   TabsContent,
   TabsList,
@@ -43,7 +49,7 @@ export type BlockGuidanceEntry = {
   /** Markdown content paired with the rendered example, including any needed lead-in. */
   renderedExample: string;
   /** Renderer used when the example needs a host or rich-block component. */
-  renderKind: 'markdown' | 'nodes' | 'embed' | 'quiz' | 'tsdocs';
+  renderKind: 'markdown' | 'nodes' | 'embed' | 'quiz' | 'tsdocs' | 'custom';
   /** Restored editor screenshots that illustrate insertion controls or formatting. */
   editorImages: { src: string; alt: string }[];
 };
@@ -90,7 +96,21 @@ export function BlockGuidance({ entry }: { entry: BlockGuidanceEntry }): JSX.Ele
             value="rendered"
             className="docs-block-stack mt-0 rounded-b-sm border border-t-0 border-primary-6 p-4"
           >
-            {entry.renderKind === 'nodes' ? (
+            {entry.renderKind === 'custom' ? (
+              <Card variant="primary-outline" size="sm" className="max-w-lg">
+                <CardHeader>
+                  <Badge variant="success-default" size="sm">
+                    Ready
+                  </Badge>
+                  <CardHeading as="h4">Build status</CardHeading>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>
+                    <DocsMarkdown markdown={entry.renderedExample} />
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            ) : entry.renderKind === 'nodes' ? (
               <>
                 <Nodes
                   direction="LR"

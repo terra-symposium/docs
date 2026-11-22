@@ -299,10 +299,10 @@ function NestedContent({
  * @docsId embeds-and-custom-blocks
  * @docsUseWhen An external resource or host-registered component adds needed context at this point in the reading path.
  * @docsConstraint Embed only when a reader needs to inspect the resource in the page; use a descriptive link when they only need the destination.
- * @docsConstraint Host-managed custom blocks and reusable leaves must be registered and resolvable in the active host.
+ * @docsConstraint Reusable leaf embeds must resolve to a leaf registered in the active host.
  * @docsConstraint Verify authorization and access behavior before presenting an embed as working.
  * @docsDo Provide a resolvable leaf ID when using a reusable leaf embed.
- * @docsDo Document custom block props and keep attachment embeds near their explanation.
+ * @docsDo Keep attachment embeds near their explanation.
  * @docsDo Preserve unknown or disabled structured source in a recoverable form.
  * @docsDont Do not present an unregistered component or unauthorized URL as working.
  * @docsDont Do not discard unknown source or display raw JSON as ordinary prose.
@@ -310,12 +310,11 @@ function NestedContent({
  * @docsRenderKind embed
  * @docsDo External embed: use when readers need to inspect the resource here; otherwise link to it.
  * @docsDo Reusable leaf: resolve a valid leaf ID and embed only when the host registers the component.
- * @docsDo Host custom block: register and document the component and its props before use.
  * @docsDo Attachment embed: select an existing authorized file and use Visual embed beside its explanation.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-attachment.png | Docs Insert content menu with Add attachment highlighted
  * @docsInsertionStep For a host-managed file, choose + Insert content → Add attachment and select the authorized file.
  * @docsInsertionStep Choose Visual embed when the reader needs to inspect it in place; otherwise link to it.
- * @docsInsertionStep For Markdown embeds or custom blocks, verify the URL, scope, registration, and access in the target host.
+ * @docsInsertionStep For a Markdown embed, verify the URL, scope, and access behavior in the target host.
  * @docsSyntax
  * ```mdx
  * The reader needs the related guide in place:

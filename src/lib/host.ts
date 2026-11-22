@@ -212,6 +212,38 @@ export type DocsHostAdapter = {
 };
 /**
  * A host-specific rich block renderer. Generic blocks live in @terra-symposium/docs.
+ *
+ * @docsId custom-blocks
+ * @docsUseWhen Add a page-specific React component or host-registered rich block when built-in Docs blocks do not express the needed view.
+ * @docsConstraint A repository leaf is Markdown-only in `.md`; use `.mdx` only when that leaf imports a React component.
+ * @docsConstraint Page-local MDX components and host-wide `DocsCustomBlock` registrations are different extension paths.
+ * @docsConstraint Every registered custom block needs a stable `name` and a `component` or `render` implementation.
+ * @docsConstraint Keep the existing `SiteMarkdownPage.astro` route and `DocsSiteLayout` shell; do not wrap a page in a second Docs layout.
+ * @docsDo Keep a page-specific TSX component and its example data beside the `.mdx` leaf that owns them.
+ * @docsDo Import and render the component where its explanation belongs in the reading path.
+ * @docsDo Keep title and description in frontmatter and use ordinary headings for the page table of contents.
+ * @docsDo Register reusable host-level blocks through `DocsWorkspace.customBlocks` and document their props.
+ * @docsDo Keep nested routes under their parent path so the parent remains active in navigation.
+ * @docsDont Do not add custom markup or styles before checking shared components and variants in `@terra-symposium/styling/ui`.
+ * @docsDont Do not add page-specific CSS when shared variants and layout utilities fit.
+ * @docsDont Do not render generated APIs as custom signature cards; use shared tables.
+ * @docsDont Do not change the Docs shell to work around a missing MDX component; trace the shared MDX rendering path.
+ * @docsTip Prefer `DataTable`, `Card`, `Button`, and `ButtonLink` when they fit the content.
+ * @docsTip Keep components data-driven when they accept rows or columns, and reuse existing form and display controls.
+ * @docsTip Build the site and inspect the direct route, component output, generated table of contents, sidebar selection, and sibling leaves.
+ * @docsTip Check the browser console for MDX, React, and hydration errors.
+ * @docsRenderKind custom
+ * @docsSyntax
+ * import StatusPanel from './_components';
+ *
+ * <StatusPanel status="ready" />
+ * @docsRenderedExample
+ * Release build passed. The component presents a short status at the point where readers need it.
+ * @docsInsertionStep Choose the extension scope: use a page-local component for one leaf or a registered custom block for a host-wide reusable block.
+ * @docsInsertionStep For one leaf, create a sibling `.tsx` component, import it from the `.mdx` leaf, and render it beside its explanation.
+ * @docsInsertionStep For host-wide reuse, implement a `DocsCustomBlock` with a stable `name` and `component` or `render`, then register it in `DocsWorkspace.customBlocks`.
+ * @docsInsertionStep Reuse shared UI variants and data-driven controls before adding custom markup or styles.
+ * @docsInsertionStep Build Docs and inspect the direct route, generated table of contents, sidebar selection, sibling leaves, and browser console.
  */
 export type DocsCustomBlock = {
   name: string;

@@ -89,40 +89,7 @@ Add media, notation, or host-provided blocks when they help readers inspect, cal
 
 ### Custom blocks
 
-Use `.mdx` when one leaf imports a React component for a demo, interactive view, or generated API panel; `.md` remains Markdown-only. This page-local path differs from registering a host-wide Markdown block.
-
-| 🧭 Need                       | 🧩 Extension path                          |
-| ----------------------------- | ------------------------------------------ |
-| One leaf needs a demo or API  | Import sibling TSX in `.mdx`               |
-| Markdown needs a custom block | Register `customBlocks` on `DocsWorkspace` |
-
-See the [component reference](../../../developer/component/blocks/) for the host contract.
-
-1. Keep the component beside the leaf that owns it.
-   - Put a leaf-specific TSX file, such as `_components.tsx`, beside its `.mdx` file.
-   - Keep the component and its example data with that page.
-   - Keep nested routes under their parent path so the parent stays active.
-2. Import and place the component in the MDX reading path.
-   - Render it where its explanation is needed.
-   - Keep title and description in frontmatter; use ordinary headings for the page TOC.
-   - Use the existing `SiteMarkdownPage.astro` route and `DocsSiteLayout` shell.
-3. Reuse the shared UI before adding markup or styles.
-   - Check `@terra-symposium/styling/ui` and its component variants first.
-   - Prefer `DataTable`, `Card`, `Button`, and `ButtonLink` where they fit.
-   - Reuse existing form and display controls instead of rebuilding them.
-   - Keep components data-driven when they accept rows or columns.
-   - Render generated APIs with shared tables, not custom cards or signature styles.
-   - Use shared variants and existing layout utilities; avoid page-specific CSS.
-4. Build Docs, then open the leaf's direct route and inspect its context.
-   - Check component output, the generated TOC, sidebar selection, and sibling leaves.
-   - Confirm nested pages keep their parent active and siblings visible.
-   - Check the browser console for MDX, React, and hydration errors.
-
-:::caution[Keep the Docs shell single]
-
-Render the MDX leaf through the existing route and layout. If its component is missing, trace the shared MDX slot rendering before changing the page shell; do not wrap the leaf in a second Docs layout.
-
-:::
+<DocsBlock data='{"_type":"blockGuidance","id":"custom-blocks"}' />
 
 ### Quiz
 

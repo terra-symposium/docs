@@ -151,6 +151,7 @@
     "pdf-lib": "^1.17.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "remark-directive": "4.0.0",
     "sonner": "^1.4.41",
     "use-sync-external-store": "1.7.0",
     "yaml": "^2.7.0"

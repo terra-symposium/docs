@@ -8,7 +8,7 @@ IMPORTS
 
 // COMPONENTS
 import { ErrorBoundary } from '@terra-symposium/boundaries/react';
-import { DocsStaticWorkspace } from '../../../src/components/StaticWorkspace.js';
+import { DocsStaticWorkspace } from '../../../dist/lib/components/StaticWorkspace.js';
 import { DocsSiteSearch } from './DocsSiteSearch.js';
 
 // TYPES

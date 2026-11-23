@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.34
+
+### Patch Changes
+
+- Load the packaged Docs workspace from its compiled distribution so published site builds do not depend on source files that are absent from the package.
+
 ## 0.4.33
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.33
+
+### Patch Changes
+
+- Include the static workspace source used by the packaged Docs site entry point.
+
 ## 0.4.32
 
 ### Patch Changes

@@ -990,9 +990,9 @@ const editorNestedMd = (body: DocBody | null | undefined, markdown = ''): string
               }
               md += text;
             }
-            const source = escDocsTableTemplates(normDocsSpacing(md));
-            trace('serialize.editor.complete', { length: source.length });
-            return source;
+            const src = escDocsTableTemplates(normDocsSpacing(md));
+            trace('serialize.editor.complete', { length: src.length });
+            return src;
           })()
         : fromBlockJsx(markdown || '').trim(),
     )

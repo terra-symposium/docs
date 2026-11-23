@@ -49,23 +49,23 @@ test.describe('local source downloads', () => {
     },
   );
   test(
-    'Tree handling editor opens and preserves rich blocks on Save',
+    'Tree reference editor opens and preserves rich Markdown on Save',
     XL_VIEWPORT_TEST,
     async ({ page: p }) => {
-      await p.goto('/consumer/1-usage/2-tree-handling/?mode=edit');
+      await p.goto('/consumer/1-usage/0-tree/?mode=edit');
       await waitForWorkspaceReady(p);
       await expect(p.locator('[data-docs-shell]')).toHaveAttribute('data-docs-mode', 'edit');
-      await expect(p.getByRole('textbox', { name: 'Document editor' })).toBeVisible();
+      await expect(p.locator('[data-docs-article-editor="true"]')).toBeVisible();
       await expect(p.getByRole('heading', { name: 'Editor Surface Crashed' })).toHaveCount(0);
       await p.getByRole('textbox', { name: 'Title', exact: true }).fill('Tree operations');
       const [download] = await Promise.all([
         p.waitForEvent('download'),
         p.getByRole('button', { name: 'Save', exact: true }).click(),
       ]);
-      expect(download.suggestedFilename()).toBe('2-tree-handling.md');
+      expect(download.suggestedFilename()).toBe('0-tree.md');
       const src = await readFile(await download.path(), 'utf8');
       expect(src).toContain('title: Tree operations');
-      expect(src).toContain('<Nodes');
+      expect(src).toContain('| 🧭 Level');
       expect(src).toContain('|||[Local]');
     },
   );

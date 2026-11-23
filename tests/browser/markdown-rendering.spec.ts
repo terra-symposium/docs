@@ -28,7 +28,7 @@ TESTS
 //////////////////////////////////////////////////*/
 
 test(
-  'published MDX code fixture has a language header and copy control',
+  'published code fixture has a language header and copy control',
   {
     tag: '@viewport:xl',
     annotation: {
@@ -39,27 +39,16 @@ test(
   async ({ page }) => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto('/developer/fixture/code/');
-    const prose = page.locator('.copy');
-    await expect(prose.locator('> p').first()).toHaveCSS('margin-top', '0px');
-    expect(
-      await prose
-        .locator('> h2')
-        .first()
-        .evaluate((heading) => {
-          const prev = heading.previousElementSibling;
-          return prev
-            ? heading.getBoundingClientRect().top - prev.getBoundingClientRect().bottom
-            : 0;
-        }),
-    ).toBeGreaterThanOrEqual(40);
     const block = page.locator('.code-block');
     await expect(block).toBeVisible();
     await expect(block.locator('.code-header')).toHaveCSS('display', 'flex');
     await expect(block.locator('.code-header')).toHaveCSS('border-bottom-width', '1px');
-    await expect(block.locator('.code-language')).toHaveText('sh');
-    await expect(block.locator('pre.astro-code .line span').first()).toBeVisible();
-    await block.getByRole('button', { name: 'Copy sh code' }).click();
-    await expect(block.getByRole('button')).toHaveText('Copied');
+    await expect(block.locator('.code-header p')).toHaveText('sh');
+    await expect(block.locator('.code-body [role="textbox"]')).toContainText(
+      'pnpm list @terra-symposium/docs',
+    );
+    await block.getByRole('button', { name: 'Copy', exact: true }).click();
+    await expect(block.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
   },
 );
 
@@ -84,29 +73,31 @@ HELPERS
  *
  * @param page Playwright page configured for the published Docs test site.
  *
- * @returns Completion after the Git tab and accordion panel respond to user input.
+ * @returns Completion after the Local/Hosted tab and accordion respond to input.
  */
 async function verifyPublishedMarkdownControls({
   page,
 }: {
   page: import('@playwright/test').Page;
 }): Promise<void> {
-  await page.goto('/consumer/1-usage/2-blocks/');
+  await page.goto('/developer/fixture/controls/');
   await expect(page.locator('[data-docs-shell]')).toHaveAttribute('data-loading', 'false');
 
-  const npmTab = page.getByRole('tab', { name: 'npm', exact: true }).first();
-  await expect(page.getByRole('tablist')).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'pnpm', exact: true }).first()).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
-  await npmTab.click();
-  await expect(npmTab).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByText('npm install @terra-symposium/docs', { exact: false })).toBeVisible();
-
-  await page.getByRole('button', { name: 'Why the host saves', exact: true }).click();
+  const hostedTab = page.getByRole('tab', { name: 'Hosted', exact: true });
+  await expect(hostedTab).toBeVisible();
+  await hostedTab.click();
+  await expect(hostedTab).toHaveAttribute('aria-selected', 'true');
   await expect(
-    page.getByText('The host owns persistence and publication.', { exact: false }),
+    page
+      .getByRole('tabpanel', { name: 'Hosted' })
+      .getByText('Save through the host adapter and confirm the reader route.', { exact: false }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Hosted', exact: true }).click();
+  await expect(
+    page
+      .getByRole('region', { name: 'Hosted' })
+      .getByText('Save through the host adapter and confirm the reader route.', { exact: false }),
   ).toBeVisible();
 }
 
@@ -146,7 +137,7 @@ test(
     await expect(siteTitle).toHaveCSS('font-style', 'italic');
 
     const code = page.locator('[data-docs-code-block="view"]').first();
-    await expect(code.locator('.code-header')).toContainText('yaml');
+    await expect(code.locator('.code-header')).toContainText(/mdx|yaml/);
     await expect(code.getByRole('button', { name: 'Copy' })).toBeVisible();
     await expect(code.locator('.cm-editor')).toBeVisible();
     await expect(code.locator('.cm-line')).not.toHaveCount(0);

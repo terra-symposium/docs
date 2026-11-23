@@ -1,9 +1,12 @@
 ---
 title: Docs consumers
 description: Local repository audit of Docs package resolution and host boundaries.
+hidden: true
 ---
 
-This historical audit covers Desktop repositories with an `@terra-symposium/docs` dependency, a `docs` command, or a Docs route on 2 November 2026. Versions below reflect that date and are not a current installation inventory. For the repeatable upgrade process, use [Release and upgrade](/developer/repo/release-and-upgrades/); for application responsibilities, use [Host integration](/developer/component/host-integration/).
+## Audit scope
+
+This historical audit covers Desktop repositories with an `@terra-symposium/docs` dependency, a `docs` command, or a Docs route on 2 November 2026. Versions below reflect that date and are not a current installation inventory. For the repeatable upgrade process, use [Release](/developer/repository/release-and-upgrades/); for application responsibilities, use [Host integration](/developer/component/host-integration/).
 
 ## Integration patterns
 
@@ -15,16 +18,16 @@ The useful distinction across consumers is the boundary each host owns:
 | Local embedded workspace | Shared editor and Markdown download on Save                   | Tree, branch, and leaf routes, content and asset URLs                  |
 | Hosted workspace         | Editor, navigation, rich blocks, and action UI                | Authenticated reads, drafts, writes, publication, history, attachments |
 
-Use [Site pipeline](/developer/repo/site-pipeline/) for the first pattern and [Host integration](/developer/component/host-integration/) for the latter two. Verify a consumer's current installed version and running site in that repository rather than using the historical table as an upgrade checklist.
+Use [Development](/developer/repository/development/) for the first pattern and [Host integration](/developer/component/host-integration/) for the latter two. Verify a consumer's current installed version and running site in that repository rather than using the historical table as an upgrade checklist.
 
-## Historical snapshot
+## Consumer versions
 
 | Repository        | Declared / installed | Renderer and CSS                       | Host responsibility                                                    |
 | ----------------- | -------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
 | Docs              | local `0.4.3` source | Shared site, workspace, package CSS    | Package implementation and its own Markdown catalog                    |
 | Docs template     | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Template content and site configuration                                |
 | Standards         | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Markdown and site configuration                                        |
-| Styling           | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Component reference generation and Markdown                            |
+| Styling           | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | API reference generation and Markdown                                  |
 | Systems           | `^0.4.22` / `0.4.22` | `docs` CLI, shared CSS                 | Structure synchronization and Markdown                                 |
 | Compression       | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Assessment content and site configuration                              |
 | Personal Docs     | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Personal content and site configuration                                |

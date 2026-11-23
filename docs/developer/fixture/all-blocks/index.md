@@ -48,7 +48,7 @@ Tabs body.
 <Nodes
 nodes={[
 { id: 'start', type: 'process', data: { title: 'Start' } },
-{ id: 'finish', type: 'process', data: { title: 'Finish' } }
+{ id: 'finish', type: 'process', data: { title: 'Finish' } },
 ]}
 edges={[{ id: 'start-to-finish', source: 'start', target: 'finish' }]}
 />

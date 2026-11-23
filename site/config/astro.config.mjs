@@ -51,6 +51,7 @@ const requireFromProject = consumerProject.require;
 const reporting = projectManifest.docs?.errorReporting;
 const reportEndpoint = process.env.DOCS_ERROR_REPORT_ENDPOINT || reporting?.endpoint;
 const reportSite = reporting?.site || projectManifest.name;
+// hygiene-ignore single-use -- Keep the explicit Docs block allowlist separate from its validation loop.
 const blockSectionIds = [
   'frontmatter',
   'prose',

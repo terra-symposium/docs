@@ -281,6 +281,7 @@ function MarkdownGroup({
   return <MarkdownAccordions items={items} body={body} />;
 }
 
+// hygiene-ignore single-use -- Astro MDX maps this named renderer as a custom Markdown component.
 /**
  * Renders mutually exclusive routes that reach the same outcome.
  *
@@ -353,22 +354,22 @@ export function MarkdownTabs({
         variant="line"
         className="mb-0 w-full justify-start gap-0 border-b border-primary-6"
       >
-        {items.map((item, index) => (
+        {items.map((item, i) => (
           <TabsTrigger
-            key={index}
-            value={`tab-${index}`}
+            key={i}
+            value={`tab-${i}`}
             variant="primary-underline"
             selection="line"
             className="-mb-px rounded-none border-0 bg-transparent px-4 py-2 font-normal text-primary-11 shadow-none hover:bg-transparent hover:text-primary-12 enabled:hover:no-underline after:bg-primary-9 data-[state=active]:font-semibold data-[state=active]:text-primary-12"
           >
-            {typeof item.title === 'string' && item.title ? item.title : `Tab ${index + 1}`}
+            {typeof item.title === 'string' && item.title ? item.title : `Tab ${i + 1}`}
           </TabsTrigger>
         ))}
       </TabsList>
-      {items.map((item, index) => (
+      {items.map((item, i) => (
         <TabsContent
-          key={index}
-          value={`tab-${index}`}
+          key={i}
+          value={`tab-${i}`}
           className="docs-block-stack mt-0 rounded-b-sm border border-t-0 border-primary-6 p-4"
         >
           {body(item)}
@@ -378,6 +379,7 @@ export function MarkdownTabs({
   );
 }
 
+// hygiene-ignore single-use -- Astro MDX maps this named renderer as a custom Markdown component.
 /**
  * Renders independent cases that readers may inspect in any order.
  *
@@ -443,10 +445,10 @@ export function MarkdownAccordions({
 }): JSX.Element {
   return (
     <Accordion type="multiple" variant="sm">
-      {items.map((item, index) => (
-        <AccordionItem key={index} value={`accordion-${index}`} className="docs-accordion-item">
+      {items.map((item, i) => (
+        <AccordionItem key={i} value={`accordion-${i}`} className="docs-accordion-item">
           <AccordionTrigger>
-            {typeof item.title === 'string' && item.title ? item.title : `Item ${index + 1}`}
+            {typeof item.title === 'string' && item.title ? item.title : `Item ${i + 1}`}
           </AccordionTrigger>
           <AccordionContent className="docs-block-stack">{body(item)}</AccordionContent>
         </AccordionItem>

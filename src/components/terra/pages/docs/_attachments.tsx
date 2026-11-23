@@ -322,24 +322,24 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
    * @param tempId Temporary row ID replaced after the upload succeeds.
    * @param isMdFile Whether the uploaded file should be treated as a document.
    */
-  const processUpload = async (file: File, tempId: string, isMdFile: boolean) => {
+  const processUpload = async (file: File, tmpId: string, isMdFile: boolean) => {
     try {
       const finalAsset = await uploadAssetChunked(file, docId, {
         onProgress: ({ currentChunk: c, totalChunks: t, message: m }) => {
-          if (m) setSisters((p) => p.map((s) => (s.id === tempId ? { ...s, name: m } : s)));
+          if (m) setSisters((p) => p.map((s) => (s.id === tmpId ? { ...s, name: m } : s)));
           else if (t > 1)
             setSisters((p) =>
-              p.map((s) => (s.id === tempId ? { ...s, name: `Uploading (${c}/${t})...` } : s)),
+              p.map((s) => (s.id === tmpId ? { ...s, name: `Uploading (${c}/${t})...` } : s)),
             );
         },
       });
       setSisters((p) =>
         p.map((s) =>
-          s.id === tempId
+          s.id === tmpId
             ? {
                 ...s,
                 ...(finalAsset.id ? { id: finalAsset.id } : {}),
-                path: finalAsset.path || finalAsset.src || tempId,
+                path: finalAsset.path || finalAsset.src || tmpId,
                 name: finalAsset.name || file.name,
                 isMd: isMdFile,
                 title: file.name,
@@ -349,7 +349,7 @@ export function Attachments({ dPath, tree }: { dPath: string; tree: TreeType[] }
       );
     } catch (_err: unknown) {
       logErr('Attachments:Upload', `Failed '${file.name}'`, _err);
-      setSisters((p) => p.filter((s) => s.id !== tempId));
+      setSisters((p) => p.filter((s) => s.id !== tmpId));
       toast.error(_err instanceof Error ? _err.message : `Failed to upload ${file.name}.`);
       notify({
         error: _err instanceof Error ? _err : new Error('Failed to attach.'),

@@ -20,14 +20,13 @@ CONFIG
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(root, 'src', 'lib', 'terra');
 const output = join(root, 'dist', 'lib', 'lib', 'terra');
-const buildDirectory = process.argv[2];
-if (!buildDirectory)
-  throw new Error('Pass the temporary stylesheet directory to copy-runtime.mjs.');
+const buildDir = process.argv[2];
+if (!buildDir) throw new Error('Pass the temporary stylesheet directory to copy-runtime.mjs.');
 // Keep authored Docs prose after generated utilities, matching the original
 // website's cascade where its prose stylesheet loaded after global.css. Styling's
 // effect layer also contains authored @layer rules, so append it last.
 // hygiene-ignore single-use -- Read staged output before atomically replacing the package stylesheet.
-const workspaceStyles = await readFile(join(buildDirectory, 'workspace.css'), 'utf8');
+const workspaceStyles = await readFile(join(buildDir, 'workspace.css'), 'utf8');
 // Tailwind has already run. Leave the authored rules intact, but remove their
 // build-time layers so a consumer's Tailwind plugin can process this stylesheet.
 const effectCss = postcss.parse(
@@ -71,7 +70,7 @@ await cp(
   join(root, 'dist', 'lib', 'assets', 'fonts'),
   { recursive: true },
 );
-const stagedStylesPath = join(buildDirectory, 'style.css');
+const stagedStylesPath = join(buildDir, 'style.css');
 await appendFile(stagedStylesPath, `\n${workspaceStyles}`);
 for (const rule of [...effectCss.nodes]) {
   if (rule.type === 'atrule' && rule.name === 'layer') rule.replaceWith(...(rule.nodes ?? []));

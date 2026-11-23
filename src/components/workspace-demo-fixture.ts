@@ -590,12 +590,12 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         }
         return undefined;
       };
-      const document =
+      const doc =
         requestedDoc ??
         firstLeaf(requestedGroupMatch?.node ?? requestedSectionMatch?.node) ??
         state.documents.salesphere ??
         Object.values(state.documents)[0];
-      const position = document ? sectionForLeaf(state, document.id) : { sectionId: 'overview' };
+      const position = doc ? sectionForLeaf(state, doc.id) : { sectionId: 'overview' };
       const requestedGroupAncestors = (requestedGroupMatch?.ancestors ?? []).filter(
         (n) => n.type === 'branch',
       );
@@ -609,7 +609,7 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
         : requestedGroupMatch?.node.type === 'branch' && requestedGroupAncestors.length > 0
           ? requestedGroupMatch.node.origName
           : undefined;
-      const leafId = document?.id;
+      const leafId = doc?.id;
       return {
         sectionId,
         ...(groupId ? { groupId } : {}),
@@ -629,8 +629,8 @@ export function createWorkspaceDemoHost(readOnly = false): DocsHostAdapter {
     routePath(value) {
       const state = readWorkspaceDemoState();
       const requested = value.replace(G_REGEX(), '');
-      const document = findDoc(state, requested) ?? findDoc(state, requested.split('/').at(-1));
-      if (document) return routeForWorkspaceDocument(state, document);
+      const doc = findDoc(state, requested) ?? findDoc(state, requested.split('/').at(-1));
+      if (doc) return routeForWorkspaceDocument(state, doc);
       const branch = findNode(state.tree, requested)?.node;
       if (branch?.type === 'branch') {
         const parent =
@@ -1061,10 +1061,10 @@ export function routeForWorkspaceDocument(
   value: string | WorkspaceDemoDoc,
   routeBuilder: DocsHostAdapter['buildRoute'] = buildWorkspaceRoute,
 ): string {
-  const document = typeof value === 'string' ? findDoc(state, value) : value;
-  if (!document) return WORKSPACE_DEMO_PATH;
-  const position = sectionForLeaf(state, document.id);
-  return (routeBuilder ?? buildWorkspaceRoute)(position.sectionId, position.groupId, document.id);
+  const doc = typeof value === 'string' ? findDoc(state, value) : value;
+  if (!doc) return WORKSPACE_DEMO_PATH;
+  const position = sectionForLeaf(state, doc.id);
+  return (routeBuilder ?? buildWorkspaceRoute)(position.sectionId, position.groupId, doc.id);
 }
 /**
  * Returns a copied navigation tree with URLs and read/write permissions for the demo host.

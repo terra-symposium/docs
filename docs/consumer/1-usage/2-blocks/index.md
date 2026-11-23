@@ -93,4 +93,4 @@ Each block shows its render/source example first, followed by accordion items fo
 
 <DocsBlock data='{"_type":"blockGuidance","id":"typescript-docs"}' />
 
-For the shared block contracts and host configuration, see the [component reference](../../../developer/component/blocks/).
+For the shared block contracts and host configuration, see the [API reference](../../../developer/component/blocks/).

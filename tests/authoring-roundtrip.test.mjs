@@ -90,17 +90,18 @@ test('accordion bodies can contain fenced delimiter examples', () => {
 });
 
 test('Get started preview tabs parse as one complete group', async () => {
-  const source = await readFile(
+  const src = await readFile(
     new URL('../docs/consumer/0-configuration/0-install.md', import.meta.url),
     'utf8',
   );
-  const groups = markdownToDocsValue(source).filter((block) => block._type === 'tabs');
+  // hygiene-ignore single-use -- Keep the parsed tab groups distinct from the rendered HTML assertions below.
+  const groups = markdownToDocsValue(src).filter((block) => block._type === 'tabs');
   assert.ok(
     groups.some(
       (group) => group.items.map((item) => item.title).join(',') === 'Preview,Build,Check',
     ),
   );
-  const html = renderToStaticMarkup(createElement(DocsMarkdown, { markdown: source }));
+  const html = renderToStaticMarkup(createElement(DocsMarkdown, { markdown: src }));
   assert.match(html, /role="tab"[^>]*>Preview/);
   assert.match(html, /role="tab"[^>]*>Build/);
   assert.match(html, /role="tab"[^>]*>Check/);
@@ -108,15 +109,16 @@ test('Get started preview tabs parse as one complete group', async () => {
 });
 
 test('unclosed tab markers report their source line', () => {
-  const errors = [];
-  const original = console.error;
-  console.error = (...args) => errors.push(args);
+  const errs = [];
+  // hygiene-ignore single-use -- Restore the captured logger in finally even when parsing throws.
+  const orig = console.error;
+  console.error = (...args) => errs.push(args);
   try {
     markdownToDocsValue('Intro\n\n|||[Build]\n\nBody\n\n|||[Check]\n\nMore\n\n|||');
   } finally {
-    console.error = original;
+    console.error = orig;
   }
-  assert.equal(errors.length, 1);
-  assert.match(errors[0][0], /Unclosed group marker/);
-  assert.deepEqual(errors[0][1], { delimiter: '|||', title: 'Build', line: 3 });
+  assert.equal(errs.length, 1);
+  assert.match(errs[0][0], /Unclosed group marker/);
+  assert.deepEqual(errs[0][1], { delimiter: '|||', title: 'Build', line: 3 });
 });

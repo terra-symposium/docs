@@ -19,6 +19,7 @@ export default {
   content: [
     './src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}',
     './docs/src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}',
+    './docs/**/*.tsx',
     './site/src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}',
     './node_modules/@terra-symposium/styling/dist/**/*.{js,jsx,ts,tsx,d.ts}',
   ],

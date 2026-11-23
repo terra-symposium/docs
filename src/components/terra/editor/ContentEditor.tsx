@@ -1043,14 +1043,14 @@ function UnsupportedBlock({
   children,
   node,
 }: BlockObjectRenderProps): JSX.Element {
-  const source = isPreservedMember(node.source) ? node.source : (node as unknown as ContentMember);
+  const src = isPreservedMember(node.source) ? node.source : (node as unknown as ContentMember);
   return (
-    <div {...attrs} contentEditable={false} data-docs-unsupported-block={source._type}>
+    <div {...attrs} contentEditable={false} data-docs-unsupported-block={src._type}>
       <p className="text-sm text-primary-10">
-        Unsupported document block ({source._type}) retained in source.
+        Unsupported document block ({src._type}) retained in source.
       </p>
       <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded border border-primary-5 p-3 text-xs">
-        {JSON.stringify(source, null, 2)}
+        {JSON.stringify(src, null, 2)}
       </pre>
       {children}
     </div>
@@ -1072,10 +1072,10 @@ function UnsupportedInline({
   children,
   node,
 }: InlineObjectRenderProps): JSX.Element {
-  const source = isPreservedMember(node.source) ? node.source : (node as unknown as ContentMember);
+  const src = isPreservedMember(node.source) ? node.source : (node as unknown as ContentMember);
   return (
-    <span {...attrs} contentEditable={false} data-docs-unsupported-inline={source._type}>
-      {typeof source.text === 'string' ? source.text : `[Unsupported ${source._type}]`}
+    <span {...attrs} contentEditable={false} data-docs-unsupported-inline={src._type}>
+      {typeof src.text === 'string' ? src.text : `[Unsupported ${src._type}]`}
       {children}
     </span>
   );

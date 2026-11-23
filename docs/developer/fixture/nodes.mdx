@@ -1,0 +1,17 @@
+---
+title: Nodes fixture
+description: Check custom Markdown node graph rendering.
+hidden: true
+---
+
+## Follow the process
+
+The graph connects the starting action to its outcome:
+
+<Nodes
+  nodes={[
+    { id: 'start', type: 'process', data: { title: 'Start' } },
+    { id: 'finish', type: 'process', data: { title: 'Finish' } },
+  ]}
+  edges={[{ id: 'start-to-finish', source: 'start', target: 'finish' }]}
+/>

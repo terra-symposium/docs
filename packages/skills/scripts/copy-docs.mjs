@@ -17,6 +17,6 @@ CONFIG
 const tgt = resolve(import.meta.dirname, '../dist/docs/authoring.md');
 await mkdir(dirname(tgt), { recursive: true });
 await copyFile(
-  resolve(import.meta.dirname, '../../../docs/developer/repo/skill-authoring.md'),
+  resolve(import.meta.dirname, '../../../docs/developer/agent-tooling/skill-authoring.md'),
   tgt,
 );

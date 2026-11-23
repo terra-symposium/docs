@@ -66,10 +66,7 @@ For a Local site, open `package.json` and add the `scripts` and `docs` objects b
 
 ```json
 {
-  "scripts": {
-    "docs": "docs dev",
-    "build": "docs build"
-  },
+  "scripts": { "docs": "docs dev", "build": "docs build" },
   "docs": {
     "title": "Acme Docs",
     "description": "Guides for Acme users",
@@ -103,7 +100,7 @@ Docs requires an error report endpoint to build a Local site, but it does not cr
 
 :::
 
-For a Hosted workspace, set the site title on `DocsWorkspace` and connect routes, storage, and permissions through its host adapter. The application's own configuration controls its deployment. For a custom sidebar in an embedded site, see the [component reference](/developer/component/blocks/).
+For a Hosted workspace, set the site title on `DocsWorkspace` and connect routes, storage, and permissions through its host adapter. The application's own configuration controls its deployment. For a custom sidebar in an embedded site, see the [API reference](/developer/component/blocks/).
 
 ## 4. Add pages
 
@@ -147,7 +144,7 @@ In a hosted workspace, a developer can also disable a built-in renderer when mou
 <DocsWorkspace {...workspaceProps} blocks={{ embed: false }} customBlocks={myBlocks} />
 ```
 
-Here `workspaceProps` supplies the required host, tree, route, permission, and title; `myBlocks` contains renderers registered by the application. Omit either optional prop when unused. See the [component reference](/developer/component/blocks/) for the full contract.
+Here `workspaceProps` supplies the required host, tree, route, permission, and title; `myBlocks` contains renderers registered by the application. Omit either optional prop when unused. See the [API reference](/developer/component/blocks/) for the full contract.
 
 ===
 
@@ -184,13 +181,7 @@ pnpm run build
 The `docs.out` setting in `package.json` names the output folder. With `"out": "dist/docs"`, publish **the contents of `dist/docs/`** to your static host. Set `docs.site` to the public origin and `docs.base` to the path beneath it. For a site at `https://docs.example.com/handbook/`, use:
 
 ```json
-{
-  "docs": {
-    "site": "https://docs.example.com",
-    "base": "/handbook/",
-    "out": "dist/docs"
-  }
-}
+{ "docs": { "site": "https://docs.example.com", "base": "/handbook/", "out": "dist/docs" } }
 ```
 
 Keep the other `docs` settings from [Get started](/consumer/0-configuration/0-install/), including the required error report receiver. A successful build creates files locally; deploy them using your host's normal release process.
@@ -226,7 +217,7 @@ pnpm run build
 
 Publish `dist/docs/`, or the folder set by `docs.out`, with a static web host. A successful build creates the files; it does not deploy them.
 
-For subsequent changes and checks at the public URL, see [Run a site](/consumer/0-configuration/1-site-operations/) and [Validation](/consumer/1-usage/4-validation/).
+For subsequent checks at the public URL, see [Preview](#5-preview), [Publish](#6-publish), and [Validation](/consumer/1-usage/4-validation/).
 
 For a hosted workspace, deploy the React application and its document API. Verify that editors can save and publish and that readers see only published content.
 

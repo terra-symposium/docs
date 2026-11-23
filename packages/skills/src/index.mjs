@@ -114,9 +114,8 @@ export async function compileSkills(root) {
     const { fields, body } = splitFrontmatter(await readFile(page, 'utf8'), page);
     if (fields.skill !== true) continue;
     const { name, description: desc } = fields;
-    if (!slug.test(name ?? '') || typeof desc !== 'string' || !desc.trim()) {
+    if (!slug.test(name ?? '') || typeof desc !== 'string' || !desc.trim())
       throw new Error(`Skill needs a slug name and description: ${page}`);
-    }
     if (names.has(name)) throw new Error(`Duplicate skill name: ${name}`);
     names.add(name);
     delete fields.skill;

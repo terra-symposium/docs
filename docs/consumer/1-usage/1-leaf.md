@@ -9,21 +9,21 @@ Documentation connects knowledge with an audience. It becomes useful when you kn
 
 <Nodes
 nodes={[
-{"id":"audience","type":"origin","data":{"title":"Audience"}},
-{"id":"goal","type":"process","data":{"title":"Goal and task"}},
-{"id":"sources","type":"process","data":{"title":"Sources"}},
-{"id":"voice","type":"process","data":{"title":"Voice"}},
-{"id":"draft","type":"process","data":{"title":"Draft outline"}},
-{"id":"author","type":"process","data":{"title":"Author with block rules"}},
-{"id":"check","type":"terminator","data":{"title":"Validation"}}
+{ id: 'audience', type: 'origin', data: { title: 'Audience' } },
+{ id: 'goal', type: 'process', data: { title: 'Goal and task' } },
+{ id: 'sources', type: 'process', data: { title: 'Sources' } },
+{ id: 'voice', type: 'process', data: { title: 'Voice' } },
+{ id: 'draft', type: 'process', data: { title: 'Draft outline' } },
+{ id: 'author', type: 'process', data: { title: 'Author with block rules' } },
+{ id: 'check', type: 'terminator', data: { title: 'Validation' } },
 ]}
 edges={[
-{"id":"audience-goal","source":"audience","target":"goal"},
-{"id":"goal-sources","source":"goal","target":"sources"},
-{"id":"sources-voice","source":"sources","target":"voice"},
-{"id":"voice-draft","source":"voice","target":"draft"},
-{"id":"draft-author","source":"draft","target":"author"},
-{"id":"author-check","source":"author","target":"check"}
+{ id: 'audience-goal', source: 'audience', target: 'goal' },
+{ id: 'goal-sources', source: 'goal', target: 'sources' },
+{ id: 'sources-voice', source: 'sources', target: 'voice' },
+{ id: 'voice-draft', source: 'voice', target: 'draft' },
+{ id: 'draft-author', source: 'draft', target: 'author' },
+{ id: 'author-check', source: 'author', target: 'check' },
 ]}
 />
 
@@ -128,7 +128,7 @@ Lead with that relationship and show the smallest working example:
 <Docs mode="edit" value={value} onChange={setValue} />
 ```
 
-This reports edits into the host's state; it does not persist them. Check prop names and behaviour against the current [component reference](/developer/component/blocks/) or tests, and use synthetic example data.
+This reports edits into the host's state; it does not persist them. Check prop names and behaviour against the current [API reference](/developer/component/blocks/) or tests, and use synthetic example data.
 
 :::
 
@@ -372,9 +372,9 @@ Use the [Blocks reference](/consumer/1-usage/2-blocks/) for supported markup and
 
 ### Headings
 
-Use headings to expose the relationship between ideas. Start the body at H2. Nest H3 under its H2, and use H4 only under H3 when the extra level is necessary. Never skip a level for visual size. Keep parallel ideas at the same level; make a heading a child only when its content is part of the parent.
+Draft the heading outline before writing prose, then read the outline by itself. It should name a coherent reader path, show which ideas are peers, and make each subheading clearly belong to its parent. Beside each heading, state the reader question it answers and the new information it adds. If two headings answer the same question, merge them; if a heading adds no useful answer, remove it. Start the body at H2. Nest H3 under its H2, and use H4 only under H3 when the extra level is necessary. Never skip a level for visual size. Keep parallel ideas at the same level; make a heading a child only when its content is part of the parent.
 
-Give the page a real hierarchy: H2 for its major phases or subjects, H3 for tasks or decisions within an H2, and H4 only for a necessary detail within an H3. A row of H2s for every small step is too flat. Keep the **document title at 48 characters or fewer** and the **frontmatter description at 85 characters or fewer**, counting spaces and punctuation. Name body headings in **one to four words** where clear; rewrite any over **six words** or **48 characters** before publication, except an exact product or API name that cannot be shortened. Keep explanations in the body. Avoid filler such as “Overview”, “More information”, and “Things to consider”. Number headings only for a real sequence, not a reference outline. Put a short introduction after each H2 or H3 before a substantial table or diagram. The four related heading cases below are accordion items, each with its example inside.
+Give the page a real hierarchy: H2 for its major phases or subjects, H3 for tasks or decisions within an H2, and H4 only for a necessary detail within an H3. A row of H2s for every small step is too flat; a heading for every paragraph, example, or block is too granular. Keep distinct major topics as peers and nest only true subtopics; shared subject matter alone does not make one topic a child of another. Keep headings short, usually one to four words, and make their labels distinct enough to scan as an outline. Put the promise, explanation, and context in the opening prose. Do not use a word-count rule as a substitute for checking meaning: an outline of short headings can still be flat, falsely nested, repetitive, or unhelpful. Keep the **document title at 48 characters or fewer** and the **frontmatter description at 85 characters or fewer**, counting spaces and punctuation. Rewrite body headings over **six words** or **48 characters** before publication, except an exact product or API name that cannot be shortened. Avoid filler such as “Overview”, “More information”, and “Things to consider”. Number headings only for a real sequence, not a reference outline. Put a short introduction after each H2 or H3 before a substantial table or diagram. When explaining a visual system, show the actual fonts, colours, components, and tokens in use, then trace each one to its source; naming them alone is not useful guidance. The four related heading cases below are accordion items, each with its example inside.
 
 ===[Concise hierarchy]
 

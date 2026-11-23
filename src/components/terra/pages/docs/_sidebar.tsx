@@ -582,8 +582,8 @@ function Nav({
             .replace(TerraQualityRegex.REGEX_DRAFTS_REGEX(), '')
             .replace(TerraQualityRegex.REGEX_MD_MDX_PDF_I_REGEX(), '')
             .replace(TerraQualityRegex.REGEX_G_REGEX_35(), '');
-        const targetPath = cPath(leafTitle.path);
-        const tgtBasename = targetPath.split('/').at(-1)?.toLowerCase() ?? '';
+        const tgtPath = cPath(leafTitle.path);
+        const tgtBasename = tgtPath.split('/').at(-1)?.toLowerCase() ?? '';
         let basenameCount = 0;
         const basenameCandidates = [...nodes];
         while (basenameCandidates.length > 0 && basenameCount < 2) {
@@ -618,7 +618,7 @@ function Nav({
             if (
               nodePath === leafTitle.path ||
               node.origName === leafTitle.path ||
-              normNodePath === targetPath ||
+              normNodePath === tgtPath ||
               (tgtBasename !== 'index' &&
                 tgtBasename !== '' &&
                 basenameCount === 1 &&

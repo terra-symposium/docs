@@ -1149,9 +1149,9 @@ const EditorSurfaces = {
         );
         if (cells.length) {
           clear();
-          const target = dir === 'right' ? cells[0] : cells.at(-1);
-          if (!target) return;
-          focusTgt(target, dir === 'right' ? 'right' : 'left');
+          const tgt = dir === 'right' ? cells[0] : cells.at(-1);
+          if (!tgt) return;
+          focusTgt(tgt, dir === 'right' ? 'right' : 'left');
           return;
         }
         focus(dec, dir === 'right' ? 'left' : 'right');
@@ -3015,10 +3015,10 @@ export default function Scaffold({
         }
         syncState.threshold = window.innerWidth >= 768 ? 160 : 112;
         for (let index = syncState.els.length - 1; index >= 0; index--) {
-          const element = syncState.els[index];
-          if (element && element.getBoundingClientRect().top <= syncState.threshold) {
+          const el = syncState.els[index];
+          if (el && el.getBoundingClientRect().top <= syncState.threshold) {
             setTocStateIfChanged((previous) => ({
-              active: element.id,
+              active: el.id,
               headings: previous.path === currDoc.pathname ? previous.headings : [],
               path: currDoc.pathname,
             }));

@@ -124,3 +124,19 @@ test('Docs sanitizer flags direct NodesBlock use without removing its required i
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('Docs sanitizer accepts typed block guidance but still reports legacy DocsBlock tags', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'docs-sanitize-'));
+  try {
+    const path = join(dir, 'guidance.md');
+    writeFileSync(path, `<DocsBlock data='{"_type":"blockGuidance","id":"prose"}' />\n`);
+    assert.equal(run('check', path).status, 0);
+
+    writeFileSync(path, '<DocsBlock type="nodes" data={{}} />\n');
+    const result = run('check', path);
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /legacy <DocsBlock> at line 1/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -18,7 +18,7 @@ Build the library with `pnpm run build` and run package checks with `pnpm run ch
 
 ### Commands
 
-Run `pnpm run test:unit`, `pnpm run test:browser`, or `pnpm test` for both. The [quality and tests guide](docs/developer/repo/quality-and-tests.md) explains the checks and CI coverage.
+Run `pnpm run test:unit`, `pnpm run test:browser`, or `pnpm test` for both. The [Testing guide](docs/developer/repository/testing.md) explains the checks, browser coverage, and CI.
 
 ## Security and Limitations
 
@@ -115,10 +115,10 @@ Hosts can enable the ephemeral leaf quiz flow with `quiz={{ toolbar: true, gener
 
 ## References
 
-- [Component reference](docs/developer/component/blocks.md)
+- [API reference](docs/developer/component/blocks.md)
 - [Host integration](docs/developer/component/host-integration.md)
-- [Content migration](docs/developer/repo/content-migration.md)
-- [Release and upgrade](docs/developer/repo/release-and-upgrades.md)
+- [Migrations](docs/developer/repository/content-migration.md)
+- [Release](docs/developer/repository/release-and-upgrades.md)
 - [Package exports](package.json)
 - [Apache-2.0 license](LICENSE)
 

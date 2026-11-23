@@ -29,28 +29,53 @@ import {
 import type { JSX } from 'react';
 import type { RichBlock } from './blocks.js';
 
+const examplePanelClassName =
+  'docs-block-stack mt-0 rounded-b-sm border border-t-0 border-primary-6 p-4';
+
 /*//////////////////////////////////////////////////
 TYPES
 //////////////////////////////////////////////////*/
 
+// hygiene-ignore single-use -- This exported shape documents the generated component input contract.
+/**
+ * Render-ready guidance generated from a Docs block's source TSDoc.
+ */
 export type BlockGuidanceEntry = {
-  /** Exported symbol whose TSDoc provides this block's source material. */
+  /**
+   * Exported symbol whose TSDoc provides this block's source material.
+   */
   symbol: string;
-  /** Reader need that signals when this block is useful. */
+  /**
+   * Reader need that signals when this block is useful.
+   */
   useWhen: string;
-  /** Positive authoring practices and recommendations, combined from do and tip tags. */
+  /**
+   * Positive authoring practices and recommendations, combined from do and tip tags.
+   */
   dos: string[];
-  /** Constraints and misuses, combined from constraint and don't tags. */
+  /**
+   * Constraints and misuses, combined from constraint and don't tags.
+   */
   donts: string[];
-  /** Ordered steps for inserting or authoring the block in its supported workflow. */
+  /**
+   * Ordered steps for inserting or authoring the block in its supported workflow.
+   */
   insertionSteps: string[];
-  /** Fenced MDX source paired with the rendered example. */
+  /**
+   * Fenced MDX source paired with the rendered example.
+   */
   code: string;
-  /** Markdown content paired with the rendered example, including any needed lead-in. */
+  /**
+   * Markdown content paired with the rendered example, including any needed lead-in.
+   */
   renderedExample: string;
-  /** Renderer used when the example needs a host or rich-block component. */
+  /**
+   * Renderer used when the example needs a host or rich-block component.
+   */
   renderKind: 'markdown' | 'nodes' | 'embed' | 'quiz' | 'tsdocs' | 'custom';
-  /** Restored editor screenshots that illustrate insertion controls or formatting. */
+  /**
+   * Restored editor screenshots that illustrate insertion controls or formatting.
+   */
   editorImages: { src: string; alt: string }[];
 };
 
@@ -66,6 +91,7 @@ COMPONENTS
  * @returns The reader purpose, example tabs, and Do, Do not, and insertion accordions.
  */
 export function BlockGuidance({ entry }: { entry: BlockGuidanceEntry }): JSX.Element {
+  // hygiene-ignore single-use -- Keep the three guidance groups named and ordered before rendering their accordion items.
   const guidance = [
     { id: 'do', title: '✅ Do', items: entry.dos },
     { id: 'dont', title: '🚫 Do not', items: entry.donts },
@@ -92,10 +118,7 @@ export function BlockGuidance({ entry }: { entry: BlockGuidanceEntry }): JSX.Ele
               💻 Code (MDX)
             </TabsTrigger>
           </TabsList>
-          <TabsContent
-            value="rendered"
-            className="docs-block-stack mt-0 rounded-b-sm border border-t-0 border-primary-6 p-4"
-          >
+          <TabsContent value="rendered" className={examplePanelClassName}>
             {entry.renderKind === 'custom' ? (
               <Card variant="primary-outline" size="sm" className="max-w-lg">
                 <CardHeader>
@@ -162,10 +185,7 @@ export function BlockGuidance({ entry }: { entry: BlockGuidanceEntry }): JSX.Ele
               <DocsMarkdown markdown={entry.renderedExample} />
             )}
           </TabsContent>
-          <TabsContent
-            value="code"
-            className="docs-block-stack mt-0 rounded-b-sm border border-t-0 border-primary-6 p-4"
-          >
+          <TabsContent value="code" className={examplePanelClassName}>
             <DocsMarkdown markdown={entry.code} />
           </TabsContent>
         </Tabs>

@@ -27,7 +27,9 @@ test.describe('read-only routes, Markdown, and responsive rendering', () => {
       await p.setViewportSize({ width: 1440, height: 1000 });
       await p.goto('/');
       await expect(p.getByRole('link', { name: 'Docs', exact: true }).first()).toBeVisible();
-      await expect(p.getByRole('link', { name: 'Get started' })).toBeVisible();
+      await expect(
+        p.locator('[data-sidebar="sidebar"]').getByRole('link', { name: 'Get started' }),
+      ).toBeVisible();
       await expect(p.getByRole('combobox', { name: 'Tree' })).toBeVisible();
       await expect(p.getByRole('combobox', { name: 'Mode' })).toBeVisible();
       await expect(p.getByRole('textbox', { name: 'Search pages' })).toHaveCount(0);
@@ -49,13 +51,14 @@ test.describe('read-only routes, Markdown, and responsive rendering', () => {
       await p.screenshot({ path: t.outputPath('docs-static-mobile.png'), fullPage: true });
       await p.setViewportSize({ width: 1440, height: 1000 });
       await p.evaluate(() => document.fonts.ready);
-      const treeHandling = p
+      await p.waitForLoadState('networkidle');
+      const treeRef = p
         .locator('[data-sidebar="sidebar"]')
-        .getByRole('link', { name: 'Tree handling', exact: true });
-      await expect(treeHandling).toBeVisible();
-      await treeHandling.click();
-      await expect(p).toHaveURL(/\/consumer\/1-usage\/2-tree-handling\//);
-      await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Tree handling');
+        .getByRole('link', { name: 'Tree', exact: true });
+      await expect(treeRef).toBeVisible();
+      await treeRef.click();
+      await expect(p).toHaveURL(/\/consumer\/1-usage\/0-tree\//);
+      await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Tree');
     },
   );
   test(

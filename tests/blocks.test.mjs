@@ -152,7 +152,7 @@ test.describe('Docs block conversion and rendering contracts', () => {
       assert.match(migrated, /Shared tab body/);
       assert.match(migrated, /Details/);
       assert.match(migrated, /Shared accordion body/);
-      assert.doesNotMatch(migrated, /docs-tabs|docs-accordion/);
+      assert.doesNotMatch(migrated, /(?:^|\s)docs-tabs(?:\s|$)|(?:^|\s)docs-accordion(?:\s|$)/);
       assert.match(markdownRenderer, /role="tablist"/);
       assert.match(markdownRenderer, /data-orientation="vertical"/);
       assert.match(markdownRenderer, /Shared tab body/);

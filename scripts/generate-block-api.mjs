@@ -1,5 +1,14 @@
 #!/usr/bin/env node
 
+/**
+ * scripts/generate-block-api.mjs
+ * Builds the source-backed JSON reference used by the Blocks authoring page.
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
 import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -12,7 +21,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cache = resolve(root, 'dist/cache');
 const jsonPath = resolve(cache, 'typedoc-blocks.json');
 const outputPath = resolve(cache, 'blocks-api.json');
-const sourcePaths = [
+// hygiene-ignore single-use -- Keep the audited TSDoc input set explicit and pass it as one ordered command argument list.
+const srcPaths = [
   'site/src/lib/catalog.ts',
   'src/lib/host.ts',
   'src/lib/markdown-model.ts',
@@ -27,9 +37,11 @@ const sourcePaths = [
   'src/components/quiz.tsx',
   'src/components/terra/editor/docs/_TsDocs.tsx',
 ].map((path) => resolve(root, path));
-const require = createRequire(import.meta.url);
-const typedocManifestPath = require.resolve('typedoc/package.json');
+// hygiene-ignore single-use -- Resolve TypeDoc from this package before deriving its CLI path.
+const typedocManifestPath = createRequire(import.meta.url).resolve('typedoc/package.json');
+// hygiene-ignore single-use -- Keep package-root resolution separate from the manifest lookup for the CLI contract.
 const typedocRoot = dirname(typedocManifestPath);
+// hygiene-ignore single-use -- Pass the resolved executable to Node so pnpm's PATH layout does not affect generation.
 const typedocCli = resolve(typedocRoot, 'bin/typedoc');
 
 await mkdir(cache, { recursive: true });
@@ -44,11 +56,12 @@ execFileSync(
     'Error',
     '--json',
     jsonPath,
-    ...sourcePaths,
+    ...srcPaths,
   ],
   { cwd: root, stdio: 'inherit' },
 );
 
+// hygiene-ignore single-use -- Parse TypeDoc's JSON once before walking its reflection tree.
 const project = JSON.parse(await readFile(jsonPath, 'utf8'));
 const orderedIds = [
   'frontmatter',
@@ -68,6 +81,14 @@ const orderedIds = [
   'typescript-docs',
 ];
 
+/**
+ * Collects reflections that declare a Docs block identifier.
+ *
+ * @param reflection - TypeDoc reflection to inspect.
+ * @param found - Collected reflections to extend.
+ *
+ * @returns Reflections containing a `@docsId` tag.
+ */
 function walk(reflection, found = []) {
   if (reflection.comment?.blockTags?.some((tag) => tag.tag === '@docsId')) found.push(reflection);
   for (const child of reflection.children ?? []) walk(child, found);
@@ -75,6 +96,14 @@ function walk(reflection, found = []) {
   return found;
 }
 
+/**
+ * Reads rendered text values for one named TypeDoc block tag.
+ *
+ * @param reflection - TypeDoc reflection with optional block tags.
+ * @param name - Tag name without the `@` prefix.
+ *
+ * @returns Non-empty rendered tag values.
+ */
 function tags(reflection, name) {
   return (reflection.comment?.blockTags ?? [])
     .filter((tag) => tag.tag === `@${name}`)
@@ -82,6 +111,12 @@ function tags(reflection, name) {
     .filter(Boolean);
 }
 
+/**
+ * Converts TypeDoc text parts into normalized Markdown source.
+ *
+ * @param parts - TypeDoc content parts.
+ * @returns Joined text with normalized line endings and surrounding whitespace removed.
+ */
 function renderParts(parts) {
   return parts
     .map((part) => part.text ?? '')
@@ -90,6 +125,14 @@ function renderParts(parts) {
     .trim();
 }
 
+/**
+ * Reads a required block tag and reports the owning block when it is missing.
+ *
+ * @param reflection - TypeDoc reflection to inspect.
+ * @param name - Required tag name without the `@` prefix.
+ * @param id - Stable Docs block identifier for the error message.
+ * @returns Rendered values for the required tag.
+ */
 function requiredTag(reflection, name, id) {
   const values = tags(reflection, name);
   if (values.length === 0) throw new Error(`Block "${id}" is missing required @${name} content.`);
@@ -120,7 +163,8 @@ const blocks = orderedIds.map((id) => {
   const [syntax] = requiredTag(reflection, 'docsSyntax', id);
   const [renderedExample] = requiredTag(reflection, 'docsRenderedExample', id);
   const [renderKind = 'markdown'] = tags(reflection, 'docsRenderKind');
-  const editorImages = tags(reflection, 'docsEditorImage').map((value) => {
+  // hygiene-ignore single-use -- Validate and normalize every editor image before adding it to the public block record.
+  const editorImgs = tags(reflection, 'docsEditorImage').map((value) => {
     const [src, ...alt] = value.split('|');
     if (!src?.trim() || !alt.join('|').trim())
       throw new Error(`Block "${id}" has an invalid @docsEditorImage; use "path | alt text".`);
@@ -131,8 +175,8 @@ const blocks = orderedIds.map((id) => {
   const donts = tags(reflection, 'docsDont');
   const tips = tags(reflection, 'docsTip');
   const insertionSteps = tags(reflection, 'docsInsertionStep');
-  const summary = renderParts(reflection.comment?.summary ?? []);
-  if (!summary) throw new Error(`Block "${id}" is missing its source TSDoc summary.`);
+  if (!renderParts(reflection.comment?.summary ?? []))
+    throw new Error(`Block "${id}" is missing its source TSDoc summary.`);
   if (!constraints.length || !dos.length || !donts.length || !tips.length)
     throw new Error(
       `Block "${id}" needs @docsConstraint, @docsDo, @docsDont, and @docsTip guidance.`,
@@ -144,10 +188,11 @@ const blocks = orderedIds.map((id) => {
   if (!['markdown', 'nodes', 'embed', 'quiz', 'tsdocs', 'custom'].includes(renderKind))
     throw new Error(`Block "${id}" has invalid @docsRenderKind "${renderKind}".`);
   const code = /```/.test(syntax) ? syntax : `\`\`\`mdx\n${syntax}\n\`\`\``;
-  const fenceLanguages = [...code.matchAll(/(?:^|\n)```([A-Za-z][A-Za-z0-9_-]*)/g)].map(
+  // hygiene-ignore single-use -- Extract all fence languages before rejecting unsupported source examples.
+  const fenceLangs = [...code.matchAll(/(?:^|\n)```([A-Za-z][A-Za-z0-9_-]*)/g)].map(
     (match) => match[1],
   );
-  if (fenceLanguages.some((language) => language !== 'mdx'))
+  if (fenceLangs.some((language) => language !== 'mdx'))
     throw new Error(`Block "${id}" source examples must use the mdx fence language.`);
   return {
     id,
@@ -159,10 +204,11 @@ const blocks = orderedIds.map((id) => {
     code,
     renderedExample,
     renderKind,
-    editorImages,
+    editorImages: editorImgs,
   };
 });
 
+// hygiene-ignore single-use -- Strip the internal ID from each record while using it as the generated object's key.
 const byIdOutput = Object.fromEntries(blocks.map(({ id, ...entry }) => [id, entry]));
 await writeFile(outputPath, `${JSON.stringify(byIdOutput, null, 2)}\n`);
 console.log(`Generated ${outputPath} from ${blocks.length} source TSDoc entries.`);

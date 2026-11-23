@@ -323,6 +323,7 @@ function TableEditor({
  * @docsConstraint Use prose or a list for a single point or a sequence of actions.
  * @docsConstraint Put meaningful emoji on the independent category axis: first row for column categories, first column for row categories, or both when both axes vary.
  * @docsConstraint Keep headers short and unbolded; preserve row and cell structure.
+ * @docsDont Do not put unescaped pipe-delimited syntax in a pipe-table cell; show that source in a fenced block instead.
  * @docsDo Use structured table data when host-supplied Portable Text cells need rich content.
  * @docsDo Use HTML only to preserve necessary structure such as a caption that a simple pipe table cannot express.
  * @docsDont Do not scatter decorative emoji through dependent value cells.

@@ -10,6 +10,9 @@ IMPORTS
 import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
 
-export default JSON.parse(
-  readFileSync(new URL('./config/.prettierrc.json', import.meta.url), 'utf8'),
-);
+export default {
+  ...JSON.parse(readFileSync(new URL('./config/.prettierrc.json', import.meta.url), 'utf8')),
+  overrides: [
+    { files: ['**/*.md', '**/*.mdx'], options: { parser: 'mdx', objectWrap: 'collapse' } },
+  ],
+};

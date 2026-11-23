@@ -102,6 +102,7 @@ function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX
  * @docsUseWhen A process, dependency, or decision is clearer as connected nodes than as a short list.
  * @docsConstraint Use a diagram for a process, hierarchy, dependency, or decision only when its connections explain more than a short list or table.
  * @docsConstraint Keep prose outside the diagram; include complete node and edge arrays in the directive.
+ * @docsConstraint In `.md` files, write `nodes` and `edges` as JSON arrays inside braces: quote every key and string with double quotes, and omit trailing commas. The Markdown renderer does not evaluate JavaScript expressions.
  * @docsConstraint Every edge must point to an existing source and target node.
  * @docsDo Use origin for a start, process for an action, terminator for an outcome, and terminal for a hard stop.
  * @docsDo Use decision for meaningful alternatives, data for an input/output, note for short context, group for one stage, and ERD for entities.
@@ -120,10 +121,10 @@ function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX
  * ```mdx
  * <Nodes
  *   nodes={[
- *     { id: 'edit', type: 'origin', data: { title: 'Docs receives edit' } },
- *     { id: 'save', type: 'terminator', data: { title: 'Host saves value' } }
+ *     { "id": "edit", "type": "origin", "data": { "title": "Docs receives edit" } },
+ *     { "id": "save", "type": "terminator", "data": { "title": "Host saves value" } }
  *   ]}
- *   edges={[{ id: 'edit-save', source: 'edit', target: 'save' }]}
+ *   edges={[{ "id": "edit-save", "source": "edit", "target": "save" }]}
  * />
  * ```
  * @docsRenderedExample

@@ -1,9 +1,13 @@
 ---
-title: Migrate content
+title: Migrations
 description: Check legacy Docs Markdown, apply safe repairs, and preserve source data.
 ---
 
-## Inspect first
+## Migration
+
+Scan the consumer's authored Markdown, apply only safe transformations, repair rich data from evidence, then verify the output.
+
+### Scan source
 
 The sanitizer lives in the Docs **source checkout**, under `scripts/docs-sanitize/`. It is not included in the published npm package. Run it against a consumer's authored Markdown folder:
 
@@ -11,9 +15,9 @@ The sanitizer lives in the Docs **source checkout**, under `scripts/docs-sanitiz
 python3 /path/to/docs/scripts/docs-sanitize/cli.py check /path/to/consumer/docs
 ```
 
-`check` makes no edits and exits nonzero when it finds a problem. Add `--json` for a machine-readable report. The checker covers delimiter spacing, obsolete `<CodeBlock>` and `<DocsBlock>` tags, old `NodesBlock` shims, content dividers, and missing or empty diagram data.
+`check` makes no edits and exits nonzero when it finds a problem. Add `--json` for a machine-readable report. The checker covers delimiter spacing, obsolete `<CodeBlock>` and legacy `<DocsBlock>` tags, old `NodesBlock` shims, content dividers, and missing or empty diagram data. Typed `blockGuidance` DocsBlock nodes are current and pass through unchanged.
 
-## Apply safe repairs
+### Apply safe repairs
 
 Use the same checkout to run the deterministic fix, then inspect every changed file:
 
@@ -26,7 +30,7 @@ The fixer can normalize supported delimiters and convert literal legacy blocks. 
 
 The deterministic fixes put Docs delimiters on separate lines with blank lines around the body, convert literal `<CodeBlock>` props to fenced Markdown, and convert supported literal `<DocsBlock>` payloads. Inspect the diff, run `check` again, and build the consumer site. Add a fixture under `scripts/docs-sanitize/` before extending a transformation.
 
-## Recover manually
+### Repair rich blocks
 
 Automated fixes do not decide the meaning of obsolete rich blocks. Inspect each source before moving it to native Markdown or current component syntax:
 
@@ -38,11 +42,7 @@ Automated fixes do not decide the meaning of obsolete rich blocks. Inspect each 
 
 If diagram source data is unavailable, report that limit instead of inventing a diagram.
 
-## Check the scan
-
-CI runs `pnpm run docs:sanitize` against this repository's `docs/` tree. Pass another root to inspect a consumer. The CLI skips generated `dist`, installed dependencies, and migration audit artifacts; do not treat those directories as authored content. The implementation and fixtures live in `scripts/docs-sanitize/` in the Docs source checkout.
-
-## Verify the migration
+### Verify output
 
 1. Compare the diff with the original page.
    - Account for every block, link, asset, and attachment.
@@ -50,4 +50,6 @@ CI runs `pnpm run docs:sanitize` against this repository's `docs/` tree. Pass an
 3. Check used blocks and narrow-screen layout.
    - Include code fences, tabs, accordions, and diagrams.
 
-The `scripts/docs-sanitize/README.md` file in the Docs source checkout describes the checks and skip rules. Add a fixture under `scripts/docs-sanitize/` before extending a transformation. The [Docs sanitization skill](/agents/skills/docs-sanitization/) gives the content-preservation rules.
+## CI coverage
+
+CI runs `pnpm run docs:sanitize` against this repository's `docs/` tree. Pass another root to inspect a consumer. The CLI skips generated `dist`, installed dependencies, and migration audit artifacts; do not treat those directories as authored content. The implementation and fixtures live in `scripts/docs-sanitize/` in the Docs source checkout.

@@ -265,8 +265,8 @@ function inline(
         run.push(genTokens[index]!);
         index += 1;
       }
-      const source = run.map((t) => t.raw).join('');
-      const matches = [...source.matchAll(N_G_REGEX())];
+      const src = run.map((t) => t.raw).join('');
+      const matches = [...src.matchAll(N_G_REGEX())];
       if (!matches.length) {
         mathTokens.push(...run);
         continue;
@@ -309,7 +309,7 @@ function inline(
         mathTokens.push({ type: 'docsMath', raw, text: match[1] ?? '' });
         cursor = start + raw.length;
       }
-      appendSrcRange(cursor, source.length);
+      appendSrcRange(cursor, src.length);
     }
     normTokens = mathTokens;
   }
@@ -494,20 +494,20 @@ type JsxOpeningTag = {
 /**
  * Finds fenced Markdown spans while skipping inline code and Code components.
  *
- * @param source Markdown or legacy JSX source to scan.
+ * @param src Markdown or legacy JSX source to scan.
  *
  * @return Half-open source ranges, including the remainder for an unclosed fence.
  */
-function codeFenceRanges(source: string): SrcRange[] {
+function codeFenceRanges(src: string): SrcRange[] {
   const ranges: SrcRange[] = [];
   let open: { start: number; char: string; length: number } | undefined;
   let index = 0;
-  while (index < source.length) {
-    const lineStart = index === 0 || source[index - 1] === '\n';
+  while (index < src.length) {
+    const lineStart = index === 0 || src[index - 1] === '\n';
     if (lineStart && !open) {
-      const newline = source.indexOf('\n', index);
-      const end = newline === -1 ? source.length : newline + 1;
-      const marker = source
+      const newline = src.indexOf('\n', index);
+      const end = newline === -1 ? src.length : newline + 1;
+      const marker = src
         .slice(index, end)
         .replace(R_N_REGEX, '')
         .match(TerraQualityRegex.REGEX_0_3_3_3_REGEX());
@@ -518,9 +518,9 @@ function codeFenceRanges(source: string): SrcRange[] {
         continue;
       }
     } else if (lineStart && open) {
-      const newline = source.indexOf('\n', index);
-      const end = newline === -1 ? source.length : newline + 1;
-      const marker = source
+      const newline = src.indexOf('\n', index);
+      const end = newline === -1 ? src.length : newline + 1;
+      const marker = src
         .slice(index, end)
         .replace(R_N_REGEX, '')
         .match(TerraQualityRegex.REGEX_0_3_3_3_S_REGEX());
@@ -534,19 +534,19 @@ function codeFenceRanges(source: string): SrcRange[] {
 
     // The original Docs serializer embeds code in a template literal. Fences inside that literal
     // are code content, so treat the whole component as opaque while locating Markdown fences.
-    if (!open && source[index] === '<') {
-      const opening = readJsxOpeningTag(source, index);
+    if (!open && src[index] === '<') {
+      const opening = readJsxOpeningTag(src, index);
       if (opening?.name === 'Code') {
-        index = jsxCompRange(source, opening)?.end ?? source.length;
+        index = jsxCompRange(src, opening)?.end ?? src.length;
         continue;
       }
     }
 
     // Ignore component-looking text inside inline Markdown code spans.
-    if (!open && source[index] === '`' && source[index - 1] !== '\\') {
-      const marker = source.slice(index).match(SHARED_REGEX)?.[0];
+    if (!open && src[index] === '`' && src[index - 1] !== '\\') {
+      const marker = src.slice(index).match(SHARED_REGEX)?.[0];
       if (marker) {
-        const close = source.indexOf(marker, index + marker.length);
+        const close = src.indexOf(marker, index + marker.length);
         if (close !== -1) {
           index = close + marker.length;
           continue;
@@ -555,28 +555,27 @@ function codeFenceRanges(source: string): SrcRange[] {
     }
     index += 1;
   }
-  if (open) ranges.push({ start: open.start, end: source.length });
+  if (open) ranges.push({ start: open.start, end: src.length });
   return ranges;
 }
 
 /**
  * Replaces fenced examples with markers while directives are parsed, then restores them.
  *
- * @param source Markdown containing code fences.
+ * @param src Markdown containing code fences.
  *
  * @return The shielded source and a restoration function for its opaque fence bodies.
  */
-function shieldCodeFences(source: string) {
-  const ranges = codeFenceRanges(source);
-  const fences = ranges.map(({ start: s, end: e }) => source.slice(s, e));
+function shieldCodeFences(src: string) {
+  const ranges = codeFenceRanges(src);
+  const fences = ranges.map(({ start: s, end: e }) => src.slice(s, e));
   return {
     source:
       ranges
         .map(
-          ({ start: s }, i) =>
-            `${source.slice(ranges[i - 1]?.end ?? 0, s)}DOCSFENCE${i}PLACEHOLDER`,
+          ({ start: s }, i) => `${src.slice(ranges[i - 1]?.end ?? 0, s)}DOCSFENCE${i}PLACEHOLDER`,
         )
-        .join('') + source.slice(ranges.at(-1)?.end ?? 0),
+        .join('') + src.slice(ranges.at(-1)?.end ?? 0),
     restore: (v: string) =>
       v.replace(/DOCSFENCE(\d+)PLACEHOLDER/g, (match, number: string) =>
         fences[Number(number)] === undefined ? match : fences[Number(number)]!,
@@ -587,17 +586,17 @@ function shieldCodeFences(source: string) {
 /**
  * Reads one balanced JSX brace expression without interpreting its contents.
  *
- * @param source Full source string containing the expression.
+ * @param src Full source string containing the expression.
  * @param start Offset of the opening brace.
  *
  * @return The inner source and offset after the closing brace, or undefined if malformed.
  */
-function readBracedExpr(source: string, start: number): { value: string; end: number } | undefined {
-  if (source[start] !== '{') return undefined;
+function readBracedExpr(src: string, start: number): { value: string; end: number } | undefined {
+  if (src[start] !== '{') return undefined;
   let depth = 1;
   let quote: '"' | "'" | '`' | undefined;
-  for (let index = start + 1; index < source.length; index += 1) {
-    const char = source[index]!;
+  for (let index = start + 1; index < src.length; index += 1) {
+    const char = src[index]!;
     if (quote) {
       if (char === '\\') {
         index += 1;
@@ -613,7 +612,7 @@ function readBracedExpr(source: string, start: number): { value: string; end: nu
     if (char === '{') depth += 1;
     else if (char === '}') {
       depth -= 1;
-      if (depth === 0) return { value: source.slice(start + 1, index), end: index + 1 };
+      if (depth === 0) return { value: src.slice(start + 1, index), end: index + 1 };
     }
   }
   return undefined;
@@ -622,12 +621,12 @@ function readBracedExpr(source: string, start: number): { value: string; end: nu
 /**
  * Parses the literal subset accepted for attributes in exported Docs JSX.
  *
- * @param source Attribute value, including optional quote or brace delimiters.
+ * @param src Attribute value, including optional quote or brace delimiters.
  *
  * @return A decoded string, number, boolean, null, JSON value, or undefined if invalid.
  */
-function parseJsxLiteral(source: string): unknown {
-  const value = source.trim();
+function parseJsxLiteral(src: string): unknown {
+  const value = src.trim();
   if (!value) return '';
   if (value.startsWith('`') && value.endsWith('`'))
     return value.slice(1, -1).replace(/\\([\\`$])/g, '$1');
@@ -652,20 +651,20 @@ function parseJsxLiteral(source: string): unknown {
 /**
  * Reads a capitalized JSX opening tag and the literal attributes it can safely decode.
  *
- * @param source Full source string containing the tag.
+ * @param src Full source string containing the tag.
  * @param start Offset of the opening angle bracket.
  *
  * @return Tag name, decoded attributes, and end offset, or undefined for incomplete syntax.
  */
-function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undefined {
-  if (source[start] !== '<') return undefined;
-  const name = source.slice(start + 1).match(/^([A-Z][A-Za-z0-9_]*)\b/)?.[1];
+function readJsxOpeningTag(src: string, start: number): JsxOpeningTag | undefined {
+  if (src[start] !== '<') return undefined;
+  const name = src.slice(start + 1).match(/^([A-Z][A-Za-z0-9_]*)\b/)?.[1];
   if (!name) return undefined;
   let quote: '"' | "'" | '`' | undefined;
   let exprDepth = 0;
   let end: number | undefined;
-  for (let index = start + 1; index < source.length; index += 1) {
-    const char = source[index]!;
+  for (let index = start + 1; index < src.length; index += 1) {
+    const char = src[index]!;
     if (quote) {
       if (char === '\\') {
         index += 1;
@@ -686,7 +685,7 @@ function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undef
     }
   }
   if (!end) return undefined;
-  const shell = source.slice(start + name.length + 1, end - 1);
+  const shell = src.slice(start + name.length + 1, end - 1);
   const openingAttrs = shell.replace(S_CLASS_2, '');
   const attrs: Record<string, unknown> = {};
   let index = 0;
@@ -744,42 +743,42 @@ function readJsxOpeningTag(source: string, start: number): JsxOpeningTag | undef
 /**
  * Locates the template-literal expression used as the body of an exported Code component.
  *
- * @param source Full source string containing a component body.
+ * @param src Full source string containing a component body.
  * @param start Offset immediately after the Code opening tag.
  *
  * @return The balanced body expression, or undefined when the body is not a template literal.
  */
-function codeBodyExpr(source: string, start: number): { value: string; end: number } | undefined {
-  const first = source.slice(start).match(/^\s*\{/);
+function codeBodyExpr(src: string, start: number): { value: string; end: number } | undefined {
+  const first = src.slice(start).match(/^\s*\{/);
   if (!first) return undefined;
   const exprStart = start + first[0].length - 1;
-  return source.slice(exprStart + 1).match(/^\s*`/) ? readBracedExpr(source, exprStart) : undefined;
+  return src.slice(exprStart + 1).match(/^\s*`/) ? readBracedExpr(src, exprStart) : undefined;
 }
 
 /**
  * Finds the body and full source range of a recognized JSX component.
  *
- * @param source Full source string containing the component.
+ * @param src Full source string containing the component.
  * @param opening Parsed opening tag for the component.
  *
  * @return Body and closing offsets, or undefined when a non-self-closing tag is incomplete.
  */
 function jsxCompRange(
-  source: string,
+  src: string,
   opening: JsxOpeningTag,
 ): { bodyEnd: number; end: number } | undefined {
   if (opening.selfClosing) return { bodyEnd: opening.end, end: opening.end };
   const expr =
     opening.name === 'Code' || opening.name === 'CodeBlock'
-      ? codeBodyExpr(source, opening.end)
+      ? codeBodyExpr(src, opening.end)
       : undefined;
   const closePattern = new RegExp(`<\\/${opening.name}\\s*>`, 'g');
   closePattern.lastIndex = expr?.end ?? opening.end;
-  const close = closePattern.exec(source);
+  const close = closePattern.exec(src);
   if (opening.name === 'Code' || opening.name === 'CodeBlock') {
     // Older exported leaves can omit an end tag before the next Code block. Treat that next
     // opening tag as the boundary instead of swallowing every following code sample.
-    const nOpening = source.indexOf('<Code', expr?.end ?? opening.end);
+    const nOpening = src.indexOf('<Code', expr?.end ?? opening.end);
     if (nOpening !== -1 && (!close || nOpening < close.index))
       return { bodyEnd: nOpening, end: nOpening };
   }
@@ -807,19 +806,19 @@ function parseArrayAttr(value: unknown): unknown[] | undefined {
 /**
  * Replaces supported components outside code and structured Markdown blocks.
  *
- * @param source Markdown that may contain the legacy component syntax.
+ * @param src Markdown that may contain the legacy component syntax.
  * @param replace Converts each supported component or returns its source unchanged.
  *
  * @return Source with recognized component spans replaced by the callback output.
  */
 export function replaceCanonicalComponents(
-  source: string,
+  src: string,
   replace: (block: RichBlock | undefined, raw: string, inTable: boolean) => string,
 ): string {
-  const fences = codeFenceRanges(source);
+  const fences = codeFenceRanges(src);
   const structured = [
-    ...source.matchAll(/^(:{3,})docs [A-Za-z]+(?:\[[^\]\n]*\])?\s*\r?\n[\s\S]*?^\1\s*$/gm),
-    ...source.matchAll(/^(:{4,})docs (?:accordion|tabs)\s*\r?\n[\s\S]*?^\1\s*$/gm),
+    ...src.matchAll(/^(:{3,})docs [A-Za-z]+(?:\[[^\]\n]*\])?\s*\r?\n[\s\S]*?^\1\s*$/gm),
+    ...src.matchAll(/^(:{4,})docs (?:accordion|tabs)\s*\r?\n[\s\S]*?^\1\s*$/gm),
   ]
     .map((m) => ({ start: m.index ?? 0, end: (m.index ?? 0) + m[0].length }))
     .sort((a, b) => a.start - b.start);
@@ -827,7 +826,7 @@ export function replaceCanonicalComponents(
   let structuredIndex = 0;
   let output = '';
   let copiedUntil = 0;
-  for (let index = 0; index < source.length; index += 1) {
+  for (let index = 0; index < src.length; index += 1) {
     while (fenceIndex < fences.length && index >= fences[fenceIndex]!.end) fenceIndex += 1;
     const fence = fences[fenceIndex];
     if (fence && index >= fence.start && index < fence.end) {
@@ -841,18 +840,18 @@ export function replaceCanonicalComponents(
       index = block.end - 1;
       continue;
     }
-    if (source[index] === '`' && source[index - 1] !== '\\') {
-      const marker = source.slice(index).match(SHARED_REGEX)?.[0];
+    if (src[index] === '`' && src[index - 1] !== '\\') {
+      const marker = src.slice(index).match(SHARED_REGEX)?.[0];
       if (marker) {
-        const close = source.indexOf(marker, index + marker.length);
+        const close = src.indexOf(marker, index + marker.length);
         if (close !== -1) {
           index = close + marker.length - 1;
           continue;
         }
       }
     }
-    if (source[index] !== '<') continue;
-    const opening = readJsxOpeningTag(source, index);
+    if (src[index] !== '<') continue;
+    const opening = readJsxOpeningTag(src, index);
     if (
       !opening ||
       !(
@@ -866,15 +865,15 @@ export function replaceCanonicalComponents(
       )
     )
       continue;
-    const comp = jsxCompRange(source, opening);
+    const comp = jsxCompRange(src, opening);
     if (!comp) continue;
     const { end, bodyEnd } = comp;
     output +=
-      source.slice(copiedUntil, index) +
+      src.slice(copiedUntil, index) +
       replace(
         (() => {
           const attrs = opening.attributes;
-          const body = opening.selfClosing ? '' : source.slice(opening.end, bodyEnd);
+          const body = opening.selfClosing ? '' : src.slice(opening.end, bodyEnd);
           const expr = codeBodyExpr(body, 0);
           const bodyValue = expr ? parseJsxLiteral(expr.value) : decodeHtml(body.trim());
           if (opening.name === 'DocsBlock') {
@@ -933,10 +932,10 @@ export function replaceCanonicalComponents(
             };
           return undefined;
         })(),
-        source.slice(index, end),
+        src.slice(index, end),
         (opening.name === 'Code' || opening.name === 'CodeBlock') &&
           (() => {
-            const preceding = source
+            const preceding = src
               .slice(0, index)
               .replace(/`[^`]*`/g, '')
               .toLowerCase();
@@ -946,7 +945,7 @@ export function replaceCanonicalComponents(
     copiedUntil = end;
     index = end - 1;
   }
-  return output ? output + source.slice(copiedUntil) : source;
+  return output ? output + src.slice(copiedUntil) : src;
 }
 
 /**
@@ -1186,18 +1185,32 @@ function tableBlock(
  * @docsId prose
  * @docsUseWhen Write a readable page with headings, paragraphs, inline emphasis, and links.
  * @docsConstraint Begin the body with an H2; nest H3 beneath H2 and H4 beneath H3. Never skip a heading level.
- * @docsConstraint Use short, task-focused headings; number headings only for a real linear process.
+ * @docsConstraint Keep headings to one to four words; put the explanation or promised outcome in the opening prose.
+ * @docsConstraint H2 headings are peer topics. Put a topic's parts under it as H3; use H4 only to divide one H3 topic further.
+ * @docsConstraint Nest by meaning: a child answers a question within its parent. Shared vocabulary, chronology, or visual indentation is not a parent-child relationship.
+ * @docsConstraint Prefer two levels. Add a third only when an H3 topic contains multiple distinct parts that need headings.
  * @docsConstraint Introduce an H2 or H3 before placing a table or diagram beneath it.
- * @docsDo Use ordinary Markdown for connected ideas; keep each paragraph about one idea.
+ * @docsDo Use ordinary Markdown; keep each paragraph about one idea.
  * @docsDo Use inline code for literal names and expressions.
  * @docsDo Use bold only when the distinction changes meaning; use italics sparingly.
- * @docsDo Preserve meaningful imported underline and strikethrough; explain quotations that matter.
+ * @docsDo Preserve meaningful underline and strikethrough; explain key quotes.
+ * @docsDo Draft the outline as a tree before prose. Group details beneath the concept or task they explain; keep independent topics as peers.
+ * @docsDo Read the outline alone: peer headings should answer the same kind of reader question, and each child should be a clear part of its parent.
+ * @docsDo For one visual system, group Typography, Colour, and Components beneath a parent such as Visual system.
+ * @docsDo Use short, concrete topic names; put instructions, explanations, and promised outcomes in the prose.
+ * @docsDo Remove a heading that repeats its parent, labels one paragraph/example, or adds no reader value.
  * @docsDont Do not use decorative emoji in headings.
  * @docsDont Do not bold a sentence just for emphasis; rewrite it for clarity.
- * @docsDont Do not use H5/H6 for ordinary emphasis; retain deep levels only when source hierarchy requires them.
+ * @docsDont Do not leave a page as a flat inventory when its topics have meaningful parent-child relationships.
+ * @docsDont Do not group independent topics under a broad label just to create indentation.
+ * @docsDont Do not give each paragraph, example, or block a heading.
+ * @docsDont Do not use vague labels such as “Overview” or “Next steps” when a specific topic can be named.
+ * @docsDont Do not publish generic advice alone; add verified product details, examples, constraints, or steps.
+ * @docsDont Do not use H5/H6 for emphasis; keep deep levels only when needed.
  * @docsTip Reconsider the whole information hierarchy whenever content is added or moved.
  * @docsTip Organise by reader task, not source order, lecture chronology, or supplied groups.
- * @docsDo Use H2 for each main body section, H3 for a subsection, and H4 only under H3 when needed.
+ * @docsTip Hide the body and read the outline: its groups and levels should explain how the ideas relate before the reader opens a section.
+ * @docsDo Use H2 for main sections, H3 for subsections, and H4 only under H3.
  * @docsTip H5 and H6 are for genuinely necessary imported depth; prefer a shallower page.
  * @docsTip A blockquote sets off attributed source wording; avoid quoting ordinary instructions.
  * @docsTip Bold may mark a key term when the distinction changes meaning; italics can distinguish a term.
@@ -1210,24 +1223,24 @@ function tableBlock(
  * @docsInsertionStep Preview the heading outline, formatting, and links.
  * @docsSyntax
  * ```mdx
- * ## Save Docs edits
+ * ## Save edits
  *
  * The host receives each edit through `onChange`.
  *
- * ### Persist
+ * ### Persist changes
  *
- * Save the updated value so it survives a reload.
+ * Save the value so it survives a reload.
  *
  * > The host owns storage.
  * ```
  * @docsRenderedExample
- * ## Save Docs edits
+ * ## Save edits
  *
  * The host receives each edit through `onChange`.
  *
- * ### Persist
+ * ### Persist changes
  *
- * Save the updated value so it survives a reload.
+ * Save the value so it survives a reload.
  *
  * > The host owns storage.
  */
@@ -1490,7 +1503,7 @@ function parseMarkdown(
       calloutSrc.slice(range.end);
   }
   const fencedMath = shieldCodeFences(calloutSrc);
-  let source = fencedMath.restore(
+  let src = fencedMath.restore(
     fencedMath.source.replace(TerraQualityRegex.REGEX_S_N_S_S_S_GM_REGEX(), (r, c: string) =>
       enabled(options, 'math')
         ? richPlaceholder(blocks, { _type: 'math', code: c.trim(), inline: false, markdown: r })
@@ -1498,32 +1511,32 @@ function parseMarkdown(
     ),
   );
   if (inlineMath) {
-    const fences = codeFenceRanges(source);
+    const fences = codeFenceRanges(src);
     let fenceIndex = 0;
     let output = '';
     let cursor = 0;
     let index = 0;
-    while (index < source.length) {
+    while (index < src.length) {
       while (fenceIndex < fences.length && index >= fences[fenceIndex]!.end) fenceIndex += 1;
       const fence = fences[fenceIndex];
       if (fence && index >= fence.start && index < fence.end) {
         index = fence.end;
         continue;
       }
-      if (source[index] === '`' && source[index - 1] !== '\\') {
-        const marker = source.slice(index).match(SHARED_REGEX)?.[0];
-        const end = marker ? source.indexOf(marker, index + marker.length) : -1;
+      if (src[index] === '`' && src[index - 1] !== '\\') {
+        const marker = src.slice(index).match(SHARED_REGEX)?.[0];
+        const end = marker ? src.indexOf(marker, index + marker.length) : -1;
         if (marker && end !== -1) {
           index = end + marker.length;
           continue;
         }
       }
-      if (source[index] !== '$' || source[index - 1] === '\\') {
+      if (src[index] !== '$' || src[index - 1] === '\\') {
         index += 1;
         continue;
       }
-      if (source[index + 1] === '$') {
-        const end = source.indexOf('$$', index + 2);
+      if (src[index + 1] === '$') {
+        const end = src.indexOf('$$', index + 2);
         if (end !== -1) {
           index = end + 2;
           continue;
@@ -1532,23 +1545,22 @@ function parseMarkdown(
         continue;
       }
       let end = index + 1;
-      while (end < source.length && source[end] !== '\n') {
-        if (source[end] === '$' && source[end - 1] !== '\\' && source[end + 1] !== '$') break;
+      while (end < src.length && src[end] !== '\n') {
+        if (src[end] === '$' && src[end - 1] !== '\\' && src[end + 1] !== '$') break;
         end += 1;
       }
-      if (end >= source.length || source[end] !== '$' || end === index + 1) {
+      if (end >= src.length || src[end] !== '$' || end === index + 1) {
         index += 1;
         continue;
       }
-      output +=
-        source.slice(cursor, index) + encodeInlineMathPlaceholder(source.slice(index + 1, end));
+      output += src.slice(cursor, index) + encodeInlineMathPlaceholder(src.slice(index + 1, end));
       index = end + 1;
       cursor = index;
     }
-    source = output + source.slice(cursor);
+    src = output + src.slice(cursor);
   }
   const result: RichBlock[] = [];
-  for (const token of marked.lexer(source, { gfm: true }) as Token[]) {
+  for (const token of marked.lexer(src, { gfm: true }) as Token[]) {
     if (token.type === 'space') continue;
     const marker = token.raw.trim().match(/^DOCSBLOCK(\d+)PLACEHOLDER$/);
     if (marker) {
@@ -2644,8 +2656,8 @@ export function docsValueToMarkdown(value: DocsValue): string {
                *
                * @return A placeholder that can be restored after escaping the cell text.
                */
-              const protect = (source: string) => {
-                protectedParts.push(source);
+              const protect = (src: string) => {
+                protectedParts.push(src);
                 return `DOCSTABLEPROTECTED${protectedParts.length - 1}TOKEN`;
               };
               return (

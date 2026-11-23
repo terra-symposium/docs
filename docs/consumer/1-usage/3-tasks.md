@@ -7,11 +7,15 @@ description: Choose a Docs writing task, preserve its sources, and report a chec
 
 Choose the reader's outcome, then design the information hierarchy needed to reach it. Source order, filenames, groups, and the number of sources do not set leaf boundaries. Split or combine leaves, or change their parent branch, when new material changes the reader's path. Then choose the task below.
 
+## Apply feedback
+
+When a user reports a defect in Docs output and requests an edit, treat the example as evidence of a broken principle, not as the whole specification. Identify the invariant the output should satisfy, trace the responsible source or guidance, and fix that cause. Audit analogous pages and states, update their shared owner or guidance, and use the reported case to verify the fix alongside representative cases. Do not encode incidental details of one example as a general rule. Preserve an explicitly requested outcome while making the underlying principle hold consistently.
+
 | Task          | Use it when                                 | Return                                 |
 | ------------- | ------------------------------------------- | -------------------------------------- |
 | 🧩 Synthesise | Several sources need one reading path       | Integrated draft and coverage          |
 | 📄 Convert    | One source needs a Docs structure           | Reworked page and coverage             |
-| 🔍 Critique   | A page needs an assessment                  | Strengths and repair findings          |
+| 🔍 Critique   | A page or tree needs an assessment          | Evidence-backed findings and repairs   |
 | 🧬 Parity     | Source and rendered page disagree           | First divergence, repair, and proof    |
 | ⚖️ Compare    | Sources need a difference check             | Shared, unique, and conflicting claims |
 | ✨ Polish     | The facts are settled, but wording is rough | Revised text and preservation check    |
@@ -146,38 +150,62 @@ Reader: A new maintainer. Do not imply a full-page conversion.
 
 ===[Critique]
 
-Assess a page against its reader's task and the relevant Docs guidance. Keep useful strengths visible and make each problem actionable.
+Assess a leaf or tree against its readers' tasks and the relevant Docs guidance. Keep useful strengths visible and make each problem actionable.
+
+Critique is read-only: do not edit the target or create proposed missing leaves. Return the evidence, proposed tree map, and repair recommendations for a later edit task.
 
 **Use when**
 
-- A page may be inaccurate, hard to use, or hard to maintain.
-- The reader needs findings before anyone edits the page.
+- A leaf or tree may be inaccurate, hard to use, poorly grouped, or repetitive.
+- The reader needs evidence-backed findings before anyone edits it.
 
 **Review sequence**
 
-1. Read the target and the [Leaf](/consumer/1-usage/1-leaf/) and [Blocks](/consumer/1-usage/2-blocks/) guidance.
-   - Identify the reader goal and rules for each used block.
-2. Test whether the leaf earns its place for that reader.
+1. Read the target tree and the [Tree](/consumer/1-usage/0-tree/), [Leaf](/consumer/1-usage/1-leaf/), and [Blocks](/consumer/1-usage/2-blocks/) guidance.
+   - Identify the reader goal, active route, and renderer.
+   - Check the rules for each block in use.
+   - Trace syntax and component claims to source before explaining them.
+2. Audit groups and leaf boundaries before prose.
+   - For a tree critique, read every leaf in the target tree. For a leaf critique, read its full branch. Candidate-scan relevant sister trees, then read every leaf with a potentially shared task or repeated material.
+   - Map each group to its reader task and owning product or export. For each leaf, record its outcome, unique information, dependencies, overlaps, and canonical owner. Compare sister-tree setup, commands, examples, troubleshooting, and reference facts.
+   - Treat an unusually short leaf as a signal to investigate: it may omit needed detail, repeat a peer, belong in a shared explanation, or serve a narrow task on its own.
+   - Search the entire target repository with focused scans for user-facing workflows, commands, generated artifacts, and exported APIs missing from the tree. Verify candidates against their source. Distinguish supported integration APIs from low-level exports; do not assume every root export needs a guide. Recommend missing coverage, a new group, or an API-surface decision, but do not create missing docs during critique.
+   - Review titles in parent context. Use the shortest specific labels that distinguish reader tasks; check the full set for redundancy and ambiguity.
+   - Decide what to keep, rename, move, merge, split, share, or propose. Merge leaves with the same task and overlapping information; split only for distinct reader outcomes, owners, or routes. Group by coherent reader work or verified product ownership, not repository folders or tool names.
+   - Identify one canonical owner for repeated material and retain only verified audience-specific differences.
+   - Draft a compact proposed tree map with group and leaf titles, boundary decisions, and brief reader-task reasons. Mark missing leaves as proposals only.
+3. Assess whether each leaf earns its place.
    - Name what the reader can understand, decide, or do after reading it.
-   - Separate mechanisms, choices, limits, examples from familiar advice.
-   - Flag leaves that add no knowledge beyond common sense or repeat peers.
-   - Recommend evidence, a merge, or removal when a leaf adds no value.
-   - Polish, orderly headings, and a passing build do not prove value.
-3. Map the heading hierarchy and each substantive block.
+   - State the page's value in one evidence-backed sentence.
+   - Identify the facts, choices, limits, examples, or source-specific explanation that make this leaf useful beyond common sense.
+   - Reject advice that could be copied unchanged into almost any product's documentation; recommend verified details, a merge, or removal.
+   - Flag unsupported unique-value claims. Polish, orderly headings, and a passing build do not prove reader value.
+4. Map the heading hierarchy and each substantive block.
    - Check title ≤48 chars; description ≤85.
-   - Nest H3s under H2; flag a flat row of small H2s.
-   - Rewrite headings over six words or 48 chars.
-   - Challenge inherited tree, leaf, and source groupings.
-   - Check whether chronology hides conceptual dependencies.
+   - Write the outline as a tree before reviewing prose. H2s are peer topics; nest details only when they answer a question within their parent.
+   - If several sections explain parts of one system or task, group them under that topic. Keep independent reader needs as peers.
+   - Read the outline alone: every level must clarify the relationship, not create visual indentation. Prefer two levels; use H4 only for a genuine subtopic of an H3.
+   - Keep labels to one to four concrete words. Put explanations and outcomes in prose; remove headings that repeat, label one example, or add no value.
+   - Nest H3 under H2 and H4 under H3. Reject skipped levels, sentence headings, vague labels, and flat inventories that hide real groups.
+   - Check whether chronology hides dependencies or copies another leaf's outline without a reader reason.
    - Match blocks to relationships; compare peer pages for density.
-4. Read the whole rendered page at desktop and narrow widths.
+   - In pipe tables, inspect cells containing pipe-delimited examples; move examples to fenced blocks if the pipes split the table.
+5. Check visual claims against rendered specimens.
+   - Show actual fonts, colours, tokens, and components in the page, then trace each visible result to its source.
+   - Verify a rendered specimen; source names or a passing build alone are not evidence of what readers see.
+6. Read the whole rendered page at desktop and narrow widths.
    - Open tabs and accordions; inspect links, overflow, and diagrams.
-5. Request an independent review without sharing findings or scores.
-   - Reconcile its evidence with your own observations.
-6. Report each problem's reader impact, evidence, and repair.
+   - A critique is a content and rendering review, not a test task. Do not run unit tests (including skill tests), browser tests, or Quality suites during the critique, including after making critique-related edits or while completing a broader goal in the same thread.
+   - Validate findings with source inspection, route/link checks, and rendered-page inspection. If a relevant state cannot be inspected, mark it unchecked. Stop when the critique is complete; automated test or implementation verification requires a separate user request and task.
+7. Request a blind, independent review when an agent is available.
+   - Give it the target, applicable guidance, and general critique rubric; do not reveal your findings, suspected fixes, user examples, or scores.
+   - Request a read-only review. Do not ask the agent to edit files or run tests/builds.
+   - Reconcile its evidence with your own observations; verify relevant claims against source and rendered evidence.
+   - Do not report a clean critique from build success or checklist completion; require a useful page and a clear outline.
+8. Report each problem's reader impact, evidence, and repair.
    - Disclose uninspected states; never call an incomplete review clean.
 
-If unavailable, label this a single review. Use one or two scope sentences, one strengths paragraph, and **one negative-findings table**. Add one row per supported issue. Compare source and rendering; apply [Validation](#validation). Heading defects count even when the build passes.
+If no independent reviewer is available, label this a single review. State which trees and leaves were read and which were only candidate-scanned. Use one or two scope sentences, one strengths paragraph, a compact proposed tree map, and **one negative-findings table**. Add one row per supported issue. For reuse findings, cite both sides of the boundary and name the canonical owner. Compare source and rendering; apply [Validation](#validation) to content and hierarchy evidence without turning critique into implementation testing. Heading and grouping defects count even when the build passes.
 
 **Response format**
 
@@ -185,6 +213,8 @@ If unavailable, label this a single review. Use one or two scope sentences, one 
 <Scope: target, peers, checked states, and limits.>
 
 <Strengths: one short paragraph with evidence.>
+
+<Proposed tree: groups and concise leaf titles; mark kept, renamed, moved, merged, split, or proposed.>
 
 | 🧩 Category | 🔥 Priority  | 🧪 Evidence | Problem and reader impact | Source or screen | Repair |
 | ----------- | ------------ | ----------- | ------------------------- | ---------------- | ------ |
@@ -208,7 +238,8 @@ Task: Critique an earlier draft of Docs content and rendering parity.
 Peers: Tree; Leaf; Blocks; Tasks.
 Audit hierarchy, block choices, visible reading path, and accuracy.
 Open the rendered page and compare desktop and narrow widths.
-Use an independent subagent. Do not edit the target.
+Use a blind, read-only agent review when available; do not disclose expected findings.
+Do not edit the target or run tests/builds.
 ```
 
 |||
@@ -216,10 +247,12 @@ Use an independent subagent. Do not edit the target.
 |||[Response]
 
 ```mdx
-Single review: an earlier Parity draft; narrow layout and hosted behavior unchecked.
+Single review: no independent reviewer available; earlier Parity draft; narrow layout and hosted behavior unchecked.
 
 The symptom table gives investigators a useful first boundary.
 The source-to-screen path also keeps diagnosis tied to evidence.
+
+Proposed tree: Usage > Parity [keep; owns the source-to-screen mismatch task].
 
 | 🧩 Category | 🔥 Priority | 🧪 Evidence | Problem and reader impact              | Source or screen                                                          | Repair                              |
 | ----------- | ----------- | ----------- | -------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------- |
@@ -289,7 +322,7 @@ Trace source, catalog, model, and rendered route; repair the first mismatch.
 
 :::
 
-#### Diagnose
+### Diagnose
 
 **Find the mismatch**
 
@@ -302,7 +335,7 @@ Start with one affected leaf and one concrete symptom. The local and hosted path
 | 📎 An image or attachment is absent    | Owner and asset URL                   | Source reference, attachment record, opened URL      |
 | 🎨 Colors or spacing differ            | Loaded package, CSS, and theme inputs | Resolved artifact, computed style, matching viewport |
 
-Record the expected source, normalized value, and observed result before changing code. The [quality and tests guide](/developer/repo/quality-and-tests/) lists package checks; the [Playwright guide](/developer/repo/playwright-tests/) explains browser coverage.
+Record the expected source, normalized value, and observed result before changing code. The [Testing guide](/developer/repository/testing/) lists package checks and browser coverage.
 
 **Confirm the source**
 
@@ -331,7 +364,7 @@ Compare adjacent stages on the path that owns the affected page.
 2. Trace CLI preparation and the generated catalog/TOC.
 3. Trace Astro rendering to the DOM, links, and opened files.
 
-The [site pipeline](/developer/repo/site-pipeline/) names each build stage. A static site has no hosted storage adapter.
+The [Development guide](/developer/repository/development/) names each build stage. A static site has no hosted storage adapter.
 
 |||
 
@@ -360,7 +393,7 @@ The host may gate an action by capability. It should not replace or restyle the 
 
 Reproduce the mismatch with the smallest useful fixture. Trace upstream one edge at a time through identity, route, fallbacks, conversion, package artifact, block registry, CSS import order, theme/hue, and component variants. Record evidence for the first divergence before patching the UI. A broad CSS override or host shell can conceal the cause.
 
-#### Resolve
+### Resolve
 
 Choose the affected case: **Content**, **Attachments**, or **Interface**. Use the diagnosis above, then fix and retest below.
 
@@ -489,7 +522,7 @@ For each defect:
 
 After a shared change, rerun affected host routes and states. After a consumer-only change, verify the installed package artifact. Continue until source meaning, behavior, and appearance agree, or report the exact unverified boundary.
 
-#### Verify
+### Verify
 
 Check the package, affected consumer, and final evidence.
 
@@ -685,15 +718,15 @@ Return recommendations only; do not edit sibling leaves.
 
 Inspect every task response or Docs page through all seven dimensions below. They are a sequence, not alternative tasks: open each panel and complete its checks. Establish source coverage, then treat the logical information hierarchy as the first gate for the result. A factually complete page with the wrong tree, leaf boundaries, or heading levels is incomplete.
 
-| Dimension    | Main question                                                      |
-| ------------ | ------------------------------------------------------------------ |
-| 📚 Sources   | Are distinct points, links, examples, and conflicts accounted for? |
-| 🧭 Hierarchy | Do tree, leaves, and headings follow reader tasks?                 |
-| 📝 Content   | Are its claims accurate and useful beyond common sense?            |
-| 🧩 Syntax    | Do blocks and authored markup follow their rules?                  |
-| ♿ Render    | Does the whole page work at desktop and narrow widths?             |
-| 🚀 Publish   | Do saved and public states preserve meaning and access?            |
-| 🔁 Record    | Can another author reproduce the checks and update the page?       |
+| Dimension    | Main question                                                                                            |
+| ------------ | -------------------------------------------------------------------------------------------------------- |
+| 📚 Sources   | Are distinct points, links, examples, and conflicts accounted for?                                       |
+| 🧭 Hierarchy | Do group purposes, leaf boundaries, and headings form a concise reader path without duplicated guidance? |
+| 📝 Content   | Are claims accurate and useful beyond common sense?                                                      |
+| 🧩 Syntax    | Do blocks and authored markup follow their rules?                                                        |
+| ♿ Render    | Does the whole page work at desktop and narrow widths?                                                   |
+| 🚀 Publish   | Do saved and public states preserve meaning and access?                                                  |
+| 🔁 Record    | Can another author reproduce the checks and update the page?                                             |
 
 In a critique, report supported strengths and gaps. Score only when requested: **0** absent or wrong, **1** partial, **2** usable, **3** clear and verified. Mark **N/A** with a reason, and record incomplete checks as incomplete.
 
@@ -735,9 +768,9 @@ Strip leftover AI tool citation markers (`[cite]`, numbered markers such as `[ci
 
 Follow the [Blocks reference](/consumer/1-usage/2-blocks/) for block selection. Check every used block, example, and nested block against its section, including the list and table rules. Check Markdown and MDX against the [block contract](/developer/component/blocks/); keep private assumptions and unresolved questions in the authoring brief.
 
-#### Migration
+### Migration
 
-For legacy markup, follow [Migrate content](/developer/repo/content-migration/) before bulk edits. Use the sanitizer in the Docs source checkout to check, apply safe fixes, recheck, inspect the diff, and build the consumer site. Recover obsolete blocks and diagram data from their original source; do not replace missing meaning with placeholders. The migration guide owns the commands, CI scan scope, and manual recovery cases.
+For legacy markup, follow [Migrations](/developer/repository/content-migration/) before bulk edits. Use the sanitizer in the Docs source checkout to check, apply safe fixes, recheck, inspect the diff, and build the consumer site. Recover obsolete blocks and diagram data from their original source; do not replace missing meaning with placeholders. The migration guide owns the commands, CI scan scope, and manual recovery cases.
 
 For AI-generated content, repeat this check until it passes:
 
@@ -765,11 +798,11 @@ Inspect the rendered result in this order:
    - It must not vanish or appear as raw JSON.
 4. Review the build, relevant tests, and diff.
 
-#### Round trips
+### Round trips
 
 When conversion logic changes, check Markdown-to-value and value-to-Markdown round trips—covering heading levels, marks, list nesting, table cells, block attributes, diagrams, links, and attachments—and run browser tests when editor behaviour changes.
 
-#### Routes and assets
+### Routes and assets
 
 Moving a file or changing its number prefix alters its URL, so update incoming links and check both the old and new routes; see [Tree](/consumer/1-usage/0-tree/) for labels, ordering, and hidden pages.
 
@@ -816,7 +849,7 @@ blocks, artifact cleanup, routes, interaction states, attachment handling, and r
 | 🧭 Generation trace   | How collected material and authoring decisions produced the final draft.                       |
 | 📰 Publication record | Which source revision, deployed route, interaction states, and attachment URLs were inspected. |
 
-#### Validation log
+### Validation log
 
 Every AI-generated page response must end with a concise Validation Log after the page
 body, kept in the accompanying response or workflow record outside the content saved as

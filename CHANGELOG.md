@@ -1,5 +1,14 @@
 # @terra-symposium/docs
 
+## 0.4.32
+
+### Patch Changes
+
+- Fix the published Markdown accordion renderer to use the current Docs styling.
+- e6b0aa8: Keep the live Docs stylesheet and compiled modules available during source rebuilds.
+- a80efa4: Rebuild local Docs source changes and reload the development site automatically.
+- 7b4ee4b: Keep local Docs navigation aligned with the active URL and apply the Docs theme to the not-found page.
+
 ## 0.4.31
 
 ### Patch Changes

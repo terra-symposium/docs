@@ -18,6 +18,6 @@
     "build": "docs build"
   },
   "devDependencies": {
-    "@terra-symposium/docs": "^0.4.31"
+    "@terra-symposium/docs": "^0.4.35"
   }
 }

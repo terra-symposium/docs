@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.35
+
+### Patch Changes
+
+- Resolve published Docs site imports from compiled package files so the site does not depend on omitted repository source modules.
+
 ## 0.4.34
 
 ### Patch Changes

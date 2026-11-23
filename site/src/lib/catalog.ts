@@ -16,7 +16,7 @@ import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
 import { siteImageUrls } from '../../../src/lib/local-markdown.js';
 
 // TYPES
-import type { DocsNavNode } from '../../../src/components/navigation.js';
+import type { DocsNavNode } from '../../../dist/lib/components/navigation.js';
 
 /*//////////////////////////////////////////////////
 CONFIG

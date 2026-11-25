@@ -31,14 +31,14 @@ type Token = {
 };
 
 /** Replaces fenced Markdown while applying line-based Docs directives. */
-function shieldCodeFences(source: string) {
+function shieldCodeFences(src: string) {
 	const ranges: { start: number; end: number }[] = [];
 	let open: { start: number; character: string; length: number } | undefined;
 	let index = 0;
-	while (index < source.length) {
-		const lineEnd = source.indexOf('\n', index);
-		const end = lineEnd === -1 ? source.length : lineEnd + 1;
-		const line = source.slice(index, lineEnd === -1 ? end : lineEnd).replace(/\r$/, '');
+	while (index < src.length) {
+		const lineEnd = src.indexOf('\n', index);
+		const end = lineEnd === -1 ? src.length : lineEnd + 1;
+		const line = src.slice(index, lineEnd === -1 ? end : lineEnd).replace(/\r$/, '');
 		const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
 		if (open) {
 			const closing = line.match(/^ {0,3}(`+|~+)[ \t]*$/);
@@ -51,19 +51,19 @@ function shieldCodeFences(source: string) {
 		}
 		index = end;
 	}
-	if (open) ranges.push({ start: open.start, end: source.length });
+	if (open) ranges.push({ start: open.start, end: src.length });
 	let cursor = 0;
 	let shielded = '';
 	ranges.forEach(({ start, end }, fenceIndex) => {
-		shielded += `${source.slice(cursor, start)}TERRAFENCE${fenceIndex}PLACEHOLDER`;
+		shielded += `${src.slice(cursor, start)}TERRAFENCE${fenceIndex}PLACEHOLDER`;
 		cursor = end;
 	});
 	return {
-		source: shielded + source.slice(cursor),
+		source: shielded + src.slice(cursor),
 		restore: (value: string) =>
 			value.replace(/TERRAFENCE(\d+)PLACEHOLDER/g, (match, number: string) => {
 				const range = ranges[Number(number)];
-				return range ? source.slice(range.start, range.end) : match;
+				return range ? src.slice(range.start, range.end) : match;
 			}),
 	};
 }

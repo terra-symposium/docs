@@ -10,3 +10,11 @@ tests/results/*
 
 # Local generated caches and dependency links
 .astro
+
+# Legacy generated outputs
+/config/test-results/
+/demo-dist/
+/error.log
+/lib-dist/
+/site-dist/
+/test-results/

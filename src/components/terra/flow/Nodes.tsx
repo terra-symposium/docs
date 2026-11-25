@@ -599,8 +599,8 @@ const FLOW_COMPS = {
 				});
 				link.download = 'diagram.png';
 				link.click();
-			} catch (error) {
-				errorLog('Nodes', 'export.failed', error);
+			} catch (err) {
+				errorLog('Nodes', 'export.failed', err);
 			} finally {
 				handles.forEach((handle, index) => {
 					handle.style.visibility = handleVisibility[index] ?? '';

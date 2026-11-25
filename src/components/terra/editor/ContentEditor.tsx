@@ -791,7 +791,12 @@ function toContentValue(value: EditorValue): unknown[] {
 
 function renderTextStyle(style: unknown, children: ReactNode, readOnly: boolean): JSX.Element {
   if (style === 'blockquote') return <blockquote>{children}</blockquote>;
-  if (typeof style === 'string' && TerraQualityRegex.REGEX_H_2_6_REGEX().test(style) && readOnly)
+  if (
+    typeof style === 'string' &&
+    style !== 'h1' &&
+    TerraQualityRegex.REGEX_H_1_6_U_REGEX().test(style) &&
+    readOnly
+  )
     return <DocsHeading level={style as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'}>{children}</DocsHeading>;
   if (typeof style === 'string' && /^h[1-6]$/.test(style))
     return createElement(style, {}, children);

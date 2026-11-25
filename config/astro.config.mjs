@@ -1,17 +1,26 @@
-import { terraErrorBoundaryIntegration as __terraErrorBoundaryIntegration } from '@terra-symposium/standards-error-boundaries/astro-integration';
-import { defineConfig } from 'astro/config';
+/**
+ * astro.config.mjs
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import react from '@astrojs/react';
-import { DOCS_VITE_OPTIMIZE_DEPS } from '.././dist/lib/lib/astro.js';
+import { defineConfig } from 'astro/config';
+import { terraErrorBoundaryIntegration } from '@terra-symposium/boundaries/astro-integration';
+
+const noStore = server => {
+	server.middlewares.use((_request, response, next) => {
+		response.setHeader('Cache-Control', 'no-store');
+		next();
+	});
+};
 
 export default defineConfig({
-  outDir: './dist/site/',
-  devToolbar: { enabled: false },
-  integrations: [__terraErrorBoundaryIntegration(), react()],
-  vite: {
-    // Linked local packages (notably the live Styling checkout) must resolve
-    // React through this app. Otherwise Radix's portal providers load a second
-    // React instance and fail during Astro SSR/hydration with invalid hooks.
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { include: [...DOCS_VITE_OPTIMIZE_DEPS] },
-  },
+	outDir: './dist/site/',
+	vite: { plugins: [{ name: 'docs-no-store', configureServer: noStore, configurePreviewServer: noStore }] },
+	devToolbar: { enabled: false },
+	integrations: [react(), terraErrorBoundaryIntegration()],
 });

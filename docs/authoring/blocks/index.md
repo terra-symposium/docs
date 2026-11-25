@@ -49,13 +49,10 @@ The type is preserved when a page is opened and exported from the editor. Tables
 Use an accordion for secondary detail and tabs for genuine alternatives. Each item has an opening title and a matching closing delimiter:
 
 ```md
-=== [Further detail]
-Supporting explanation.
+=== [Further detail] Supporting explanation.
 ===
 
-||| [Linux]
-Linux instructions.
-|||
+||| [Linux] Linux instructions. |||
 ```
 
 ## Diagrams and embeds

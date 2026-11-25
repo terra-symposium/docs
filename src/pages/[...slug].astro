@@ -1,0 +1,36 @@
+---
+import { DocsSiteWorkspace } from '../components/DocsSiteWorkspace';
+import { docsPages, docsTree } from '../lib/docs-catalog';
+import '@terra-symposium/docs-site/style.css';
+
+export function getStaticPaths() {
+	return docsPages.map(p => ({
+		params: { slug: p.pathname.replace(/^\//, '').replace(/\/$/, '') || undefined },
+		props: { pageId: p.id },
+	}));
+}
+
+const { pageId } = Astro.props;
+const p = docsPages.find(e => e.id === pageId) ?? docsPages[0];
+---
+
+<!doctype html>
+<html lang='en'>
+	<head>
+		<meta charset='utf-8' />
+		<meta name='viewport' content='width=device-width, initial-scale=1' />
+		<title>{p?.title ?? 'Docs'}</title>
+	</head>
+	<body>
+		<DocsSiteWorkspace
+			client:load
+			tree={docsTree}
+			pages={docsPages}
+			pathname={Astro.url.pathname}
+			title='Docs'
+			description='Install and configure independent Docs instances.'
+			rootPath='/'
+			homePath='/'
+		/>
+	</body>
+</html>

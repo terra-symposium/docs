@@ -4,6 +4,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "baseUrl": "..",
+    "paths": { "@terra-symposium/docs": ["src/lib/index.ts"] },
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,

@@ -2,7 +2,15 @@
 @import 'katex/dist/katex.min.css';
 @import '@xyflow/react/dist/style.css';
 @import './prose.css';
-/* The pre-extraction Terra layout suppressed React Flow's attribution badge. */
-.react-flow__attribution {
-  display: none !important;
+@tailwind utilities;
+
+/* Keep Styling's responsive sidebar utilities effective when its later `hidden` rule wins the bundle order. */
+@media (min-width: 768px) {
+	.terra-docs-workspace .md\:block {
+		display: block;
+	}
+
+	.terra-docs-workspace .md\:flex {
+		display: flex;
+	}
 }

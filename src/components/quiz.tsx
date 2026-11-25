@@ -1,573 +1,465 @@
 import { createContext, useContext, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
+import { Button } from '@terra-symposium/styling/ui';
+const TEXT_SM_TEXT_PRIMARY_10_CLASS = 'text-sm text-primary-10';
+const ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS = 'rounded-md border border-primary-6 bg-background px-3 py-2';
+const FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS = 'flex flex-col gap-1 text-sm';
+const ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS = 'rounded-md bg-primary-9 px-4 py-2 text-primary-1';
 
+/** Question formats supported by the interactive Docs quiz. */
 export type DocsQuizQuestionType = 'multipleChoice' | 'keyword';
+/** Source context and requested formats passed to a host's quiz generator. */
 export type DocsQuizGenerationInput = {
-  title: string;
-  markdown: string;
-  count: number;
-  types: DocsQuizQuestionType[];
+	title: string;
+	markdown: string;
+	count: number;
+	types: DocsQuizQuestionType[];
 };
+/** A validated multiple-choice or free-response quiz question. */
 export type DocsQuizQuestion =
-  | {
-      type: 'multipleChoice';
-      prompt: string;
-      opts: string[];
-      answer: string;
-      explanation?: string;
-      section?: string;
-    }
-  | {
-      type: 'keyword';
-      prompt: string;
-      answers: string[];
-      keywords?: string[];
-      explanation?: string;
-      section?: string;
-    };
+	| {
+			type: 'multipleChoice';
+			prompt: string;
+			opts: string[];
+			answer: string;
+			explanation?: string;
+			section?: string;
+	  }
+	| {
+			type: 'keyword';
+			prompt: string;
+			answers: string[];
+			keywords?: string[];
+			explanation?: string;
+			section?: string;
+	  };
+/** A generated quiz document accepted by the runner. */
 export type DocsQuizDocument = { title: string; questions: DocsQuizQuestion[] };
+/** Host options for quiz generation and the optional toolbar action. */
 export type DocsQuizConfig = {
-  toolbar?: boolean;
-  generate?: (input: DocsQuizGenerationInput) => Promise<unknown>;
+	toolbar?: boolean;
+	generate?: (input: DocsQuizGenerationInput) => Promise<unknown>;
 };
 
+/** Quiz configuration and source context shared within a Docs workspace. */
 type DocsQuizContextValue = {
-  config: DocsQuizConfig;
-  title: string;
-  markdown: string;
+	config: DocsQuizConfig;
+	title: string;
+	markdown: string;
 };
 const DocsQuizContext = createContext<DocsQuizContextValue | null>(null);
 
-export function DocsQuizProvider({
-  children,
-  config,
-  title,
-  markdown,
-}: DocsQuizContextValue & { children: ReactNode }): JSX.Element {
-  return (
-    <DocsQuizContext.Provider value={{ config, title, markdown }}>
-      {children}
-    </DocsQuizContext.Provider>
-  );
+/** Provides host-owned quiz generation settings to rich-block renderers.
+ * @param children Workspace content receiving quiz settings.
+ * @param config Host generation and toolbar configuration.
+ * @param title Current document title.
+ * @param markdown Current document Markdown.
+ * @return Provider wrapping the workspace content.
+ */
+export function DocsQuizProvider({ children, config, title, markdown }: DocsQuizContextValue & { children: ReactNode }): JSX.Element {
+	return <DocsQuizContext.Provider value={{ config, title, markdown }}>{children}</DocsQuizContext.Provider>;
 }
 
-export function useDocsQuizContext(): DocsQuizContextValue | null {
-  return useContext(DocsQuizContext);
-}
-
+/** Validates untrusted quiz data returned by a host generator.
+ * @param value Untrusted response returned by the host generator.
+ * @return A quiz document with supported and validated questions.
+ */
 export function parseDocsQuiz(value: unknown): DocsQuizDocument {
-  if (!value || typeof value !== 'object')
-    throw new Error('The quiz endpoint returned invalid quiz data.');
-  const candidate = value as Record<string, unknown>;
-  if (
-    typeof candidate.title !== 'string' ||
-    !candidate.title.trim() ||
-    !Array.isArray(candidate.questions) ||
-    candidate.questions.length === 0 ||
-    candidate.questions.length > 20
-  )
-    throw new Error('The quiz endpoint must return a title and between one and twenty questions.');
-  return {
-    title: candidate.title,
-    questions: candidate.questions.map((value): DocsQuizQuestion => {
-      if (!value || typeof value !== 'object')
-        throw new Error('The quiz endpoint returned an invalid question.');
-      const question = value as Record<string, unknown>;
-      if (typeof question.prompt !== 'string' || !question.prompt.trim())
-        throw new Error('Each question needs a prompt.');
-      if (question.type === 'multipleChoice') {
-        if (
-          !Array.isArray(question.opts) ||
-          question.opts.length < 2 ||
-          !question.opts.every((i) => typeof i === 'string' && i.trim()) ||
-          new Set(question.opts).size !== question.opts.length ||
-          typeof question.answer !== 'string' ||
-          !question.opts.includes(question.answer)
-        )
-          throw new Error(
-            'Multiple choice questions need options and a correct answer selected from those options.',
-          );
-        return {
-          type: question.type,
-          prompt: question.prompt,
-          opts: question.opts as string[],
-          answer: question.answer,
-          ...(typeof question.explanation === 'string'
-            ? { explanation: question.explanation }
-            : {}),
-          ...(typeof question.section === 'string' ? { section: question.section } : {}),
-        };
-      }
-      if (question.type === 'keyword') {
-        if (
-          !Array.isArray(question.answers) ||
-          question.answers.length === 0 ||
-          !question.answers.every((i) => typeof i === 'string' && i.trim()) ||
-          (question.keywords !== undefined &&
-            (!Array.isArray(question.keywords) ||
-              !question.keywords.every((i) => typeof i === 'string')))
-        )
-          throw new Error('Keyword questions need at least one accepted answer.');
-        return {
-          type: question.type,
-          prompt: question.prompt,
-          answers: question.answers as string[],
-          ...(Array.isArray(question.keywords) ? { keywords: question.keywords as string[] } : {}),
-          ...(typeof question.explanation === 'string'
-            ? { explanation: question.explanation }
-            : {}),
-          ...(typeof question.section === 'string' ? { section: question.section } : {}),
-        };
-      }
-      throw new Error('The quiz endpoint returned an unsupported question type.');
-    }),
-  };
+	if (!value || typeof value !== 'object') throw new Error('The quiz endpoint returned invalid quiz data.');
+	const candidate = value as Record<string, unknown>;
+	if (typeof candidate.title !== 'string' || !candidate.title.trim() || !Array.isArray(candidate.questions) || candidate.questions.length === 0 || candidate.questions.length > 20)
+		throw new Error('The quiz endpoint must return a title and between one and twenty questions.');
+	return {
+		title: candidate.title,
+		questions: candidate.questions.map((value): DocsQuizQuestion => {
+			if (!value || typeof value !== 'object') throw new Error('The quiz endpoint returned an invalid question.');
+			const question = value as Record<string, unknown>;
+			if (typeof question.prompt !== 'string' || !question.prompt.trim()) throw new Error('Each question needs a prompt.');
+			if (question.type === 'multipleChoice') {
+				if (
+					!Array.isArray(question.opts) ||
+					question.opts.length < 2 ||
+					!question.opts.every(i => typeof i === 'string' && i.trim()) ||
+					new Set(question.opts).size !== question.opts.length ||
+					typeof question.answer !== 'string' ||
+					!question.opts.includes(question.answer)
+				)
+					throw new Error('Multiple choice questions need options and a correct answer selected from those options.');
+				return {
+					type: question.type,
+					prompt: question.prompt,
+					opts: question.opts as string[],
+					answer: question.answer,
+					...(typeof question.explanation === 'string' ? { explanation: question.explanation } : {}),
+					...(typeof question.section === 'string' ? { section: question.section } : {}),
+				};
+			}
+			if (question.type === 'keyword') {
+				if (
+					!Array.isArray(question.answers) ||
+					question.answers.length === 0 ||
+					!question.answers.every(i => typeof i === 'string' && i.trim()) ||
+					(question.keywords !== undefined && (!Array.isArray(question.keywords) || !question.keywords.every(i => typeof i === 'string')))
+				)
+					throw new Error('Keyword questions need at least one accepted answer.');
+				return {
+					type: question.type,
+					prompt: question.prompt,
+					answers: question.answers as string[],
+					...(Array.isArray(question.keywords) ? { keywords: question.keywords as string[] } : {}),
+					...(typeof question.explanation === 'string' ? { explanation: question.explanation } : {}),
+					...(typeof question.section === 'string' ? { section: question.section } : {}),
+				};
+			}
+			throw new Error('The quiz endpoint returned an unsupported question type.');
+		}),
+	};
 }
 
 function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean {
-  const norm = response.trim().toLowerCase();
-  if (!norm) return false;
-  if (question.type === 'multipleChoice') return response.trim() === question.answer;
-  return (
-    question.answers.some((answer) => norm === answer.trim().toLowerCase()) ||
-    Boolean(
-      question.keywords?.length &&
-      question.keywords.every((keyword) => norm.includes(keyword.trim().toLowerCase())),
-    )
-  );
+	const norm = response.trim().toLowerCase();
+	if (!norm) return false;
+	if (question.type === 'multipleChoice') return response.trim() === question.answer;
+	return question.answers.some(answer => norm === answer.trim().toLowerCase()) || Boolean(question.keywords?.length && question.keywords.every(keyword => norm.includes(keyword.trim().toLowerCase())));
 }
 
-/** Shared quiz setup, generation, review, and runner UI for Docs hosts. */
-export function DocsQuizGenerator({
-  title,
-  markdown,
-  generate: gen,
-}: {
-  title: string;
-  markdown: string;
-  generate?: DocsQuizConfig['generate'];
-}): JSX.Element {
-  const [stage, setStage] = useState<'setup' | 'review' | 'quiz' | 'results'>('setup');
-  const [count, setCount] = useState(5);
-  const [types, setTypes] = useState<DocsQuizQuestionType[]>(['multipleChoice']);
-  const [quiz, setQuiz] = useState<DocsQuizDocument | null>(null);
-  const [answers, setAnswers] = useState<string[]>([]);
-  const [checkedAnswers, setCheckedAnswers] = useState<boolean[]>([]);
-  const [index, setIndex] = useState(0);
-  const [err, setErr] = useState('');
-  const [loading, setLoading] = useState(false);
+/** Shared quiz setup, generation, review, and runner UI for Docs hosts.
+ * @param title Source document title.
+ * @param markdown Source document Markdown.
+ * @param gen Host callback that generates quiz data.
+ * @return Interactive quiz setup or runner.
+ */
+export function DocsQuizGenerator({ title, markdown, generate: gen }: { title: string; markdown: string; generate?: DocsQuizConfig['generate'] }): JSX.Element {
+	const [stage, setStage] = useState<'setup' | 'review' | 'quiz' | 'results'>('setup');
+	const [count, setCount] = useState(5);
+	const [types, setTypes] = useState<DocsQuizQuestionType[]>(['multipleChoice']);
+	const [quiz, setQuiz] = useState<DocsQuizDocument | null>(null);
+	const [answers, setAnswers] = useState<string[]>([]);
+	const [checkedAnswers, setCheckedAnswers] = useState<boolean[]>([]);
+	const [index, setIndex] = useState(0);
+	const [err, setErr] = useState('');
+	const [loading, setLoading] = useState(false);
 
-  const updateQuestion = (
-    questionIndex: number,
-    update: (question: DocsQuizQuestion) => DocsQuizQuestion,
-  ) => {
-    setQuiz((current) =>
-      current
-        ? {
-            ...current,
-            questions: current.questions.map((question, i) =>
-              i === questionIndex ? update(question) : question,
-            ),
-          }
-        : current,
-    );
-  };
-  const question = quiz?.questions[index];
+	const updateQuestion = (questionIndex: number, update: (question: DocsQuizQuestion) => DocsQuizQuestion) => {
+		setQuiz(current =>
+			current
+				? {
+						...current,
+						questions: current.questions.map((question, i) => (i === questionIndex ? update(question) : question)),
+					}
+				: current,
+		);
+	};
+	const question = quiz?.questions[index];
 
-  return (
-    <section
-      className="docs-quiz my-6 rounded-xl border border-primary-6 bg-primary-2 p-5"
-      aria-label="Quiz generator"
-    >
-      <h2 className="mb-2 text-xl font-semibold">{quiz?.title ?? `Quiz: ${title}`}</h2>
-      {err && (
-        <p
-          role="alert"
-          className="mb-3 rounded-md border border-destructive-7 p-3 text-sm text-destructive-11"
-        >
-          {err}
-        </p>
-      )}
-      {stage === 'setup' && (
-        <div className="space-y-4">
-          <p className="text-sm text-primary-10">
-            Generate a quiz from this leaf. Your quiz is kept in this page session only.
-          </p>
-          <label className="flex max-w-xs flex-col gap-1 text-sm">
-            Number of questions
-            <input
-              className="rounded-md border border-primary-6 bg-background px-3 py-2"
-              type="number"
-              min={1}
-              max={20}
-              value={count}
-              onChange={(event) =>
-                setCount(Math.max(1, Math.min(20, Number(event.target.value) || 1)))
-              }
-            />
-          </label>
-          <fieldset className="flex flex-wrap gap-4 text-sm">
-            <legend className="mb-2 font-medium">Question types</legend>
-            {(['multipleChoice', 'keyword'] as const).map((type) => (
-              <label key={type} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={types.includes(type)}
-                  onChange={() =>
-                    setTypes((current) =>
-                      current.includes(type)
-                        ? current.filter((i) => i !== type)
-                        : [...current, type],
-                    )
-                  }
-                />
-                {type === 'multipleChoice' ? 'Multiple choice' : 'Keyword answer'}
-              </label>
-            ))}
-          </fieldset>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() =>
-              void (async () => {
-                setErr('');
-                if (!gen) {
-                  setErr('Quiz generation is not configured for this Docs host.');
-                  return;
-                }
-                if (!types.length) {
-                  setErr('Choose at least one question type.');
-                  return;
-                }
-                setLoading(true);
-                try {
-                  const generated = parseDocsQuiz(await gen({ title, markdown, count, types }));
-                  if (generated.questions.length !== count)
-                    throw new Error(
-                      `The quiz endpoint returned ${generated.questions.length} questions; ${count} were requested.`,
-                    );
-                  if (generated.questions.some((question) => !types.includes(question.type)))
-                    throw new Error(
-                      'The quiz endpoint returned a question type that was not selected.',
-                    );
-                  setQuiz(generated);
-                  setStage('review');
-                } catch (cause) {
-                  setErr(
-                    cause instanceof Error
-                      ? cause.message
-                      : 'Quiz generation failed. Please try again.',
-                  );
-                } finally {
-                  setLoading(false);
-                }
-              })()
-            }
-            className="rounded-md bg-primary-9 px-4 py-2 font-medium text-primary-1 disabled:opacity-60"
-          >
-            {loading ? 'Generating…' : 'Generate quiz'}
-          </button>
-        </div>
-      )}
-      {stage === 'review' && quiz && (
-        <div className="space-y-4">
-          <p className="text-sm text-primary-10">Review and edit the questions before starting.</p>
-          {quiz.questions.map((v, i) => (
-            <fieldset key={i} className="space-y-2 rounded-lg border border-primary-6 p-4">
-              <legend className="px-1 font-medium">
-                Question {i + 1} · {v.type === 'multipleChoice' ? 'Multiple choice' : 'Keyword'}
-              </legend>
-              <label className="flex flex-col gap-1 text-sm">
-                Prompt
-                <input
-                  className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                  value={v.prompt}
-                  onChange={(event) =>
-                    updateQuestion(i, (q) => ({
-                      ...q,
-                      prompt: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              {v.type === 'multipleChoice' ? (
-                <>
-                  <label className="flex flex-col gap-1 text-sm">
-                    Options (one per line)
-                    <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                      value={v.opts.join('\n')}
-                      onChange={(event) =>
-                        updateQuestion(i, (q) =>
-                          q.type === 'multipleChoice'
-                            ? { ...q, opts: event.target.value.split('\n') }
-                            : q,
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    Correct answer
-                    <input
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                      value={v.answer}
-                      onChange={(event) =>
-                        updateQuestion(i, (q) =>
-                          q.type === 'multipleChoice' ? { ...q, answer: event.target.value } : q,
-                        )
-                      }
-                    />
-                  </label>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <label className="flex flex-col gap-1 text-sm">
-                    Accepted answers (one per line)
-                    <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                      value={v.answers.join('\n')}
-                      onChange={(event) =>
-                        updateQuestion(i, (q) =>
-                          q.type === 'keyword'
-                            ? { ...q, answers: event.target.value.split('\n') }
-                            : q,
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    Hint keywords (one per line)
-                    <textarea
-                      className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                      value={v.keywords?.join('\n') ?? ''}
-                      onChange={(event) =>
-                        updateQuestion(i, (q) =>
-                          q.type === 'keyword'
-                            ? { ...q, keywords: event.target.value.split('\n') }
-                            : q,
-                        )
-                      }
-                    />
-                  </label>
-                </div>
-              )}
-              <label className="flex flex-col gap-1 text-sm">
-                Explanation
-                <input
-                  className="rounded-md border border-primary-6 bg-background px-3 py-2"
-                  value={v.explanation ?? ''}
-                  onChange={(event) =>
-                    updateQuestion(i, (q) => ({
-                      ...q,
-                      explanation: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-            </fieldset>
-          ))}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setStage('setup')}
-              className="rounded-md border border-primary-6 px-4 py-2"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  parseDocsQuiz(quiz);
-                  setErr('');
-                  setAnswers([]);
-                  setCheckedAnswers([]);
-                  setIndex(0);
-                  setStage('quiz');
-                } catch (cause) {
-                  setErr(
-                    cause instanceof Error
-                      ? cause.message
-                      : 'Fix invalid quiz questions before starting.',
-                  );
-                }
-              }}
-              className="rounded-md bg-primary-9 px-4 py-2 font-medium text-primary-1"
-            >
-              Start quiz
-            </button>
-          </div>
-        </div>
-      )}
-      {stage === 'quiz' && question && (
-        <div className="space-y-4">
-          <p className="text-sm text-primary-10">
-            Question {index + 1} of {quiz?.questions.length}
-          </p>
-          <h3 className="text-lg font-medium">{question.prompt}</h3>
-          {question.type === 'multipleChoice' ? (
-            <fieldset className="space-y-2">
-              {question.opts.map((option, i) => (
-                <label
-                  key={`${i}-${option}`}
-                  className="flex items-center gap-2 rounded-md border border-primary-6 p-3"
-                >
-                  <input
-                    type="radio"
-                    name={`quiz-${index}`}
-                    value={option}
-                    checked={answers[index] === option}
-                    onChange={() =>
-                      setAnswers((current) => {
-                        const n = [...current];
-                        n[index] = option;
-                        return n;
-                      })
-                    }
-                    onClick={() =>
-                      setCheckedAnswers((current) => {
-                        const n = [...current];
-                        n[index] = false;
-                        return n;
-                      })
-                    }
-                  />
-                  {option}
-                </label>
-              ))}
-            </fieldset>
-          ) : (
-            <div className="space-y-2">
-              <input
-                className="w-full rounded-md border border-primary-6 bg-background px-3 py-2"
-                aria-label="Your answer"
-                value={answers[index] ?? ''}
-                onChange={(event) =>
-                  setAnswers((current) => {
-                    const n = [...current];
-                    n[index] = event.target.value;
-                    return n;
-                  })
-                }
-                onChangeCapture={() =>
-                  setCheckedAnswers((current) => {
-                    const n = [...current];
-                    n[index] = false;
-                    return n;
-                  })
-                }
-              />
-              {question.keywords?.length ? (
-                <p className="text-sm text-primary-10">
-                  Hint: include {question.keywords.join(', ')}.
-                </p>
-              ) : null}
-            </div>
-          )}
-          {checkedAnswers[index] && (
-            <div
-              role="status"
-              aria-live="polite"
-              className="rounded-md border border-primary-6 p-3"
-            >
-              <p className="font-medium">
-                {isCorrectAnswer(question, answers[index] ?? '')
-                  ? 'Correct.'
-                  : `Not quite. Answer: ${question.type === 'multipleChoice' ? question.answer : question.answers.join(' / ')}`}
-              </p>
-              {question.explanation && <p className="mt-1 text-sm">{question.explanation}</p>}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={index === 0}
-              onClick={() => setIndex((i) => i - 1)}
-              className="rounded-md border border-primary-6 px-4 py-2 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            {!checkedAnswers[index] ? (
-              <button
-                type="button"
-                onClick={() =>
-                  setCheckedAnswers((current) => {
-                    const n = [...current];
-                    n[index] = true;
-                    return n;
-                  })
-                }
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
-              >
-                Check answer
-              </button>
-            ) : index < (quiz?.questions.length ?? 0) - 1 ? (
-              <button
-                type="button"
-                onClick={() => setIndex((i) => i + 1)}
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
-              >
-                Next
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setStage('results')}
-                className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
-              >
-                Finish quiz
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-      {stage === 'results' && quiz && (
-        <div className="space-y-4">
-          <p className="text-lg font-medium">
-            Score:{' '}
-            {quiz.questions.reduce(
-              (score, v, i) => score + Number(isCorrectAnswer(v, (answers[i] ?? '').trim())),
-              0,
-            )}{' '}
-            / {quiz.questions.length}
-          </p>
-          {quiz.questions.map((v, i) => {
-            return (
-              <article key={i} className="rounded-lg border border-primary-6 p-4">
-                <h3 className="font-medium">
-                  {i + 1}. {v.prompt}
-                </h3>
-                <p className="text-sm">
-                  {isCorrectAnswer(v, (answers[i] ?? '').trim())
-                    ? 'Correct'
-                    : `Answer: ${v.type === 'multipleChoice' ? v.answer : v.answers.join(' / ')}`}
-                </p>
-                {v.explanation && <p className="mt-1 text-sm text-primary-10">{v.explanation}</p>}
-              </article>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setStage('setup')}
-            className="rounded-md border border-primary-6 px-4 py-2"
-          >
-            Generate another quiz
-          </button>
-        </div>
-      )}
-    </section>
-  );
+	return (
+		<section className='docs-quiz my-6 rounded-xl border border-primary-6 bg-primary-2 p-5' aria-label='Quiz generator'>
+			<h2 className='mb-2 text-xl font-semibold'>{quiz?.title ?? `Quiz: ${title}`}</h2>
+			{err && (
+				<p role='alert' className='mb-3 rounded-md border border-destructive-7 p-3 text-sm text-destructive-11'>
+					{err}
+				</p>
+			)}
+			{stage === 'setup' && (
+				<div className='space-y-4'>
+					<p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>Generate a quiz from this leaf. Your quiz is kept in this page session only.</p>
+					<label className='flex max-w-xs flex-col gap-1 text-sm'>
+						Number of questions
+						<input
+							className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
+							type='number'
+							min={1}
+							max={20}
+							value={count}
+							onChange={event => setCount(Math.max(1, Math.min(20, Number(event.target.value) || 1)))}
+						/>
+					</label>
+					<fieldset className='flex flex-wrap gap-4 text-sm'>
+						<legend className='mb-2 font-medium'>Question types</legend>
+						{(['multipleChoice', 'keyword'] as const).map(type => (
+							<label key={type} className='flex items-center gap-2'>
+								<input type='checkbox' checked={types.includes(type)} onChange={() => setTypes(current => (current.includes(type) ? current.filter(i => i !== type) : [...current, type]))} />
+								{type === 'multipleChoice' ? 'Multiple choice' : 'Keyword answer'}
+							</label>
+						))}
+					</fieldset>
+					<button
+						type='button'
+						disabled={loading}
+						onClick={() =>
+							void (async () => {
+								setErr('');
+								if (!gen) {
+									setErr('Quiz generation is not configured for this Docs host.');
+									return;
+								}
+								if (!types.length) {
+									setErr('Choose at least one question type.');
+									return;
+								}
+								setLoading(true);
+								try {
+									const generated = parseDocsQuiz(await gen({ title, markdown, count, types }));
+									if (generated.questions.length !== count) throw new Error(`The quiz endpoint returned ${generated.questions.length} questions; ${count} were requested.`);
+									if (generated.questions.some(question => !types.includes(question.type))) throw new Error('The quiz endpoint returned a question type that was not selected.');
+									setQuiz(generated);
+									setStage('review');
+								} catch (cause) {
+									setErr(cause instanceof Error ? cause.message : 'Quiz generation failed. Please try again.');
+								} finally {
+									setLoading(false);
+								}
+							})()
+						}
+						className='rounded-md bg-primary-9 px-4 py-2 font-medium text-primary-1 disabled:opacity-60'
+					>
+						{loading ? 'Generating…' : 'Generate quiz'}
+					</button>
+				</div>
+			)}
+			{stage === 'review' && quiz && (
+				<div className='space-y-4'>
+					<p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>Review and edit the questions before starting.</p>
+					{quiz.questions.map((v, i) => (
+						<fieldset key={i} className='space-y-2 rounded-lg border border-primary-6 p-4'>
+							<legend className='px-1 font-medium'>
+								Question {i + 1} · {v.type === 'multipleChoice' ? 'Multiple choice' : 'Keyword'}
+							</legend>
+							<label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
+								Prompt
+								<input
+									className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
+									value={v.prompt}
+									onChange={event =>
+										updateQuestion(i, q => ({
+											...q,
+											prompt: event.target.value,
+										}))
+									}
+								/>
+							</label>
+							{v.type === 'multipleChoice' ? (
+								<>
+									<label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
+										Options (one per line)
+										<textarea
+											className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
+											value={v.opts.join('\n')}
+											onChange={event => updateQuestion(i, q => (q.type === 'multipleChoice' ? { ...q, opts: event.target.value.split('\n') } : q))}
+										/>
+									</label>
+									<label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
+										Correct answer
+										<input
+											className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
+											value={v.answer}
+											onChange={event => updateQuestion(i, q => (q.type === 'multipleChoice' ? { ...q, answer: event.target.value } : q))}
+										/>
+									</label>
+								</>
+							) : (
+								<div className='space-y-2'>
+									<label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
+										Accepted answers (one per line)
+										<textarea
+											className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
+											value={v.answers.join('\n')}
+											onChange={event => updateQuestion(i, q => (q.type === 'keyword' ? { ...q, answers: event.target.value.split('\n') } : q))}
+										/>
+									</label>
+									<label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
+										Hint keywords (one per line)
+										<textarea
+											className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
+											value={v.keywords?.join('\n') ?? ''}
+											onChange={event => updateQuestion(i, q => (q.type === 'keyword' ? { ...q, keywords: event.target.value.split('\n') } : q))}
+										/>
+									</label>
+								</div>
+							)}
+							<label className={FLEX_FLEX_COL_GAP_1_TEXT_SM_CLASS}>
+								Explanation
+								<input
+									className={ROUNDED_MD_BORDER_BORDER_PRIMARY_6_BG_BACKGROUND_PX_3_PY_2_CLASS}
+									value={v.explanation ?? ''}
+									onChange={event =>
+										updateQuestion(i, q => ({
+											...q,
+											explanation: event.target.value,
+										}))
+									}
+								/>
+							</label>
+						</fieldset>
+					))}
+					<div className='flex gap-2'>
+						<button type='button' onClick={() => setStage('setup')} className='rounded-md border border-primary-6 px-4 py-2'>
+							Back
+						</button>
+						<button
+							type='button'
+							onClick={() => {
+								try {
+									parseDocsQuiz(quiz);
+									setErr('');
+									setAnswers([]);
+									setCheckedAnswers([]);
+									setIndex(0);
+									setStage('quiz');
+								} catch (cause) {
+									setErr(cause instanceof Error ? cause.message : 'Fix invalid quiz questions before starting.');
+								}
+							}}
+							className='rounded-md bg-primary-9 px-4 py-2 font-medium text-primary-1'
+						>
+							Start quiz
+						</button>
+					</div>
+				</div>
+			)}
+			{stage === 'quiz' && question && (
+				<div className='space-y-4'>
+					<p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>
+						Question {index + 1} of {quiz?.questions.length}
+					</p>
+					<h3 className='text-lg font-medium'>{question.prompt}</h3>
+					{question.type === 'multipleChoice' ? (
+						<fieldset className='space-y-2'>
+							{question.opts.map((option, i) => (
+								<label key={`${i}-${option}`} className='flex items-center gap-2 rounded-md border border-primary-6 p-3'>
+									<input
+										type='radio'
+										name={`quiz-${index}`}
+										value={option}
+										checked={answers[index] === option}
+										onChange={() =>
+											setAnswers(current => {
+												const n = [...current];
+												n[index] = option;
+												return n;
+											})
+										}
+										onClick={() =>
+											setCheckedAnswers(current => {
+												const n = [...current];
+												n[index] = false;
+												return n;
+											})
+										}
+									/>
+									{option}
+								</label>
+							))}
+						</fieldset>
+					) : (
+						<div className='space-y-2'>
+							<input
+								className='w-full rounded-md border border-primary-6 bg-background px-3 py-2'
+								aria-label='Your answer'
+								value={answers[index] ?? ''}
+								onChange={event =>
+									setAnswers(current => {
+										const n = [...current];
+										n[index] = event.target.value;
+										return n;
+									})
+								}
+								onChangeCapture={() =>
+									setCheckedAnswers(current => {
+										const n = [...current];
+										n[index] = false;
+										return n;
+									})
+								}
+							/>
+							{question.keywords?.length ? <p className={TEXT_SM_TEXT_PRIMARY_10_CLASS}>Hint: include {question.keywords.join(', ')}.</p> : null}
+						</div>
+					)}
+					{checkedAnswers[index] && (
+						<div role='status' aria-live='polite' className='rounded-md border border-primary-6 p-3'>
+							<p className='font-medium'>
+								{isCorrectAnswer(question, answers[index] ?? '') ? 'Correct.' : `Not quite. Answer: ${question.type === 'multipleChoice' ? question.answer : question.answers.join(' / ')}`}
+							</p>
+							{question.explanation && <p className='mt-1 text-sm'>{question.explanation}</p>}
+						</div>
+					)}
+					<div className='flex gap-2'>
+						<button type='button' disabled={index === 0} onClick={() => setIndex(i => i - 1)} className='rounded-md border border-primary-6 px-4 py-2 disabled:opacity-50'>
+							Previous
+						</button>
+						{!checkedAnswers[index] ? (
+							<button
+								type='button'
+								onClick={() =>
+									setCheckedAnswers(current => {
+										const n = [...current];
+										n[index] = true;
+										return n;
+									})
+								}
+								className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}
+							>
+								Check answer
+							</button>
+						) : index < (quiz?.questions.length ?? 0) - 1 ? (
+							<button type='button' onClick={() => setIndex(i => i + 1)} className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}>
+								Next
+							</button>
+						) : (
+							<button type='button' onClick={() => setStage('results')} className={ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS}>
+								Finish quiz
+							</button>
+						)}
+					</div>
+				</div>
+			)}
+			{stage === 'results' && quiz && (
+				<div className='space-y-4'>
+					<p className='text-lg font-medium'>
+						Score: {quiz.questions.reduce((score, v, i) => score + Number(isCorrectAnswer(v, (answers[i] ?? '').trim())), 0)} / {quiz.questions.length}
+					</p>
+					{quiz.questions.map((v, i) => {
+						return (
+							<article key={i} className='rounded-lg border border-primary-6 p-4'>
+								<h3 className='font-medium'>
+									{i + 1}. {v.prompt}
+								</h3>
+								<p className='text-sm'>{isCorrectAnswer(v, (answers[i] ?? '').trim()) ? 'Correct' : `Answer: ${v.type === 'multipleChoice' ? v.answer : v.answers.join(' / ')}`}</p>
+								{v.explanation && <p className='mt-1 text-sm text-primary-10'>{v.explanation}</p>}
+							</article>
+						);
+					})}
+					<button type='button' onClick={() => setStage('setup')} className='rounded-md border border-primary-6 px-4 py-2'>
+						Generate another quiz
+					</button>
+				</div>
+			)}
+		</section>
+	);
 }
 
-/** Renders the Markdown opt-in directive using the active host configuration. */
+/** Renders the Markdown opt-in directive using the active host configuration.
+ * @return Quiz generator configured for the current host, or setup guidance.
+ */
 export function DocsQuizBlock(): JSX.Element {
-  const context = useDocsQuizContext();
-  if (!context) return <p>Quiz generation is available when configured by this Docs host.</p>;
-  return (
-    <DocsQuizGenerator
-      title={context.title}
-      markdown={context.markdown}
-      generate={context.config.generate}
-    />
-  );
+	const context = useContext(DocsQuizContext);
+	if (!context) return <p>Quiz generation is available when configured by this Docs host.</p>;
+	return <DocsQuizGenerator title={context.title} markdown={context.markdown} generate={context.config.generate} />;
+}
+
+/** Optional editor-toolbar action for generating a quiz from the active document.
+ * @return The configured quiz action, or nothing when the host disables it.
+ */
+export function DocsQuizToolbarAction(): JSX.Element | null {
+	const context = useContext(DocsQuizContext);
+	const [open, setOpen] = useState(false);
+	if (!context?.config.toolbar) return null;
+	return (
+		<div className='basis-full' data-docs-quiz-toolbar>
+			<Button variant='outline' size='sm' onClick={() => setOpen(value => !value)} aria-expanded={open}>
+				{open ? 'Close quiz generator' : 'Generate quiz'}
+			</Button>
+			{open && <DocsQuizGenerator title={context.title} markdown={context.markdown} generate={context.config.generate} />}
+		</div>
+	);
 }

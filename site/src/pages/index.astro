@@ -2,25 +2,25 @@
 import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
 import { firstAvailableLeafHref, pageForSlug, pageHref, siteNavigation } from '../lib/catalog.js';
 
-const destination = firstAvailableLeafHref();
+const dest = firstAvailableLeafHref();
 const page = pageForSlug('');
 const title = import.meta.env.PUBLIC_DOCS_TITLE ?? 'Documentation';
-const description = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
+const desc = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
 const base = import.meta.env.BASE_URL;
 ---
 
-{destination ? (
+{dest ? (
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="robots" content="noindex" />
-		<meta http-equiv="refresh" content={`0;url=${destination}`} />
-		<link rel="canonical" href={destination} />
+			<meta http-equiv="refresh" content={`0;url=${dest}`} />
+			<link rel="canonical" href={dest} />
 		<title>Redirecting · {title}</title>
 	</head>
 	<body>
-		<p>Redirecting to <a href={destination}>the first available page</a>.</p>
+		<p>Redirecting to <a href={dest}>the first available page</a>.</p>
 	</body>
 </html>
  ) : page ? (
@@ -28,14 +28,14 @@ const base = import.meta.env.BASE_URL;
 		<head>
 			<meta charset="utf-8" />
 			<meta name="viewport" content="width=device-width, initial-scale=1" />
-			{page.description ? <meta name="description" content={page.description} /> : description ? <meta name="description" content={description} /> : null}
+			{page.description ? <meta name="description" content={page.description} /> : desc ? <meta name="description" content={desc} /> : null}
 			<title>{page.title} · {title}</title>
 		</head>
 		<body>
 			<DocsSiteLayout
 				title={title}
 				homeHref={pageHref('', base)}
-				description={description}
+				 description={desc}
 				pageTitle={page.title}
 				hue={page.hue}
 				nodes={siteNavigation}

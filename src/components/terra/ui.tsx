@@ -10,7 +10,7 @@ IMPORTS
 import { Component } from 'react';
 
 // TYPES
-import type { ErrorInfo, ReactNode } from 'react';
+import type { ErrorInfo, JSX, ReactNode } from 'react';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -20,48 +20,54 @@ CONFIG
 HELPERS
 //////////////////////////////////////////////////*/
 
-export { Empty } from '@terra-symposium/styling/ui';
+/**
+ * Displays a centered empty-state message.
+ *
+ * @param title Short heading shown above the description.
+ * @param desc Optional supporting text.
+ *
+ * @return Empty-state markup.
+ */
+export function Empty({ title = 'Nothing to show', description: desc = '' }: { title?: string; description?: string }): JSX.Element {
+	return (
+		<div className='flex min-h-24 flex-col items-center justify-center gap-2 p-6 text-center text-primary-11'>
+			<strong className='text-primary-12'>{title}</strong>
+			{desc && <span>{desc}</span>}
+		</div>
+	);
+}
 
-/** Contains render errors in a local fallback without replacing the surrounding Docs page. */
+// hygiene-ignore single-use -- Preserve the default User component export for external workspace consumers.
+/**
+ * Displays the signed-in user's name or email when present.
+ *
+ * @param user Optional identity fields available to the workspace.
+ *
+ * @return User label markup, or an empty label when no identity is available.
+ */
+export default function User({ user }: { user?: { name?: string; email?: string } | null }): JSX.Element {
+	return <span className='text-sm text-primary-11'>{user?.name ?? user?.email ?? ''}</span>;
+}
+
+/** Catches rendering errors and shows a message or caller-provided fallback.
+ *
+ * @remarks A changed `resetKey` is used by React to reset the boundary state.
+ */
 export class ErrorBoundary extends Component<
-  {
-    children?: ReactNode;
-    name?: string;
-    fallback?: (err: Error) => ReactNode;
-    resetKey?: unknown;
-  },
-  { error: Error | null }
+	{
+		children?: ReactNode;
+		name?: string;
+		fallback?: (err: Error) => ReactNode;
+		resetKey?: unknown;
+	},
+	{ error: Error | null }
 > {
-  state: { error: Error | null } = { error: null };
-  /**
-   * Stores a render error so the next render can show the boundary fallback.
-   *
-   * @param err Error thrown while rendering a descendant.
-   *
-   * @return State containing the error to render in the fallback.
-   */
-  static getDerivedStateFromError(err: Error) {
-    return { error: err };
-  }
-  /**
-   * Receives React's error report after the fallback has been activated.
-   *
-   * @param _error Error caught by the boundary and stored in state.
-   * @param _info React component stack associated with the error.
-   *
-   * @return Nothing; fallback state is managed by `getDerivedStateFromError`.
-   */
-  componentDidCatch(_error: Error, _info: ErrorInfo) {}
-  /**
-   * Renders the caller's fallback or the error message when a child has failed.
-   *
-   * @return The error fallback after a failure, otherwise the boundary's children.
-   */
-  render() {
-    return this.state.error
-      ? (this.props.fallback?.(this.state.error) ?? (
-          <div role="alert">{this.state.error.message}</div>
-        ))
-      : this.props.children;
-  }
+	state: { error: Error | null } = { error: null };
+	static getDerivedStateFromError(err: Error) {
+		return { error: err };
+	}
+	componentDidCatch(_error: Error, _info: ErrorInfo) {}
+	render() {
+		return this.state.error ? (this.props.fallback?.(this.state.error) ?? <div role='alert'>{this.state.error.message}</div>) : this.props.children;
+	}
 }

@@ -1,5 +1,5 @@
 /**
- * astro/src/actions/docs/nodes.ts
+ * src/lib/terra/runtime/nodes.ts
  * Pure utility functions for parsing and rendering node blocks.
  * Extracted from the React component to prevent circular dependencies.
  */
@@ -13,10 +13,10 @@ import { createTrace, validateType } from './runtime.js';
 import { parse as fromYaml } from 'yaml';
 
 // COMPONENTS
-import * as TerraQualityRegex from '../regex.mjs';
+import * as HygieneRegex from '../regex.mjs';
 
 // TYPES
-import type { Field, Md } from './types.js';
+import type { DocsNodesDraft as Draft, Field, Md } from './types.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -37,202 +37,134 @@ export const EMPTY_NODES = `\n\n<Nodes\n  node_data={[\n    { id: 'start', type:
  * Handles the nodes route.
  */
 const NODES = {
-  empty: EMPTY_NODES,
-  jsx: EMPTY_NODES,
-  fields:
-    /*
-     * Validated UI node mappings matching structural attributes and parsing constraints.
-     */ [
-      {
-        key: 'direction',
-        kind: 'string',
-        label: 'Direction',
-        placeholder: 'TB or LR',
-        tooltip: 'Graph flow direction.',
-      },
-      {
-        key: 'nodes',
-        kind: 'expression',
-        label: 'Nodes',
-        placeholder: '[...]',
-        textarea: true,
-        tooltip: 'Node defs.',
-      },
-      {
-        key: 'edges',
-        kind: 'expression',
-        label: 'Edges',
-        placeholder: '[...]',
-        textarea: true,
-        tooltip: 'Edge defs.',
-      },
-      {
-        key: 'height',
-        kind: 'expression',
-        label: 'Height',
-        placeholder: '384',
-        tooltip: 'Canvas height.',
-      },
-      {
-        key: 'nodeSep',
-        kind: 'expression',
-        label: 'node_sep',
-        placeholder: '50',
-        tooltip: 'Node x-spacing.',
-      },
-      {
-        key: 'rankSep',
-        kind: 'expression',
-        label: 'rank_sep',
-        placeholder: '5',
-        tooltip: 'Rank y-spacing.',
-      },
-      {
-        key: 'proximityConnect',
-        kind: 'boolean',
-        label: 'proximity',
-        tooltip: 'Enable auto-connect.',
-      },
-    ] as const satisfies readonly /** Editor metadata describing a supported JSX attribute in a Docs `Nodes` block. */ {
-      key: string;
-      kind: 'boolean' | 'expression' | 'string';
-      label: string;
-      placeholder?: string;
-      textarea?: boolean;
-      tooltip: string;
-    }[],
-  import: "import Nodes from '@src/pages/docs/blocks/nodes';",
-  keys: {
-    direction: 'direction',
-    edges: 'edges_data',
-    height: 'height',
-    nodeSep: 'node_sep',
-    nodes: 'node_data',
-    proximityConnect: 'proximity_connect',
-    rankSep: 'rank_sep',
-  } as const,
-  rx: {
-    block: /(?:^|\n)[ \t\xA0]*\^\^\^[ \t]*\r?\n([\s\S]*?)\r?\n[ \t\xA0]*\^\^\^[ \t]*(?=\n|$)/g,
-    import:
-      /^import\s+Nodes\s+from\s+['"]@(?:src|pages)\/pages\/docs\/(?:_components\/(?:blocks\/nodes|docs\/(?:editor\/nodes|scaffold\/nodes|nodes))|components\/_Nodes)['"];\s*\n?/m,
-    tag: /<Nodes\b[\s\S]*?\/>/g,
-    meta: /\b(nodes|edges|direction|height|nodeSep|rankSep|proximityConnect)=\{metadata\.([A-Za-z0-9_$]+)\}/g,
-  },
-  inline: (content: string, meta: Md = {}): string => {
-    trace('inline.start', { length: content.length });
-    const n = content
-      ?.replace(NODES.rx.import, '')
-      ?.replace(NODES.rx.tag, (c) => {
-        const vals: Record<string, boolean | string | undefined> = {};
-        let i = c.indexOf('Nodes') + 5;
-        while (i < c.length) {
-          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
-          if (c.slice(i).startsWith('/>') || c[i] === '>') break;
-          const name = c.slice(i).match(TerraQualityRegex.REGEX_A_ZA_Z_W_U_REGEX())?.[0];
-          if (!name) {
-            i++;
-            continue;
-          }
-          i += name.length;
-          const field = FIELDS.get(name);
-          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
-          if (c[i] !== '=') {
-            if (field?.kind === 'boolean') vals[field.key] = true;
-            continue;
-          }
-          i++;
-          while (TerraQualityRegex.REGEX_S_U_REGEX().test(c[i] ?? '')) i++;
-          if (!field) continue;
-          if (c[i] === '{') {
-            i++;
-            let depth = 1;
-            let value = '';
-            let quote: '"' | "'" | '`' | null = null;
-            for (; i < c.length; i++) {
-              const char = c[i];
-              if (!char) break;
-              if (quote) {
-                value += char;
-                if (char === '\\') {
-                  value += c[i + 1] ?? '';
-                  i++;
-                  continue;
-                }
-                if (char === quote) quote = null;
-                continue;
-              }
-              if (char === '"' || char === "'" || char === '`') {
-                quote = char;
-                value += char;
-                continue;
-              }
-              if (char === '{') {
-                depth++;
-                value += char;
-                continue;
-              }
-              if (char === '}') {
-                depth--;
-                if (!depth) break;
-                value += char;
-                continue;
-              }
-              value += char;
-            }
-            vals[field.key] = value.trim();
-            i++;
-            continue;
-          }
-          const marker = c[i];
-          if (marker !== '"' && marker !== "'") continue;
-          i++;
-          const end = c.indexOf(marker, i);
-          if (end === -1) break;
-          vals[field.key] = c.slice(i, end);
-          i = end + 1;
-        }
-        const result: Record<string, unknown> = {};
-        for (const field of NODES.fields) {
-          const content = Object.hasOwn(vals, field.key) ? vals[field.key] : undefined;
-          if (field.kind === 'boolean') {
-            if (content) result[NODES.keys[field.key]] = true;
-            continue;
-          }
-          if (typeof content === 'string' && content.trim()) {
-            const trimmed = content.trim();
-            const key = trimmed.match(/^metadata\.([A-Za-z0-9_$]+)$/)?.[1];
-            if (key) {
-              result[NODES.keys[field.key]] = meta[key];
-            } else result[NODES.keys[field.key]] = scalar(trimmed);
-          }
-        }
-        return jsx(result);
-      })
-      ?.replace(NODES.rx.block, (_, p: string) => {
-        // prettier-ignore
-        const src = p.replace(/^\s*```[a-z]*\r?\n/i, '').replace(/\r?\n\s*```\s*$/i, '').split('\n').map(l => l.replace(/^[ \t]*(?:>\s*)+/u, '')).join('\n').trim();
-        if (!src)
-          return jsx({
-            node_data: [{ id: 'start', type: 'terminator', data: { title: 'Start' } }],
-            edges_data: [],
-          });
-        const recs: string[] = [];
-        const statements: string[] = [];
-        for (const line of src.split('\n')) {
-          if (!line.trim()) {
-            recs.push(line);
-            continue;
-          }
-          if (TerraQualityRegex.REGEX_A_ZA_Z_W_S_U_REGEX().test(line.trim())) {
-            statements.push(line);
-            continue;
-          }
-          recs.push(line);
-        }
-        const san = recs.join('\n').trim();
-        const assignmentVals: Record<string, unknown> = {};
-        // prettier-ignore
-        for (const line of statements.join('\n').split('\n').map(x => x.trim()).filter(Boolean)) {
+	empty: EMPTY_NODES,
+	jsx: EMPTY_NODES,
+	fields:
+		/*
+		 * Validated UI node mappings matching structural attributes and parsing constraints.
+		 */ [
+			{
+				key: 'direction',
+				kind: 'string',
+				label: 'Direction',
+				placeholder: 'TB or LR',
+				tooltip: 'Graph flow direction.',
+			},
+			{
+				key: 'nodes',
+				kind: 'expression',
+				label: 'Nodes',
+				placeholder: '[...]',
+				textarea: true,
+				tooltip: 'Node defs.',
+			},
+			{
+				key: 'edges',
+				kind: 'expression',
+				label: 'Edges',
+				placeholder: '[...]',
+				textarea: true,
+				tooltip: 'Edge defs.',
+			},
+			{
+				key: 'height',
+				kind: 'expression',
+				label: 'Height',
+				placeholder: '384',
+				tooltip: 'Canvas height.',
+			},
+			{
+				key: 'nodeSep',
+				kind: 'expression',
+				label: 'node_sep',
+				placeholder: '50',
+				tooltip: 'Node x-spacing.',
+			},
+			{
+				key: 'rankSep',
+				kind: 'expression',
+				label: 'rank_sep',
+				placeholder: '5',
+				tooltip: 'Rank y-spacing.',
+			},
+			{
+				key: 'proximityConnect',
+				kind: 'boolean',
+				label: 'proximity',
+				tooltip: 'Enable auto-connect.',
+			},
+		] as const satisfies readonly /** Editor metadata describing a supported JSX attribute in a Docs `Nodes` block. */ {
+			key: string;
+			kind: 'boolean' | 'expression' | 'string';
+			label: string;
+			placeholder?: string;
+			textarea?: boolean;
+			tooltip: string;
+		}[],
+	import: "import Nodes from '@src/pages/docs/blocks/nodes';",
+	keys: {
+		direction: 'direction',
+		edges: 'edges_data',
+		height: 'height',
+		nodeSep: 'node_sep',
+		nodes: 'node_data',
+		proximityConnect: 'proximity_connect',
+		rankSep: 'rank_sep',
+	} as const,
+	rx: {
+		block: /(?:^|\n)[ \t\xA0]*\^\^\^[ \t]*\r?\n([\s\S]*?)\r?\n[ \t\xA0]*\^\^\^[ \t]*(?=\n|$)/g,
+		import: /^import\s+Nodes\s+from\s+['"]@(?:src|pages)\/pages\/docs\/(?:_components\/(?:blocks\/nodes|docs\/(?:editor\/nodes|scaffold\/nodes|nodes))|components\/_Nodes)['"];\s*\n?/m,
+		tag: /<Nodes\b[\s\S]*?\/>/g,
+		meta: /\b(nodes|edges|direction|height|nodeSep|rankSep|proximityConnect)=\{metadata\.([A-Za-z0-9_$]+)\}/g,
+	},
+	inline: (r: string, m: Md = {}): string => {
+		trace('inline.start', { length: r.length });
+		const n = r
+			?.replace(NODES.rx.import, '')
+			?.replace(NODES.rx.tag, c => {
+				const vals: Draft = Object.fromEntries(Object.entries(props(c)).map(([k, v]) => [k, `${v ?? ''}`]));
+				const result: Record<string, unknown> = {};
+				for (const field of NODES.fields) {
+					const content = Object.hasOwn(vals, field.key) ? vals[field.key] : undefined;
+					if (field.kind === 'boolean') {
+						if (content) result[NODES.keys[field.key]] = true;
+						continue;
+					}
+					if (typeof content === 'string' && content.trim()) {
+						const trimmed = content.trim();
+						const key = trimmed.match(/^metadata\.([A-Za-z0-9_$]+)$/)?.[1];
+						if (key) {
+							result[NODES.keys[field.key]] = m[key];
+						} else result[NODES.keys[field.key]] = scalar(trimmed);
+					}
+				}
+				return jsx(result);
+			})
+			?.replace(NODES.rx.block, (_, p: string) => {
+				// prettier-ignore
+				const src = p.replace(/^\s*```[a-z]*\r?\n/i, '').replace(/\r?\n\s*```\s*$/i, '').split('\n').map(l => l.replace(/^[ \t]*(?:>\s*)+/u, '')).join('\n').trim();
+				if (!src)
+					return jsx({
+						node_data: [{ id: 'start', type: 'terminator', data: { title: 'Start' } }],
+						edges_data: [],
+					});
+				const recs: string[] = [];
+				const statements: string[] = [];
+				for (const line of src.split('\n')) {
+					if (!line.trim()) {
+						recs.push(line);
+						continue;
+					}
+					if (HygieneRegex.REGEX_A_ZA_Z_W_S_U_REGEX().test(line.trim())) {
+						statements.push(line);
+						continue;
+					}
+					recs.push(line);
+				}
+				const san = recs.join('\n').trim();
+				const assignmentVals: Record<string, unknown> = {};
+				// prettier-ignore
+				for (const line of statements.join('\n').split('\n').map(x => x.trim()).filter(Boolean)) {
 				let i = 0;
 				while (i < line.length) {
 					const el = line.slice(i).match(/^([A-Za-z_$][\w$]*)\s*=\s*/u);
@@ -273,109 +205,101 @@ const NODES = {
 							i++;
 							continue;
 						}
-							if (depth === 0 && TerraQualityRegex.REGEX_S_U_REGEX().test(char ?? '') && TerraQualityRegex.REGEX_A_ZA_Z_W_S_U_REGEX().test(line.slice(i).trimStart())) break;
+							if (depth === 0 && HygieneRegex.REGEX_S_U_REGEX().test(char ?? '') && HygieneRegex.REGEX_A_ZA_Z_W_S_U_REGEX().test(line.slice(i).trimStart())) break;
 						v += char;
 						i++;
 					}
 					const trimmed = v.trim();
 						assignmentVals[attrName] = scalar((trimmed.match(/^\{([^{}\n]+)\}$/u)?.[1]?.trim() ?? (/^\{[-\w.'"`$]+\}$/u.test(trimmed) ? trimmed.slice(1, -1).trim() : null)) ?? trimmed);
-						while (i < line.length && TerraQualityRegex.REGEX_S_U_REGEX().test(line[i] ?? '')) i++;
+						while (i < line.length && HygieneRegex.REGEX_S_U_REGEX().test(line[i] ?? '')) i++;
 				}
 			}
-        const asgn = Object.keys(assignmentVals).length ? assignmentVals : null;
-        let parsed: Record<string, unknown> | null = null;
-        if (san) {
-          try {
-            parsed = fromYaml(san) as Record<string, unknown>;
-          } catch {
-            parsed = null;
-          }
-        }
-        if (!parsed) {
-          if (asgn) parsed = asgn;
-          else {
-            try {
-              parsed = Function(`"use strict"; return ({\n${loose(src)}\n});`)() as Record<
-                string,
-                unknown
-              >;
-            } catch {
-              parsed = null;
-            }
-          }
-        } else if (asgn && validateType(['object'], parsed)) parsed = { ...parsed, ...asgn };
-        if (!parsed || !validateType(['object'], parsed) || Array.isArray(parsed)) return _;
-        return jsx(
-          Object.fromEntries(
-            Object.entries(parsed).flatMap(([k, c]) => {
-              const field =
-                new Map<string, Field['key']>(
-                  Object.entries(NODES.keys).map(([f, s]) => [s, f as Field['key']]),
-                ).get(k) ?? (FIELDS.has(k) ? (k as Field['key']) : null);
-              if (!field) return [];
-              return [[NODES.keys[field as keyof typeof NODES.keys], c]];
-            }),
-          ),
-        );
-      });
-    trace('inline.complete', {
-      inputLength: content.length,
-      outputLength: n?.length ?? 0,
-      hasNodes: n?.includes('<Nodes'),
-    });
-    return n;
-  },
+				const asgn = Object.keys(assignmentVals).length ? assignmentVals : null;
+				let parsed: Record<string, unknown> | null = null;
+				if (san) {
+					try {
+						parsed = fromYaml(san) as Record<string, unknown>;
+					} catch {
+						parsed = null;
+					}
+				}
+				if (!parsed) {
+					if (asgn) parsed = asgn;
+					else {
+						try {
+							parsed = Function(`"use strict"; return ({\n${loose(src)}\n});`)() as Record<string, unknown>;
+						} catch {
+							parsed = null;
+						}
+					}
+				} else if (asgn && validateType(['object'], parsed)) parsed = { ...parsed, ...asgn };
+				if (!parsed || !validateType(['object'], parsed) || Array.isArray(parsed)) return _;
+				return jsx(
+					Object.fromEntries(
+						Object.entries(parsed).flatMap(([k, c]) => {
+							const field = new Map<string, Field['key']>(Object.entries(NODES.keys).map(([f, s]) => [s, f as Field['key']])).get(k) ?? (FIELDS.has(k) ? (k as Field['key']) : null);
+							if (!field) return [];
+							return [[NODES.keys[field as keyof typeof NODES.keys], c]];
+						}),
+					),
+				);
+			});
+		trace('inline.complete', {
+			inputLength: r.length,
+			outputLength: n?.length ?? 0,
+			hasNodes: n?.includes('<Nodes'),
+		});
+		return n;
+	},
 } as const;
 
 /**
  * Encodes node payload arrays into a serializer-safe string literal.
  *
+ * @param val Node or edge array to encode for safe serializer round-tripping.
+ *
+ * @return Backtick-wrapped payload with escaped JavaScript template characters.
+ *
  * @remarks
  * A template literal keeps the payload readable while preventing mdxeditor from compacting the
  * payload back into a raw array expression during code/edit round-trips.
- *
- * @param value - Node or edge array to encode for safe serializer round-tripping.
  */
 export const encodeNodesPayload = (val: unknown): string =>
-  `\`${(Array.isArray(val) ? `[\n${val.map((i) => `    ${literal(i)}`).join(',\n')}\n  ]` : '[]')
-    .replace(TerraQualityRegex.REGEX_G_REGEX_12(), '\\\\')
-    .replace(TerraQualityRegex.REGEX_G_REGEX_18(), '\\`')
-    .replace(TerraQualityRegex.REGEX_G_REGEX_16(), '\\$')}\``;
+	`\`${(Array.isArray(val) ? `[\n${val.map(i => `    ${literal(i)}`).join(',\n')}\n  ]` : '[]')
+		.replace(HygieneRegex.REGEX_G_REGEX_12(), '\\\\')
+		.replace(HygieneRegex.REGEX_G_REGEX_18(), '\\`')
+		.replace(HygieneRegex.REGEX_G_REGEX_16(), '\\$')}\``;
 
 /**
  * Decodes a serializer-safe node payload back into arrays.
  *
+ * @param val Serialized node payload in array, JSON, or quoted literal form.
+ *
+ * @return Decoded node or edge array, or an empty array for invalid input.
+ *
  * @remarks
  * Accepts raw arrays, JSON strings, backtick-wrapped literals, and the newer quoted payload.
- *
- * @param value - Serialized node payload in array, JSON, or quoted literal form.
  */
 export const decodeNodesPayload = (val: unknown): unknown[] => {
-  if (Array.isArray(val)) return val;
-  if (typeof val !== 'string' || !val.trim()) return [];
-  try {
-    const parsed = JSON.parse(
-      val.trim().startsWith('`') && val.trim().endsWith('`')
-        ? val
-            .trim()
-            .slice(1, -1)
-            .replace(TerraQualityRegex.REGEX_G_REGEX_15(), '`')
-            .replace(TerraQualityRegex.REGEX_G_REGEX_14(), '$')
-            .replace(TerraQualityRegex.REGEX_G_REGEX_13(), '\\')
-        : val.trim(),
-    ) as unknown;
-    if (Array.isArray(parsed)) return parsed;
-    if (typeof parsed === 'string') {
-      const nested = JSON.parse(parsed) as unknown;
-      return Array.isArray(nested) ? nested : [];
-    }
-    return [];
-  } catch {
-    return [];
-  }
+	if (Array.isArray(val)) return val;
+	if (typeof val !== 'string' || !val.trim()) return [];
+	try {
+		const parsed = JSON.parse(
+			val.trim().startsWith('`') && val.trim().endsWith('`')
+				? val.trim().slice(1, -1).replace(HygieneRegex.REGEX_G_REGEX_15(), '`').replace(HygieneRegex.REGEX_G_REGEX_14(), '$').replace(HygieneRegex.REGEX_G_REGEX_13(), '\\')
+				: val.trim(),
+		) as unknown;
+		if (Array.isArray(parsed)) return parsed;
+		if (typeof parsed === 'string') {
+			const nested = JSON.parse(parsed) as unknown;
+			return Array.isArray(nested) ? nested : [];
+		}
+		return [];
+	} catch {
+		return [];
+	}
 };
-
-const FIELDS = new Map<string, Field>(NODES.fields.map((f) => [f.key, f]));
+const FIELDS = new Map<string, Field>(NODES.fields.map(f => [f.key, f]));
 
 /*//////////////////////////////////////////////////
 FUNCTIONS
@@ -386,50 +310,126 @@ FUNCTIONS
  *
  * @param v - Value to stringify.
  *
- * @returns A one-line literal that stays readable inside MDX attribute shells.
+ * @return A one-line literal that stays readable inside MDX attribute shells.
  *
  * @remarks Keeps serialized node metadata compact enough to embed inside MDX attributes.
  */
 const literal = (v: unknown): string => {
-  if (Array.isArray(v)) return `[${v.map(literal).join(', ')}]`;
-  if (v && typeof v === 'object') {
-    return `{ ${Object.entries(v as Record<string, unknown>)
-      .sort(([l], [r]) => l.localeCompare(r))
-      .map(([k, e]) => `${JSON.stringify(k)}: ${literal(e)}`)
-      .join(', ')} }`;
-  }
-  if (typeof v === 'string') return JSON.stringify(v);
-  if (typeof v === 'number' || typeof v === 'boolean') return `${v}`;
-  if (v === null) return 'null';
-  return 'undefined';
+	if (Array.isArray(v)) return `[${v.map(literal).join(', ')}]`;
+	if (v && typeof v === 'object')
+		return `{ ${Object.entries(v as Record<string, unknown>)
+			.sort(([l], [r]) => l.localeCompare(r))
+			.map(([k, e]) => `${JSON.stringify(k)}: ${literal(e)}`)
+			.join(', ')} }`;
+	if (typeof v === 'string') return JSON.stringify(v);
+	if (typeof v === 'number' || typeof v === 'boolean') return `${v}`;
+	if (v === null) return 'null';
+	return 'undefined';
 };
 
 /**
  * Interprets a plain scalar string without forcing object or array parsing.
  *
+ * @param val
  * @param value - Scalar text to interpret.
  *
- * @returns Scalar value, or the original string when it should remain a literal label.
+ * @return Scalar value, or the original string when it should remain a literal label.
  *
  * @remarks The scalar path preserves plain strings unless they clearly parse as another primitive.
  */
 const scalar = (val: string): unknown => {
-  const trimmed = val.trim();
-  if (!trimmed) return '';
-  try {
-    if (trimmed.startsWith('{') || trimmed.startsWith('['))
-      return Function(`"use strict"; return (${loose(trimmed)});`)() as unknown;
-    if (
-      trimmed.startsWith('"') ||
-      trimmed.startsWith("'") ||
-      trimmed.startsWith('`') ||
-      TerraQualityRegex.REGEX_TRUE_FALSE_NULL_UNDEFINED_D_D_U_REGEX().test(trimmed)
-    )
-      return Function(`"use strict"; return (${trimmed});`)() as unknown;
-    return Function(`"use strict"; return (${quote(trimmed)});`)() as unknown;
-  } catch {
-    return val;
-  }
+	const trimmed = val.trim();
+	if (!trimmed) return '';
+	try {
+		if (trimmed.startsWith('{') || trimmed.startsWith('[')) return Function(`"use strict"; return (${loose(trimmed)});`)() as unknown;
+		if (trimmed.startsWith('"') || trimmed.startsWith("'") || trimmed.startsWith('`') || HygieneRegex.REGEX_TRUE_FALSE_NULL_UNDEFINED_D_D_U_REGEX().test(trimmed))
+			return Function(`"use strict"; return (${trimmed});`)() as unknown;
+		return Function(`"use strict"; return (${quote(trimmed)});`)() as unknown;
+	} catch {
+		return val;
+	}
+};
+
+// hygiene-ignore single-use -- Keep the documented Nodes attribute parser separate so errors retain the parser stack boundary and recognized-field contract.
+/**
+ * Parses the raw attribute shell on a `Nodes` tag into a field map of editor keys and raw values.
+ *
+ * @param content - Raw `Nodes` tag source.
+ *
+ * @return Parsed field values keyed by editor field name.
+ *
+ * @remarks This parser reads one inline `Nodes` tag at a time and preserves only recognized fields.
+ */
+const props = (content: string): Draft => {
+	const vals: Draft = {};
+	let i = content.indexOf('Nodes') + 5;
+	while (i < content.length) {
+		while (HygieneRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
+		if (content.slice(i).startsWith('/>') || content[i] === '>') break;
+		const name = content.slice(i).match(HygieneRegex.REGEX_A_ZA_Z_W_U_REGEX())?.[0];
+		if (!name) {
+			i++;
+			continue;
+		}
+		i += name.length;
+		const field = FIELDS.get(name);
+		while (HygieneRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
+		if (content[i] !== '=') {
+			if (field?.kind === 'boolean') vals[field.key] = true;
+			continue;
+		}
+		i++;
+		while (HygieneRegex.REGEX_S_U_REGEX().test(content[i] ?? '')) i++;
+		if (!field) continue;
+		if (content[i] === '{') {
+			i++;
+			let depth = 1;
+			let v = '';
+			let mQuote: '"' | "'" | '`' | null = null;
+			for (; i < content.length; i++) {
+				const char = content[i];
+				if (!char) break;
+				if (mQuote) {
+					v += char;
+					if (char === '\\') {
+						v += content[i + 1] ?? '';
+						i++;
+						continue;
+					}
+					if (char === mQuote) mQuote = null;
+					continue;
+				}
+				if (char === '"' || char === "'" || char === '`') {
+					mQuote = char;
+					v += char;
+					continue;
+				}
+				if (char === '{') {
+					depth++;
+					v += char;
+					continue;
+				}
+				if (char === '}') {
+					depth--;
+					if (!depth) break;
+					v += char;
+					continue;
+				}
+				v += char;
+			}
+			vals[field.key] = v.trim();
+			i++;
+			continue;
+		}
+		const qmarker = content[i];
+		if (qmarker !== '"' && qmarker !== "'") continue;
+		i++;
+		const end = content.indexOf(qmarker, i);
+		if (end === -1) break;
+		vals[field.key] = content.slice(i, end);
+		i = end + 1;
+	}
+	return vals;
 };
 
 /**
@@ -437,41 +437,20 @@ const scalar = (val: string): unknown => {
  *
  * @param vals - Normalized node payload.
  *
- * @returns Rendered `Nodes` JSX string used by the editor and source view.
+ * @return Rendered `Nodes` JSX string used by the editor and source view.
  *
  * @remarks The rendered tag shape matches the editor-side `Nodes` component contract.
  */
 const jsx = (vals: Record<string, unknown>): string => {
-  return `<Nodes ${NODES.fields
-    .flatMap((f) => {
-      const content = vals[NODES.keys[f.key]];
-      if (validateType(['undefined'], content) || content === null) return [];
-      if (f.kind === 'boolean') return content === true ? [f.key] : [];
-      if (f.kind === 'string')
-        return typeof content === 'string' ? [`${f.key}=${JSON.stringify(content)}`] : [];
-      if (f.key === 'nodes' || f.key === 'edges') {
-        const decoded = decodeNodesPayload(content);
-        void {
-          rawType: Array.isArray(content) ? 'array' : typeof content,
-          rawLength: Array.isArray(content)
-            ? content.length
-            : typeof content === 'string'
-              ? content.length
-              : 0,
-          decodedLength: decoded.length,
-          decodedHead: decoded.length > 0 ? JSON.stringify(decoded[0]).slice(0, 200) : '',
-          preview:
-            typeof content === 'string'
-              ? content.slice(0, 160)
-              : Array.isArray(content)
-                ? JSON.stringify(content.slice(0, 1)).slice(0, 160)
-                : '',
-        };
-        return [`${f.key}={${encodeNodesPayload(decoded)}}`];
-      }
-      return [`${f.key}={${literal(content)}}`];
-    })
-    .join(' ')} />`;
+	return `<Nodes ${NODES.fields
+		.flatMap(f => {
+			const content = vals[NODES.keys[f.key]];
+			if (validateType(['undefined'], content) || content === null) return [];
+			if (f.kind === 'boolean') return content === true ? [f.key] : [];
+			if (f.kind === 'string') return typeof content === 'string' ? [`${f.key}=${JSON.stringify(content)}`] : [];
+			return [`${f.key}={${f.key === 'nodes' || f.key === 'edges' ? encodeNodesPayload(nodesPayload(content)) : literal(content)}}`];
+		})
+		.join(' ')} />`;
 };
 
 /**
@@ -479,19 +458,15 @@ const jsx = (vals: Record<string, unknown>): string => {
  *
  * @param x - String value to quote if needed.
  *
- * @returns Original string when it is already safe, otherwise a JSON-quoted literal.
+ * @return Original string when it is already safe, otherwise a JSON-quoted literal.
  *
  * @remarks Plain identifiers are preserved so the generated YAML stays readable.
  */
 const quote = (x: string): string => {
-  const y = x.trim();
-  if (!y) return '""';
-  if (
-    ['"', "'", '`', '{', '['].includes(y.charAt(0)) ||
-    TerraQualityRegex.REGEX_TRUE_FALSE_NULL_UNDEFINED_D_D_U_REGEX().test(y)
-  )
-    return y;
-  return JSON.stringify(y);
+	const y = x.trim();
+	if (!y) return '""';
+	if (['"', "'", '`', '{', '['].includes(y.charAt(0)) || HygieneRegex.REGEX_TRUE_FALSE_NULL_UNDEFINED_D_D_U_REGEX().test(y)) return y;
+	return JSON.stringify(y);
 };
 
 /**
@@ -499,54 +474,76 @@ const quote = (x: string): string => {
  *
  * @param body - Raw node block source.
  *
- * @returns Source with bare scalar values quoted so YAML does not misread them.
+ * @return Source with bare scalar values quoted so YAML does not misread them.
  *
  * @remarks This pass quotes bare values that would otherwise be misread as JS expressions.
  */
 const loose = (body: string): string => {
-  let name = '';
-  let i = 0;
-  let mquote: '"' | "'" | '`' | null = null;
-  while (i < body.length) {
-    const char = body[i];
-    if (mquote) {
-      name += char;
-      if (char === '\\') {
-        name += body[i + 1] ?? '';
-        i += 2;
-        continue;
-      }
-      if (char === mquote) mquote = null;
-      i++;
-      continue;
-    }
-    if (char === '"' || char === "'" || char === '`') {
-      mquote = char;
-      name += char;
-      i++;
-      continue;
-    }
-    if (char !== ':') {
-      name += char;
-      i++;
-      continue;
-    }
-    name += char;
-    i++;
-    while (body[i] === ' ' || body[i] === '\t') {
-      name += body[i];
-      i++;
-    }
-    const src = body[i] ?? '';
-    if (!src || ['"', "'", '`', '{', '[', '\n'].includes(src) || /[-\d]/u.test(src)) continue;
-    let end = i;
-    while (end < body.length && !/[,\]\n}]/u.test(body[end] ?? '')) end++;
-    const v = body.slice(i, end);
-    if (/^(?:true|false|null|undefined)$/u.test(v.trim())) name += v;
-    else name += quote(v);
-    i = end;
-  }
-  return name;
+	let name = '';
+	let i = 0;
+	let mquote: '"' | "'" | '`' | null = null;
+	while (i < body.length) {
+		const char = body[i];
+		if (mquote) {
+			name += char;
+			if (char === '\\') {
+				name += body[i + 1] ?? '';
+				i += 2;
+				continue;
+			}
+			if (char === mquote) mquote = null;
+			i++;
+			continue;
+		}
+		if (char === '"' || char === "'" || char === '`') {
+			mquote = char;
+			name += char;
+			i++;
+			continue;
+		}
+		if (char !== ':') {
+			name += char;
+			i++;
+			continue;
+		}
+		name += char;
+		i++;
+		while (body[i] === ' ' || body[i] === '\t') {
+			name += body[i];
+			i++;
+		}
+		const src = body[i] ?? '';
+		if (!src || ['"', "'", '`', '{', '[', '\n'].includes(src) || /[-\d]/u.test(src)) continue;
+		let end = i;
+		while (end < body.length && !/[,\]\n}]/u.test(body[end] ?? '')) end++;
+		const v = body.slice(i, end);
+		if (/^(?:true|false|null|undefined)$/u.test(v.trim())) name += v;
+		else name += quote(v);
+		i = end;
+	}
+	return name;
+};
+
+/**
+ * Normalizes a raw nodes payload before JSX emission.
+ *
+ * @param val
+ * @param value - Raw attribute payload.
+ *
+ * @return Decoded node payload ready for JSX emission.
+ *
+ * @remarks The payload may already be encoded as a backtick-wrapped string during a previous round-trip.
+ */
+const nodesPayload = (val: unknown): unknown[] => {
+	const decoded = decodeNodesPayload(val);
+	void {
+		rawType: Array.isArray(val) ? 'array' : typeof val,
+		rawLength: Array.isArray(val) ? val.length : typeof val === 'string' ? val.length : 0,
+		decodedLength: decoded.length,
+		decodedHead: decoded.length > 0 ? JSON.stringify(decoded[0]).slice(0, 200) : '',
+		preview: typeof val === 'string' ? val.slice(0, 160) : Array.isArray(val) ? JSON.stringify(val.slice(0, 1)).slice(0, 160) : '',
+	};
+	return decoded;
 };
 
 /*//////////////////////////////////////////////////

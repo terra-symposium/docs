@@ -1,27 +1,35 @@
 ---
-title: Docs consumers
-description: Local repository audit of Docs package resolution and host boundaries.
-order: 9
+title: Docs integrations
+description: Choose a Docs surface and keep consumer artifacts in sync.
+order: 1
 ---
 
-This audit covers Desktop repositories with an `@terra-symposium/docs` dependency, a `docs` command, or a Docs route on 2 November 2026. Versions below reflect the `0.4.3` rollout; each host keeps data loading and routing in its own repository.
+Docs separates shared rendering from the application that owns document data. Choose the public surface that matches where content comes from, then keep identity, persistence, and routing at the host boundary.
 
-| Repository        | Declared / installed | Renderer and CSS                       | Host responsibility                                                    |
-| ----------------- | -------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
-| Docs              | local `0.4.3` source | Shared site, workspace, package CSS    | Package implementation and its own Markdown catalog                    |
-| Docs template     | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Template content and site configuration                                |
-| Standards         | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Markdown and site configuration                                        |
-| Styling           | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Component reference generation and Markdown                            |
-| Business Docs     | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Structure synchronization and Markdown                                 |
-| Compression       | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Assessment content and site configuration                              |
-| Personal Docs     | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Personal content and site configuration                                |
-| Portfolio Styling | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Portfolio content and base path                                        |
-| RMA Sports        | `^0.4.3` / `0.4.3`   | `docs` CLI, shared CSS                 | Business content and site configuration                                |
-| Salesphere root   | `0.4.3` / `0.4.3`    | `docs` CLI, shared CSS                 | Static site content                                                    |
-| Salesphere Astro  | `^0.4.3` / `0.4.3`   | `DocsWorkspace`, package CSS           | Tree loading, routes, actions, authorization                           |
-| Uni notes         | `^0.4.3` / `0.4.3`   | `DocsLocalWorkspace`, package CSS      | Content tree, routes, links, quiz capability                           |
-| Website Astro     | `0.4.3` / `0.4.3`    | `DocsWorkspace`, package CSS           | Sanity loading, routes, permissions, custom blocks                     |
-| Website Sanity    | none / none          | No Docs renderer or CSS import found   | Sanity schema and data                                                 |
-| Playlist Atlas    | none                 | Own Astro content renderer and app CSS | Product-specific guide site; outside the Terra Docs workspace contract |
+| Integration                       | Docs surface                                | Host responsibility                                                                                        |
+| --------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Standalone editor                 | `Docs`                                      | Pass a Portable Text value, handle `onChange`, and save it in the host.                                    |
+| Repository-backed Markdown        | `DocsLocalWorkspace`                        | Supply local pages and assets; the workspace renders them read-only.                                       |
+| Static root `docs/` site          | `docs` CLI or `DocsSiteLayout`              | Configure the site metadata and content; Docs builds routes, navigation, search, and the shared workspace. |
+| Remote records or a host database | `TerraDocsWorkspace` with `DocsHostAdapter` | Load records, authorize actions, persist revisions, resolve routes, and provide attachment URLs.           |
 
-Uni notes uses the shared workspace at runtime; its local code does not implement a second document renderer. Website and Salesphere use the remote host adapter. The static sites use the shared CLI. Consumer lockfiles and active previews must be refreshed after each package release; a manifest alone does not change a running server.
+## Check the resolved package
+
+An application can use a published package, a local link, or a previously built artifact. Confirm which copy the application resolves before diagnosing a mismatch:
+
+```sh
+pnpm list @terra-symposium/docs --depth 0
+pnpm why @terra-symposium/docs
+```
+
+Keep the consumer lockfile consistent with its manifest. After changing the package version or source, reinstall the selected artifact and restart the active preview so it does not keep serving an older build. Import the package stylesheet from the host entry point:
+
+```ts
+import '@terra-symposium/docs/style.css';
+```
+
+## Verify a consumer change
+
+Use the checks declared by the consumer repository. For this package, `pnpm run test:consumer` builds and opens the packaged workspace fixture. Check the rendered host data, navigation, stylesheet, and browser console against the exact package artifact the application uses; a successful package build alone does not verify a downstream consumer.
+
+Keep routes, identity, authorization, data loading, saving, publishing, and durable storage in the host application. The shared workspace supplies common navigation and rendering; a host adapter connects those controls to host-owned data and capabilities.

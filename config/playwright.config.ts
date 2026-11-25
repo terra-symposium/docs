@@ -1,37 +1,35 @@
+/**
+ * playwright.config.ts
+ */
+
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
 import { defineConfig } from '@playwright/test';
-import { resolve } from 'node:path';
-import { withResponsivePlaywright } from '@terra-symposium/standards-reporting/viewports';
-
-const port = Number(process.env.DOCS_PLAYWRIGHT_PORT ?? 4335);
-const baseURL = `http://127.0.0.1:${port}`;
-
+import { withResponsivePlaywright } from '@terra-symposium/reporting/viewports';
+import { fileURLToPath } from 'node:url';
 export default withResponsivePlaywright(
-  defineConfig({
-    testDir: resolve(process.cwd(), 'test/browser'),
-    workers: 1,
-    outputDir: resolve(process.cwd(), 'tests/results/playwright-output'),
-    projects: [{ name: 'chromium' }],
-    use: { baseURL, browserName: 'chromium' },
-    expect: {
-      toHaveScreenshot: {
-        pathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}',
-      },
-    },
-    webServer: {
-      command: `python3 -m http.server ${port} --bind 127.0.0.1 --directory ${resolve(process.cwd(), 'dist/site')}`,
-      url: `${baseURL}/`,
-      reuseExistingServer: false,
-      timeout: 120_000,
-    },
-  }),
-  {
-    viewportPolicy: 'declared',
-    viewportCatalog: {
-      mobile: { width: 390, height: 844 },
-      md: { width: 768, height: 900 },
-      xl: { width: 1280, height: 720 },
-    },
-    screenshotsDirectory: resolve(process.cwd(), 'tests/results/visual/screenshots'),
-    screenshotOnlySlideshow: true,
-  },
+	defineConfig({
+		testDir: '../tests/browser',
+		reporter: [['list'], ['junit', { outputFile: '../tests/results/playwright-browser.xml' }]],
+		use: { baseURL: 'http://127.0.0.1:4335', browserName: 'chromium' },
+		projects: [{ name: 'chromium' }],
+		webServer: {
+			cwd: fileURLToPath(new URL('../', import.meta.url)),
+			command: 'pnpm run docs:build && ASTRO_PREVIEW_BACKGROUND=0 pnpm exec astro preview --config config/astro.config.mjs --host 127.0.0.1 --port 4335',
+			url: 'http://127.0.0.1:4335/',
+			reuseExistingServer: false,
+			timeout: 120_000,
+		},
+	}),
+	{
+		viewportPolicy: 'declared',
+		viewportCatalog: { mobile: { width: 390, height: 844 }, md: { width: 768, height: 900 }, xl: { width: 1280, height: 720 } },
+		outputDir: '../tests/results/playwright-browser',
+		outputRoot: 'tests/results/visual',
+		screenshotsDirectory: 'tests/results/visual/screenshots',
+		screenshotOnlySlideshow: true,
+	},
 );

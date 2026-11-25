@@ -1,3 +1,7 @@
+/**
+ * src/lib/index.ts
+ */
+
 export { Docs } from '../components/Docs.js';
 export { DocsSiteLayout } from '../components/SiteLayout.js';
 export { DocsStaticWorkspace } from '../components/StaticWorkspace.js';
@@ -6,27 +10,14 @@ export { DocsNavigation } from '../components/navigation.js';
 export type { DocsNavNode } from '../components/navigation.js';
 export { renderMarkdown } from './markdown.js';
 export { markdownToDocsValue, docsValueToMarkdown } from './markdown-model.js';
-export {
-  DOCS_BLOCK_TYPES,
-  DOCS_BLOCK_FIELDS,
-  enabledDocsBlocks,
-  defaultDocsBlock,
-  DocsRichBlock,
-} from '../components/blocks.js';
+export { DOCS_BLOCK_TYPES, DOCS_BLOCK_FIELDS, enabledDocsBlocks, defaultDocsBlock, DocsRichBlock } from '../components/blocks.js';
+export { DocsQuizBlock, DocsQuizGenerator, DocsQuizToolbarAction, parseDocsQuiz } from '../components/quiz.js';
+export type { DocsQuizConfig, DocsQuizDocument, DocsQuizGenerationInput, DocsQuizQuestion, DocsQuizQuestionType } from '../components/quiz.js';
 export type { DocsBlockOptions, DocsBlockType, RichBlock } from '../components/blocks.js';
-export { DocsQuizGenerator } from '../components/quiz.js';
-export { parseDocsQuiz } from '../components/quiz.js';
-export type {
-  DocsQuizConfig,
-  DocsQuizDocument,
-  DocsQuizGenerationInput,
-  DocsQuizQuestion,
-  DocsQuizQuestionType,
-} from '../components/quiz.js';
-export { DocsWorkspace } from '../components/terra/Workspace.js';
+export { TerraDocsWorkspace } from '../components/terra/Workspace.js';
 export { DocsLocalWorkspace } from '../components/LocalDocsWorkspace.js';
 export type { DocsLocalPage, DocsLocalWorkspaceProps } from '../components/LocalDocsWorkspace.js';
-export { ContentEditor as DocsContentEditor } from '../components/terra/editor/ContentEditor.js';
+export { TerraContentEditor as DocsContentEditor } from '../components/terra/editor/TerraContentEditor.js';
 export { renderCallout } from '../components/terra/editor/docs/_Callout.js';
 export { renderCode } from '../components/terra/editor/docs/_DocsCode.js';
 export { Embed } from '../components/terra/editor/docs/_Embed.js';
@@ -45,18 +36,17 @@ export { ExportDialog } from '../components/terra/pages/docs/_export-dialog.js';
 export type { DocsExportOpts, ExportTgt } from './terra/runtime/types.js';
 export { configureDocsHost, getDocsHostAdapter } from './host-runtime.js';
 export type {
-  DocsActionOperation,
-  DocsActionResult,
-  DocsHostOperationContracts,
-  DocsResolvedRoute,
-  DocsCustomBlock,
-  DocsHostAdapter,
-  DocsHostAttachment,
-  DocsHostCapabilities,
-  DocsHostDocument,
-  DocsHostTreeNode,
-  DocsHostUser,
-  DocsWorkspaceProps,
+	DocsActionOperation,
+	DocsActionResult,
+	DocsHostOperationContracts,
+	DocsResolvedRoute,
+	DocsCustomBlock,
+	DocsHostAdapter,
+	DocsHostAttachment,
+	DocsHostCapabilities,
+	DocsHostDocument,
+	DocsHostTreeNode,
+	DocsHostUser,
+	TerraDocsWorkspaceProps,
 } from './host.js';
-
 export type { DocsAttachment, DocsLeaf, DocsGroup, DocsSection } from './workspace-types.js';

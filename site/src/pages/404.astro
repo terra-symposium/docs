@@ -1,6 +1,6 @@
 ---
-import DocsNotFound from '../../../src/components/NotFound.astro';
 import { firstAvailableLeafHref, pageHref } from '../lib/catalog.js';
+import '../../../src/styles/style.css';
 
 const title = import.meta.env.PUBLIC_DOCS_TITLE ?? 'Documentation';
 const base = import.meta.env.BASE_URL;
@@ -15,6 +15,12 @@ const homeHref = firstAvailableLeafHref() ?? pageHref('', base);
 		<title>Page not found · {title}</title>
 	</head>
 	<body>
-		<DocsNotFound appName={title} homeHref={homeHref} />
+		<main class="terra-docs-workspace flex items-center justify-center bg-background px-5 text-primary-12">
+			<section aria-labelledby="docs-not-found-title" class="w-full rounded-lg border border-primary-6 bg-primary-2 p-6 text-center sm:max-w-lg">
+				<h1 class="mb-3 font-serif text-4xl italic tracking-tight" id="docs-not-found-title">Page not found</h1>
+				<p class="mb-5 text-base leading-relaxed">The page may have moved, or the link may be out of date.</p>
+				<a class="inline-flex items-center rounded-md bg-primary-9 px-4 py-2 text-primary-1" href={homeHref}>Return to {title}</a>
+			</section>
+		</main>
 	</body>
 </html>

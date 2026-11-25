@@ -1,8 +1,6 @@
 ---
-import { DocsSiteIsland } from '../../site/src/components/DocsSiteIsland.js';
-import AstroErrorBoundary from '@terra-symposium/standards-error-boundaries/astro-boundary';
+import { DocsStaticWorkspace } from '../../dist/lib/components/StaticWorkspace.js';
 import '../../dist/lib/style.css';
-import '../../site/src/styles/search.css';
 import type { DocsAttachment, DocsSection, DocsNavNode } from '../../dist/lib/lib/index.js';
 
 type Props = {
@@ -19,36 +17,24 @@ type Props = {
 	content?: unknown;
 	attachments?: DocsAttachment[];
 	updatedAt?: string;
-	searchBase?: string;
 };
 
-const { title, homeHref = '/', description, pageTitle, hue = 145, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
-const staticContent = Astro.slots.has('default');
+const { title, homeHref = '/', description: desc, pageTitle, hue = 145, nodes = [], sections, currentPath, rootPath = '/', markdown = '', content, attachments = [], updatedAt } = Astro.props;
 ---
 
-<AstroErrorBoundary title="Documentation could not load" description="The Docs interface failed to start. The error has been recorded for diagnosis." reloadLabel="Reload Docs">
-	<DocsSiteIsland
-		client:load
-		title={title}
-		homeHref={homeHref}
-		description={description}
-		pageTitle={pageTitle}
-		hue={hue}
-		nodes={nodes}
-		sections={sections}
-		currentPath={currentPath}
-		rootPath={rootPath}
-		markdown={markdown}
-		content={content}
-		attachments={attachments}
-		updatedAt={updatedAt}
-		staticContent={staticContent}
-		searchBase={searchBase}
-	>
-		<slot />
-	</DocsSiteIsland>
-</AstroErrorBoundary>
-
-<style is:global>
-	.docs-page-content { max-width: 100%; }
-</style>
+<DocsStaticWorkspace
+	client:load
+	title={title}
+	homeHref={homeHref}
+	description={desc}
+	pageTitle={pageTitle}
+	hue={hue}
+	nodes={nodes}
+	sections={sections}
+	currentPath={currentPath}
+	rootPath={rootPath}
+	markdown={markdown}
+	content={content}
+	attachments={attachments}
+	updatedAt={updatedAt}
+/>

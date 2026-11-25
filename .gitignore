@@ -1,29 +1,12 @@
-# Dependencies
 node_modules/
-
-# Build and generated output
 dist/
-dist/.docs/
-demo-dist/
-lib-dist/
-site-dist/
 .astro/
-
-# Test artifacts
-coverage/
-tests/results/
-test-results/
-config/test-results/
-
-# Local environment
 .env
 .env.*
-!.env.example
-
-# TypeScript build cache
+.DS_Store
 *.tsbuildinfo
 
-# Vendored dependencies
-vendor/
+tests/results/*
 
-error.log
+# Local generated caches and dependency links
+.astro

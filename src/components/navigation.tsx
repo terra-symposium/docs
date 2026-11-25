@@ -1,93 +1,72 @@
-import { colors } from '@terra-symposium/styling';
-import type { DocsAttachment } from '../lib/workspace-types.js';
-import type { CSSProperties, JSX } from 'react';
+/**
+ * src/components/navigation.tsx
+ */
 
+/*//////////////////////////////////////////////////
+IMPORTS
+//////////////////////////////////////////////////*/
+
+// API
+import { colors } from '@terra-symposium/styling';
+
+// TYPES
+import type { CSSProperties, JSX } from 'react';
+import type { DocsAttachment } from '../lib/workspace-types.js';
+
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
+
+/** Hierarchical navigation item accepted by the static Docs navigation component. */
 export type DocsNavNode = {
-  id?: string;
-  path?: string;
-  title: string;
-  href?: string;
-  description?: string;
-  updatedAt?: string;
-  attachments?: DocsAttachment[];
-  hue?: number | null;
-  children?: DocsNavNode[];
+	id?: string;
+	path?: string;
+	title: string;
+	href?: string;
+	description?: string;
+	updatedAt?: string;
+	attachments?: DocsAttachment[];
+	children?: DocsNavNode[];
 };
 
-export function DocsNavigation({
-  nodes,
-  currentPath,
-  hue = 210,
-}: {
-  nodes: DocsNavNode[];
-  currentPath: string;
-  hue?: number | null;
-}): JSX.Element {
-  const [accent] = colors(hue);
-  const rootItems: JSX.Element[] = [];
-  const lists: {
-    nodes: DocsNavNode[];
-    index: number;
-    items: JSX.Element[];
-    parent?: { node: DocsNavNode; index: number };
-  }[] = [{ nodes, index: 0, items: rootItems }];
-  while (lists.length) {
-    const list = lists.at(-1);
-    if (!list) break;
-    if (list.index === list.nodes.length) {
-      lists.pop();
-      if (list.parent) {
-        const parentList = lists.at(-1);
-        if (parentList)
-          parentList.items.push(
-            <li key={`${list.parent.node.href ?? list.parent.node.title}-${list.parent.index}`}>
-              {list.parent.node.href ? (
-                <a
-                  href={list.parent.node.href}
-                  aria-current={list.parent.node.href === currentPath ? 'page' : undefined}
-                >
-                  {list.parent.node.title}
-                </a>
-              ) : (
-                <span>{list.parent.node.title}</span>
-              )}
-              <ul className="docs-nav-list">{list.items}</ul>
-            </li>,
-          );
-      }
-      continue;
-    }
-    const index = list.index++;
-    const node = list.nodes[index];
-    if (!node) continue;
-    if (node.children?.length) {
-      lists.push({
-        nodes: node.children,
-        index: 0,
-        items: [],
-        parent: { node, index },
-      });
-    } else {
-      list.items.push(
-        <li key={`${node.href ?? node.title}-${index}`}>
-          {node.href ? (
-            <a href={node.href} aria-current={node.href === currentPath ? 'page' : undefined}>
-              {node.title}
-            </a>
-          ) : (
-            <span>{node.title}</span>
-          )}
-        </li>,
-      );
-    }
-  }
-  return (
-    <nav
-      className="docs-nav"
-      aria-label="Documentation"
-      style={{ '--docs-accent': `rgb(${accent.light[8]})` } as CSSProperties}
-    >
-      <ul className="docs-nav-list">{rootItems}</ul>
-    </nav>
-  );
+/*//////////////////////////////////////////////////
+HELPERS
+//////////////////////////////////////////////////*/
+
+/**
+ * Renders a nested documentation navigation list with the active route marked.
+ *
+ * @param nodes Navigation nodes to display.
+ * @param currentPath Current URL used to mark the active page.
+ * @param hue Base hue used for the navigation accent.
+ *
+ * @return Accessible nested navigation element.
+ */
+export function DocsNavigation({ nodes, currentPath, hue = 210 }: { nodes: DocsNavNode[]; currentPath: string; hue?: number | null }): JSX.Element {
+	const [accent] = colors(hue);
+	const render = (items: DocsNavNode[], nested = false): JSX.Element => (
+		<ul className={nested ? 'm-0 list-none pl-4' : 'm-0 list-none p-0'}>
+			{items.map((n, i) => (
+				<li className='my-0.5' key={`${n.href ?? n.title}-${i}`}>
+					{n.href ? (
+						<a
+							href={n.href}
+							aria-current={n.href === currentPath ? 'page' : undefined}
+							className='block rounded px-2 py-1 text-inherit no-underline hover:bg-[color-mix(in_srgb,var(--docs-accent)_10%,white)] hover:text-[var(--docs-accent)] aria-[current=page]:bg-[color-mix(in_srgb,var(--docs-accent)_10%,white)] aria-[current=page]:text-[var(--docs-accent)]'
+						>
+							{n.title}
+						</a>
+					) : (
+						<span className='block px-2 pb-1 pt-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground'>{n.title}</span>
+					)}
+					{n.children?.length ? render(n.children, true) : null}
+				</li>
+			))}
+		</ul>
+	);
+	return (
+		<nav className='text-sm leading-normal' aria-label='Documentation' style={{ '--docs-accent': `rgb(${accent.light[8]})` } as CSSProperties}>
+			{render(nodes)}
+		</nav>
+	);
 }

@@ -2629,7 +2629,7 @@ export default function Scaffold({
   const [currDoc, setCurrDoc] = useState({ pathname: initPathname, path: initPath, title: initTitle, description: initDesc, contributors, updatedAt: initUpdatedAt, source: initSrc || (typeof initContent === 'string' ? initContent : ''), content: toPortableBody(initContent), compiledMDX: initMdx, versions: [] as DocVer[] });
   const [tocState, setTocState] = useState<{
     active: string | null;
-    headings: { id: string; text: string }[];
+    headings: { id: string; text: string; level: 2 | 3; parentId?: string }[];
     path: string;
   }>({ active: null, headings: [], path: initPathname });
 
@@ -2981,7 +2981,10 @@ export default function Scaffold({
           previous.headings.length === n.headings.length &&
           previous.headings.every(
             (heading, index) =>
-              heading.id === n.headings[index]?.id && heading.text === n.headings[index]?.text,
+              heading.id === n.headings[index]?.id &&
+              heading.text === n.headings[index]?.text &&
+              heading.level === n.headings[index]?.level &&
+              heading.parentId === n.headings[index]?.parentId,
           )
           ? previous
           : n;
@@ -3066,8 +3069,9 @@ export default function Scaffold({
           }
           const lowerTitle = currDoc.title ? currDoc.title.toLowerCase() : null;
           const validEls: HTMLElement[] = [];
-          const headings: { id: string; text: string }[] = [];
-          for (const element of Array.from(root.querySelectorAll<HTMLElement>('h2') ?? [])) {
+          const headings: { id: string; text: string; level: 2 | 3; parentId?: string }[] = [];
+          let currentParentId: string | undefined;
+          for (const element of Array.from(root.querySelectorAll<HTMLElement>('h2, h3') ?? [])) {
             if (
               element.closest('[data-placeholder], [data-tabs-placeholder]') ||
               element.closest('[hidden]') ||
@@ -3089,8 +3093,17 @@ export default function Scaffold({
             const id = element.id || (element.id = toHeadingId(text));
             if (!id || seen.has(id)) continue;
             seen.add(id);
+            const level = element.tagName === 'H2' ? 2 : 3;
+            if (level === 2) currentParentId = id;
+            // A child entry only belongs in the page outline when an H2 owns it.
+            if (level === 3 && !currentParentId) continue;
             validEls.push(element);
-            headings.push({ id, text });
+            headings.push({
+              id,
+              text,
+              level,
+              ...(level === 3 && currentParentId ? { parentId: currentParentId } : {}),
+            });
           }
           syncState.els = validEls;
           if (!syncState.els.length) {
@@ -3363,27 +3376,56 @@ export default function Scaffold({
                                     On this page
                                   </p>
                                   <ol className="m-0 flex list-none flex-col gap-y-0 p-0">
-                                    {tocHeadings.map((h) => (
-                                      <li key={h.id} className="h-fit py-0">
-                                        <ButtonLink
-                                          data-docs-toc-id={h.id}
-                                          data-docs-toc-heading={h.text}
-                                          href={`#${h.id}`}
-                                          variant="ghost"
-                                          size="xs"
-                                          aria-label={`Jump to ${h.text}`}
-                                          className={cn(
-                                            'relative h-fit min-h-0 w-full justify-start gap-0.5 truncate py-0 pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
-                                            tocState.path === currDoc.pathname &&
-                                              tocState.active === h.id
-                                              ? 'text-primary-12 before:bg-current'
-                                              : 'text-primary-11 before:bg-primary-11 before:opacity-0 hover:before:opacity-100',
+                                    {tocHeadings
+                                      .filter((h) => h.level === 2)
+                                      .map((parent) => (
+                                        <li key={parent.id} className="h-fit py-0">
+                                          <ButtonLink
+                                            data-docs-toc-id={parent.id}
+                                            data-docs-toc-heading={parent.text}
+                                            href={`#${parent.id}`}
+                                            variant="ghost"
+                                            size="xs"
+                                            aria-label={`Jump to ${parent.text}`}
+                                            className={cn(
+                                              'relative h-fit min-h-0 w-full justify-start gap-0.5 truncate py-0 pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
+                                              tocState.path === currDoc.pathname &&
+                                                tocState.active === parent.id
+                                                ? 'text-primary-12 before:bg-current'
+                                                : 'text-primary-11 before:bg-primary-11 before:opacity-0 hover:before:opacity-100',
+                                            )}
+                                          >
+                                            {parent.text}
+                                          </ButtonLink>
+                                          {tocHeadings.some((h) => h.parentId === parent.id) && (
+                                            <ol className="m-0 flex list-none flex-col gap-y-0 p-0">
+                                              {tocHeadings
+                                                .filter((h) => h.parentId === parent.id)
+                                                .map((child) => (
+                                                  <li key={child.id} className="h-fit py-0">
+                                                    <ButtonLink
+                                                      data-docs-toc-id={child.id}
+                                                      data-docs-toc-heading={child.text}
+                                                      href={`#${child.id}`}
+                                                      variant="ghost"
+                                                      size="xs"
+                                                      aria-label={`Jump to ${child.text}`}
+                                                      className={cn(
+                                                        'h-fit min-h-0 w-full justify-start truncate py-0 pl-7 text-[0.7rem] hover:!bg-transparent',
+                                                        tocState.path === currDoc.pathname &&
+                                                          tocState.active === child.id
+                                                          ? 'text-primary-12'
+                                                          : 'text-primary-11',
+                                                      )}
+                                                    >
+                                                      {child.text}
+                                                    </ButtonLink>
+                                                  </li>
+                                                ))}
+                                            </ol>
                                           )}
-                                        >
-                                          {h.text}
-                                        </ButtonLink>
-                                      </li>
-                                    ))}
+                                        </li>
+                                      ))}
                                   </ol>
                                 </nav>
                               )}

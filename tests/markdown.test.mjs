@@ -9,6 +9,7 @@ IMPORTS
 // API
 import assert from 'node:assert/strict';
 import { renderMarkdown } from '../dist/lib/lib/markdown.js';
+import { markdownToDocsValue } from '../dist/lib/lib/markdown-model.js';
 import { test } from 'node:test';
 
 /*//////////////////////////////////////////////////
@@ -27,6 +28,16 @@ test('renders Terra accordion and tab syntax without dropping rich content', () 
   assert.doesNotMatch(html, /<details|docs-tabs|docs-accordions/);
   assert.match(html, /const x = 1/);
   assert.match(html, /role="tablist"/);
+});
+test('renders accordion callouts when Prettier joins the title and directive', () => {
+  const html = renderMarkdown(
+    '===[Worked example] :::tip[Example]\n\nTrace the **packet**.\n\n:::\n\n===',
+  );
+  assert.match(html, /class="docs-markdown-accordions"/);
+  assert.match(html, /Worked example/);
+  assert.match(html, /class="callout tip"/);
+  assert.match(html, /Trace the <\/span><span><strong>packet<\/strong>/);
+  assert.doesNotMatch(html, /===[Worked example]|:::tip/);
 });
 test('nested and malformed groups preserve canonical Markdown behavior', () => {
   const nested = renderMarkdown('|||[Outer]\n===[Inner]\nInner body\n===\n|||');
@@ -88,4 +99,30 @@ test('renders Docs callout directives as shared rich blocks', () => {
     renderMarkdown(':::warning[Check this]\nBody.\n:::', { callout: false }),
     /class="callout/,
   );
+});
+test('renders Nodes as a default Markdown block without a page import', () => {
+  const markdown = [
+    ':::example[Flow]',
+    '',
+    'The diagram connects the input to its result.',
+    '',
+    '<Nodes direction="LR"',
+    'nodes={[{"id":"input","type":"origin","data":{"title":"Input"}},{"id":"result","type":"terminator","data":{"title":"Result"}}]}',
+    'edges={[{"id":"input-result","source":"input","target":"result"}]}',
+    '/>',
+    '',
+    ':::',
+  ].join('\n');
+  const value = markdownToDocsValue(markdown);
+  const callout = value.find((block) => block._type === 'callout');
+  assert.ok(callout);
+  const nodes = callout.content.find((block) => block._type === 'nodes');
+  assert.ok(nodes);
+  assert.equal(nodes.nodes[0].data.title, 'Input');
+  assert.equal(nodes.nodes[1].data.title, 'Result');
+
+  const html = renderMarkdown(markdown);
+  assert.match(html, /class="callout example"/);
+  assert.match(html, /data-docs-editor-block="Nodes"/);
+  assert.doesNotMatch(html, /&lt;Nodes|data-docs-code-block="view"/);
 });

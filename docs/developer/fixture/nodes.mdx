@@ -9,9 +9,9 @@ hidden: true
 The graph connects the starting action to its outcome:
 
 <Nodes
-  nodes={[
-    { id: 'start', type: 'process', data: { title: 'Start' } },
-    { id: 'finish', type: 'process', data: { title: 'Finish' } },
-  ]}
-  edges={[{ id: 'start-to-finish', source: 'start', target: 'finish' }]}
+  nodes={`[{"id":"start","type":"process","data":{"title":"Start"}},{"id":"finish","type":"process","data":{"title":"Finish"}}]`}
+  edges={`[{"id":"start-to-finish","source":"start","target":"finish"}]`}
+  direction="LR"
+  showBg={false}
+  showCtrls={false}
 />

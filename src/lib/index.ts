@@ -25,10 +25,13 @@ export type {
   DocsEditorBlockType,
   RichBlock,
 } from '../components/blocks.js';
-export { DocsQuizGenerator } from '../components/quiz.js';
-export { parseDocsQuiz } from '../components/quiz.js';
+export { DocsQuizBlock, DocsQuizGenerator } from '../components/quiz.js';
+export { parseDocsAuthoredQuiz, parseDocsQuiz } from '../components/quiz.js';
 export type {
+  DocsAuthoredQuizDocument,
+  DocsAuthoredQuizQuestion,
   DocsQuizConfig,
+  DocsQuizBlockProps,
   DocsQuizDocument,
   DocsQuizGenerationInput,
   DocsQuizQuestion,

@@ -29,7 +29,6 @@ HELPERS
  * @param homeHref - Host home route used by the navigation and not-found page.
  * @param desc - Optional product description for the shared page chrome.
  * @param pageTitle - Optional title for the selected document page.
- * @param breadcrumbParent - Optional parent link shown above the selected page.
  * @param nodes - Host-provided navigation tree.
  * @param currentPath - Current route used to select the active navigation entry.
  * @param hue - Palette hue applied to the workspace.
@@ -51,7 +50,6 @@ export function DocsSiteLayout({
   homeHref = '/',
   description: desc,
   pageTitle,
-  breadcrumbParent,
   nodes,
   currentPath,
   hue = 145,
@@ -70,7 +68,6 @@ export function DocsSiteLayout({
   homeHref?: string;
   description?: string;
   pageTitle?: string;
-  breadcrumbParent?: { title: string; href: string };
   nodes: DocsNavNode[];
   currentPath: string;
   hue?: number | null;
@@ -94,7 +91,6 @@ export function DocsSiteLayout({
       homeHref={homeHref}
       {...(desc ? { description: desc } : {})}
       {...(pageTitle ? { pageTitle } : {})}
-      {...(breadcrumbParent ? { breadcrumbParent } : {})}
       hue={hue}
       nodes={nodes}
       {...(trees ? { trees } : {})}

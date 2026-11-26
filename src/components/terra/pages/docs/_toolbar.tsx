@@ -26,7 +26,7 @@ import { DOCS_LAYOUT_CLASSES } from '../../../../lib/terra/layout-classes.js';
 import { toast } from 'sonner';
 import { toolbarFocusValue } from '../../../../lib/terra/docs/toolbar.js';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useDocsQuizContext } from '../../../quiz.js';
+import { DocsAuthoredQuiz, useDocsQuizContext } from '../../../quiz.js';
 import type { JSX } from 'react';
 
 // COMPONENTS
@@ -1660,6 +1660,7 @@ const {
     };
     const quizContext = useDocsQuizContext();
     const [quizOpen, setQuizOpen] = useState(false);
+    const [authoredQuizOpen, setAuthoredQuizOpen] = useState(false);
     const mode = aMode ?? 'view';
     const [vers, setVers] = useState<DocVer[]>([]);
     const [verDialogOpen, setVerDialogOpen] = useState(false);
@@ -2181,7 +2182,12 @@ const {
     return (
       <ErrorBoundary name="Toolbar">
         <div
-          className="toolbar-scroll not-prose pointer-events-auto sticky top-10 isolate z-50 mx-auto mb-5 !w-full !max-w-full self-start overflow-visible px-6 text-primary-12 print:hidden md:px-10"
+          className={cn(
+            'toolbar-scroll not-prose pointer-events-auto sm:sticky sm:top-10 isolate z-50 self-start overflow-visible text-primary-12 print:hidden',
+            mode === 'view'
+              ? 'mb-2 w-fit max-w-full px-6 md:px-10'
+              : 'mx-auto mb-5 !w-full !max-w-full px-6 md:px-10',
+          )}
           data-docs-toolbar-frame
           data-docs-toolbar-scroll
           data-can-edit={editable ? 'true' : 'false'}
@@ -2193,7 +2199,10 @@ const {
           <div className="relative z-10 rounded-lg border border-primary-6 bg-primary-3 shadow-lg shadow-primary-12/20">
             <TooltipProvider>
               <div
-                className="mdxeditor-toolbar not-prose relative z-10 box-border flex !w-full max-w-full min-w-0 flex-wrap items-center justify-between gap-0.5 px-2 py-1 text-primary-12 print:hidden"
+                className={cn(
+                  'mdxeditor-toolbar not-prose relative z-10 box-border flex max-w-full min-w-0 flex-wrap items-center justify-between gap-0.5 px-2 py-1 text-primary-12 print:hidden',
+                  mode === 'view' ? 'w-fit' : '!w-full',
+                )}
                 data-docs-main-toolbar
               >
                 {mode === 'view' ? (
@@ -2216,6 +2225,35 @@ const {
                           });
                         }}
                       />
+                    )}
+                    {docs && quizContext?.authoredQuiz && (
+                      <>
+                        <UiButton
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setAuthoredQuizOpen(true)}
+                        >
+                          Quiz
+                        </UiButton>
+                        <Dialog open={authoredQuizOpen} onOpenChange={setAuthoredQuizOpen}>
+                          <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle>{quizContext.authoredQuiz.quiz.title}</DialogTitle>
+                              <DialogDescription>
+                                Work through the questions and reveal each answer when ready.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DocsAuthoredQuiz
+                              key={quizContext.markdown}
+                              quiz={quizContext.authoredQuiz.quiz}
+                              {...(quizContext.authoredQuiz.renderMarkdown
+                                ? { renderMarkdown: quizContext.authoredQuiz.renderMarkdown }
+                                : {})}
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      </>
                     )}
                     {docs && quizContext?.config.toolbar && (
                       <>

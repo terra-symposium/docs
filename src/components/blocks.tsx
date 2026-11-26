@@ -9,7 +9,7 @@ IMPORTS
 // API
 import katex from 'katex';
 import { DataTableContent } from '@terra-symposium/styling/ui';
-import { docsValueToMarkdown } from '../lib/markdown-model.js';
+import { docsValueToMarkdown, markdownToDocsValue } from '../lib/markdown-model.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../lib/terra/regex.mjs';
@@ -86,7 +86,7 @@ export const DOCS_BLOCK_FIELDS: Record<
     { name: 'proximityConnect', type: 'boolean' },
     { name: 'markdown', type: 'string' },
   ],
-  quiz: [{ name: 'markdown', type: 'string' }],
+  quiz: [{ name: 'data', type: 'object' }],
   raw: [{ name: 'markdown', type: 'string' }],
   tsDocs: [
     { name: 'scope', type: 'string' },
@@ -441,7 +441,19 @@ export function DocsRichBlock({
         </section>
       );
     case 'quiz':
-      return <DocsQuizBlock />;
+      return block.data !== undefined ? (
+        <DocsQuizBlock
+          data={block.data}
+          renderMarkdown={(markdown) => (
+            <DocsBlocks
+              blocks={markdownToDocsValue(markdown, options) as RichBlock[]}
+              {...(options ? { options } : {})}
+            />
+          )}
+        />
+      ) : (
+        <DocsQuizBlock />
+      );
     default:
       return (
         <div data-unsupported-block={block._type}>

@@ -39,8 +39,8 @@ if (requestedMode === 'init') {
 }
 const mode = requestedMode === 'docs' ? 'dev' : requestedMode;
 const root = resolve(process.cwd());
-const docsConfig =
-  createConsumerProject(root, process.env.DOCS_PACKAGE_ROOT ?? '.').manifest.docs ?? {};
+const consumerProject = createConsumerProject(root, process.env.DOCS_PACKAGE_ROOT ?? '.');
+const docsConfig = consumerProject.manifest.docs ?? {};
 const args = [
   resolve(dirname(createRequire(import.meta.url).resolve('astro/package.json')), 'bin/astro.mjs'),
   mode,
@@ -53,7 +53,7 @@ const args = [
   ),
 ];
 const docsRoot = resolve(root, 'docs');
-const publicRoot = resolve(root, 'dist/public');
+const publicRoot = resolve(consumerProject.root, 'dist/public');
 const publicAssetsRoot = resolve(publicRoot, '_docs/assets');
 let parsedArgs;
 try {

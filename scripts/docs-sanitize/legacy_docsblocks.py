@@ -30,22 +30,15 @@ def image(data: dict[str, Any]) -> str:
 
 
 def array(items: list[Any]) -> str:
-    """Serialize node or edge records as a readable JSX array prop.
+    """Serialize node or edge records as a static JSON array prop.
 
     Args:
         items (list[Any]): Records from the legacy DocsBlock payload.
 
     Returns:
-        str: An indented JSON-compatible array expression.
+        str: A compact JSON array expression.
     """
-    return (
-        "[\n"
-        + "".join(
-            "\t" + json.dumps(item, ensure_ascii=False, separators=(", ", ": ")) + ",\n"
-            for item in items
-        )
-        + "]"
-    )
+    return json.dumps(items, ensure_ascii=False, separators=(",", ":"))
 
 
 def replacement(match: re.Match[str]) -> str:

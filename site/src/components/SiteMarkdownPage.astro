@@ -7,8 +7,6 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 import DocsSiteLayout from '../../../src/components/SiteLayout.astro';
-import DocsCodeBlock from './DocsCodeBlock.astro';
-import DocsNodes from './DocsNodes.astro';
 import { pageForSlug, pageHref, siteNavigation } from '../lib/catalog.js';
 import blockApi from '../../../dist/cache/blocks-api.json';
 
@@ -18,9 +16,6 @@ const title = import.meta.env.PUBLIC_DOCS_TITLE ?? 'Documentation';
 const desc = import.meta.env.PUBLIC_DOCS_DESCRIPTION ?? '';
 const base = import.meta.env.BASE_URL;
 const currentPage = pageForSlug(slug);
-const parentSlug = slug.split('/').slice(0, -1).join('/');
-const parentPage = pageForSlug(parentSlug);
-const Content = currentPage?.file.endsWith('.mdx') ? (currentPage.content as any) : undefined;
 const blockGuidanceEntries = currentPage?.file.endsWith('/consumer/1-usage/2-blocks/index.md')
 	? blockApi
 	: undefined;
@@ -30,7 +25,6 @@ const layoutProps = {
 	description: desc,
 	pageTitle: currentPage?.title,
 	pageDescription: currentPage?.description,
-	...(parentPage ? { breadcrumbParent: { title: parentPage.title, href: pageHref(parentSlug, base) } } : {}),
 	...(blockGuidanceEntries ? { blockGuidanceEntries } : {}),
 	hue: currentPage?.hue,
 	nodes: siteNavigation,
@@ -52,13 +46,7 @@ const layoutProps = {
 			<title>{currentPage.title} · {title}</title>
 		</head>
 		<body>
-			{Content ? (
-				<DocsSiteLayout {...layoutProps}>
-					<main class="copy"><Content components={{ CodeBlock: DocsCodeBlock, Nodes: DocsNodes }} /></main>
-				</DocsSiteLayout>
-			) : (
-				<DocsSiteLayout {...layoutProps} />
-			)}
+			<DocsSiteLayout {...layoutProps} />
 		</body>
 	</html>
 ) : null}

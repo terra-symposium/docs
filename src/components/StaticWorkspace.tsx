@@ -208,7 +208,6 @@ function StaticContentSlot({ children }: { children: ReactNode }): JSX.Element {
  * @param desc Description shown with the site title.
  * @param pageTitle Title of the page selected for the current route.
  * @param pageDesc Description of the selected page.
- * @param breadcrumbParent Optional parent link shown above the selected page.
  * @param hue Theme hue used to color the workspace.
  * @param nodes Host navigation tree used when `trees` is not supplied.
  * @param trees Structured navigation trees supplied by the host.
@@ -235,7 +234,6 @@ export function DocsStaticWorkspace({
   description: desc,
   pageTitle,
   pageDescription: pageDesc,
-  breadcrumbParent,
   hue,
   nodes = [],
   trees,
@@ -259,7 +257,6 @@ export function DocsStaticWorkspace({
   description?: string;
   pageTitle?: string;
   pageDescription?: string;
-  breadcrumbParent?: { title: string; href: string };
   hue?: number | null;
   nodes?: DocsNavNode[];
   trees?: DocsTree[];
@@ -645,21 +642,6 @@ export function DocsStaticWorkspace({
           content={docContent}
           staticContent={staticContent}
           {...(quiz ? { quiz } : {})}
-          {...(breadcrumbParent
-            ? {
-                beforeContent: (
-                  <nav aria-label="Breadcrumb" className="mb-6 text-sm text-primary-11">
-                    <ol className="m-0 flex list-none items-center gap-2 p-0">
-                      <li>
-                        <a href={breadcrumbParent.href}>{breadcrumbParent.title}</a>
-                      </li>
-                      <li aria-hidden="true">/</li>
-                      <li aria-current="page">{edited?.title ?? initialTitle}</li>
-                    </ol>
-                  </nav>
-                ),
-              }
-            : {})}
           {...(readyContent !== undefined ? { renderContent: readyContent } : {})}
         />
       </ErrorBoundary>

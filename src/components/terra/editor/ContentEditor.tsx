@@ -644,9 +644,9 @@ const editorNodeComps: {
       ),
     ),
     quiz: eraseBlockRenderer(
-      ({ attributes: a, children: c }: BlockObjectRenderProps): JSX.Element => (
+      ({ attributes: a, children: c, node: n }: BlockObjectRenderProps): JSX.Element => (
         <div {...a} data-docs-editor-block="Quiz generator">
-          <DocsQuizBlock />
+          <DocsQuizBlock data={(n as unknown as { data?: unknown }).data} />
           {c}
         </div>
       ),

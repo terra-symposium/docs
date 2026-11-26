@@ -35,6 +35,8 @@ HELPERS
  * @param diagramOptions.nodeSep Optional horizontal separation between sibling nodes in the layout.
  * @param diagramOptions.rankSep Optional separation between graph ranks in the layout.
  * @param diagramOptions.proximityConnect Whether the layout may connect eligible nearby nodes automatically.
+ * @param diagramOptions.showBg Whether to display the graph background grid.
+ * @param diagramOptions.showCtrls Whether to display graph controls.
  *
  * @return A Docs diagram container with the validated graph and requested layout options.
  */
@@ -55,7 +57,7 @@ function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX
     <ErrorBoundary name="Nodes">
       <div
         className={cn(
-          'block not-prose relative my-0 flow-root transition-all duration-200 [&>:first-child]:!mt-0 [&>:last-child]:!mb-0',
+          'block not-prose relative my-0 flow-root transition-all duration-200 [&>:first-child]:!mt-0 [&>:last-child]:!mb-0 [&_.flow-node-handle]:invisible',
           className,
         )}
         data-docs-editor-block="Nodes"
@@ -160,6 +162,9 @@ export function NodesBlock({
           ? {}
           : { proximityConnect: block.proximityConnect })}
         {...(block.rankSep === undefined ? {} : { rankSep: block.rankSep })}
+        {...(typeof block.showBg === 'boolean' ? { showBg: block.showBg } : {})}
+        {...(typeof block.showCtrls === 'boolean' ? { showCtrls: block.showCtrls } : {})}
+        {...(typeof block.className === 'string' ? { className: block.className } : {})}
       />
     </ErrorBoundary>
   );

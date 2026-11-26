@@ -9,6 +9,6 @@ const answer = 42;
 ```
 
 <Nodes
-nodes={[{ id: '1', data: { label: 'Start' } }]}
-edges={[{ id: 'e1', source: '1', target: '2' }]}
+  nodes={[{ id: '1', data: { label: 'Start' } }]}
+  edges={[{ id: 'e1', source: '1', target: '2' }]}
 />

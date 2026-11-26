@@ -8,18 +8,18 @@ description: Preview Docs and trace authored Markdown to a published site.
 The Docs package builds and serves a site from a repository's Markdown. The package is reusable code; each generated site has its own pages, settings, and output folder.
 
 <Nodes
-direction={'LR'}
-nodes={[
-{ id: 'source', type: 'data', data: { title: 'Markdown source' } },
-{ id: 'cli', type: 'process', data: { title: 'Docs CLI' } },
-{ id: 'catalog', type: 'process', data: { title: 'Site catalog' } },
-{ id: 'site', type: 'terminator', data: { title: 'Static site' } },
-]}
-edges={[
-{ id: 'source-cli', source: 'source', target: 'cli' },
-{ id: 'cli-catalog', source: 'cli', target: 'catalog' },
-{ id: 'catalog-site', source: 'catalog', target: 'site' },
-]}
+  direction="LR"
+  nodes={[
+    { id: 'source', type: 'data', data: { title: 'Markdown source' } },
+    { id: 'cli', type: 'process', data: { title: 'Docs CLI' } },
+    { id: 'catalog', type: 'process', data: { title: 'Site catalog' } },
+    { id: 'site', type: 'terminator', data: { title: 'Static site' } },
+  ]}
+  edges={[
+    { id: 'source-cli', source: 'source', target: 'cli' },
+    { id: 'cli-catalog', source: 'cli', target: 'catalog' },
+    { id: 'catalog-site', source: 'catalog', target: 'site' },
+  ]}
 />
 
 The CLI prepares search data and assets. The catalog turns source paths and frontmatter into routes; Astro renders the pages and shared Docs shell.

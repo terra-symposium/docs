@@ -89,4 +89,4 @@ Supported question shapes are:
 - Keyword questions use `prompt` and `answers` fields.
 - Either type may include `explanation` and `section`.
 
-Keep generation behind a host endpoint so credentials and provider access stay on the server. Generated questions and answers live in the page session; the Docs component does not save quiz results. The toolbar is off unless enabled. Individual Markdown leaves can use `<Quiz />` when the host registers that block. See the [README quiz contract](../../../README.md#security-and-limitations) for a complete example.
+Keep generation behind a host endpoint so credentials and provider access stay on the server. Generated questions and answers live in the page session; the Docs component does not save quiz results. The toolbar is off unless enabled. Individual Markdown leaves use `<Quiz />` for generation or `<Quiz data={{...}} />` for a source-controlled JSON bank when the host registers that block. In Docs View, a final `## Quiz` plus authored bank is shown through a page-level Quiz button and dialog. See the [README quiz contract](../../../README.md#security-and-limitations) for a complete example.

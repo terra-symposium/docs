@@ -8,20 +8,12 @@ IMPORTS
 
 // API
 import { markdownToDocsValue } from '../lib/markdown-model.js';
+import { useDocsQuizContext, parseDocsAuthoredQuiz } from './quiz.js';
+import { useCallback, useEffect, useMemo } from 'react';
 
 // COMPONENTS
 import { DocsRichBlock } from './blocks.js';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Checkbox,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@terra-symposium/styling/ui';
+import { Checkbox, Tabs, TabsContent, TabsList, TabsTrigger } from '@terra-symposium/styling/ui';
 
 // TYPES
 import type { DocsBlockOptions } from '../lib/block-types.js';
@@ -105,9 +97,52 @@ HELPERS
  * [Read Docs setup](../../../0-configuration/0-install/)
  */
 export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Element {
-  return (
-    <DocsBlocks blocks={markdownToDocsValue(markdown, options) as RichBlock[]} options={options} />
-  );
+  const quizContext = useDocsQuizContext();
+  const parsed = useMemo(() => {
+    const blocks = markdownToDocsValue(markdown, options) as RichBlock[];
+    if (!quizContext) return { blocks, pageQuiz: null };
+    const quizBlock = blocks.at(-1);
+    const heading = blocks.at(-2);
+    if (
+      quizBlock?._type !== 'quiz' ||
+      heading?._type !== 'block' ||
+      heading.style !== 'h2' ||
+      blockText(heading).trim().toLowerCase() !== 'quiz' ||
+      quizBlock.data === undefined
+    )
+      return { blocks, pageQuiz: null };
+    try {
+      return {
+        blocks: blocks.slice(0, -2),
+        pageQuiz: { quiz: parseDocsAuthoredQuiz(quizBlock.data) },
+      };
+    } catch {
+      return { blocks, pageQuiz: null };
+    }
+  }, [markdown, options, Boolean(quizContext)]);
+  const renderMarkdown = useCallback((source: string) => <DocsMarkdown markdown={source} />, []);
+  const registerAuthoredQuiz = quizContext?.registerAuthoredQuiz;
+  useEffect(() => {
+    if (!registerAuthoredQuiz || !parsed.pageQuiz) return;
+    registerAuthoredQuiz({
+      quiz: parsed.pageQuiz.quiz,
+      renderMarkdown,
+    });
+  }, [parsed.pageQuiz, registerAuthoredQuiz, renderMarkdown]);
+  return <DocsBlocks blocks={parsed.blocks} options={options} />;
+}
+
+/** Extracts visible text from a Portable Text heading to detect the final Quiz section. */
+function blockText(block: RichBlock): string {
+  return Array.isArray(block.children)
+    ? block.children
+        .map((child) =>
+          child && typeof child === 'object' && 'text' in child && typeof child.text === 'string'
+            ? child.text
+            : '',
+        )
+        .join('')
+    : '';
 }
 
 /**
@@ -283,7 +318,7 @@ function MarkdownGroup({
 
 // hygiene-ignore single-use -- Astro MDX maps this named renderer as a custom Markdown component.
 /**
- * Renders mutually exclusive routes that reach the same outcome.
+ * Renders related, parallel methods, versions, or modes for one shared reader question.
  *
  * @param items Ordered alternatives with reader-facing tab titles.
  * @param body Renders the parsed Markdown body for one alternative.
@@ -291,20 +326,24 @@ function MarkdownGroup({
  * @returns A tab list with one complete route visible at a time.
  *
  * @docsId tabs
- * @docsUseWhen Present alternatives that reach the same outcome and require one reader choice.
- * @docsConstraint Tabs are for mutually exclusive alternatives that reach the same outcome.
- * @docsConstraint Keep facts shared by all alternatives before the tabs.
- * @docsConstraint Each alternative must be titled and complete; number actions in reading order.
+ * @docsUseWhen Compare related, parallel alternatives that perform the same task or answer the same question.
+ * @docsConstraint When multiple methods, algorithms, protocols, versions, or modes solve the same problem, use tabs by default if each needs its own explanation.
+ * @docsConstraint Keep the comparison question and facts shared by all alternatives before the tabs.
+ * @docsConstraint Each alternative must be a complete, independently understandable peer with a concise title.
+ * @docsConstraint Put each option's full method-specific lesson, including its subheadings, diagrams, and examples, inside its tab; a summary tab followed by separate option sections is invalid.
+ * @docsConstraint Align the order and heading structure inside tabs when the alternatives share the same learning route.
+ * @docsConstraint Do not tab phases that occur in sequence or mechanisms that work together rather than offer alternatives.
  * @docsConstraint Local and Hosted procedures, platform-specific commands, and other either/or paths must use titled tabs.
- * @docsDo Use tabs for alternatives the reader must choose between.
+ * @docsDo Use tabs to compare alternative methods, algorithms, protocol versions, or configurations even when readers are learning the choices rather than selecting one.
  * @docsDo Keep each tab directive adjacent to the other alternatives.
  * @docsDont Do not put alternatives in side-by-side table columns.
- * @docsDont Do not use tabs for information readers need all at once or for consecutive steps.
- * @docsTip When one option’s information does not apply to another, tabs make the choice explicit.
- * @docsDo Keep shared facts before the alternatives; each tab body should be a complete route with its own numbered steps.
+ * @docsDont Do not tab consecutive phases, prerequisite concepts, or complementary mechanisms that are used together.
+ * @docsDont Do not hide facts readers need all at once; keep essential cross-option conclusions visible after the tabs.
+ * @docsTip A useful test is whether every tab answers the same question, such as “How do these methods provide reliable delivery?”
+ * @docsDo Keep shared facts before or after the alternatives; put each complete parallel route inside its tab and keep only material outside that answers a shared question or teaches a distinct follow-on concept.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/editor-toolbar.png | Docs editor toolbar; it has no Tabs insertion button
  * @docsInsertionStep Tabs have no toolbar insertion button. Add adjacent titled `|||[Title]` directives in Markdown source.
- * @docsInsertionStep Keep shared facts before the alternatives and give each tab a complete route.
+ * @docsInsertionStep Put each alternative's full explanation, subheadings, diagrams, and examples inside its tab; align the order where useful.
  * @docsInsertionStep Switch through every tab in View mode.
  * @docsSyntax
  * ```mdx
@@ -383,7 +422,7 @@ export function MarkdownTabs({
 /**
  * Renders independent cases that readers may inspect in any order.
  *
- * @param items Independent entries with reader-facing accordion headings.
+ * @param items Independent entries with reader-facing accordion labels.
  * @param body Renders the parsed Markdown body for one entry.
  *
  * @returns A group of expandable items, one per independent case.
@@ -393,7 +432,7 @@ export function MarkdownTabs({
  * @docsConstraint Accordion items are independent cases, examples, questions, or optional explanations in one category.
  * @docsConstraint Shared context, required actions, decisions, and serious warnings remain visible outside collapsed content.
  * @docsConstraint A stack of callouts serving one purpose should become titled accordion items.
- * @docsDo Give each item a title naming its case and its own supporting detail.
+ * @docsDo Give each item a label naming its case and its own supporting detail.
  * @docsDo Put an example aside inside the item it illustrates, retaining its boundary.
  * @docsDo Put each delimiter on its own line with blank lines around the body.
  * @docsDont Do not combine unrelated details in one item or split one ordered procedure across items.
@@ -444,16 +483,19 @@ export function MarkdownAccordions({
   body: (item: Record<string, unknown>) => JSX.Element;
 }): JSX.Element {
   return (
-    <Accordion type="multiple" variant="sm">
+    <div className="docs-markdown-accordions">
       {items.map((item, i) => (
-        <AccordionItem key={i} value={`accordion-${i}`} className="docs-accordion-item">
-          <AccordionTrigger>
+        <details key={i} className="docs-markdown-accordion">
+          <summary className="docs-markdown-accordion-trigger">
             {typeof item.title === 'string' && item.title ? item.title : `Item ${i + 1}`}
-          </AccordionTrigger>
-          <AccordionContent className="docs-block-stack">{body(item)}</AccordionContent>
-        </AccordionItem>
+            <span className="docs-markdown-accordion-icon" aria-hidden="true">
+              ⌄
+            </span>
+          </summary>
+          <div className="docs-markdown-accordion-content docs-block-stack">{body(item)}</div>
+        </details>
       ))}
-    </Accordion>
+    </div>
   );
 }
 

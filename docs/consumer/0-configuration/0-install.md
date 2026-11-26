@@ -131,12 +131,12 @@ Use the [Authoring guide](/consumer/1-usage/0-authoring/) to plan each page and 
 
 ===[Optional blocks and navigation]
 
-| Feature                                                   | How to use it                                                                                                                                       |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Built-in tables, images, asides, tabs, math, and diagrams | Write the form shown in the [Blocks reference](/consumer/1-usage/2-blocks/). They need no separate installation.                                    |
-| Custom blocks                                             | A developer registers a renderer through the hosted workspace's `customBlocks` prop. A `package.json` setting cannot register a React component.    |
-| Quiz and TypeScript reference                             | The application must supply the quiz generator or reference data. Adding `<Quiz />` or `<TsDocs />` alone does not provide them.                    |
-| Manual sidebar in an embedded site                        | A developer passes ordered `trees` to `DocsSiteLayout`. A local site uses the folders and filenames described in [Tree](/consumer/1-usage/0-tree/). |
+| Feature                                                   | How to use it                                                                                                                                                   |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Built-in tables, images, asides, tabs, math, and diagrams | Write the form shown in the [Blocks reference](/consumer/1-usage/2-blocks/). They need no separate installation.                                                |
+| Custom blocks                                             | A developer registers a renderer through the hosted workspace's `customBlocks` prop. A `package.json` setting cannot register a React component.                |
+| Quiz and TypeScript reference                             | Authored `<Quiz data={...} />` JSON banks work without a host generator. The self-closing `<Quiz />` needs a host generator; `<TsDocs />` needs reference data. |
+| Manual sidebar in an embedded site                        | A developer passes ordered `trees` to `DocsSiteLayout`. A local site uses the folders and filenames described in [Tree](/consumer/1-usage/0-tree/).             |
 
 In a hosted workspace, a developer can also disable a built-in renderer when mounting `DocsWorkspace`:
 

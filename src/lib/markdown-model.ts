@@ -898,7 +898,17 @@ export function replaceCanonicalComponents(
               edges: Array.isArray(edges) ? edges : [],
             };
           }
-          if (opening.name === 'Quiz') return { _type: 'quiz', _key: key(), ...attrs };
+          if (opening.name === 'Quiz') {
+            if (!opening.selfClosing || body.trim()) return undefined;
+            if (Object.keys(attrs).some((name) => name !== 'data')) return undefined;
+            if ('data' in attrs && (!attrs.data || typeof attrs.data !== 'object'))
+              return undefined;
+            return {
+              _type: 'quiz',
+              _key: key(),
+              ...(attrs.data !== undefined ? { data: attrs.data } : {}),
+            };
+          }
           if (opening.name === 'Code' || opening.name === 'CodeBlock') {
             const codeSrc = typeof attrs.source === 'string' ? attrs.source : undefined;
             const codeAttr = typeof attrs.code === 'string' ? attrs.code : undefined;
@@ -1190,12 +1200,15 @@ function tableBlock(
  * @docsConstraint Nest by meaning: a child answers a question within its parent. Shared vocabulary, chronology, or visual indentation is not a parent-child relationship.
  * @docsConstraint Prefer two levels. Add a third only when an H3 topic contains multiple distinct parts that need headings.
  * @docsConstraint Introduce an H2 or H3 before placing a table or diagram beneath it.
+ * @docsConstraint Treat every paragraph over 400 characters as a red flag. Review whether its ideas belong in a list, table, diagram, code block, or aside; keep prose when those blocks would obscure the relationship.
+ * @docsConstraint Many H3s beneath one H2, or long prose and several example-heavy subconcepts beneath an H3, signal that the section may be a comparison table instead. When subconcepts share dimensions, give each one a row and use columns for those dimensions; do not force unrelated ideas into a table.
  * @docsDo Use ordinary Markdown; keep each paragraph about one idea.
  * @docsDo Use inline code for literal names and expressions.
  * @docsDo Use bold only when the distinction changes meaning; use italics sparingly.
  * @docsDo Preserve meaningful underline and strikethrough; explain key quotes.
  * @docsDo Draft the outline as a tree before prose. Group details beneath the concept or task they explain; keep independent topics as peers.
  * @docsDo Read the outline alone: peer headings should answer the same kind of reader question, and each child should be a clear part of its parent.
+ * @docsDo When a section contains many related subconcepts or examples, compare them in a table with one row per subconcept and concise columns for shared attributes.
  * @docsDo For one visual system, group Typography, Colour, and Components beneath a parent such as Visual system.
  * @docsDo Use short, concrete topic names; put instructions, explanations, and promised outcomes in the prose.
  * @docsDo Remove a heading that repeats its parent, labels one paragraph/example, or adds no reader value.
@@ -1347,6 +1360,13 @@ function parseMarkdown(
       ),
   );
   let calloutSrc = fencedAccordions.restore(fencedAccordions.source);
+  // Prettier treats custom group markers as ordinary Markdown and may join the
+  // next callout directive to the title line. Separate it before scanning so
+  // formatting a source file cannot turn rich blocks back into literal text.
+  calloutSrc = calloutSrc.replace(
+    /^(===|\|\|\|)\s*(\[(?:\\.|[^\]\n])+\])[ \t]+(?=:::)/gm,
+    '$1$2\n\n',
+  );
   /**
    * One complete top-level tab or accordion item found in the Markdown source.
    */
@@ -2812,8 +2832,10 @@ export function docsValueToMarkdown(value: DocsValue): string {
       );
       continue;
     }
-    if (item._type === 'quiz' && !extra) result.push('<Quiz />');
-    else result.push(richBlockDirective(item));
+    if (item._type === 'quiz' && !extra) {
+      const data = item.data && typeof item.data === 'object' ? JSON.stringify(item.data) : '';
+      result.push(data ? `<Quiz data={${data}} />` : '<Quiz />');
+    } else result.push(richBlockDirective(item));
   }
   return result.join('\n\n').replace(N_3_G_REGEX(), '\n\n').replace(R_N_CLASS_2_3, '') + '\n';
 }

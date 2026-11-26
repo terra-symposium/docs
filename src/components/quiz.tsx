@@ -7,7 +7,7 @@ IMPORTS
 //////////////////////////////////////////////////*/
 
 // API
-import { createContext, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useState } from 'react';
 import { DOCS_LAYOUT_CLASSES } from '../lib/terra/layout-classes.js';
 
 // TYPES
@@ -27,6 +27,13 @@ const ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS =
  * Question formats supported by the shared quiz runner.
  */
 export type DocsQuizQuestionType = 'multipleChoice' | 'keyword';
+/** One source-controlled open-response question in an authored quiz bank. */
+export type DocsAuthoredQuizQuestion = { title: string; prompt: string; answer: string };
+/** JSON document consumed by `<Quiz data={...} />`. */
+export type DocsAuthoredQuizDocument = {
+  title: string;
+  questions: DocsAuthoredQuizQuestion[];
+};
 /**
  * Source and constraints sent to a host when it generates a page quiz.
  */
@@ -74,6 +81,13 @@ type DocsQuizContextValue = {
   config: DocsQuizConfig;
   title: string;
   markdown: string;
+  authoredQuiz: DocsPageQuiz | null;
+  registerAuthoredQuiz: (quiz: DocsPageQuiz) => void;
+};
+/** A source-authored quiz bank and renderer lifted into the page-level quiz dialog. */
+export type DocsPageQuiz = {
+  quiz: DocsAuthoredQuizDocument;
+  renderMarkdown?: (markdown: string) => ReactNode;
 };
 const DocsQuizContext = createContext<DocsQuizContextValue | null>(null);
 
@@ -96,9 +110,29 @@ export function DocsQuizProvider({
   config,
   title,
   markdown,
-}: DocsQuizContextValue & { children: ReactNode }): JSX.Element {
+}: {
+  config: DocsQuizConfig;
+  title: string;
+  markdown: string;
+  children: ReactNode;
+}): JSX.Element {
+  const [registered, setRegistered] = useState<{ markdown: string; quiz: DocsPageQuiz } | null>(
+    null,
+  );
+  const registerAuthoredQuiz = useCallback(
+    (quiz: DocsPageQuiz) => setRegistered({ markdown, quiz }),
+    [markdown],
+  );
   return (
-    <DocsQuizContext.Provider value={{ config, title, markdown }}>
+    <DocsQuizContext.Provider
+      value={{
+        config,
+        title,
+        markdown,
+        authoredQuiz: registered?.markdown === markdown ? registered.quiz : null,
+        registerAuthoredQuiz,
+      }}
+    >
       {children}
     </DocsQuizContext.Provider>
   );
@@ -191,6 +225,52 @@ export function parseDocsQuiz(v: unknown): DocsQuizDocument {
 }
 
 /**
+ * Validates authored quiz JSON supplied to `<Quiz data={...} />`.
+ *
+ * @param v JSON value expected to contain a title and at least one prompt/answer pair.
+ * @returns A validated authored quiz document.
+ * @throws When the document or any question is missing required text.
+ */
+export function parseDocsAuthoredQuiz(v: unknown): DocsAuthoredQuizDocument {
+  if (!v || typeof v !== 'object') throw new Error('The authored quiz data must be a JSON object.');
+  const candidate = v as Record<string, unknown>;
+  if (
+    typeof candidate.title !== 'string' ||
+    !candidate.title.trim() ||
+    !Array.isArray(candidate.questions) ||
+    candidate.questions.length === 0
+  )
+    throw new Error('Authored quiz data needs a title and at least one question.');
+  return {
+    title: candidate.title,
+    questions: candidate.questions.map((item): DocsAuthoredQuizQuestion => {
+      if (!item || typeof item !== 'object')
+        throw new Error('Each authored quiz question must be a JSON object.');
+      const question = item as Record<string, unknown>;
+      if (
+        typeof question.title !== 'string' ||
+        !question.title.trim() ||
+        typeof question.prompt !== 'string' ||
+        !question.prompt.trim() ||
+        typeof question.answer !== 'string' ||
+        !question.answer.trim()
+      )
+        throw new Error('Each authored quiz question needs a title, prompt, and answer.');
+      if ([question.prompt, question.answer].some(containsQuizNestedContainer))
+        throw new Error('Quiz prompts and answers cannot contain callouts, tabs, or accordions.');
+      return { title: question.title, prompt: question.prompt, answer: question.answer };
+    }),
+  };
+}
+
+/** Detects Docs block wrappers that would override the quiz's own presentation. */
+function containsQuizNestedContainer(markdown: string): boolean {
+  return /^(?:\s*:{3,}(?:[\w-]+(?:\[[^\]\n]*\])?)?\s*|\s*\|\|\|(?:\[[^\]\n]*\])?\s*|\s*===(?:\[[^\]\n]*\])?\s*)$/m.test(
+    markdown,
+  );
+}
+
+/**
  * Checks an answer using exact option matching or case-insensitive accepted keywords.
  *
  * @param question - Validated question whose answer rules should be applied.
@@ -210,6 +290,14 @@ function isCorrectAnswer(question: DocsQuizQuestion, response: string): boolean 
     )
   );
 }
+
+/** Props accepted by the shared authored and host-generated Docs quiz block. */
+export type DocsQuizBlockProps = {
+  /** Authored quiz document as JSON; when present, no host generator is required. */
+  data?: unknown;
+  /** Render Markdown with the host's configured Docs block renderer. */
+  renderMarkdown?: (markdown: string) => ReactNode;
+};
 
 /**
  * Renders quiz setup, host-backed generation, question review, and answer results.
@@ -644,14 +732,15 @@ export function DocsQuizGenerator({
 }
 
 /**
- * Renders the Markdown opt-in directive using the active host configuration.
+ * Renders a JSON-authored question bank or the host-backed generator directive.
  *
- * @returns The configured quiz generator, or an explanation when no host context exists.
+ * @returns An authored question navigator, configured quiz generator, or a host setup message.
  *
  * @docsId quiz
- * @docsUseWhen Readers should practise a concept after the page has explained it.
+ * @docsUseWhen Readers should practise a concept after the page has explained it, using an authored or host-generated question bank.
  * @docsConstraint Place a quiz after the explanation it tests; it tests understanding and does not replace required page content.
- * @docsConstraint The host must provide a quiz generator; generated questions and answers remain in the current page session.
+ * @docsConstraint `<Quiz />` needs a host-supplied JSON generator; authored `<Quiz data={...} />` JSON banks work without host configuration and cannot contain nested callouts, tabs, or accordions.
+ * @docsConstraint Keep each authored question and worked answer together in one titled item; reveal answers on demand.
  * @docsDo Explain the concept before asking readers to practise it.
  * @docsDo Check generated questions and answers in the target host.
  * @docsDo Use multiple choice for recognition with one supported answer; use keyword answers for a specific term or relationship.
@@ -666,14 +755,37 @@ export function DocsQuizGenerator({
  * @docsInsertionStep Confirm results remain in the page session unless the host explicitly persists them.
  * @docsSyntax
  * ```mdx
- * After explaining the concept, practise the key ideas:
+ * After explaining the concept, practise with a generated quiz:
  *
  * <Quiz />
+ *
+ * Or author a reusable JSON question bank without a host generator:
+ *
+ * <Quiz data={{"title":"Queue growth","questions":[{"title":"Queue growth","prompt":"Find the queue growth rate.","answer":"Subtract service rate from arrival rate."}]}} />
  * ```
  * @docsRenderedExample
- * After explaining the concept, practise the key ideas:
+ * After explaining the concept, practise the key ideas with a generated or authored quiz.
  */
-export function DocsQuizBlock(): JSX.Element {
+export function DocsQuizBlock({ data, renderMarkdown }: DocsQuizBlockProps = {}): JSX.Element {
+  if (data !== undefined) {
+    try {
+      return (
+        <DocsAuthoredQuiz
+          quiz={parseDocsAuthoredQuiz(data)}
+          {...(renderMarkdown ? { renderMarkdown } : {})}
+        />
+      );
+    } catch (cause) {
+      return (
+        <p
+          role="alert"
+          className="rounded-md border border-destructive-7 p-3 text-sm text-destructive-11"
+        >
+          {cause instanceof Error ? cause.message : 'Authored quiz JSON is invalid.'}
+        </p>
+      );
+    }
+  }
   const context = useDocsQuizContext();
   if (!context) return <p>Quiz generation is available when configured by this Docs host.</p>;
   return (
@@ -682,5 +794,82 @@ export function DocsQuizBlock(): JSX.Element {
       markdown={context.markdown}
       generate={context.config.generate}
     />
+  );
+}
+
+export function DocsAuthoredQuiz({
+  quiz,
+  renderMarkdown,
+}: {
+  quiz: DocsAuthoredQuizDocument;
+  renderMarkdown?: (markdown: string) => ReactNode;
+}): JSX.Element {
+  const questions = quiz.questions;
+  const [index, setIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const question = questions[index];
+  const render = (source: string): ReactNode =>
+    renderMarkdown ? renderMarkdown(source) : <pre>{source}</pre>;
+
+  if (!question)
+    return (
+      <section
+        className="quiz my-6 rounded-xl border border-primary-6 bg-primary-2 p-5"
+        data-docs-quiz
+      >
+        <h3 className="mb-2 text-xl font-semibold">Question bank unavailable</h3>
+        <p>This quiz has no readable question and worked-answer pairs.</p>
+      </section>
+    );
+
+  const moveTo = (next: number): void => {
+    setIndex(next);
+    setShowAnswer(false);
+  };
+
+  return (
+    <section
+      className="quiz my-6 rounded-xl border border-primary-6 bg-primary-2 p-5"
+      data-docs-quiz
+      aria-label={quiz.title}
+    >
+      <div className="mb-4">
+        <p className="text-sm" aria-live="polite">
+          Question {index + 1} of {questions.length}
+        </p>
+      </div>
+      <h3 className="mb-3 text-xl font-semibold">{question.title}</h3>
+      {render(question.prompt)}
+      {showAnswer ? (
+        <div className="mt-4" data-docs-quiz-answer>
+          {render(question.answer)}
+        </div>
+      ) : (
+        <button
+          className="mt-4 rounded-md border border-primary-6 bg-background px-4 py-2"
+          type="button"
+          onClick={() => setShowAnswer(true)}
+        >
+          Show worked answer
+        </button>
+      )}
+      <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Quiz questions">
+        <button
+          className="rounded-md border border-primary-6 bg-background px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+          type="button"
+          disabled={index === 0}
+          onClick={() => moveTo(index - 1)}
+        >
+          Previous
+        </button>
+        <button
+          className="rounded-md bg-primary-9 px-4 py-2 text-primary-1"
+          type="button"
+          onClick={() => moveTo((index + 1) % questions.length)}
+        >
+          {index === questions.length - 1 ? 'Restart quiz' : 'Next question'}
+        </button>
+      </nav>
+    </section>
   );
 }

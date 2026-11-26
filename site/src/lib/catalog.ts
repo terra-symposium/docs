@@ -10,6 +10,7 @@ IMPORTS
 
 // API
 import { getHue } from '@terra-symposium/styling';
+import { parse as parseYaml } from 'yaml';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
@@ -49,7 +50,7 @@ const G_CLASS_2 = () => TerraQualityRegex.REGEX_G_REGEX_35();
 /**
  * Matches a leading YAML frontmatter block in a Markdown or MDX page.
  */
-const S_N_S_S_N_S_N_REGEX = /^---\s*\n[\s\S]*?\n---\s*\n/;
+const S_N_S_S_N_S_N_REGEX = /^---\s*\n([\s\S]*?)\n---\s*\n/;
 
 /**
  * Renderable Docs page metadata derived from its Markdown source and frontmatter.
@@ -62,30 +63,14 @@ export type SitePage = {
   description: string;
   hue?: number | null;
   hidden: boolean;
-  content: unknown;
   markdown: string;
   sourceMarkdown: string;
 };
-const pageInputs = {
-  modules: import.meta.glob<{
-    Content?: unknown;
-    default?: unknown;
-    frontmatter?: {
-      title?: string;
-      description?: string;
-      hue?: number | null;
-      label?: string;
-      hidden?: boolean;
-      visibility?: 'visible' | 'hidden';
-      sidebar?: { label?: string; hidden?: boolean };
-    };
-  }>('/docs/**/*.{md,mdx}', { eager: true }),
-  sources: import.meta.glob<string>('/docs/**/*.{md,mdx}', {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  }),
-};
+const pageInputs = import.meta.glob<string>('/docs/**/*.{md,mdx}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
 const base = import.meta.env.BASE_URL;
 const routes = new Map<string, string>();
 /**
@@ -123,12 +108,12 @@ const routes = new Map<string, string>();
  *
  * ## Save edits
  */
-export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
+export const sitePages: SitePage[] = Object.entries(pageInputs)
   .filter(
     ([f]) =>
       import.meta.env.PUBLIC_DOCS_INCLUDE_AGENTS !== 'false' || !f.startsWith('/docs/agents/'),
   )
-  .map(([f, m]) => {
+  .map(([f, source]) => {
     const relativeFile = f.replace(/^\/docs\//, '');
     if (
       !['index.md', 'index.mdx'].includes(relativeFile.toLowerCase()) &&
@@ -144,8 +129,26 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
     if (routes.has(slug))
       throw new Error(`Duplicate Docs route "${slug || '/'}": ${routes.get(slug)} and ${f}`);
     routes.set(slug, f);
-    const markdown = pageInputs.sources[f] ?? '';
-    const frontmatter = m.frontmatter ?? {};
+    const markdown = source ?? '';
+    const frontmatterSource = S_N_S_S_N_S_N_REGEX.exec(markdown)?.[1] ?? '';
+    let frontmatter: {
+      title?: string;
+      description?: string;
+      hue?: number | null;
+      label?: string;
+      hidden?: boolean;
+      visibility?: 'visible' | 'hidden';
+      sidebar?: { label?: string; hidden?: boolean; order?: number };
+      order?: number;
+    };
+    try {
+      frontmatter = (parseYaml(frontmatterSource) ?? {}) as typeof frontmatter;
+    } catch (error) {
+      throw new Error(
+        `Invalid Docs frontmatter in ${f}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+    }
     for (const [field, limit] of [
       ['title', 48],
       ['description', 85],
@@ -178,7 +181,6 @@ export const sitePages: SitePage[] = Object.entries(pageInputs.modules)
       ...(frontmatter.hue !== undefined ? { hue: frontmatter.hue } : {}),
       hidden:
         frontmatter.sidebar?.hidden ?? frontmatter.hidden ?? frontmatter.visibility === 'hidden',
-      content: m.Content ?? m.default,
       markdown: siteImageUrls(markdown.replace(S_N_S_S_N_S_N_REGEX, ''), relativeFile, base),
       sourceMarkdown: markdown,
     };

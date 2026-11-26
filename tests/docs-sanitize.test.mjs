@@ -80,7 +80,7 @@ test('Docs sanitizer converts supported literal rich blocks without changing fen
     assert.equal(run('fix', path).status, 0);
     const fixed = readFileSync(path, 'utf8');
     assert.match(fixed, /<CodeBlock language="ts" code=\{"example"\} \/>/);
-    assert.match(fixed, /<Nodes\n\tnodes=\{\[\n\t\{"id": "1"/);
+    assert.match(fixed, /<Nodes\n\tnodes=\{\[\{"id":"1"/);
     assert.equal(run('check', path).status, 0);
   } finally {
     rmSync(dir, { recursive: true, force: true });

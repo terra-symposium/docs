@@ -322,7 +322,7 @@ function docsNotFoundRoute() {
 export default defineConfig({
   root: consumerRoot,
   srcDir: resolve(packageRoot, 'site/src'),
-  publicDir: resolve(projectRoot, 'dist/public'),
+  publicDir: resolve(consumerRoot, 'dist/public'),
   outDir: resolve(projectRoot, process.env.DOCS_OUT ?? 'dist/docs'),
   ...(site ? { site } : {}),
   base,

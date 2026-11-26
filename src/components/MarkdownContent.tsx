@@ -129,6 +129,11 @@ export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Elem
       renderMarkdown,
     });
   }, [parsed.pageQuiz, registerAuthoredQuiz, renderMarkdown]);
+  useEffect(() => {
+    const authoredQuiz = quizContext?.authoredQuiz;
+    if (!registerAuthoredQuiz || !authoredQuiz || authoredQuiz.renderMarkdown) return;
+    registerAuthoredQuiz({ quiz: authoredQuiz.quiz, renderMarkdown });
+  }, [quizContext?.authoredQuiz, registerAuthoredQuiz, renderMarkdown]);
   return <DocsBlocks blocks={parsed.blocks} options={options} />;
 }
 

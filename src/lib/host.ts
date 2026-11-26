@@ -9,7 +9,7 @@ IMPORTS
 // TYPES
 import type { ComponentType, ReactNode } from 'react';
 import type { DocsBlockOptions } from '../components/blocks.js';
-import type { DocsQuizConfig } from '../components/quiz.js';
+import type { DocsAuthoredQuizDocument, DocsQuizConfig } from '../components/quiz.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -271,6 +271,8 @@ export type DocsWorkspaceProps = {
   userData?: DocsHostUser | null;
   source?: string;
   content?: unknown;
+  /** Optional authored quiz loaded from the current leaf's sibling `quiz.json`. */
+  authoredQuiz?: DocsAuthoredQuizDocument;
   /**
    * Optional static React content slot rendered inside the canonical View surface.
    */

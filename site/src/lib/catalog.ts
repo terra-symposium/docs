@@ -11,6 +11,7 @@ IMPORTS
 // API
 import { getHue } from '@terra-symposium/styling';
 import { parse as parseYaml } from 'yaml';
+import { parseDocsAuthoredQuiz } from '../../../dist/lib/components/quiz.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
@@ -18,6 +19,7 @@ import { siteImageUrls } from '../../../src/lib/local-markdown.js';
 
 // TYPES
 import type { DocsNavNode } from '../../../dist/lib/components/navigation.js';
+import type { DocsAuthoredQuizDocument } from '../../../dist/lib/components/quiz.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -65,12 +67,30 @@ export type SitePage = {
   hidden: boolean;
   markdown: string;
   sourceMarkdown: string;
+  authoredQuiz?: DocsAuthoredQuizDocument;
 };
 const pageInputs = import.meta.glob<string>('/docs/**/*.{md,mdx}', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
+const quizInputs = import.meta.glob<string>('/docs/**/quiz.json', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const leafDirectory = (file: string): string => file.replace(/(?:index\.mdx?|quiz\.json)$/, '');
+const authoredQuizzes = new Map<string, DocsAuthoredQuizDocument>();
+for (const [file, source] of Object.entries(quizInputs)) {
+  try {
+    authoredQuizzes.set(leafDirectory(file), parseDocsAuthoredQuiz(JSON.parse(source)));
+  } catch (error) {
+    throw new Error(
+      `Invalid authored quiz in ${file}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
+}
 const base = import.meta.env.BASE_URL;
 const routes = new Map<string, string>();
 /**
@@ -115,6 +135,7 @@ export const sitePages: SitePage[] = Object.entries(pageInputs)
   )
   .map(([f, source]) => {
     const relativeFile = f.replace(/^\/docs\//, '');
+    const authoredQuiz = authoredQuizzes.get(leafDirectory(f));
     if (
       !['index.md', 'index.mdx'].includes(relativeFile.toLowerCase()) &&
       !relativeFile.includes('/')
@@ -183,6 +204,7 @@ export const sitePages: SitePage[] = Object.entries(pageInputs)
         frontmatter.sidebar?.hidden ?? frontmatter.hidden ?? frontmatter.visibility === 'hidden',
       markdown: siteImageUrls(markdown.replace(S_N_S_S_N_S_N_REGEX, ''), relativeFile, base),
       sourceMarkdown: markdown,
+      ...(authoredQuiz ? { authoredQuiz } : {}),
     };
   })
   .sort((l, r) => l.file.localeCompare(r.file, undefined, { numeric: true }));

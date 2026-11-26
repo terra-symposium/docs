@@ -18,6 +18,7 @@ import '../../site/src/styles/search.css';
 
 // TYPES
 import type { DocsAttachment, DocsSection, DocsTree, DocsNavNode } from '../../dist/lib/lib/index.js';
+import type { DocsAuthoredQuizDocument } from '../../dist/lib/components/quiz.js';
 
 type Props = {
 	title: string;
@@ -41,10 +42,11 @@ type Props = {
 	blockGuidanceEntries?: Record<string, unknown>;
 	attachments?: DocsAttachment[];
 	updatedAt?: string;
+	authoredQuiz?: DocsAuthoredQuizDocument;
 	searchBase?: string;
 };
 
-const { title, homeHref = '/', description: desc, pageTitle, pageDescription: pageDesc, hue = 145, nodes = [], trees, sections, currentPath, rootPath = '/', markdown = '', sourceMarkdown: srcMarkdown, sourcePath: srcPath, content, blockGuidanceEntries, attachments = [], updatedAt, searchBase = '/' } = Astro.props;
+const { title, homeHref = '/', description: desc, pageTitle, pageDescription: pageDesc, hue = 145, nodes = [], trees, sections, currentPath, rootPath = '/', markdown = '', sourceMarkdown: srcMarkdown, sourcePath: srcPath, content, blockGuidanceEntries, attachments = [], updatedAt, authoredQuiz, searchBase = '/' } = Astro.props;
 const hasStaticSlot = Astro.slots.has('default');
 const staticContent = hasStaticSlot || markdown.trim().length > 0;
 const siteIslandProps = {
@@ -66,6 +68,7 @@ const siteIslandProps = {
 	blockGuidanceEntries,
 	attachments,
 	updatedAt,
+	authoredQuiz,
 	staticContent,
 	searchBase,
 };

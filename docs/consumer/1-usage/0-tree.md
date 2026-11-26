@@ -43,7 +43,7 @@ Trees, branches, and leaves can own files. Choose the owner whose readers need t
 
 A page must include the useful content from its sources. Use [Leaf: Sources](/consumer/1-usage/1-leaf/#sources) for coverage; keep maps and missing-source notes in the work record. For university-source access, reuse, and placement rules, follow the [University profile](/consumer/2-audience-profiles/3-university/).
 
-In local repositories, prefix attachments with `_` and do not number them. Put leaf-specific files beside its `index.md`; put shared files at the owning tree or branch. Keep the names and paths with the page when moving or exporting it.
+In local repositories, prefix attachments with `_` and do not number them. Put leaf-specific files beside its `index.md`; put shared files at the owning tree or branch. The recognised `quiz.json` question bank is leaf data, not an attachment, and sits beside `index.md` without the prefix. Keep names and paths with the page when moving or exporting it.
 
 Choose an attachment owner by scope:
 

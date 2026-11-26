@@ -746,21 +746,21 @@ export function DocsQuizGenerator({
  *
  * @docsId quiz
  * @docsUseWhen Readers should practise a concept after the page has explained it, using an authored or host-generated question bank.
- * @docsConstraint Place a quiz after its explanation.
- * @docsConstraint Keep authored banks in sibling `quiz.json` files.
- * @docsConstraint Keep each question and answer in one titled item.
+ * @docsConstraint Put a quiz after its explanation; it tests understanding.
+ * @docsConstraint `<Quiz />` needs a host generator; authored banks use sibling `quiz.json`.
+ * @docsConstraint Keep each question and answer together; reveal answers on demand.
  * @docsDo Explain the concept before asking readers to practise it.
  * @docsDo Check generated questions and answers in the target host.
- * @docsDo Use choice questions to test recognition.
+ * @docsDo Use multiple choice for recognition and keywords for recall.
  * @docsDont Do not promise saved results unless the host persists them.
- * @docsDont Avoid unexplained identifiers and ambiguous answers.
- * @docsTip Tell readers whether questions or results persist.
+ * @docsDont Do not use unexplained identifiers or ambiguous answer sets.
+ * @docsTip Tell readers whether questions or results are saved.
  * @docsRenderKind quiz
- * @docsTip Use keyword answers to test recall of a term or relation.
+ * @docsTip Multiple choice tests recognition; keywords test recall.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-quiz.png | Docs Insert content menu with Quiz generator highlighted
  * @docsInsertionStep After the explanation, choose + Insert content → Quiz generator.
- * @docsInsertionStep Choose question types, then inspect the generated questions.
- * @docsInsertionStep Tell readers whether results persist.
+ * @docsInsertionStep In View mode, choose question count and types, then inspect the results.
+ * @docsInsertionStep Tell readers whether the host saves results.
  * @docsSyntax
  * ```mdx
  * Save a question bank in `quiz.json` beside the leaf's `index.md`.

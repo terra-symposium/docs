@@ -157,7 +157,7 @@ Each question record has:
 - `prompt`: the question text.
 - `answer`: the solution in Markdown.
 
-Keep each value focused on its purpose. Docs View discovers the file and shows one question at a time in the page-level Quiz dialog.
+Keep each value focused on its purpose. The static site validates the sibling JSON and presents one question at a time in the page-level Quiz dialog, with answers revealed on demand. A host using `DocsLocalWorkspace` or `DocsWorkspace` passes its parsed bank as `authoredQuiz`. The `<Quiz />` generator is a separate host-backed feature: it requires a configured generator, and generated results persist only when the host explicitly saves them.
 
 ```json
 {

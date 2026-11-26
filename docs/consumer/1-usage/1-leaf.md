@@ -109,6 +109,8 @@ For a learning page, follow this sequence:
 
 Follow the [University profile](/consumer/2-audience-profiles/3-university/) for subject-specific teaching requirements.
 
+For learning pages, omit practice questions by default. Add one final quiz only when the reader goal or source calls for it; keep the authored bank in a sibling `quiz.json` and out of the lesson Markdown. See [Blocks: Quiz](/consumer/1-usage/2-blocks/#quiz) for its schema and rendered behavior.
+
 Before drafting, write a short outline. Keep independent topics at the same level; nest a topic only when it is part of its parent. Use the [Blocks reference](/consumer/1-usage/2-blocks/) to choose and validate rendered structures.
 
 Remove repeated or unfinished material and transitions that only announce a block. Introduce a table or visual by explaining what it shows and why it follows here.

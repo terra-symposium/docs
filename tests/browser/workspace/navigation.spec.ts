@@ -286,6 +286,36 @@ test.describe('shared shell and document navigation', () => {
       await p.evaluate(() => {
         const key = 'docs-workspace-demo-v1';
         const state = JSON.parse(localStorage.getItem(key) ?? '{}');
+        state.documents.salesphere.content.push(
+          {
+            _key: 'navigation-h3-one',
+            _type: 'block',
+            style: 'h3',
+            markDefs: [],
+            children: [
+              {
+                _key: 'navigation-h3-one-text',
+                _type: 'span',
+                marks: [],
+                text: 'Implementation detail one',
+              },
+            ],
+          },
+          {
+            _key: 'navigation-h3-two',
+            _type: 'block',
+            style: 'h3',
+            markDefs: [],
+            children: [
+              {
+                _key: 'navigation-h3-two-text',
+                _type: 'span',
+                marks: [],
+                text: 'Implementation detail two',
+              },
+            ],
+          },
+        );
         state.documents.salesphere.content.push({
           _key: 'heading-navigation-tail',
           _type: 'block',
@@ -310,8 +340,42 @@ test.describe('shared shell and document navigation', () => {
       await expect(toc).toBeVisible();
       const tgt = toc.getByRole('link', { name: 'Jump to Find the implementation' });
       await expect(tgt).toBeVisible();
+      const childLinks = toc.getByRole('link', { name: /^Jump to Implementation detail/ });
+      await expect(childLinks).toHaveCount(2);
+      const childLinkGap = await childLinks.evaluateAll((links) => {
+        const [first, second] = links.map((link) => link.getBoundingClientRect());
+        return second.top - first.bottom;
+      });
+      expect(childLinkGap).toBeLessThanOrEqual(2);
+      const tocRowHeights = await toc.evaluate((element) => ({
+        h2: element.querySelector<HTMLElement>('ol > li > [data-docs-toc-id]')?.offsetHeight,
+        h3: element.querySelector<HTMLElement>('ol > li > ol > li > [data-docs-toc-id]')
+          ?.offsetHeight,
+      }));
+      expect(tocRowHeights.h2).toBe(48);
+      expect(tocRowHeights.h3).toBe(24);
+      await p.evaluate(() => {
+        const state = window as Window & { __docsScrollBehaviors?: Array<string | undefined> };
+        state.__docsScrollBehaviors = [];
+        const original = HTMLElement.prototype.scrollIntoView;
+        HTMLElement.prototype.scrollIntoView = function (
+          options?: boolean | ScrollIntoViewOptions,
+        ) {
+          state.__docsScrollBehaviors?.push(
+            typeof options === 'object' ? options.behavior : undefined,
+          );
+          original.call(this, options);
+        };
+      });
       await tgt.click();
       await expect(p).toHaveURL(/#find-the-implementation$/);
+      await expect
+        .poll(() =>
+          p.evaluate(() =>
+            (window as Window & { __docsScrollBehaviors?: string[] }).__docsScrollBehaviors?.at(-1),
+          ),
+        )
+        .toBe('smooth');
       await expect
         .poll(
           async () =>
@@ -319,6 +383,27 @@ test.describe('shared shell and document navigation', () => {
               await p
                 .locator('[data-docs-view-root] h2')
                 .filter({ hasText: /^Find the implementation$/ })
+                .boundingBox()
+            )?.y ?? Number.POSITIVE_INFINITY,
+        )
+        .toBeLessThan(180);
+      const childTarget = toc.getByRole('link', { name: 'Jump to Implementation detail two' });
+      await childTarget.click();
+      await expect(p).toHaveURL(/#implementation-detail-two$/);
+      await expect
+        .poll(() =>
+          p.evaluate(() =>
+            (window as Window & { __docsScrollBehaviors?: string[] }).__docsScrollBehaviors?.at(-1),
+          ),
+        )
+        .toBe('smooth');
+      await expect
+        .poll(
+          async () =>
+            (
+              await p
+                .locator('[data-docs-view-root] h3')
+                .filter({ hasText: /^Implementation detail two$/ })
                 .boundingBox()
             )?.y ?? Number.POSITIVE_INFINITY,
         )

@@ -3,31 +3,38 @@ title: Blocks
 description: Choose Docs blocks to clarify a reader's task.
 ---
 
-## Choosing Blocks
+## Choosing blocks
 
-Start with the reader's task and the information hierarchy. Use a block when its shape makes a relationship easier to understand.
+Start with the reader's question and the relationship the page must show. Pick the block that makes that relationship easier to follow.
 
-Before drafting a leaf, read the guidance for every block in this reference so the choice of blocks is informed. Apply each relevant rule to every instance, including examples and nested blocks. Check both the Markdown source and rendered result; a successful build does not replace those checks.
+| 🧭 Reader need                   | Block              |
+| -------------------------------- | ------------------ |
+| 📖 Explain an idea               | Prose and headings |
+| 📋 Group parallel facts or steps | Markdown list      |
+| 🔀 Show flow or dependencies     | Nodes diagram      |
+| 📊 Compare shared fields         | Table              |
+| 🖼️ Explain a visual relationship | Image or diagram   |
+| 🧪 Show one worked example       | Example aside      |
+| ↔️ Compare parallel methods      | Tabs               |
+| 🗂️ Reveal optional peer details  | Accordions         |
 
-| 🧭 Need                                           | Use                                                              |
-| ------------------------------------------------- | ---------------------------------------------------------------- |
-| Organise a page and explain its ideas             | [Meta](#meta), [Native Blocks](#native-blocks)                   |
-| Compare, connect, or separate related information | [Native Blocks](#native-blocks), [Custom Blocks](#custom-blocks) |
-| Add supporting material or practice               | [Custom Blocks](#custom-blocks)                                  |
+The table is a quick choice guide. Follow the sections below for each block's rules and rendered example.
 
-:::caution[Reconsider the hierarchy]
+:::caution[Recheck the hierarchy]
 
-When new content changes a relationship, revisit the headings, order, and groups. Do not keep the old structure by inertia, preserve lecture chronology automatically, or retain supplied groups without checking what readers need. Reconsider the page outline whenever a new block or example changes the relationship between ideas.
+When new material changes a relationship, revisit the headings, order, and groups. Source order and supplied groups do not decide the reader's path.
 
 :::
 
-:::note[Open a block section]
+:::note[Read a block example]
 
-Each block shows its render/source example first, followed by accordion items for Do (including tips), Do not (including constraints), and insertion steps. In Edit mode, use **+ Insert content** for available blocks, then switch to View and check the result. The example has **Rendered** and **Code (MDX)** tabs. Tabs and accordions use adjacent Markdown source syntax; the toolbar does not insert them.
+Each block example pairs authoring guidance with its source and rendered preview. In Edit mode, use **+ Insert content** for supported blocks. Check the result in View mode as well.
 
 :::
 
 ## Frontmatter
+
+The title, description, route, and content identify a leaf. Follow the generated example below.
 
 ===[Frontmatter example]
 
@@ -35,22 +42,15 @@ Each block shows its render/source example first, followed by accordion items fo
 
 ===
 
-## Native Blocks
+## Native blocks
 
-### Prose
+### Prose and headings
 
-- Treat every paragraph over 400 characters as a red flag that needs a deliberate split, rewrite, or explanation for keeping it. A long paragraph is not acceptable merely because its sentences concern one broad topic.
-- Do not use a table to hide a wall of prose or save space. Use a table only when multiple items share the same comparison fields. Use a list for parallel facts or ordered actions; use Nodes for flow, dependencies, hand-offs, or state changes. Separate explanations when they answer different questions.
-- Lists, tables, and callouts still present text. Choose the block that explains the material: lists for grouped facts or actions, Nodes for relationships and movement, tables for shared comparison fields, and images when a visual detail itself matters. Reuse or crop a source image only when it teaches something the other blocks cannot show as clearly. Do not add images just to interrupt prose.
-- Keep an H2 to three H3 children by default; four or more needs a specific reader reason. Count authored Markdown headings only. A source-supported, approved concept outline may need more distinct subconcepts; retain them when each names a necessary idea and fits its parent, and critique the structure instead of failing its count alone. Do not create a stack of H3s for minor details beneath one broad H2: merge near-duplicates or split the leaf when its reader goal has become too broad. Do not use a table to excuse a crowded heading tree, and do not create a practice heading for the concept it practises.
-- Use an accordion only for two or more optional, self-contained peer items of the same kind that readers may choose to open independently. Repeated practice tasks or examples can qualify. A schedule, one topic, a sequence of dependent concepts, or essential explanation does not qualify. Do not use accordions to shorten a page or hide the lesson. Keep accordion titles concise; name the item, not an instruction sentence.
-- Use tabs by default whenever two or more methods, algorithms, protocol versions, or configurations solve the same problem and each needs its own explanation. Give the shared question before the tabs, then make each option a complete, parallel peer. Put its full method-specific explanation, subheadings, diagrams, and examples inside the tab; a summary tab followed by separate method sections is invalid. Align the order and heading structure where the options share a learning route. Keep only shared facts or distinct follow-on concepts outside the tabs. Examples include client-server vs peer-to-peer, stop-and-wait vs Go-Back-N vs TCP recovery, recursive vs iterative DNS, HTTP versions, and alternative schedulers. A concise comparison table is not a reason to omit tabs when the alternatives need explanation. Keep shared conclusions visible after the tabs. Do not tab prerequisites, dependent phases, complementary mechanisms, a whole leaf, or unrelated concepts; when readers need A before B, use visible headings in that order.
-- Put a worked example directly after the concept or method it demonstrates, in a `:::example` callout. A callout is one compact demonstration, not a container for the lesson: keep it to about 80 words or one code fragment of at most 8 lines, and use only one short prose explanation or one small table when needed. Show one concrete input or situation, the essential reasoning, and its result. Never put a complete runnable program, paired client/server files, multiple code blocks, a long table, or setup and troubleshooting instructions in a callout. Put substantial demonstrations in a named subsection with ordinary prose and fenced code; use tabs when the complete demonstrations are parallel methods. Follow the subsection with a brief callout only when one small input/output trace adds learning. Do not collect examples in a page-end “Examples” section, put them in tips, or hide one-off examples in accordions. Keep an example only when it clarifies a concept, method, or decision; remove redundant examples that add no distinct learning. For a valid method comparison, put each method's complete demonstration inside its tab, with compact example callouts where useful.
-- During critique, first scan every concept and compare all candidates that do the same job, answer the same reader question, or provide versions of one service. Require tabs for each applicable set; do not only judge tabs already present. Record the exact alternatives and shared comparison question, or explain why an apparent candidate is sequential or complementary and therefore stays visible. Identify each accordion's exact peer items and why readers benefit from opening them independently. Inspect each example callout's rendered height and content: fail a callout that contains a complete program, paired client/server files, multiple code blocks, a long table, setup instructions, or troubleshooting steps. Keep callouts compact enough to read as one inline demonstration; move a substantial worked tutorial into a named subsection, with ordinary prose and code, or into parallel method tabs. Check that every retained example is beside the concept it demonstrates, not a tip or page-end collection. If the reviewer cannot name the relationship, the block fails; page length, convenience, and shared source location are not valid reasons.
-- Avoid runs of tiny H2 sections and long explanations or example lists under one H2/H3. When one H3 contains several substantial explanations or many examples, first check whether they are genuinely comparable; use a compact table only for shared comparison fields. Otherwise use lists for parallel facts, Nodes for a process or relationship, keep distinct subconcepts visible under concise headings, or split the leaf if reader goals differ. Accordions remain limited to repeated optional peer items of the same kind.
-- Never place two code blocks directly together. Combine one example, put alternatives in tabs or an accordion, or explain a meaningful difference between blocks.
-- Keep the default page to 12 content-view heights at 1280 × 800 with accordions closed and tabs at their initial state. Treat the limit as a review signal, not permission to hide required content. Split distinct reader goals; shorten repetition and use blocks only when each one meets its content test.
-- Remove meta commentary about how to read or navigate the documentation. Include interface directions only when they are part of the reader's actual task.
+Keep each paragraph on one idea. Treat paragraphs over 400 characters as a review signal. Move every sentence under the heading where it advances the explanation.
+
+Put definitions in a labeled list item or table row. Keep relationships and reasoning in prose. If prose contains parallel points, make them a real Markdown list.
+
+Use only H2 and H3 in Docs Markdown. The renderer rejects H4–H6 Markdown and HTML headings on every leaf. Keep each H2 focused and use H3 only for its true subconcepts.
 
 ===[Prose example]
 
@@ -59,6 +59,8 @@ Each block shows its render/source example first, followed by accordion items fo
 ===
 
 ### Lists and links
+
+Give each list one clear purpose and each item one point, at most 75 visible characters including link labels and inline code. Split compound items when they contain separate facts or actions. A list over five items must be grouped under meaningful categories or changed to a more suitable structure; consecutive lists do not make a long list shorter. Number steps only when order matters. Use descriptive link text and check that each destination opens.
 
 ===[Lists and links example]
 
@@ -76,15 +78,21 @@ Each block shows its render/source example first, followed by accordion items fo
 
 ### Tables
 
+Introduce a table with prose that names the comparison and why it belongs here. Follow it with an interpretation or transition. Never place tables back to back; explain their relationship or combine them when they share one comparison.
+
+Show a history once, in one chronological table with date, event, and significance. Put definitions in rows with columns such as **Term**, **Description**, and **Examples**. Add meaningful emoji to the independent category axis when it helps scanning; omit decorative emoji.
+
 ===[Tables example]
 
 <DocsBlock data='{"_type":"blockGuidance","id":"tables"}' />
 
 ===
 
-## Visual
+## Visual blocks
 
 ### Diagrams
+
+Use Nodes for flow, dependencies, hand-offs, and state. In Markdown, write `nodes` and `edges` as valid JSON arrays with double-quoted keys and strings and no trailing commas. Preview every diagram to confirm it renders as a diagram.
 
 ===[Diagram example]
 
@@ -93,6 +101,8 @@ Each block shows its render/source example first, followed by accordion items fo
 ===
 
 ### Images
+
+Crop source images to the relevant content. Remove surrounding document headings and unrelated material. Keep meaningful labels, add specific alt text, and explain nearby what readers should notice. Do not show a caption in the rendered page.
 
 ===[Image example]
 
@@ -108,9 +118,11 @@ Each block shows its render/source example first, followed by accordion items fo
 
 ===
 
-## Interactive
+## Interactive blocks
 
 ### Tabs
+
+Use tabs for related, parallel methods, versions, or configurations that answer the same question. Put each option's full explanation and example inside its tab. Keep shared facts outside. Do not hide a dependent sequence in tabs.
 
 ===[Tabs example]
 
@@ -120,15 +132,11 @@ Each block shows its render/source example first, followed by accordion items fo
 
 ### Accordions
 
-An accordion group is a run of at least two adjacent, titled disclosures under one descriptive heading. Each disclosure is one item in the group. Use the group only when those items are optional, self-contained peers of the same kind and readers benefit from opening them independently. Repeated worked examples or troubleshooting cases may qualify, but never mix item kinds within a group. Keep each item's instructions, examples, conditions, and expected result together. Practice questions belong in a final Docs `<Quiz data={...} />` block when the lesson requires a quiz, not in accordion groups. A single disclosure, a timetable, a single subject, a dependent sequence, or essential orientation does not qualify: keep it visible in the page hierarchy, with one-off examples in a `:::example` callout. Accordions change presentation only; they are not a reason to summarize, omit, defer content to an attachment, or compress a long page.
+Use an accordion group only for at least two optional, self-contained peers of the same kind. Give the group a meaningful heading and each item a concise label. Do not hide essential explanation, ordered steps, a schedule, or a whole lesson.
 
-Accordion labels are disclosure controls, not document headings. They do not belong in the page's heading outline and should not be counted as H3 siblings. Give the group a meaningful heading, then use concise labels to distinguish the expandable cases. Split a large group when the reader's goal changes; do not add a heading for every task just to create artificial hierarchy.
+Worked examples and troubleshooting cases may qualify when each item can be read independently. Quiz questions belong in a sibling `quiz.json`, never in accordions. For example size and callout rules, see [Asides](#asides).
 
-For university lessons, show an essential worked example in a `:::example[Worked example]` callout immediately after the explanation it demonstrates. Keep that aside to about 80 words or one code fragment of at most 8 lines; it must show one concrete input or situation, the essential reasoning, and the result. Never put a whole program, paired client/server files, several code blocks, a long table, or setup steps in an example callout. Move a substantial demonstration into a named subsection with ordinary prose and fenced code, or into complete parallel method tabs. Never label worked examples as tips or move them to an end-of-page collection. Remove a redundant example if it adds no distinct learning. Use `:::tip` for a short tip or warning; do not wrap a quiz prompt or answer in a callout. By default, omit practice questions; add a quiz only when the reader goal or source material requires one, and author it in a final `## Quiz` section after all teaching. Never scatter questions beneath the concepts they test. An authored bank uses `<Quiz data={...} />` with a JSON object containing `title` and `questions`; each question is an object with `title`, `prompt`, and `answer` strings. Keep each string focused on its question or solution; do not wrap it in callouts, tabs, or accordions because the Quiz component supplies the presentation. In Docs View, the shared renderer moves a final authored bank into a page-level **Quiz** button that opens a dialog. The Markdown source still keeps the bank in its final section, and other renderers may show the block inline. The dialog shows one question at a time and reveals the answer on demand. Do not use an accordion for each quiz question. This pattern does not qualify ordinary prose, a schedule, or one-off essential content for an accordion. Keep task labels concise. The normal reading path must expose essential explanations and subject information.
-
-Before publication, list every tab group and accordion group in the agent-side critique record and state which rule it satisfies: name at least two exact peer item titles in each accordion group and why readers benefit from opening them independently, or name the related parallel topics and shared comparison question for each tab set. Quiz questions belong in the shared `<Quiz data={...} />` block and never count as qualifying accordion items. Reject a single disclosure, a mismatched set, or a group whose only reason is that the page is long, the content arrived together, or the items are convenient to hide. Do not group a worked example with a practice task or mix examples with explanations. Verify that every `:::example` stays within the compact callout limit; complete programs, paired files, long tables, and setup procedures must appear as ordinary lesson content or inside parallel method tabs. Check the rendered callout at normal reading size. Verify examples use the `example` aside and the default page still teaches its subject and exposes essential information without opening a block.
-
-=== [Accordion example]
+===[Accordion example]
 
 <DocsBlock data='{"_type":"blockGuidance","id":"accordions"}' />
 
@@ -136,24 +144,32 @@ Before publication, list every tab group and accordion group in the agent-side c
 
 ### Quiz
 
-Quiz content is JSON only. A source-controlled bank uses the self-closing `<Quiz data={{...}} />` form; its `data` value must be a JSON object with a `title` and `questions` array. Each question object has a `title`, plus focused `prompt` and `answer` Markdown strings. Do not place callouts, tabs, or accordions inside them; the Quiz component supplies the presentation and answer reveal. The shared block needs no host-specific callback. It does not accept a Markdown body between `<Quiz>` tags. Keep the source bank after the lesson in a final `## Quiz` section. In Docs View, the shared renderer presents that bank through a page-level **Quiz** button and dialog, so readers don't see a separate quiz block at the end of the lesson.
+Keep authored quiz data in `quiz.json` beside the leaf's `index.md`. Do not put a Quiz component, heading, or question bank in Markdown.
 
-For generated quizzes, `<Quiz />` has no authored question data; the host generator must return JSON in the generated question schema. It is an optional host integration, separate from source-controlled JSON banks.
+The quiz object has:
 
-<!-- prettier-ignore -->
-```mdx
-## Quiz
+- `title`: the quiz name.
+- `questions`: an array of question records.
 
-<Quiz data={{
+Each question record has:
+
+- `title`: a short label.
+- `prompt`: the question text.
+- `answer`: the solution in Markdown.
+
+Keep each value focused on its purpose. Docs View discovers the file and shows one question at a time in the page-level Quiz dialog.
+
+```json
+{
   "title": "Queue growth",
   "questions": [
     {
-      "title": "Queue growth rate",
-      "prompt": "Arrival is 500 packets/s and service is 350 packets/s. Find the queue growth rate.",
-      "answer": "The queue grows at 500 − 350 = 150 packets/s while it is not full."
+      "title": "Growth rate",
+      "prompt": "Arrival is 500 packets/s and service is 350 packets/s. Find the growth rate.",
+      "answer": "The queue grows at 150 packets/s while it is not full."
     }
   ]
-}} />
+}
 ```
 
 ===[Quiz example]
@@ -166,7 +182,22 @@ For generated quizzes, `<Quiz />` has no authored question data; the host genera
 
 ### Asides
 
-Use `:::example[Worked example]` for one compact worked example, not as a lesson container and not as `:::tip`. Keep it to about 80 words or one code fragment of at most 8 lines. A complete program, paired client/server files, multiple code blocks, a long table, or setup procedure belongs in a named subsection or a complete parallel method tab, outside the aside. Close each aside with exactly the same number of colons as its opening line. Accordion and tab items are parsed as independent Markdown bodies, so do not add an extra colon to an aside closer merely because it appears inside an item. Check the rendered item at normal reading size to confirm it is concise, styled, and its full content remains inside it.
+Choose the callout kind that matches the reader's need:
+
+| 🧭 Kind    | Use it for                      |
+| ---------- | ------------------------------- |
+| 📝 Note    | Background or a definition      |
+| 💡 Tip     | Practical advice                |
+| ⚠️ Caution | A likely pitfall                |
+| 🚨 Warning | A serious issue                 |
+| ⛔ Danger  | A forbidden or high-risk action |
+| 🧪 Example | Concrete behavior               |
+
+Keep required explanations and steps in the reading path. Place each aside beside the concept or decision it changes.
+
+Use `:::example[Worked example]` for one compact example beside the concept it teaches. Keep it to about 80 words or one code fragment of at most 8 lines. Put a substantial explanation, program, or procedure in ordinary lesson content. Close the aside with the same number of colons used to open it.
+
+Use `:::tip` for one short tip or warning. Do not use it for a quiz question or answer.
 
 ===[Aside example]
 
@@ -198,4 +229,4 @@ Use `:::example[Worked example]` for one compact worked example, not as a lesson
 
 ===
 
-For the shared block contracts and host configuration, see the [API reference](../../../developer/component/blocks/).
+For shared block contracts and host configuration, see the [API reference](../../../developer/component/blocks/).

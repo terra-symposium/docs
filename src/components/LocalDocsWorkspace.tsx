@@ -31,7 +31,7 @@ import type {
   DocsHostTreeNode,
 } from '../lib/host.js';
 import type { DocsBlockOptions } from './blocks.js';
-import type { DocsQuizConfig } from './quiz.js';
+import type { DocsAuthoredQuizDocument, DocsQuizConfig } from './quiz.js';
 import type { JSX, ReactNode } from 'react';
 
 /*//////////////////////////////////////////////////
@@ -47,6 +47,7 @@ export type DocsLocalPage = {
   pathname: string;
   title: string;
   markdown: string;
+  authoredQuiz?: DocsAuthoredQuizDocument;
   description?: string;
   contributors?: string[];
   updatedAt?: string;
@@ -532,6 +533,7 @@ export function DocsLocalWorkspace(workspaceOptions: DocsLocalWorkspaceProps): J
       {...(page?.description ? { description: page.description } : {})}
       {...(page?.contributors ? { contributors: page.contributors } : {})}
       {...(page?.updatedAt ? { updatedAt: page.updatedAt } : {})}
+      {...(page?.authoredQuiz ? { authoredQuiz: page.authoredQuiz } : {})}
       {...(page ? { source: srcBody, content } : { content })}
       {...(page && !customBlocks
         ? { renderContent: <DocsMarkdown markdown={srcBody} options={blocks} /> }

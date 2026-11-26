@@ -283,6 +283,7 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
         config={workspaceOptions.quiz ?? {}}
         title={workspaceOptions.title}
         markdown={workspaceOptions.source ?? ''}
+        {...(workspaceOptions.authoredQuiz ? { authoredQuiz: workspaceOptions.authoredQuiz } : {})}
       >
         <Scaffold
           tree={

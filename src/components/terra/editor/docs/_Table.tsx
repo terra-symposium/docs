@@ -319,23 +319,24 @@ function TableEditor({
  *
  * @docsId tables
  * @docsUseWhen Compare repeated attributes that share meaningful columns.
- * @docsConstraint Use a table only when multiple rows share meaningful comparison columns.
- * @docsConstraint Use prose or a list for a single point or a sequence of actions.
- * @docsConstraint Put meaningful emoji on the independent category axis: first row for column categories, first column for row categories, or both when both axes vary.
- * @docsConstraint Keep headers short and unbolded; preserve row and cell structure.
- * @docsDont Do not put unescaped pipe-delimited syntax in a pipe-table cell; show that source in a fenced block instead.
- * @docsDo Use structured table data when host-supplied Portable Text cells need rich content.
- * @docsDo Use HTML only to preserve necessary structure such as a caption that a simple pipe table cannot express.
+ * @docsConstraint Use tables for one comparison with shared columns.
+ * @docsConstraint Introduce each table and interpret it afterward.
+ * @docsConstraint Add explanatory prose between adjacent tables.
+ * @docsConstraint Show history once in a chronological table.
+ * @docsConstraint Put useful emoji on the independent category axis.
+ * @docsDont Fence source text that contains unescaped table pipes.
+ * @docsDo Keep headers short and unbolded.
+ * @docsDo Use structured data when host-supplied cells need rich content.
+ * @docsDo Use HTML only when structure such as a caption matters.
  * @docsDont Do not scatter decorative emoji through dependent value cells.
  * @docsDont Do not use HTML for an ordinary two-column grid.
  * @docsDont Do not flatten rich Portable Text cells into prose.
  * @docsTip Check cell wrapping and scan the category axis in the rendered page.
- * @docsDo Use a pipe table for simple repeated rows; preserve an HTML table only when structure such as a caption matters.
- * @docsDo Keep rich host-supplied Portable Text cells structured when they contain more than plain text.
+ * @docsDo Use pipe tables for simple repeated rows.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-table.png | Docs Insert content menu with Table highlighted
- * @docsInsertionStep In Edit mode, place the cursor where the comparison belongs and choose + Insert content → Table.
- * @docsInsertionStep Enter concise headers and comparable row values; add axis emojis to the varying categories.
- * @docsInsertionStep Preview cell wrapping and confirm the columns support an actual comparison.
+ * @docsInsertionStep Choose + Insert content → Table.
+ * @docsInsertionStep Enter short headers and comparable row values.
+ * @docsInsertionStep Preview cell wrapping and confirm columns compare like values.
  * @docsSyntax
  * ```mdx
  * | Stage     | Owner |

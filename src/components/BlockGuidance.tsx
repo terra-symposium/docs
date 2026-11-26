@@ -54,7 +54,11 @@ export type BlockGuidanceEntry = {
    */
   dos: string[];
   /**
-   * Constraints and misuses, combined from constraint and don't tags.
+   * Requirements and limits for using this block.
+   */
+  constraints: string[];
+  /**
+   * Misuses to avoid.
    */
   donts: string[];
   /**
@@ -94,6 +98,7 @@ export function BlockGuidance({ entry }: { entry: BlockGuidanceEntry }): JSX.Ele
   // hygiene-ignore single-use -- Keep the three guidance groups named and ordered before rendering their accordion items.
   const guidance = [
     { id: 'do', title: '✅ Do', items: entry.dos },
+    { id: 'constraints', title: '📌 Constraints', items: entry.constraints },
     { id: 'dont', title: '🚫 Do not', items: entry.donts },
     { id: 'insertion', title: '🖱️ Insertion steps', items: entry.insertionSteps },
   ];
@@ -125,7 +130,7 @@ export function BlockGuidance({ entry }: { entry: BlockGuidanceEntry }): JSX.Ele
                   <Badge variant="success-default" size="sm">
                     Ready
                   </Badge>
-                  <CardHeading as="h4">Build status</CardHeading>
+                  <CardHeading as="h3">Build status</CardHeading>
                 </CardHeader>
                 <CardContent>
                   <CardDescription>
@@ -213,10 +218,7 @@ export function BlockGuidance({ entry }: { entry: BlockGuidanceEntry }): JSX.Ele
               {id === 'insertion' && entry.editorImages.length > 0 && (
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {entry.editorImages.map((img) => (
-                    <figure key={img.src} className="m-0">
-                      <img src={img.src} alt={img.alt} />
-                      <figcaption className="mt-1 text-sm">{img.alt}</figcaption>
-                    </figure>
+                    <img key={img.src} src={img.src} alt={img.alt} />
                   ))}
                 </div>
               )}

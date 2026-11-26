@@ -11,6 +11,7 @@ IMPORTS
 // API
 import { getHue } from '@terra-symposium/styling';
 import { parse as parseYaml } from 'yaml';
+import { parseDocsAuthoredQuiz } from '../../../dist/lib/components/quiz.js';
 
 // COMPONENTS
 import * as TerraQualityRegex from '../../../src/lib/terra/regex.mjs';
@@ -18,6 +19,7 @@ import { siteImageUrls } from '../../../src/lib/local-markdown.js';
 
 // TYPES
 import type { DocsNavNode } from '../../../dist/lib/components/navigation.js';
+import type { DocsAuthoredQuizDocument } from '../../../dist/lib/components/quiz.js';
 
 /*//////////////////////////////////////////////////
 CONFIG
@@ -65,12 +67,30 @@ export type SitePage = {
   hidden: boolean;
   markdown: string;
   sourceMarkdown: string;
+  authoredQuiz?: DocsAuthoredQuizDocument;
 };
 const pageInputs = import.meta.glob<string>('/docs/**/*.{md,mdx}', {
   query: '?raw',
   import: 'default',
   eager: true,
 });
+const quizInputs = import.meta.glob<string>('/docs/**/quiz.json', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const leafDirectory = (file: string): string => file.replace(/(?:index\.mdx?|quiz\.json)$/, '');
+const authoredQuizzes = new Map<string, DocsAuthoredQuizDocument>();
+for (const [file, source] of Object.entries(quizInputs)) {
+  try {
+    authoredQuizzes.set(leafDirectory(file), parseDocsAuthoredQuiz(JSON.parse(source)));
+  } catch (error) {
+    throw new Error(
+      `Invalid authored quiz in ${file}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
+}
 const base = import.meta.env.BASE_URL;
 const routes = new Map<string, string>();
 /**
@@ -78,20 +98,19 @@ const routes = new Map<string, string>();
  *
  * @docsId frontmatter
  * @docsUseWhen Every repository-backed leaf needs a title and description before its body.
- * @docsConstraint Every repository-backed leaf starts with YAML frontmatter containing title and description.
- * @docsConstraint The title is at most 48 characters; the description is at most 85 characters. Count spaces and punctuation.
- * @docsConstraint Keep each value on one line; quote YAML-significant punctuation such as a colon.
- * @docsConstraint The local catalogue reads title and description, but rejects order and sidebar.order; filenames determine navigation order.
- * @docsConstraint Audience assumptions belong in the authoring brief unless the active host schema supports that metadata.
+ * @docsConstraint Put title and description in frontmatter.
+ * @docsConstraint Keep titles within 48 characters.
+ * @docsConstraint Keep descriptions within 85 characters.
+ * @docsConstraint Keep each metadata value on one line.
+ * @docsConstraint Local navigation order comes from filenames.
  * @docsDo Describe the page purpose, not its source filename or format.
  * @docsDo Check host-specific metadata against that host’s schema before adding it.
  * @docsDo Use numbered filenames when setting local navigation order.
  * @docsDont Do not add metadata the catalogue does not read.
  * @docsDont Do not split a title or description across lines.
- * @docsTip Treat title and description as navigation and search labels; keep them concise and meaningful.
- * @docsTip A short description is typically near 75 characters; never exceed the strict 85-character maximum.
+ * @docsTip Make metadata specific to the page.
  * @docsInsertionStep Put the YAML fence at the start of the Markdown leaf.
- * @docsInsertionStep Enter a one-line `title` and `description`, then preview the navigation and search labels.
+ * @docsInsertionStep Enter one-line title and description values.
  * @docsSyntax
  * ```mdx
  * ---
@@ -115,6 +134,7 @@ export const sitePages: SitePage[] = Object.entries(pageInputs)
   )
   .map(([f, source]) => {
     const relativeFile = f.replace(/^\/docs\//, '');
+    const authoredQuiz = authoredQuizzes.get(leafDirectory(f));
     if (
       !['index.md', 'index.mdx'].includes(relativeFile.toLowerCase()) &&
       !relativeFile.includes('/')
@@ -183,6 +203,7 @@ export const sitePages: SitePage[] = Object.entries(pageInputs)
         frontmatter.sidebar?.hidden ?? frontmatter.hidden ?? frontmatter.visibility === 'hidden',
       markdown: siteImageUrls(markdown.replace(S_N_S_S_N_S_N_REGEX, ''), relativeFile, base),
       sourceMarkdown: markdown,
+      ...(authoredQuiz ? { authoredQuiz } : {}),
     };
   })
   .sort((l, r) => l.file.localeCompare(r.file, undefined, { numeric: true }));

@@ -24,7 +24,7 @@ import { Button } from '@terra-symposium/styling/ui';
 import { ErrorBoundary } from '@terra-symposium/boundaries/react';
 import { DocsWorkspace } from './terra/Workspace.js';
 import { DocsMarkdown } from './MarkdownContent.js';
-import type { DocsQuizConfig } from './quiz.js';
+import type { DocsAuthoredQuizDocument, DocsQuizConfig } from './quiz.js';
 
 // TYPES
 import type { DocsAttachment, DocsLeaf, DocsSection, DocsTree } from '../lib/workspace-types.js';
@@ -251,6 +251,7 @@ export function DocsStaticWorkspace({
   children,
   staticContent = false,
   quiz,
+  authoredQuiz,
 }: {
   title: string;
   homeHref?: string;
@@ -276,6 +277,8 @@ export function DocsStaticWorkspace({
    */
   sourcePath?: string;
   content?: unknown;
+  /** Authored question bank loaded from the current leaf's sibling `quiz.json`. */
+  authoredQuiz?: DocsAuthoredQuizDocument;
   blockGuidanceEntries?: Record<string, unknown>;
   attachments?: DocsAttachment[];
   updatedAt?: string;
@@ -336,7 +339,9 @@ export function DocsStaticWorkspace({
         : '';
   // hygiene-ignore single-use -- Resolve asset URLs before choosing the render fallback; moving this call into the edited branch would defer source validation.
   const editedPreview = srcPath ? siteImageUrls(srcBody, srcPath, rootPath) : srcBody;
-  const markdownOptions = blockGuidanceEntries ? { blockGuidanceEntries } : undefined;
+  const markdownOptions = {
+    ...(blockGuidanceEntries ? { blockGuidanceEntries } : {}),
+  };
   const contentSlot =
     (edited ? <DocsMarkdown markdown={editedPreview} options={markdownOptions} /> : undefined) ??
     renderContent ??
@@ -642,6 +647,7 @@ export function DocsStaticWorkspace({
           content={docContent}
           staticContent={staticContent}
           {...(quiz ? { quiz } : {})}
+          {...(authoredQuiz ? { authoredQuiz } : {})}
           {...(readyContent !== undefined ? { renderContent: readyContent } : {})}
         />
       </ErrorBoundary>

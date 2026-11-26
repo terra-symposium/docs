@@ -10,6 +10,7 @@ IMPORTS
 import assert from 'node:assert/strict';
 import { renderMarkdown } from '../dist/lib/lib/markdown.js';
 import { markdownToDocsValue } from '../dist/lib/lib/markdown-model.js';
+import { markdownHeadingDepthIssues } from '../dist/lib/lib/index.js';
 import { test } from 'node:test';
 
 /*//////////////////////////////////////////////////
@@ -28,6 +29,20 @@ test('renders Terra accordion and tab syntax without dropping rich content', () 
   assert.doesNotMatch(html, /<details|docs-tabs|docs-accordions/);
   assert.match(html, /const x = 1/);
   assert.match(html, /role="tablist"/);
+});
+test('heading depth check ignores code and rejects headings deeper than H3', () => {
+  assert.deepEqual(markdownHeadingDepthIssues('## Topic\n### Part\n#### Too deep'), [3]);
+  assert.deepEqual(markdownHeadingDepthIssues('```md\n#### Example\n```\n## Topic'), []);
+  assert.deepEqual(markdownHeadingDepthIssues('~~~\n##### Example\n~~~'), []);
+});
+test('renderer replaces Markdown that contains H4 headings with an error', () => {
+  assert.match(renderMarkdown('## Topic\n#### Too deep'), /H2 and H3 headings only/);
+  assert.doesNotMatch(renderMarkdown('## Topic\n#### Too deep'), /<h4/);
+});
+test('images keep alt text and omit visible captions', () => {
+  const html = renderMarkdown('![Relevant detail](https://example.com/crop.png "Slide heading")');
+  assert.match(html, /alt="Relevant detail"/);
+  assert.doesNotMatch(html, /Slide heading|<figcaption/);
 });
 test('renders accordion callouts when Prettier joins the title and directive', () => {
   const html = renderMarkdown(

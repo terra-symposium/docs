@@ -8,6 +8,7 @@ IMPORTS
 
 // API
 import { markdownToDocsValue } from '../lib/markdown-model.js';
+import { markdownHeadingDepthIssues } from '../lib/block-types.js';
 import { useDocsQuizContext, parseDocsAuthoredQuiz } from './quiz.js';
 import { useCallback, useEffect, useMemo } from 'react';
 
@@ -57,19 +58,18 @@ HELPERS
  *
  * @docsId lists-and-links
  * @docsUseWhen Group related points, ordered actions, or destinations a reader may need next.
- * @docsConstraint Each list item, including nested items and checklist entries, is at most 75 characters excluding its marker.
- * @docsConstraint Bullets represent unordered facts; numbered lists represent dependent actions in order.
+ * @docsConstraint Keep each list item at or below 75 characters.
+ * @docsConstraint Use bullets for facts and numbers for ordered actions.
+ * @docsConstraint Turn parallel points in prose into a Markdown list.
+ * @docsConstraint Give each list one purpose.
  * @docsDo Keep one idea per item and preserve order when actions depend on it.
- * @docsDo Put supporting details in short nested items under their owning point.
- * @docsDo Use prose outside the list if a point cannot be split without losing meaning.
+ * @docsDo Put short supporting details under their owning point.
  * @docsDo Use descriptive links whose labels name the destination or reader outcome.
- * @docsDo Use [ ] and [x] for read-only checklist states, marking complete only after checking.
- * @docsDont Do not number unordered facts or use “click here” as the only link label.
- * @docsDont Do not mark a checklist item complete before verifying it.
- * @docsTip If a long list has comparable attributes, consider a table; otherwise keep the list.
- * @docsTip For lists too long to scan, consider a table only if items share comparable attributes.
+ * @docsDo Mark a checklist complete only after verifying it.
+ * @docsDont Do not number unordered facts or use “click here” as a link label.
+ * @docsTip Use a table only when list items share comparable attributes.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/formatting.png | Docs editor toolbar with the Link button
- * @docsInsertionStep Enter `-`, `1.`, or checklist markers in Markdown source for the required list type.
+ * @docsInsertionStep Enter `-`, `1.`, or checklist markers in Markdown source.
  * @docsInsertionStep For a link, select its label, choose Link, and enter the destination.
  * @docsInsertionStep Preview list nesting, order, checklist state, and destination.
  * @docsSyntax
@@ -99,6 +99,26 @@ HELPERS
 export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Element {
   const quizContext = useDocsQuizContext();
   const parsed = useMemo(() => {
+    if (markdownHeadingDepthIssues(markdown).length)
+      return {
+        blocks: [
+          {
+            _type: 'block',
+            _key: 'learning-heading-error',
+            style: 'normal',
+            markDefs: [],
+            children: [
+              {
+                _type: 'span',
+                _key: 'learning-heading-error-text',
+                text: 'Invalid page: use H2 and H3 headings only.',
+                marks: [],
+              },
+            ],
+          },
+        ] as RichBlock[],
+        pageQuiz: null,
+      };
     const blocks = markdownToDocsValue(markdown, options) as RichBlock[];
     if (!quizContext) return { blocks, pageQuiz: null };
     const quizBlock = blocks.at(-1);
@@ -129,6 +149,11 @@ export function DocsMarkdown({ markdown, options }: DocsMarkdownProps): JSX.Elem
       renderMarkdown,
     });
   }, [parsed.pageQuiz, registerAuthoredQuiz, renderMarkdown]);
+  useEffect(() => {
+    const authoredQuiz = quizContext?.authoredQuiz;
+    if (!registerAuthoredQuiz || !authoredQuiz || authoredQuiz.renderMarkdown) return;
+    registerAuthoredQuiz({ quiz: authoredQuiz.quiz, renderMarkdown });
+  }, [quizContext?.authoredQuiz, registerAuthoredQuiz, renderMarkdown]);
   return <DocsBlocks blocks={parsed.blocks} options={options} />;
 }
 
@@ -327,23 +352,20 @@ function MarkdownGroup({
  *
  * @docsId tabs
  * @docsUseWhen Compare related, parallel alternatives that perform the same task or answer the same question.
- * @docsConstraint When multiple methods, algorithms, protocols, versions, or modes solve the same problem, use tabs by default if each needs its own explanation.
- * @docsConstraint Keep the comparison question and facts shared by all alternatives before the tabs.
- * @docsConstraint Each alternative must be a complete, independently understandable peer with a concise title.
- * @docsConstraint Put each option's full method-specific lesson, including its subheadings, diagrams, and examples, inside its tab; a summary tab followed by separate option sections is invalid.
- * @docsConstraint Align the order and heading structure inside tabs when the alternatives share the same learning route.
- * @docsConstraint Do not tab phases that occur in sequence or mechanisms that work together rather than offer alternatives.
- * @docsConstraint Local and Hosted procedures, platform-specific commands, and other either/or paths must use titled tabs.
- * @docsDo Use tabs to compare alternative methods, algorithms, protocol versions, or configurations even when readers are learning the choices rather than selecting one.
- * @docsDo Keep each tab directive adjacent to the other alternatives.
+ * @docsConstraint Use tabs for alternatives that answer the same question.
+ * @docsConstraint Keep shared facts before the tabs.
+ * @docsConstraint Give each alternative a complete explanation and concise title.
+ * @docsConstraint Align the order of parallel explanations when useful.
+ * @docsConstraint Use titled tabs for Local and Hosted alternatives.
+ * @docsDo Put each full alternative inside its tab.
+ * @docsDo Keep tab directives adjacent.
  * @docsDont Do not put alternatives in side-by-side table columns.
- * @docsDont Do not tab consecutive phases, prerequisite concepts, or complementary mechanisms that are used together.
- * @docsDont Do not hide facts readers need all at once; keep essential cross-option conclusions visible after the tabs.
- * @docsTip A useful test is whether every tab answers the same question, such as “How do these methods provide reliable delivery?”
- * @docsDo Keep shared facts before or after the alternatives; put each complete parallel route inside its tab and keep only material outside that answers a shared question or teaches a distinct follow-on concept.
+ * @docsDont Do not tab steps or mechanisms used together.
+ * @docsDont Keep facts shared by all options outside the tabs.
+ * @docsTip Check that every tab answers the same question.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/editor-toolbar.png | Docs editor toolbar; it has no Tabs insertion button
- * @docsInsertionStep Tabs have no toolbar insertion button. Add adjacent titled `|||[Title]` directives in Markdown source.
- * @docsInsertionStep Put each alternative's full explanation, subheadings, diagrams, and examples inside its tab; align the order where useful.
+ * @docsInsertionStep Add adjacent titled `|||[Title]` directives in Markdown.
+ * @docsInsertionStep Put each alternative's full explanation inside its tab.
  * @docsInsertionStep Switch through every tab in View mode.
  * @docsSyntax
  * ```mdx
@@ -429,20 +451,20 @@ export function MarkdownTabs({
  *
  * @docsId accordions
  * @docsUseWhen Let readers inspect parallel details without forcing every detail into the main reading path.
- * @docsConstraint Accordion items are independent cases, examples, questions, or optional explanations in one category.
- * @docsConstraint Shared context, required actions, decisions, and serious warnings remain visible outside collapsed content.
- * @docsConstraint A stack of callouts serving one purpose should become titled accordion items.
+ * @docsConstraint Keep accordion items independent and in one category.
+ * @docsConstraint Keep required actions and shared context outside collapsed content.
+ * @docsConstraint Group same-purpose callouts in titled accordion items.
  * @docsDo Give each item a label naming its case and its own supporting detail.
- * @docsDo Put an example aside inside the item it illustrates, retaining its boundary.
+ * @docsDo Put each example inside the item it illustrates.
  * @docsDo Put each delimiter on its own line with blank lines around the body.
- * @docsDont Do not combine unrelated details in one item or split one ordered procedure across items.
+ * @docsDont Do not combine unrelated details in one item.
+ * @docsDont Do not split one ordered procedure across items.
  * @docsDont Do not hide a required action or warning in a closed panel.
- * @docsDont An aside does not replace an accordion when several parallel items need titles.
- * @docsTip A run of same-purpose callouts is a cue to group them; test each panel in View mode.
- * @docsDo An example aside may live inside the accordion item for its case; retain the aside boundary.
+ * @docsDont Use an accordion when there are no independent items.
+ * @docsTip Open every panel in View mode.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/editor-toolbar.png | Docs editor toolbar; it has no Accordion insertion button
- * @docsInsertionStep Accordions have no toolbar insertion button. Add adjacent titled `===[Title]` directives in Markdown source.
- * @docsInsertionStep Give each independent item its own supporting detail; keep required actions outside.
+ * @docsInsertionStep Add adjacent titled `===[Title]` directives in Markdown.
+ * @docsInsertionStep Keep required actions outside closed panels.
  * @docsInsertionStep Open every panel in View mode and check nested examples.
  * @docsSyntax
  * ```mdx

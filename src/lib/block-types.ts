@@ -34,6 +34,28 @@ export type DocsBlockOptions = Partial<Record<DocsBlockType | 'inlineMath', bool
    */
   blockGuidanceEntries?: Record<string, unknown>;
 };
+
+/** Reports Markdown or HTML headings deeper than H3, outside code and comments. */
+export function markdownHeadingDepthIssues(markdown: string): number[] {
+  const issues: number[] = [];
+  const source = markdown.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, ''));
+  let fence: { character: string; length: number } | undefined;
+  source.split(/\r?\n/).forEach((line, index) => {
+    const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const marker = fenceMatch[1]!;
+      const character = marker[0]!;
+      if (fence) {
+        if (fence.character === character && marker.length >= fence.length) fence = undefined;
+      } else fence = { character, length: marker.length };
+      return;
+    }
+    if (fence) return;
+    const prose = line.replace(/(`+)(.*?)\1/g, '');
+    if (/^\s*#{4,6}\s+/.test(prose) || /<\/?h[4-6]\b[^>]*>/i.test(prose)) issues.push(index + 1);
+  });
+  return issues;
+}
 /**
  * Open record shape used while converting host blocks to and from Portable Text.
  */

@@ -1194,45 +1194,25 @@ function tableBlock(
  *
  * @docsId prose
  * @docsUseWhen Write a readable page with headings, paragraphs, inline emphasis, and links.
- * @docsConstraint Begin the body with an H2; nest H3 beneath H2 and H4 beneath H3. Never skip a heading level.
- * @docsConstraint Keep headings to one to four words; put the explanation or promised outcome in the opening prose.
- * @docsConstraint H2 headings are peer topics. Put a topic's parts under it as H3; use H4 only to divide one H3 topic further.
- * @docsConstraint Nest by meaning: a child answers a question within its parent. Shared vocabulary, chronology, or visual indentation is not a parent-child relationship.
- * @docsConstraint Prefer two levels. Add a third only when an H3 topic contains multiple distinct parts that need headings.
- * @docsConstraint Introduce an H2 or H3 before placing a table or diagram beneath it.
- * @docsConstraint Treat every paragraph over 400 characters as a red flag. Review whether its ideas belong in a list, table, diagram, code block, or aside; keep prose when those blocks would obscure the relationship.
- * @docsConstraint Many H3s beneath one H2, or long prose and several example-heavy subconcepts beneath an H3, signal that the section may be a comparison table instead. When subconcepts share dimensions, give each one a row and use columns for those dimensions; do not force unrelated ideas into a table.
- * @docsDo Use ordinary Markdown; keep each paragraph about one idea.
- * @docsDo Use inline code for literal names and expressions.
- * @docsDo Use bold only when the distinction changes meaning; use italics sparingly.
- * @docsDo Preserve meaningful underline and strikethrough; explain key quotes.
- * @docsDo Draft the outline as a tree before prose. Group details beneath the concept or task they explain; keep independent topics as peers.
- * @docsDo Read the outline alone: peer headings should answer the same kind of reader question, and each child should be a clear part of its parent.
- * @docsDo When a section contains many related subconcepts or examples, compare them in a table with one row per subconcept and concise columns for shared attributes.
- * @docsDo For one visual system, group Typography, Colour, and Components beneath a parent such as Visual system.
- * @docsDo Use short, concrete topic names; put instructions, explanations, and promised outcomes in the prose.
- * @docsDo Remove a heading that repeats its parent, labels one paragraph/example, or adds no reader value.
+ * @docsConstraint Use H2 and H3 only; deeper headings are banned.
+ * @docsConstraint Use short headings; put explanations in prose.
+ * @docsConstraint Use H2 for topics and H3 for their parts.
+ * @docsConstraint Nest headings only when each child belongs to its parent.
+ * @docsConstraint Introduce tables and diagrams under a relevant heading.
+ * @docsDo Keep each paragraph about one idea.
+ * @docsDo Outline the page before drafting prose.
+ * @docsDo Keep independent topics as peer headings.
+ * @docsDo Compare related concepts in a table when they share fields.
+ * @docsDont Do not group unrelated topics beneath one heading.
+ * @docsDont Do not give every paragraph or example its own heading.
  * @docsDont Do not use decorative emoji in headings.
- * @docsDont Do not bold a sentence just for emphasis; rewrite it for clarity.
- * @docsDont Do not leave a page as a flat inventory when its topics have meaningful parent-child relationships.
- * @docsDont Do not group independent topics under a broad label just to create indentation.
- * @docsDont Do not give each paragraph, example, or block a heading.
- * @docsDont Do not use vague labels such as “Overview” or “Next steps” when a specific topic can be named.
- * @docsDont Do not publish generic advice alone; add verified product details, examples, constraints, or steps.
- * @docsDont Do not use H5/H6 for emphasis; keep deep levels only when needed.
- * @docsTip Reconsider the whole information hierarchy whenever content is added or moved.
- * @docsTip Organise by reader task, not source order, lecture chronology, or supplied groups.
- * @docsTip Hide the body and read the outline: its groups and levels should explain how the ideas relate before the reader opens a section.
- * @docsDo Use H2 for main sections, H3 for subsections, and H4 only under H3.
- * @docsTip H5 and H6 are for genuinely necessary imported depth; prefer a shallower page.
- * @docsTip A blockquote sets off attributed source wording; avoid quoting ordinary instructions.
- * @docsTip Bold may mark a key term when the distinction changes meaning; italics can distinguish a term.
- * @docsTip Preserve meaningful imported underline; strikethrough can show a superseded value when the old value matters.
+ * @docsDont Do not use H4, H5, or H6.
+ * @docsTip Recheck the outline after moving or adding content.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/docs-authoring-ui.png | Docs Authoring page showing headings and a code example
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/block-type-menu.png | Docs editor Block type menu with Heading 2 highlighted
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/formatting.png | Docs editor toolbar with inline formatting and link controls
- * @docsInsertionStep In Edit mode, open Block type and choose Normal, Heading 2–6, or Quote.
- * @docsInsertionStep Use inline controls for emphasis and links; enter inline code in Markdown source.
+ * @docsInsertionStep Choose Normal, Heading 2, Heading 3, or Quote.
+ * @docsInsertionStep Use inline controls for emphasis and links.
  * @docsInsertionStep Preview the heading outline, formatting, and links.
  * @docsSyntax
  * ```mdx

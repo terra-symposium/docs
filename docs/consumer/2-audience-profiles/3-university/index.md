@@ -48,9 +48,25 @@ Explain why a source is useful and where to begin. Link readings to the relevant
 
 ### Subject Information
 
-Model every university branch's Subject Information leaf on this visible outline, in this order. Keep each section as a real page heading; do not put a whole section, schedule, or learning path inside tabs or accordions. If a section has no verified data, keep its heading and say what is unavailable, then report the source gap outside the published page. Never invent missing course details.
+Model every university branch's Subject Information leaf on this visible outline, in this exact order. These seven labels are the only H2 headings on the page; use H3 only for genuine subsections within one of them. Do not add a second heading for the same topic under a different name. Keep each section as a real page heading; do not put a whole section, schedule, or learning path inside tabs or accordions. If a section has no verified data, keep its heading and say what is unavailable, then report the source gap outside the published page. Never invent missing course details.
 
-| Topic              | Include                                                                                                 |
+```md
+## At a glance
+
+## Learning path
+
+## Teaching team
+
+## Readings and tools
+
+## Schedule
+
+## Assessment
+
+## Support
+```
+
+| H2 section         | Include                                                                                                 |
 | ------------------ | ------------------------------------------------------------------------------------------------------- |
 | At a glance        | Subject name, purpose, and current official course link                                                 |
 | Learning path      | Concept lessons in prerequisite order, with a short reason for the sequence                             |
@@ -59,6 +75,8 @@ Model every university branch's Subject Information leaf on this visible outline
 | Schedule           | Topics and dependencies; mark dates without a confirmed year as historical or unverified                |
 | Assessment         | Task, criteria, release and due dates, submission route; direct learners to the current official source |
 | Support            | Where to ask academic, technical, or personal questions                                                 |
+
+Use the same seven H2 labels on every Subject Information page, even when a section has no verified facts. Keep concept explanations in their concept lessons; the Learning path section names and orders those lessons rather than teaching their subject matter. Put contact details under Teaching team and support routes under Support. Put course reading and tool access under Readings and tools. Keep the visible chronological schedule table under Schedule and assessment requirements under Assessment. Use H3 only to divide substantial, distinct material inside one required section; use bold labels or table rows for smaller details.
 
 Use visible tables for contacts, reading lists, schedules, and assessment facts when the data shares columns. A reading row preserves the source's full title, access route, purpose, required/optional status, and related concept lesson. Put practical setup under **Readings and tools** or a clearly titled subheading within it, with steps visible when they matter. Do not accordion a schedule or a singleton section. Use an accordion only for at least two optional, self-contained peer items of the same kind; use tabs only for related parallel topics readers may compare. Do not use either block to compress or conceal required administration. For concept teaching, critique every applicable tab opportunity: if two or more approaches do the same job, ask the same question, or represent versions of one service, compare them in tabs unless their relationship is sequential or complementary. A comparison table alone is not a reason to omit tabs; convert same-purpose method tables to complete tabs and state the shared comparison question.
 
@@ -117,7 +135,7 @@ Organize by concepts and prerequisites. Weeks, lectures, tutorials, labs, assess
 
 Use an accordion for at least two optional, self-contained worked examples or troubleshooting cases of the same kind that readers can open independently. In critique, name those peer items and explain why independent disclosure helps; if that reason cannot be stated, fail the accordion. A single essential worked example stays visible in a `:::example[Worked example]` aside. Omit practice questions by default. If a quiz is required, place one final `## Quiz` source section after all teaching and use the shared Docs `<Quiz data={...} />` block; Docs View lifts it into a page-level Quiz button and dialog. Author the bank as JSON in `<Quiz data={{...}} />`: the document has a `title` and a `questions` array, and each question has a `title`, `prompt`, and `answer`. Keep each prompt and answer focused; do not place callouts, tabs, or accordions inside them because the Quiz component supplies the presentation. The block shows one question at a time and reveals answers on demand; it does not accept quiz content as a Markdown tag body. Do not use accordions for quiz items, distribute questions through the lesson, or interrupt dependent explanations. A schedule, explanation, or unrelated section never qualifies merely because it is long.
 
-#### Logical operators
+### Logical operators
 
 :::example[Worked example]
 

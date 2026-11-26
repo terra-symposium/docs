@@ -121,6 +121,10 @@ const ContentEditor = lazy(() =>
   import('../../editor/ContentEditor.js').then((module) => ({ default: module.ContentEditor })),
 );
 
+/*//////////////////////////////////////////////////
+CONFIG
+//////////////////////////////////////////////////*/
+
 /**
  * Matches trailing separators when comparing route roots.
  */
@@ -158,10 +162,10 @@ const navigateHeading = (id: string, text: string): void => {
       : shell?.dataset.docsMode === 'edit'
         ? shell.querySelector<HTMLElement>('[data-docs-body-editor], [data-docs-body-content]')
         : null
-    )?.querySelectorAll<HTMLElement>('h2') ?? [],
+    )?.querySelectorAll<HTMLElement>('h2, h3') ?? [],
   )
     .find((e) => e.id === id || e.textContent?.trim() === text)
-    ?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   window.history.pushState(null, '', `#${id}`);
 };
 
@@ -239,20 +243,15 @@ const EditorSurfaces = {
   }): JSX.Element {
     // INIT
     const surface = useContext(EditorSurfaceCtx);
-    const editorRefs = {
-      toolbar: useAtom($toolbar),
-      empty: useRef<EditorRefs>({} as EditorRefs),
-    };
+    const editorRefs = { toolbar: useAtom($toolbar), empty: useRef<EditorRefs>({} as EditorRefs) };
     const [init, setInit] = useState(false);
     const [docsAttachments, setDocsAttachments] = useState<DocsHostAttachment[]>([]);
     const transition = useContext(TransitionCtx);
     useEffect(() => {
       if (!surface) return;
-      const markNativeInput = (event: Event): void => {
+      const markNativeInput = (e: Event): void => {
         if (
-          (event.target as Element).closest(
-            '[data-docs-body-editor] [data-docs-article-editor="true"]',
-          )
+          (e.target as Element).closest('[data-docs-body-editor] [data-docs-article-editor="true"]')
         )
           surface.markBodyInteraction();
       };
@@ -276,7 +275,7 @@ const EditorSurfaces = {
       const body = surface.refs.current.body;
       if (!body) return;
       let frame = 0;
-      const mountObserver = {
+      const mountObs = {
         /**
          * Checks whether the editor root has mounted and updates route readiness from the editor mount registry.
          */
@@ -284,7 +283,7 @@ const EditorSurfaces = {
           const root = body.querySelector<HTMLElement>('[data-content-editor]');
           if (root) {
             setEditorMount(surface.path, 'root', true);
-            observer.disconnect();
+            obs.disconnect();
           }
           const mounts = $editorMounts.get();
           setInit(
@@ -298,16 +297,16 @@ const EditorSurfaces = {
          */
         queue(): void {
           window.cancelAnimationFrame(frame);
-          frame = window.requestAnimationFrame(mountObserver.check);
+          frame = window.requestAnimationFrame(mountObs.check);
         },
       };
-      const observer = new MutationObserver(mountObserver.queue);
-      observer.observe(body, { childList: true, subtree: true });
-      mountObserver.queue();
+      const obs = new MutationObserver(mountObs.queue);
+      obs.observe(body, { childList: true, subtree: true });
+      mountObs.queue();
       return () => {
         window.cancelAnimationFrame(frame);
         setEditorMount(surface.path, 'root', false);
-        observer.disconnect();
+        obs.disconnect();
       };
     }, [surface?.path, surface?.parseError, surface?.editor.loaded]);
     useEffect(() => {
@@ -594,51 +593,33 @@ const EditorSurfaces = {
           visible: true,
         });
         $cursorPosition.set({
-          anchorOffset: saved.anchorOffset,
-          anchorPath: saved.anchorPath,
-          anchorText: saved.anchorText,
+          ...saved,
           anchorLinear,
           box,
           collapsed: n.collapsed,
           code: null,
           dom: n.cloneRange(),
-          focusOffset: saved.focusOffset,
-          focusPath: saved.focusPath,
-          focusText: saved.focusText,
           focusLinear,
-          text: saved.text,
           visible: true,
         });
         $cursor.set({
-          anchorOffset: saved.anchorOffset,
-          anchorPath: saved.anchorPath,
-          anchorText: saved.anchorText,
+          ...saved,
           anchorLinear,
           box,
           collapsed: n.collapsed,
           code: null,
           dom: n.cloneRange(),
-          focusOffset: saved.focusOffset,
-          focusPath: saved.focusPath,
-          focusText: saved.focusText,
           focusLinear,
-          text: saved.text,
           visible: true,
         });
         $cursorGhost.set({
-          anchorOffset: saved.anchorOffset,
-          anchorPath: saved.anchorPath,
-          anchorText: saved.anchorText,
+          ...saved,
           anchorLinear,
           box,
           collapsed: n.collapsed,
           code: null,
           dom: n.cloneRange(),
-          focusOffset: saved.focusOffset,
-          focusPath: saved.focusPath,
-          focusText: saved.focusText,
           focusLinear,
-          text: saved.text,
           visible: true,
         });
         editorRefsForRoot.current.selection = {
@@ -3388,7 +3369,7 @@ export default function Scaffold({
                                             size="xs"
                                             aria-label={`Jump to ${parent.text}`}
                                             className={cn(
-                                              'relative h-fit min-h-0 w-full justify-start gap-0.5 truncate py-0 pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
+                                              'relative !my-0 !h-12 !min-h-12 w-full justify-start gap-0.5 truncate !py-0 !leading-5 pl-4 text-xs before:absolute before:left-1.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:content-[""] hover:!bg-transparent',
                                               tocState.path === currDoc.pathname &&
                                                 tocState.active === parent.id
                                                 ? 'text-primary-12 before:bg-current'
@@ -3401,24 +3382,22 @@ export default function Scaffold({
                                             <ol className="m-0 flex list-none flex-col gap-y-0 p-0">
                                               {tocHeadings
                                                 .filter((h) => h.parentId === parent.id)
-                                                .map((child) => (
-                                                  <li key={child.id} className="h-fit py-0">
+                                                .map((c) => (
+                                                  <li key={c.id} className="h-fit py-0">
                                                     <ButtonLink
-                                                      data-docs-toc-id={child.id}
-                                                      data-docs-toc-heading={child.text}
-                                                      href={`#${child.id}`}
+                                                      data-docs-toc-id={c.id}
+                                                      data-docs-toc-heading={c.text}
+                                                      href={`#${c.id}`}
                                                       variant="ghost"
                                                       size="xs"
-                                                      aria-label={`Jump to ${child.text}`}
+                                                      aria-label={`Jump to ${c.text}`}
                                                       className={cn(
-                                                        'h-fit min-h-0 w-full justify-start truncate py-0 pl-7 text-[0.7rem] hover:!bg-transparent',
-                                                        tocState.path === currDoc.pathname &&
-                                                          tocState.active === child.id
-                                                          ? 'text-primary-12'
-                                                          : 'text-primary-11',
+                                                        '!my-0 !h-6 !min-h-6 w-full justify-start truncate !py-0 !leading-5 pl-7 text-[0.7rem] hover:!bg-transparent',
+                                                        // prettier-ignore
+                                                        tocState.path === currDoc.pathname && tocState.active === c.id ? 'text-primary-12' : 'text-primary-11',
                                                       )}
                                                     >
-                                                      {child.text}
+                                                      {c.text}
                                                     </ButtonLink>
                                                   </li>
                                                 ))}

@@ -29,7 +29,7 @@ const ROUNDED_MD_BG_PRIMARY_9_PX_4_PY_2_TEXT_PRIMARY_1_CLASS =
 export type DocsQuizQuestionType = 'multipleChoice' | 'keyword';
 /** One source-controlled open-response question in an authored quiz bank. */
 export type DocsAuthoredQuizQuestion = { title: string; prompt: string; answer: string };
-/** JSON document consumed by `<Quiz data={...} />`. */
+/** Authored question bank loaded from a leaf's sibling `quiz.json`. */
 export type DocsAuthoredQuizDocument = {
   title: string;
   questions: DocsAuthoredQuizQuestion[];
@@ -75,7 +75,7 @@ export type DocsQuizConfig = {
   generate?: (input: DocsQuizGenerationInput) => Promise<unknown>;
 };
 /**
- * Current document and generation settings shared with Markdown quiz blocks.
+ * Current document, authored bank, and generation settings shared with quiz controls.
  */
 type DocsQuizContextValue = {
   config: DocsQuizConfig;
@@ -102,6 +102,7 @@ HELPERS
  * @param config - Host controls for toolbar visibility and server-backed generation.
  * @param title - Page title used in quiz labels and as a generation fallback.
  * @param markdown - Page source from which a host may generate questions.
+ * @param authoredQuiz - Optional source-controlled bank loaded from the leaf's sibling JSON file.
  *
  * @returns The provider subtree with quiz context available to descendants.
  */
@@ -110,10 +111,12 @@ export function DocsQuizProvider({
   config,
   title,
   markdown,
+  authoredQuiz,
 }: {
   config: DocsQuizConfig;
   title: string;
   markdown: string;
+  authoredQuiz?: DocsAuthoredQuizDocument;
   children: ReactNode;
 }): JSX.Element {
   const [registered, setRegistered] = useState<{ markdown: string; quiz: DocsPageQuiz } | null>(
@@ -129,7 +132,12 @@ export function DocsQuizProvider({
         config,
         title,
         markdown,
-        authoredQuiz: registered?.markdown === markdown ? registered.quiz : null,
+        authoredQuiz:
+          registered?.markdown === markdown
+            ? registered.quiz
+            : authoredQuiz
+              ? { quiz: authoredQuiz }
+              : null,
         registerAuthoredQuiz,
       }}
     >
@@ -225,7 +233,7 @@ export function parseDocsQuiz(v: unknown): DocsQuizDocument {
 }
 
 /**
- * Validates authored quiz JSON supplied to `<Quiz data={...} />`.
+ * Validates an authored quiz JSON document loaded from a leaf or supplied by a host.
  *
  * @param v JSON value expected to contain a title and at least one prompt/answer pair.
  * @returns A validated authored quiz document.
@@ -738,30 +746,25 @@ export function DocsQuizGenerator({
  *
  * @docsId quiz
  * @docsUseWhen Readers should practise a concept after the page has explained it, using an authored or host-generated question bank.
- * @docsConstraint Place a quiz after the explanation it tests; it tests understanding and does not replace required page content.
- * @docsConstraint `<Quiz />` needs a host-supplied JSON generator; authored `<Quiz data={...} />` JSON banks work without host configuration and cannot contain nested callouts, tabs, or accordions.
- * @docsConstraint Keep each authored question and worked answer together in one titled item; reveal answers on demand.
+ * @docsConstraint Place a quiz after its explanation.
+ * @docsConstraint Keep authored banks in sibling `quiz.json` files.
+ * @docsConstraint Keep each question and answer in one titled item.
  * @docsDo Explain the concept before asking readers to practise it.
  * @docsDo Check generated questions and answers in the target host.
- * @docsDo Use multiple choice for recognition with one supported answer; use keyword answers for a specific term or relationship.
+ * @docsDo Use choice questions to test recognition.
  * @docsDont Do not promise saved results unless the host persists them.
- * @docsDont Do not require an unexplained private identifier or use an ambiguous answer set.
- * @docsTip State where questions/results live so readers know what is and is not saved.
+ * @docsDont Avoid unexplained identifiers and ambiguous answers.
+ * @docsTip Tell readers whether questions or results persist.
  * @docsRenderKind quiz
- * @docsTip Multiple choice tests recognition among alternatives with one supported answer; keyword answer tests recall of a specific term or relationship.
+ * @docsTip Use keyword answers to test recall of a term or relation.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-quiz.png | Docs Insert content menu with Quiz generator highlighted
  * @docsInsertionStep After the explanation, choose + Insert content → Quiz generator.
- * @docsInsertionStep In View mode, choose question count and types, then generate and inspect the questions.
- * @docsInsertionStep Confirm results remain in the page session unless the host explicitly persists them.
+ * @docsInsertionStep Choose question types, then inspect the generated questions.
+ * @docsInsertionStep Tell readers whether results persist.
  * @docsSyntax
  * ```mdx
- * After explaining the concept, practise with a generated quiz:
- *
- * <Quiz />
- *
- * Or author a reusable JSON question bank without a host generator:
- *
- * <Quiz data={{"title":"Queue growth","questions":[{"title":"Queue growth","prompt":"Find the queue growth rate.","answer":"Subtract service rate from arrival rate."}]}} />
+ * Save a question bank in `quiz.json` beside the leaf's `index.md`.
+ * The host loads it into the page-level Quiz dialog.
  * ```
  * @docsRenderedExample
  * After explaining the concept, practise the key ideas with a generated or authored quiz.

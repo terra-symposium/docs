@@ -102,23 +102,24 @@ function NodesRenderer(diagramOptions: NodesProps & { className?: string }): JSX
  *
  * @docsId diagrams
  * @docsUseWhen A process, dependency, or decision is clearer as connected nodes than as a short list.
- * @docsConstraint Use a diagram for a process, hierarchy, dependency, or decision only when its connections explain more than a short list or table.
- * @docsConstraint Keep prose outside the diagram; include complete node and edge arrays in the directive.
- * @docsConstraint In `.md` files, write `nodes` and `edges` as JSON arrays inside braces: quote every key and string with double quotes, and omit trailing commas. The Markdown renderer does not evaluate JavaScript expressions.
+ * @docsConstraint Use a diagram only when its connections clarify the idea.
+ * @docsConstraint Keep explanatory prose outside the diagram.
+ * @docsConstraint In Markdown, provide valid JSON arrays for `nodes` and `edges`.
  * @docsConstraint Every edge must point to an existing source and target node.
- * @docsDo Use origin for a start, process for an action, terminator for an outcome, and terminal for a hard stop.
- * @docsDo Use decision for meaningful alternatives, data for an input/output, note for short context, group for one stage, and ERD for entities.
- * @docsDo Put each node or edge object on one line, then inspect labels, direction, spacing, and controls.
+ * @docsDo Match each node type to its role.
+ * @docsDo Keep each node and edge on one line.
+ * @docsDo Preview labels and connections.
  * @docsDont Do not add a diagram when it only repeats labels or a linear list.
- * @docsDont Do not point edges to missing nodes or replace required data with empty arrays.
- * @docsDont Do not use a node type for a different semantic role (for example, an origin for every intermediate step).
- * @docsTip Prefer a list for a short linear sequence and a table for repeated attributes.
+ * @docsDont Do not point edges to missing nodes.
+ * @docsDont Do not use empty node or edge arrays.
+ * @docsDont Do not use a node type for the wrong role.
+ * @docsTip Prefer a list for a short sequence.
  * @docsRenderKind nodes
- * @docsTip Origin marks a start; process an action; terminator an outcome; terminal a hard stop; decision a meaningful branch; data an input/output; note short context; group one stage; ERD an entity.
+ * @docsTip Use a table for repeated attributes.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-nodes.png | Docs Insert content menu with Nodes highlighted
- * @docsInsertionStep In Edit mode, place the cursor where the relationships belong and choose + Insert content → Nodes.
- * @docsInsertionStep Add complete node and edge arrays; connect each edge to an existing node.
- * @docsInsertionStep Preview labels, direction, spacing, and graph controls.
+ * @docsInsertionStep Choose + Insert content → Nodes.
+ * @docsInsertionStep Add nodes and connect each edge to an existing node.
+ * @docsInsertionStep Preview labels and connections.
  * @docsSyntax
  * ```mdx
  * <Nodes

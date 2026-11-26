@@ -298,23 +298,21 @@ function NestedContent({
  *
  * @docsId embeds-and-custom-blocks
  * @docsUseWhen An external resource or host-registered component adds needed context at this point in the reading path.
- * @docsConstraint Embed only when a reader needs to inspect the resource in the page; use a descriptive link when they only need the destination.
- * @docsConstraint Reusable leaf embeds must resolve to a leaf registered in the active host.
- * @docsConstraint Verify authorization and access behavior before presenting an embed as working.
- * @docsDo Provide a resolvable leaf ID when using a reusable leaf embed.
- * @docsDo Keep attachment embeds near their explanation.
- * @docsDo Preserve unknown or disabled structured source in a recoverable form.
- * @docsDont Do not present an unregistered component or unauthorized URL as working.
- * @docsDont Do not discard unknown source or display raw JSON as ordinary prose.
- * @docsTip Use an attachment’s Visual embed when the reader needs the image in place; otherwise link to it.
+ * @docsConstraint Embed only when readers need the resource in this page.
+ * @docsConstraint Reusable leaf embeds need host registration.
+ * @docsConstraint Verify access before presenting an embed as working.
+ * @docsDo Keep attachment embeds beside their explanation.
+ * @docsDo Preserve unknown source in a recoverable form.
+ * @docsDont Do not present an unregistered component as working.
+ * @docsDont Do not discard unknown source or show raw JSON as prose.
+ * @docsTip Link when the destination alone is enough.
  * @docsRenderKind embed
- * @docsDo External embed: use when readers need to inspect the resource here; otherwise link to it.
- * @docsDo Reusable leaf: resolve a valid leaf ID and embed only when the host registers the component.
- * @docsDo Attachment embed: select an existing authorized file and use Visual embed beside its explanation.
+ * @docsDo Embed a reusable leaf only when its host registers it.
+ * @docsDo Use Visual embed beside an attachment's explanation.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-attachment.png | Docs Insert content menu with Add attachment highlighted
- * @docsInsertionStep For a host-managed file, choose + Insert content → Add attachment and select the authorized file.
- * @docsInsertionStep Choose Visual embed when the reader needs to inspect it in place; otherwise link to it.
- * @docsInsertionStep For a Markdown embed, verify the URL, scope, and access behavior in the target host.
+ * @docsInsertionStep Choose Add attachment and select an authorized file.
+ * @docsInsertionStep Choose Visual embed or link to the file.
+ * @docsInsertionStep Verify Markdown embed access in the target host.
  * @docsSyntax
  * ```mdx
  * The reader needs the related guide in place:
@@ -395,7 +393,6 @@ export function DocsRichBlock({
       return sUrl(block.url) ? (
         <figure>
           <img src={sUrl(block.url)} alt={text(block.alt)} />
-          <figcaption>{text(block.title)}</figcaption>
         </figure>
       ) : (
         <p>Image URL unavailable</p>

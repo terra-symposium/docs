@@ -19,6 +19,7 @@ export {
   defaultDocsBlock,
   DocsRichBlock,
 } from '../components/blocks.js';
+export { markdownHeadingDepthIssues } from './block-types.js';
 export type {
   DocsBlockOptions,
   DocsBlockType,

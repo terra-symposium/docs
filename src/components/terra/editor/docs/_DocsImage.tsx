@@ -43,13 +43,12 @@ HELPERS
 /**
  * Renders a Docs image block from its authored block.
  *
- * @param block Authored image block containing its URL, dimensions, alt text, and caption.
+ * @param block Authored image block containing its URL, dimensions, and alt text.
  *
- * @return The image with its authored caption and alternate text.
+ * @return The image with its authored alternate text.
  */
 function Img({ block }: { block: DocsImgBlock }): JSX.Element {
   const url = typeof block.url === 'string' ? block.url : '';
-  const title = typeof block.title === 'string' ? block.title : undefined;
   const width =
     typeof block.width === 'string' || typeof block.width === 'number' ? block.width : undefined;
   const height =
@@ -66,7 +65,6 @@ function Img({ block }: { block: DocsImgBlock }): JSX.Element {
         src={url}
         alt={typeof block.alt === 'string' ? block.alt : ''}
         className="max-w-full"
-        {...(title === undefined ? {} : { title })}
         {...(width === undefined ? {} : { width })}
         {...(height === undefined ? {} : { height })}
       />
@@ -87,21 +85,23 @@ function Img({ block }: { block: DocsImgBlock }): JSX.Element {
  *
  * @docsId images
  * @docsUseWhen A visual explains a detail that prose or a diagram cannot show as clearly.
- * @docsConstraint Use an image only when it shows a detail or spatial relationship the surrounding text needs.
- * @docsConstraint Meaningful images require specific alt text; image paths in repository Markdown are relative to the leaf.
+ * @docsConstraint Use images only for needed detail or spatial relationships.
+ * @docsConstraint Give meaningful images specific alt text.
+ * @docsConstraint Crop screenshots to the relevant detail and remove surrounding material.
+ * @docsConstraint Repository image paths are relative to the leaf.
  * @docsConstraint Keep downloadable attachments in the leaf’s attachment view.
- * @docsDo Name the visible detail in alt text and explain what the reader should notice nearby.
- * @docsDo Use a standalone image after its explanation; small meaningful status images may sit inline.
- * @docsDont Do not use empty alt text for a meaningful image.
- * @docsDont Do not embed a full screenshot mid-sentence or use an image that merely repeats nearby prose.
- * @docsDont Use text or code when the reader needs exact wording or copyable source.
- * @docsTip In a host editor, choose Add attachment, select the existing image, choose Visual embed, and check its alt text.
- * @docsDo A standalone image follows the sentence naming what to inspect; a small status image can be inline when it does not interrupt reading.
- * @docsDo Empty alt text is reserved for decorative images, never meaningful screenshots.
+ * @docsDo Add specific alt text to meaningful images.
+ * @docsDo Explain what to inspect before a standalone image.
+ * @docsDo Keep rendered image captions hidden.
+ * @docsDo Use empty alt text only for decorative images.
+ * @docsDont Do not embed a full screenshot.
+ * @docsDont Do not repeat nearby prose in an image.
+ * @docsDont Use an image for wording or code readers must copy.
+ * @docsTip Add an existing image as a Visual embed in the host editor.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-attachment.png | Docs Insert content menu with Add attachment highlighted
- * @docsInsertionStep In Edit mode, choose + Insert content → Add attachment and select an existing image.
- * @docsInsertionStep Choose Visual embed, then write specific alt text for meaningful content.
- * @docsInsertionStep Preview the image beside its explanation and confirm the asset loads.
+ * @docsInsertionStep Edit: choose Add attachment and select an image.
+ * @docsInsertionStep Choose Visual embed and add specific alt text.
+ * @docsInsertionStep Preview beside prose and confirm it loads.
  * @docsSyntax
  * ```mdx
  * This screenshot shows how headings and code appear in Docs:

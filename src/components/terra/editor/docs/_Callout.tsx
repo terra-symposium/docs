@@ -134,21 +134,22 @@ function CalloutEditor({
  *
  * @docsId asides
  * @docsUseWhen Add one bounded note, tip, warning, or example that changes how nearby content should be read.
- * @docsConstraint Use one aside for one bounded note, tip, caution, warning, danger, or example.
+ * @docsConstraint Use one aside for one bounded point.
  * @docsConstraint Keep the main explanation and required steps in the reading path.
  * @docsConstraint A callout is not a way to make the page look shorter.
- * @docsDo Choose note for background/definition, tip for practical advice, caution for a pitfall, warning for a serious issue, danger for a forbidden/high-risk action, and example for concrete behavior.
- * @docsDo Give each aside a specific title; keep nested lists, tables, and code inside its boundary.
- * @docsDo Map imported info to note and error to danger.
- * @docsDo Group adjacent callouts of one purpose in titled accordion items, with example asides inside their related item.
+ * @docsDo Give each aside a specific title.
+ * @docsDo Choose the [aside kind](#asides) that fits the content.
+ * @docsDo Keep nested lists, tables, and code inside their aside.
+ * @docsDo Group callouts of one purpose in titled accordion items.
  * @docsDont Do not hide a required step in a callout.
- * @docsDont Do not use danger for ordinary background, a vague warning at page end, or a warning for a routine fact.
+ * @docsDont Do not use danger for ordinary facts.
+ * @docsDont Do not put vague warnings at the end of a page.
+ * @docsDont Do not label routine facts as warnings.
  * @docsTip Place the aside beside the decision it affects.
- * @docsTip In Edit mode choose + Insert content → Callout, set its kind and title, then check the result in View mode.
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-callout.png | Docs Insert content menu with Callout highlighted
- * @docsInsertionStep In Edit mode, place the cursor beside the affected explanation and choose + Insert content → Callout.
- * @docsInsertionStep Choose the matching kind, enter a specific title, and write one bounded point.
- * @docsInsertionStep Preview the callout beside the action or decision it affects.
+ * @docsInsertionStep Place the cursor beside prose; choose + Insert content → Callout.
+ * @docsInsertionStep Choose a kind, add a title, and write one point.
+ * @docsInsertionStep Preview beside the affected decision.
  * @docsSyntax
  * ```mdx
  * :::warning[Save outside the editor]

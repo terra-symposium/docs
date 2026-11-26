@@ -183,6 +183,18 @@ const blocks = orderedIds.map((id) => {
     );
   if (insertionSteps.length < 2)
     throw new Error(`Block "${id}" needs at least two ordered @docsInsertionStep entries.`);
+  const guidanceLists = [
+    [`${id} constraints`, constraints],
+    [`${id} Do`, [...dos, ...tips]],
+    [`${id} Do not`, donts],
+    [`${id} insertion steps`, insertionSteps],
+  ];
+  for (const [name, items] of guidanceLists) {
+    if (items.length > 5)
+      throw new Error(`Block "${name}" has ${items.length} items; split or shorten the guidance.`);
+    const overlong = items.find((item) => item.length > 75);
+    if (overlong) throw new Error(`Block "${name}" has an item over 75 characters: ${overlong}`);
+  }
   if (!renderedExample) throw new Error(`Block "${id}" is missing @docsRenderedExample.`);
   if (!syntax.trim()) throw new Error(`Block "${id}" @docsSyntax must include a source example.`);
   if (!['markdown', 'nodes', 'embed', 'quiz', 'tsdocs', 'custom'].includes(renderKind))
@@ -199,7 +211,8 @@ const blocks = orderedIds.map((id) => {
     symbol: reflection.name,
     useWhen,
     dos: [...dos, ...tips],
-    donts: [...constraints, ...donts],
+    constraints,
+    donts,
     insertionSteps,
     code,
     renderedExample,

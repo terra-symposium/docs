@@ -143,16 +143,16 @@ function TsDocsRenderer({
  *
  * @docsId typescript-docs
  * @docsUseWhen Readers need API details after they understand the task the API supports.
- * @docsConstraint Use a TypeScript docs block only for a named API scope the host actually serves.
+ * @docsConstraint Use an API scope the host serves.
  * @docsConstraint Explain the task and the API’s relevance before the generated reference.
  * @docsDo Name the API readers should inspect first.
  * @docsDo Confirm the selected scope exists at the published route.
- * @docsDont Do not use a large reference for one trivial call; use a short code example.
+ * @docsDont Use a short example for one trivial call.
  * @docsDont Do not use an empty or unavailable scope.
- * @docsTip Place the generated reference after the reader understands the task it supports.
+ * @docsTip Place the reference after its task explanation.
  * @docsRenderKind tsdocs
  * @docsEditorImage /_docs/assets/consumer/1-usage/2-blocks/insert-typescript.png | Docs Insert content menu with TypeScript docs highlighted
- * @docsInsertionStep After explaining the API, choose + Insert content → TypeScript docs.
+ * @docsInsertionStep Choose + Insert content → TypeScript docs.
  * @docsInsertionStep Choose a scope the host serves and publish it at the documented route.
  * @docsInsertionStep Preview the generated reference and verify the API scope resolves.
  * @docsSyntax

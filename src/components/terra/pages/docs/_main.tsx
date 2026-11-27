@@ -2724,35 +2724,6 @@ export default function Scaffold({
   useEffect(() => {
     setDocumentTitle(currDoc.title);
   }, [currDoc.path, currDoc.title]);
-  useEffect(() => {
-    /**
-     * Recolors the inline favicon with the active Docs theme and refreshes it on hue changes.
-     */
-    const updateFavicon = () => {
-      const favicon = document.getElementById('favicon') as HTMLLinkElement | null;
-      if (!favicon) return;
-      const href = favicon.href.split(',')[1];
-      if (!href) return;
-      const styles = getComputedStyle(document.documentElement);
-      const primary = styles.getPropertyValue('--primaryLight9').trim();
-      const secondary = styles.getPropertyValue('--secondaryLight5').trim();
-      if (!primary || !secondary) return;
-      favicon.href = `data:image/svg+xml,${encodeURIComponent(
-        decodeURIComponent(href)
-          .replace(
-            /fill="[^"]*"\s*stroke="[^"]*"/,
-            `fill="rgb(${secondary})" stroke="rgb(${secondary})"`,
-          )
-          .replace(/fill="[^"]*"/, `fill="rgb(${primary})"`),
-      )}`;
-    };
-    updateFavicon();
-    document.addEventListener('docs:hue-change', updateFavicon);
-    return () => {
-      document.removeEventListener('docs:hue-change', updateFavicon);
-    };
-  }, []);
-
   // 2. SPA NAVIGATION INTERCEPT & URL SYNC
   // Only updates the state, letting React naturally handle side effects.
   useEffect(() => {

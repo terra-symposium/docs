@@ -1,5 +1,11 @@
 # @terra-symposium/docs
 
+## 0.4.36
+
+### Patch Changes
+
+- Improve Docs workspace navigation and update the favicon to follow the active page hue.
+
 ## 0.4.35
 
 ### Patch Changes

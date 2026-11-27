@@ -7,10 +7,14 @@ description: Teach university material as clear, complete, concept-first lessons
 
 This profile guides the author. Write for a learner who wants to understand and use the subject, not merely find the next lecture task. Assume no prior knowledge unless verified context says otherwise. Define technical terms and symbols before relying on them.
 
+Separate course logistics from concept teaching so learners can find each kind of information quickly. This table shows what belongs on each page type.
+
 | Page                    | Put here                                                                          | Keep out                                   |
 | ----------------------- | --------------------------------------------------------------------------------- | ------------------------------------------ |
 | **Subject Information** | Verified contacts, tools, reading, support, assessment rules, and a learning path | Concept teaching and first-week exercises  |
 | **Concept lesson**      | One coherent subject, taught from prerequisites through explanation and examples  | Course logistics and assessment chronology |
+
+Use Subject Information for course-wide facts and the concept lessons for teaching; the goal below describes what those lessons should help learners do.
 
 ## Goal
 
@@ -34,7 +38,9 @@ By the end, the learner can explain the idea in their own words, connect it to a
 
 ## Patterns
 
-Use the patterns below to keep course administration separate from teaching while making both easy to find. A pattern is not a container: keep explanations and required administration visible. An accordion needs at least two optional, independent peer items of the same kind. A tab set needs related, parallel alternatives that answer one shared question. Use tabs by default whenever multiple methods, algorithms, protocol versions, or configurations solve the same problem and each needs its own explanation; examples include Stop-and-wait / Go-Back-N / TCP recovery, recursive / iterative DNS, and HTTP versions. A method can be a real-world protocol while its peers are teaching models: name that distinction inside the comparison. Put each option's full method lesson, including its explanation, subheadings, diagrams, and examples, inside its tab; do not leave summary tabs above separate sections for the same options. Align the order and heading structure where the options share a learning route. Keep only shared facts or distinct follow-on concepts outside, and name the exact alternatives and reason for the grouping in critique. Do not tab prerequisites, dependent phases, or mechanisms used together; those stay in visible heading or node order. Keep a one-off worked example in a visible example callout.
+Use the patterns below to keep administration and teaching easy to find. Keep required explanations visible. Use an accordion only for at least two optional, independent, self-contained peers of the same kind; a one-off worked example stays in an example callout.
+
+Use tabs to compare related, complete alternatives that answer the same question, such as Stop-and-Wait, Go-Back-N, and Selective Repeat ARQ protocols compared by retransmission behavior, or HTTP versions compared by connection behavior. Put each option's explanation, diagrams, and examples in its tab, and align their shared learning sequence. State the comparison question. Keep prerequisites, mechanisms used together, shared facts, and sequential follow-on concepts in visible page order.
 
 ### Reading lists
 
@@ -48,7 +54,7 @@ Explain why a source is useful and where to begin. Link readings to the relevant
 
 ### Subject Information
 
-Model every university branch's Subject Information leaf on this visible outline, in this exact order. These seven labels are the only H2 headings on the page; use H3 only for genuine subsections within one of them. Do not add a second heading for the same topic under a different name. Keep each section as a real page heading; do not put a whole section, schedule, or learning path inside tabs or accordions. If a section has no verified data, keep its heading and say what is unavailable, then report the source gap outside the published page. Never invent missing course details.
+Model every university branch's Subject Information leaf on this visible outline, in this exact order. These seven labels are the only H2 headings on the page. Do not add a second heading for the same topic under a different name. Keep each section as a real page heading; do not put a whole section, schedule, or learning path inside tabs or accordions. If a section has no verified data, keep its heading and say what is unavailable, then report the source gap outside the published page. Never invent missing course details.
 
 ```md
 ## At a glance
@@ -76,9 +82,9 @@ Model every university branch's Subject Information leaf on this visible outline
 | Assessment         | Task, criteria, release and due dates, submission route; direct learners to the current official source |
 | Support            | Where to ask academic, technical, or personal questions                                                 |
 
-Use the same seven H2 labels on every Subject Information page, even when a section has no verified facts. Keep concept explanations in their concept lessons; the Learning path section names and orders those lessons rather than teaching their subject matter. Put contact details under Teaching team and support routes under Support. Put course reading and tool access under Readings and tools. Keep the visible chronological schedule table under Schedule and assessment requirements under Assessment. Use H3 only to divide substantial, distinct material inside one required section; use bold labels or table rows for smaller details.
+Use the same seven H2 labels on every Subject Information page, in this order, even when a section has no verified facts. Keep concept explanations in their concept lessons; the Learning path section names and orders those lessons rather than teaching their subject matter. Put contact details under Teaching team and support routes under Support. Put course reading and tool access under Readings and tools. Keep the visible chronological schedule table under Schedule and assessment requirements under Assessment. Use H3 only to divide substantial, distinct material inside one required section; use bold labels or table rows for smaller details.
 
-Use visible tables for contacts, reading lists, schedules, and assessment facts when the data shares columns. A reading row preserves the source's full title, access route, purpose, required/optional status, and related concept lesson. Put practical setup under **Readings and tools** or a clearly titled subheading within it, with steps visible when they matter. Do not accordion a schedule or a singleton section. Use an accordion only for at least two optional, self-contained peer items of the same kind; use tabs only for related parallel topics readers may compare. Do not use either block to compress or conceal required administration. For concept teaching, critique every applicable tab opportunity: if two or more approaches do the same job, ask the same question, or represent versions of one service, compare them in tabs unless their relationship is sequential or complementary. A comparison table alone is not a reason to omit tabs; convert same-purpose method tables to complete tabs and state the shared comparison question.
+Use tables for contacts, readings, schedules, and assessment facts when the items share fields. A reading row preserves its full title, access route, purpose, required/optional status, and related concept lesson. Put contact details under Teaching team, support routes under Support, and visible setup steps under Readings and tools. Mark unverified or historical details; link useful procedures to a how-to page. Do not place required administration, a schedule, or a learning path inside tabs or accordions.
 
 Do not present old dates, staff availability, assessment weights, or access details as current without checking the official source. Put useful procedural detail in a linked how-to page when the reader needs steps.
 
@@ -104,65 +110,60 @@ Use underscore-prefixed, unnumbered attachment names. Never bypass access restri
 Use this sequence for the work and the final critique. Fix a failure and repeat the review; a build alone cannot show that a beginner learned the subject.
 
 <Nodes
-  direction="LR"
-  nodes={[
-    { id: 'sources', type: 'origin', data: { title: 'Read sources' } },
-    { id: 'concepts', type: 'process', data: { title: 'Map concepts' } },
-    { id: 'lessons', type: 'process', data: { title: 'Teach and illustrate' } },
-    { id: 'blind', type: 'process', data: { title: 'Blind learner review' } },
-    { id: 'repair', type: 'terminator', data: { title: 'Repair and repeat' } },
-  ]}
-  edges={[
-    { id: 'sources-concepts', source: 'sources', target: 'concepts' },
-    { id: 'concepts-lessons', source: 'concepts', target: 'lessons' },
-    { id: 'lessons-blind', source: 'lessons', target: 'blind' },
-    { id: 'blind-repair', source: 'blind', target: 'repair' },
-  ]}
+  direction="TB"
+  nodes='[{"id":"sources","type":"origin","data":{"title":"Read sources"}},{"id":"concepts","type":"process","data":{"title":"Map concepts"}},{"id":"lessons","type":"process","data":{"title":"Teach and illustrate"}},{"id":"blind","type":"process","data":{"title":"Blind learner review"}},{"id":"repair","type":"terminator","data":{"title":"Repair and repeat"}}]'
+  edges='[{"id":"sources-concepts","source":"sources","target":"concepts"},{"id":"concepts-lessons","source":"concepts","target":"lessons"},{"id":"lessons-blind","source":"lessons","target":"blind"},{"id":"blind-repair","source":"blind","target":"repair"}]'
 />
 
 ### Lessons
 
-Organize by concepts and prerequisites. Weeks, lectures, tutorials, labs, assessments, attachment order, and document structure are source context, never the lesson outline. Teach each named subject fully; a task catalogue is not a lesson. Omit practice questions by default. If the reader goal requires a quiz, author it after the lesson in a final `## Quiz` section; Docs View presents the bank through a page-level Quiz button and dialog.
+Organize by concepts and prerequisites. Weeks, lectures, tutorials, labs, assessments, and file order are source context, never the lesson outline. Teach each named subject fully; a task catalogue is not a lesson.
 
 | Lesson step     | Reader question                                          | Useful form                                                                                                        |
 | --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | On-ramp         | What is this idea for, and what should I know first?     | Plain-language opening and links to prerequisites                                                                  |
 | Definition      | What does each term or symbol mean?                      | Short explanation, image, or focused comparison                                                                    |
 | Mechanism       | Why does the idea exist, and how does it work?           | Concise explanation, code, or Nodes diagram                                                                        |
-| Worked example  | How does it behave with real inputs?                     | Visible `:::example[Worked example]` aside traced step by step; accordion only for repeated optional peer examples |
+| Worked example  | How does it behave with real inputs?                     | Visible `:::example[Worked example]` aside traced step by step                                                   |
 | Boundaries      | What changes at the edges, and what commonly goes wrong? | Concise explanation with a relevant visual                                                                         |
-| Quiz (optional) | Is a quiz needed for this reader goal?                   | If required, a final `## Quiz` section with one shared Docs `<Quiz data={...} />` block after all teaching         |
+| Quiz (optional) | Does the reader goal or source call for a quiz?          | Optional authored bank in sibling `quiz.json`                                                                   |
 
-Use an accordion for at least two optional, self-contained worked examples or troubleshooting cases of the same kind that readers can open independently. In critique, name those peer items and explain why independent disclosure helps; if that reason cannot be stated, fail the accordion. A single essential worked example stays visible in a `:::example[Worked example]` aside. Omit practice questions by default. If a quiz is required, place one final `## Quiz` source section after all teaching and use the shared Docs `<Quiz data={...} />` block; Docs View lifts it into a page-level Quiz button and dialog. Author the bank as JSON in `<Quiz data={{...}} />`: the document has a `title` and a `questions` array, and each question has a `title`, `prompt`, and `answer`. Keep each prompt and answer focused; do not place callouts, tabs, or accordions inside them because the Quiz component supplies the presentation. The block shows one question at a time and reveals answers on demand; it does not accept quiz content as a Markdown tag body. Do not use accordions for quiz items, distribute questions through the lesson, or interrupt dependent explanations. A schedule, explanation, or unrelated section never qualifies merely because it is long.
+Omit practice questions by default. When the reader goal or source calls for a quiz, put its authored bank in sibling `quiz.json` beside `index.md`, outside lesson Markdown. Use a `title` and `questions` array with focused `title`, `prompt`, and `answer` Markdown strings. Docs View validates the bank and presents it in a page-level Quiz dialog. A host supplies the parsed bank as `authoredQuiz`; the separate `<Quiz />` generator requires a configured host generator. Follow [Blocks: Quiz](/consumer/1-usage/2-blocks/#quiz) for the schema.
 
-### Logical operators
+**Logical operators example**
 
 :::example[Worked example]
 
-Define `&&` as “both conditions are true”, `||` as “at least one is true”, and `!` as “reverse a truth value”. Then trace a concrete expression, test boundary cases, and only after that ask the learner to combine conditions. Do not require fluency in notation before explaining it.
+A page opens when it is not locked and the reader is a member or has a guest pass. Define `!` as “not”, `&&` as “and”, and `||` as “or”. Write `canOpen = !locked && (member || guestPass)`.
+
+For `locked = false`, `member = false`, and `guestPass = true`, first evaluate the parentheses: `false || true` is `true`. Then `!false` is `true`, so `true && true` gives `canOpen = true`.
+
+At the boundary `locked = true`, even if `member = true`, `!true` is `false`; `false && true` gives `canOpen = false`.
 
 :::
 
-Give beginners several on-ramps to difficult concepts: a plain-language purpose, prerequisite links, a familiar situation, a visual relationship, and a worked example. Make sure they converge on the same accurate explanation. Give every subconcept a concise heading in the lesson and explain what it is, why it exists, how it works, and how it connects to earlier ideas. If a quiz is included, its source section follows all teaching; Docs View exposes it through a page-level Quiz button and dialog.
+Give beginners several on-ramps to difficult concepts: a plain-language purpose, prerequisite links, a familiar situation, a visual relationship, and a worked example. Make sure they converge on the same accurate explanation. Give each subconcept a concise heading and explain what it is, why it exists, how it works, and how it connects to earlier ideas.
 
-Keep lessons calm and concise. Use prose to explain, lists for parallel facts or actions, and Nodes for processes, dependencies, hand-offs, or relationships. Use a table only when entries share comparison fields. Use an image only when its visual detail helps teach the concept; crop an attachment to the relevant figure and keep labels readable. A visual supports the explanation; it never replaces it. During critique, name the topics in each tab set and their shared comparison context, and name the same-kind optional items in each accordion and why independent disclosure helps; fail any block that cannot meet that test.
+Keep lessons calm and concise. Use prose to explain, lists for parallel facts or actions, Nodes for processes and dependencies, and tables only for shared comparison fields. Use an image only when its detail helps teach; crop it, keep labels readable, and explain what it shows. A visual supports the lesson but never replaces it.
 
-Count authored Markdown headings, not accordion or custom-block labels. Aim for no more than three H3 siblings under an H2. Four or more needs a concrete reader reason, but a source-supported, approved concept outline may retain additional distinct subconcepts when each has its own teaching purpose and clearly belongs beneath the parent; critique the fit instead of failing the count alone. Merge overlap or split unrelated reader goals. Also merge a run of tiny H2 sections when they teach one concept; do not create a flat list of headings for each detail. Keep H3 only for a few true subconcepts. Merge headings such as “Delay” and “Delay practice” when both cover the same concept. Do not create repeated code or example blocks back to back; combine them or put alternatives in tabs or one titled accordion. Long prose or many short headings under an H2 or H3 signals weak grouping: simplify, make true peer concepts H2s, or split the leaf. Do not use a table to hide a long explanation or to collect examples that do not share comparison dimensions.
+Use at most three authored H3 siblings under an H2 unless a source-supported outline needs more distinct subconcepts. Merge overlapping headings and short sections that teach one idea; split unrelated reader goals. Keep paragraphs and examples focused, and use tables only for shared comparison fields.
 
-Keep the default page at or below 12 content-view heights at a 1280 × 800 desktop viewport. Exceeding this is a validation warning, not a reason to omit source material or hide core content. Split only when reader goals differ; otherwise restructure headings, remove repetition, and use a table only for genuinely shared comparison fields. Keep essential explanations and on-ramps visible. For every tab group, name the parallel topics and their shared comparison context. For every accordion group, name at least two exact same-kind optional peer items and why independent disclosure helps. A prompt plus its answer is one item, not a qualifying pair. Fail singleton accordions, mixed-kind groups, whole-section tabs, schedules in accordions, and hidden dependent concepts. If the rationale cannot be stated, the block fails critique. Subject Information headings remain visible in the required order, and its schedule remains visible as a table. Omit practice questions by default; when a quiz is needed, keep its source bank in one final `## Quiz` section with the shared Docs `<Quiz data={...} />` block; in Docs View, verify the page-level Quiz button opens the bank in a dialog, using JSON question objects with `title`, `prompt`, and `answer` Markdown strings, without nested callouts, tabs, or accordions. Examples that are not optional repeated peers remain visible in example callouts.
+Keep a coherent page at or below 12 content-view heights at 1280 × 800. Restructure repetition before splitting; split only when reader goals differ. In critique, name each tab's alternatives and shared question, and each accordion's optional peers and reason for independent disclosure. Reject schedules in accordions, whole-section tabs, and hidden dependent ideas. Keep the Subject Information headings in order and its schedule visible as a table.
 
-### Exam-tomorrow simulation
+### Independent critique
 
-Give the complete tree and its available sources to an independent reviewer with no prior conversation context. Ask them to roleplay a learner with no knowledge of the field who must earn 100% on a difficult exam tomorrow using only the lessons.
+Give a fresh reviewer the complete tree, available sources, and rendered pages. Ask them to act as a beginner who must solve a difficult, unfamiliar problem using only the lessons.
 
-The only valid critique is the reviewer’s own unstructured prose. Give no table, rubric, checklist, sample, template, fixed heading, bullet, numbered issue format, or JSON schema; do not give the reviewer this guidance page or other material containing templates. The reviewer must ignore any response shapes present in source material. Reject every structured critique in full and commission a fresh no-context review with a prose-only instruction; never reformat structured output and call it independent. The prose must show what the learner understood, where they guessed, and what they could solve, with evidence from source points and the rendered lesson.
+Ask for the reviewer's direct, unstructured prose only; give no response format, examples, templates, or prior findings. The critique must explain what the learner understood, where they had to guess or look up a term, and whether they solved an unfamiliar problem, with evidence from the sources and rendered pages. Reject structured responses rather than reshaping them.
 
-The reviewer must identify every point where they would have to guess, look up a term, infer a missing step, or rely on prior experience. They must explain each concept in their own words, trace examples, handle boundary cases, distinguish similar ideas, and solve a new problem without copying a worked example. Check that the tree provides on-ramps and that every source point is taught in its canonical lesson. Inspect every rendered tab and accordion and explain in the critique why it qualifies: tabs must present related parallel topics for comparison; accordions must group repeated optional peer items of the same kind. Reject whole-leaf tabs, dependent lesson sequences hidden in tabs, schedules in accordions, and blocks justified only by page length. Verify that Subject Information contains every required visible heading in order, clearly labels unavailable data, and shows the schedule as a visible table. Verify that practice questions are absent by default. If a quiz is included, verify the source bank follows all teaching in the shared Docs `<Quiz data={...} />` block and that Docs View shows a page-level Quiz button that opens the bank in a dialog, and that its JSON questions use focused `title`, `prompt`, and `answer` fields without nested callouts, tabs, or accordions. Single essential worked examples remain visible in example callouts. A single essential worked example must be visible in an example callout; accordion only repeated optional examples of the same kind. Check that accordions are collapsed by default, text blocks are interrupted by useful visuals rather than more text blocks, H2 sections usually have no more than three authored H3 siblings; four or more needs a reader-focused reason. A source-supported, approved concept hierarchy may keep additional distinct subconcepts when each is required and belongs under its parent; assess the fit, not count alone. Do not count accordion labels as headings, and the default page is at most 12 desktop content-view heights. When a coherent leaf exceeds that limit, require a warning and restructure without hiding required material; use tabs or accordions only when their content tests are met, and split only when goals differ. Repair each actionable gap, then repeat the independent critique with a fresh reviewer until their prose critique finds no remaining issue.
+The reviewer must trace explanations and examples, test boundary cases, compare similar ideas, and attempt a new problem without copying a worked example. Check source coverage, prerequisite order, headings, rendered states, and the required Subject Information structure. After each repair, repeat with a fresh reviewer until no actionable issue remains.
 
-### Coverage report
+### Coverage and rendering
 
-Create a source-to-concept-to-leaf map and account for every useful fact, explanation, example, task, constraint, and caveat. Keep the map in agent workflow notes, never in published lessons. Report coverage, missing material, and unresolved restrictions to the user outside the tree; do not claim full coverage when a source could not be read.
+**Coverage report**
 
-### Rendered page
+Map useful source points to concepts and leaves in workflow notes, not published pages. Report missing material or unavailable sources outside the tree; do not claim full coverage when a source could not be read.
 
-Read every leaf in the rendered site. Check that headings form a concise hierarchy, paragraphs are easy to scan, tables and diagrams render correctly, examples are visible in asides, and accordions keep complete tasks together. Fix any visual wall, missing block, broken link, hidden page, or awkward sequence before reporting completion.
+**Rendered page**
+
+Read every rendered leaf. Check concise headings, scannable prose, working links, complete tables and diagrams, visible essential examples, and complete optional accordion items. Fix layout problems, missing blocks, broken links, or hidden pages before reporting completion.

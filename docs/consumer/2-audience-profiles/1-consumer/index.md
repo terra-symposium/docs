@@ -17,29 +17,41 @@ Be neutral, direct, and reassuring. Address the reader as “you”; use the exa
 
 ## Patterns
 
-Use the tutorial pattern when readers need to complete an ordered task with UI or code variants.
+Use the tutorial pattern when readers need ordered instructions for an interface task or its source-file equivalent.
 
 ### Tutorials
 
-Use a step table for a tutorial when each action has a useful visual or code counterpart. Put the instruction in the left column and the corresponding screenshot or code example in the right column. Use one row per step; crop screenshots to the relevant control, preserve readable labels, and add alt text that describes the meaningful state. Keep each step complete when the image is unavailable.
+Use a step table for a tutorial when each action has a useful screenshot or source example. Put the instruction in the left column and its corresponding screenshot or source example in the right column. Use one row per step; crop screenshots to the relevant control, preserve readable labels, and add alt text that describes the meaningful state. Keep each step complete when the image is unavailable.
 
-Wrap parallel variants in Docs tabs so readers can select the path they use:
+Wrap equivalent interface and Markdown paths in Docs tabs so readers can select the path they use:
 
 |||[User interface]
 
 | Instruction                                                                    | Screenshot                                                                                 |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| In the Docs editor, open the **Text** menu; confirm the heading styles appear. | ![The Text menu open with Heading 2 available](../../1-usage/2-blocks/block-type-menu.png) |
+| In the Docs editor, type **Setup** on an empty line, select it, and choose **Text** > **Heading 2**. Confirm that **Setup** appears as a level-two heading. | ![The Text menu open with Heading 2 available](../../1-usage/2-blocks/block-type-menu.png) |
 
 |||
 
-|||[Code]
+|||[Markdown]
 
-| Instruction                                                              | Code            |
-| ------------------------------------------------------------------------ | --------------- |
-| Set the option, save the configuration, then confirm the returned value. | `config.save()` |
+| Instruction                                                                                   | Markdown        |
+| --------------------------------------------------------------------------------------------- | --------------- |
+| Add `## Setup` on its own line. Confirm that **Setup** appears as a level-two heading.         | `## Setup`      |
 
 |||
+
+:::example[Tutorial with a decision and recovery]
+
+**Before you start:** [Verified prerequisite].
+
+1. Choose **[control]**. Confirm **[expected result]**.
+2. For **[condition]**, choose **[A]**; otherwise **[B]**. Confirm **[result]**.
+3. Choose **[final control]**. Confirm **[completion state]**.
+
+If **[known error]** appears, use **[verified recovery]**, then repeat step [number]. This is a structure placeholder: replace every bracket with the product's tested labels and behavior.
+
+:::
 
 ## Sources
 
@@ -47,9 +59,8 @@ Verify each procedure against the current product release or API. Capture screen
 
 ## Validation
 
-- Use the same order and wording as the visible interface or verified API.
+- Match the visible interface or verified API wording and order.
 - Give every step one action and its expected result.
 - Show a recovery path when an error can prevent completion.
-- Keep screenshots current, focused, accessible, and secondary to text instructions.
-- Verify the procedure from the reader's starting state through its final result.
-- Have a reader who did not write the guide follow it without help; repair every step where they pause, guess, or get a different result.
+- Keep screenshots current, focused, accessible, and secondary to text.
+- Ask a new reader to follow the guide without help; repair every pause.

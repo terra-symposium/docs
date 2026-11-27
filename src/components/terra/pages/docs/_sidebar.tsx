@@ -3746,8 +3746,8 @@ function Nav({
           </div>
           <Button
             variant="primary-underline"
-            aria-label="Search ⌘K"
-            title="Search (⌘K)"
+            aria-label="Search (Cmd+K)"
+            title="Search (Cmd+K)"
             onClick={(e) => {
               e.stopPropagation();
               window.dispatchEvent(new Event('docs:open-search'));

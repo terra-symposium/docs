@@ -27,11 +27,13 @@ Use a decision record when a technical choice affects future integrations or cha
 
 ### Decision records
 
-Use a decision record for a choice likely to affect future changes. Keep its sections consistent: **Context** (problem and constraints), **Decision** (chosen approach), **Consequences** (benefits and costs), and **Alternatives** (credible options considered). Link each section to the feature or API it affects.
+Use a decision record for a choice likely to affect future changes. Keep its sections consistent: **Context** (problem and constraints), **Decision** (chosen approach), **Consequences** (benefits and costs), and **Alternatives** (credible options considered). Name the affected feature or API in the record. Link to stable, relevant implementation or API documentation when that helps readers find more detail.
 
 :::example[Decision record]
 
 **Context:** Printed handouts include controls that readers do not need.
+
+**Affected area:** Docs print view.
 
 **Decision:** Use CSS print queries to hide those controls.
 
@@ -41,15 +43,30 @@ Use a decision record for a choice likely to affect future changes. Keep its sec
 
 :::
 
+### API integrations
+
+For an API guide, show a minimal request and its verified success and failure behavior. Include authentication, ordering, version constraints, and recovery details when the current public contract makes them relevant. For a current request and response example, see [Host integration](/developer/component/host-integration/#connect-a-hosted-workspace).
+
+:::example[API integration pattern]
+
+**Request:** `[method] [verified endpoint]` with `[documented input]`.
+
+**Success:** `[documented status]` returns `[representative response]`.
+
+**Failure:** `[documented error]` means `[effect]`; recover by `[supported action]`.
+
+This is a structure placeholder, not an API contract. Replace every bracket with details checked against the current API reference and implementation.
+
+:::
+
 ## Sources
 
 Check public contracts against the current API reference, implementation, tests, and release notes as relevant. Record the versions and sources used. Distinguish a tested guarantee from an inferred behavior, and link to the owner of details that may change.
 
 ## Validation
 
-- Explain why the choice exists, not just which functions or files implement it.
+- Explain why the choice exists, not just which code implements it.
 - Distinguish stable contracts from implementation details that may change.
 - State constraints and failure behavior where they affect integration.
 - Verify names, examples, and behavior against the current API or code.
-- Trace the explanation to its feature and domain goal.
-- Ask a developer unfamiliar with the subsystem to use the page for a realistic change or integration task, then repair missing context and contract details.
+- Ask a new developer to use the page for a realistic task; repair gaps.

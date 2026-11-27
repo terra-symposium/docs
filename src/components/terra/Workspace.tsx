@@ -168,6 +168,33 @@ export function DocsWorkspace(workspaceOptions: DocsWorkspaceProps): JSX.Element
     };
   }, [hue]);
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    let favicon = document.getElementById('favicon') as HTMLLinkElement | null;
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.id = 'favicon';
+      favicon.rel = 'icon';
+      favicon.type = 'image/svg+xml';
+      document.head.append(favicon);
+    }
+    /**
+     * Paints a rounded rectangle using the active page's primary hue.
+     */
+    const updateFavicon = () => {
+      const themeRoot = portalThemeRoot.current?.querySelector<HTMLElement>('.workspace') ?? portalThemeRoot.current;
+      const styles = getComputedStyle(themeRoot ?? document.documentElement);
+      const primary = styles.getPropertyValue('--primary-6').trim();
+      const fill = primary
+        ? `rgb(${primary})`
+        : `hsl(${typeof hue === 'number' ? hue : 0} 65% 55%)`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect x="3" y="3" width="26" height="26" rx="7" fill="${fill}"/></svg>`;
+      favicon!.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    };
+    updateFavicon();
+    document.addEventListener('docs:hue-change', updateFavicon);
+    return () => document.removeEventListener('docs:hue-change', updateFavicon);
+  }, [hue]);
+  useEffect(() => {
     const workspace = portalThemeRoot.current?.querySelector<HTMLElement>('.workspace');
     if (!workspace || typeof document === 'undefined') return;
 

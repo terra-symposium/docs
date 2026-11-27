@@ -116,7 +116,7 @@ test('standalone Astro pages mount the extracted read-only workspace with their 
 	await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Docs content and rendering parity');
 	await expect(p.getByRole('heading', { name: 'Trace content from source to screen' })).toBeVisible();
 });
-test('shared workspace keeps the Terra header, toolbar position, section navigation, and nested leaf actions', XL_VIEWPORT_TEST, async ({ page: p }) => {
+test('shared workspace keeps its layout and actions while deleting pages and managing attachments', XL_VIEWPORT_TEST, async ({ page: p }) => {
 	await p.goto('/workspace-demo/?section=overview&group=start-here&leaf=salesphere');
 	await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Salesphere');
 	await expect(p.getByRole('link', { name: 'Salesphere Docs' })).toBeVisible();
@@ -182,6 +182,26 @@ test('shared workspace keeps the Terra header, toolbar position, section navigat
 	await leaf.hover();
 	await expect(p.getByRole('button', { name: 'Reorder item' }).last()).toBeVisible();
 	await p.screenshot({ path: '/tmp/terra-docs-shared-desktop.png', fullPage: true });
+	await p.goto('/workspace-demo/');
+	await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Salesphere');
+	await expect(p.locator('[data-docs-shell]')).toHaveAttribute('data-docs-mode', 'view');
+	await p.getByRole('link', { name: 'Runtime map', exact: true }).click({ button: 'right' });
+	await expect(p.getByRole('menuitem', { name: 'Delete page' })).toBeVisible();
+	await p.getByRole('menuitem', { name: 'Delete page' }).click();
+	await expect(p.getByRole('dialog')).toContainText('Delete page?');
+	await p.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+	await expect
+		.poll(() => p.evaluate(() => (window as Window & { __terraDocsActionCalls?: Array<{ operation: string }> }).__terraDocsActionCalls?.some(call => call.operation === 'write.doc.rm')))
+		.toBe(true);
+	await expect(p.getByRole('link', { name: 'Runtime map', exact: true })).toHaveCount(0);
+	await expect(p.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Salesphere');
+	await p.getByRole('combobox', { name: 'Mode' }).click();
+	await p.getByRole('option', { name: 'Attachments' }).click();
+	await expect(p.locator('[data-docs-attachments]')).toBeVisible();
+	await expect(p.getByText('Product brief.pdf')).toBeVisible();
+	await p.locator('[data-docs-attachments]').evaluate(element => element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 })));
+	await expect(p.getByRole('dialog')).toContainText('Add Attachment');
+	await expect(p.getByRole('button', { name: 'Add Document attachment' })).toBeVisible();
 });
 for (const { name, details, display } of [
 	{ name: 'mobile', details: MOBILE_VIEWPORT_TEST, display: 'flex' },
@@ -260,28 +280,6 @@ test('host document navigation follows the leaf URL instead of replacing content
 	await waitForWorkspaceReady(p);
 	await expect(p.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Runtime map');
 	await expect.poll(() => p.evaluate(() => sessionStorage.getItem('terra-docs-document-navigation-loads'))).toBe('2');
-});
-test('shared workspace performs deletion and opens attachment management from its original controls', XL_VIEWPORT_TEST, async ({ page: p }) => {
-	await p.goto('/workspace-demo/');
-	await expect(p.getByRole('textbox', { name: 'Title' })).toHaveValue('Salesphere');
-	await expect(p.locator('[data-docs-shell]')).toHaveAttribute('data-docs-mode', 'view');
-	await p.getByRole('link', { name: 'Runtime map', exact: true }).click({ button: 'right' });
-	await expect(p.getByRole('menuitem', { name: 'Delete page' })).toBeVisible();
-	await p.getByRole('menuitem', { name: 'Delete page' }).click();
-	await expect(p.getByRole('dialog')).toContainText('Delete page?');
-	await p.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
-	await expect
-		.poll(() => p.evaluate(() => (window as Window & { __terraDocsActionCalls?: Array<{ operation: string }> }).__terraDocsActionCalls?.some(call => call.operation === 'write.doc.rm')))
-		.toBe(true);
-	await expect(p.getByRole('link', { name: 'Runtime map', exact: true })).toHaveCount(0);
-	await expect(p.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Salesphere');
-	await p.getByRole('combobox', { name: 'Mode' }).click();
-	await p.getByRole('option', { name: 'Attachments' }).click();
-	await expect(p.locator('[data-docs-attachments]')).toBeVisible();
-	await expect(p.getByText('Product brief.pdf')).toBeVisible();
-	await p.locator('[data-docs-attachments]').evaluate(element => element.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 })));
-	await expect(p.getByRole('dialog')).toContainText('Add Attachment');
-	await expect(p.getByRole('button', { name: 'Add Document attachment' })).toBeVisible();
 });
 test('tree create, rename, duplicate, download, and delete persist through the host adapter', XL_VIEWPORT_TEST, async ({ page: p }) => {
 	await p.goto('/workspace-demo/', { waitUntil: 'commit' });
